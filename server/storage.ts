@@ -644,8 +644,8 @@ export class DatabaseStorage implements IStorage {
       const result = await db
         .update(users)
         .set({
-          lastLogin: now,
-          updatedAt: now, // Also update the general updatedAt field
+          lastLogin: now.toISOString(),
+          updatedAt: now.toISOString(), // Also update the general updatedAt field
         })
         .where(eq(users.id, id));
 
@@ -1824,50 +1824,6 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error(`Error creating product "${product.name}":`, error);
       throw error; // Rethrow so the route handler can catch it and send a proper error response
-    }
-  }
-
-  async updateProduct(productId: number, productData: Partial<InsertProduct>): Promise<Product> {
-    try {
-      // Use snake_case field names like the working createProductWithWizard method
-      const updateData = {
-        name: productData.name,
-        slug: productData.slug,
-        price: productData.price,
-        cost_price: productData.costPrice,
-        stock: productData.stock,
-        description: productData.description,
-        category_id: productData.categoryId,
-        catalog_id: productData.catalogId,
-        sale_price: productData.salePrice,
-        discount: productData.discount,
-        image_url: productData.imageUrl,
-        additional_images: productData.additionalImages || [],
-        is_active: productData.isActive,
-        is_featured: productData.isFeatured,
-        is_flash_deal: productData.isFlashDeal,
-        updated_at: new Date()
-      };
-
-      // Remove undefined values to avoid issues
-      const cleanUpdateData = Object.fromEntries(
-        Object.entries(updateData).filter(([_, value]) => value !== undefined)
-      );
-
-      const [updatedProduct] = await db
-        .update(products)
-        .set(cleanUpdateData)
-        .where(eq(products.id, productId))
-        .returning();
-
-      if (!updatedProduct) {
-        throw new Error(`Product with ID ${productId} not found`);
-      }
-
-      return updatedProduct;
-    } catch (error) {
-      console.error(`Error updating product ID ${productId}:`, error);
-      throw error;
     }
   }
 
@@ -9873,54 +9829,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  /**
-   * Update user information
-   */
-  async updateUser(userId: number, updateData: {
-    username?: string;
-    email?: string;
-    fullName?: string;
-    phoneNumber?: string;
-    address?: string;
-    city?: string;
-    province?: string;
-    postalCode?: string;
-    country?: string;
-    role?: string;
-    isActive?: boolean;
-  }): Promise<any | undefined> {
-    try {
-      const [updatedUser] = await db
-        .update(users)
-        .set({
-          ...updateData,
-          updatedAt: new Date().toISOString()
-        })
-        .where(eq(users.id, userId))
-        .returning({
-          id: users.id,
-          username: users.username,
-          email: users.email,
-          fullName: users.fullName,
-          phoneNumber: users.phoneNumber,
-          address: users.address,
-          city: users.city,
-          province: users.province,
-          postalCode: users.postalCode,
-          country: users.country,
-          isActive: users.isActive,
-          role: users.role,
-          createdAt: users.createdAt,
-          updatedAt: users.updatedAt,
-          lastLogin: users.lastLogin
-        });
 
-      return updatedUser;
-    } catch (error) {
-      logger.error("Error updating user", { error, userId });
-      throw error;
-    }
-  }
 
   /**
    * Update user role
