@@ -26,6 +26,9 @@ import {
   ChevronLeft, ChevronRight, TrendingUp, TrendingDown
 } from 'lucide-react';
 
+// Constants
+const DRAFTS_PER_PAGE = 20;
+
 // Utility function for currency formatting
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('en-ZA', {
