@@ -170,14 +170,6 @@ router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Respons
     let shippingExemption = false;
     
     if (orderData.creditUsed && orderData.creditUsed > 0) {
-      // Verify user has sufficient credit balance
-      const creditBalance = await storage.getUserCreditBalance(userId);
-      const availableCredit = parseFloat(creditBalance.availableCredits || '0');
-      
-      if (orderData.creditUsed > availableCredit) {
-        return sendError(res, `Insufficient credit balance. Available: R${availableCredit.toFixed(2)}, Requested: R${orderData.creditUsed.toFixed(2)}`, 400);
-      }
-      
       // Check if credits qualify for shipping exemption (from unshipped orders)
       shippingExemption = await storage.checkShippingExemptionForCredits(userId, orderData.creditUsed);
       
@@ -208,11 +200,10 @@ router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Respons
         remainingBalance = 0;
       }
       
-      logger.info("Credit validation successful", {
+      logger.info("Credit will be applied after order creation", {
         userId: userId,
         creditUsed: orderData.creditUsed,
         remainingBalance: remainingBalance,
-        availableCredit: availableCredit,
         shippingExemption: shippingExemption
       });
     }
