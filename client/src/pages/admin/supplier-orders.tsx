@@ -153,13 +153,24 @@ const SupplierOrders = () => {
       // Return a context object with the snapshotted value
       return { previousOrders };
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       // Force cache refresh with more aggressive invalidation
       queryClient.invalidateQueries({ queryKey: ['/api/admin/supplier-orders'] });
       queryClient.refetchQueries({ queryKey: ['/api/admin/supplier-orders'] });
+      
+      // If status was set to unavailable, invalidate credit queries to update balance
+      if (variables.status === 'unavailable') {
+        queryClient.invalidateQueries({ queryKey: ['/api/credits/balance'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/credits/transactions'] });
+        queryClient.refetchQueries({ queryKey: ['/api/credits/balance'] });
+        queryClient.refetchQueries({ queryKey: ['/api/credits/transactions'] });
+      }
+      
       toast({
         title: 'Status updated',
-        description: 'Supplier order status has been updated',
+        description: variables.status === 'unavailable' 
+          ? 'Product marked unavailable. Customer credit has been generated.'
+          : 'Supplier order status has been updated',
       });
     },
     onError: (err, variables, context) => {
