@@ -98,9 +98,11 @@ router.patch('/:id/status', isAuthenticated, isAdmin, asyncHandler(async (req, r
   }
   
   try {
-    console.log('PATCH status update - Received request body:', req.body);
+    console.log('PATCH status update - Received request body:', JSON.stringify(req.body, null, 2));
     console.log('PATCH status update - Request body type:', typeof req.body);
     console.log('PATCH status update - Request body keys:', Object.keys(req.body || {}));
+    console.log('PATCH status update - Status value:', req.body?.status);
+    console.log('PATCH status update - Notes value:', req.body?.notes);
     
     const validation = updateStatusSchema.safeParse(req.body);
     if (!validation.success) {
