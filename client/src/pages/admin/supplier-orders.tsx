@@ -125,7 +125,7 @@ const SupplierOrders = () => {
     mutationFn: ({ orderId, status, notes }: { orderId: number; status: string; notes?: string }) =>
       apiRequest(`/api/admin/supplier-orders/${orderId}/status`, {
         method: 'PATCH',
-        body: { status, notes },
+        data: { status, notes },
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/supplier-orders'] });
@@ -222,6 +222,31 @@ const SupplierOrders = () => {
       hour: '2-digit',
       minute: '2-digit'
     });
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-ZA', {
+      style: 'currency',
+      currency: 'ZAR',
+    }).format(amount);
+  };
+
+  // Map supplier ID to actual supplier URL
+  const getSupplierUrl = (supplierUrlOrId: string) => {
+    // If it's already a full URL, return it
+    if (supplierUrlOrId.startsWith('http://') || supplierUrlOrId.startsWith('https://')) {
+      return supplierUrlOrId;
+    }
+    
+    // Map supplier IDs to their actual URLs
+    const supplierMapping: Record<string, string> = {
+      '1': 'https://dmcwholesale.co.za',
+      '2': 'https://dmcwholesale.co.za',
+      '3': 'https://supplier3.co.za',
+      // Add more supplier mappings as needed
+    };
+    
+    return supplierMapping[supplierUrlOrId] || `https://supplier${supplierUrlOrId}.co.za`;
   };
 
   if (isLoading) {
@@ -344,13 +369,26 @@ const SupplierOrders = () => {
             <Card key={order.id} className="overflow-hidden">
               <CardHeader>
                 <div className="flex items-start justify-between">
-                  <div className="space-y-1">
-                    <CardTitle className="text-lg">
-                      {order.productName}
-                    </CardTitle>
-                    <CardDescription>
-                      Order #{order.customerOrder.orderNumber} • {order.customerOrder.customerName}
-                    </CardDescription>
+                  <div className="flex items-start gap-4">
+                    {/* Product Image */}
+                    <div className="flex-shrink-0">
+                      <img
+                        src={order.product.imageUrl || '/placeholder-product.jpg'}
+                        alt={order.productName}
+                        className="w-16 h-16 object-cover rounded-md border"
+                        onError={(e) => {
+                          e.currentTarget.src = '/placeholder-product.jpg';
+                        }}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <CardTitle className="text-lg">
+                        {order.productName}
+                      </CardTitle>
+                      <CardDescription>
+                        Order #{order.customerOrder.orderNumber} • {order.customerOrder.customerName}
+                      </CardDescription>
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant={getStatusVariant(order.status)} className="flex items-center gap-1">
@@ -410,7 +448,7 @@ const SupplierOrders = () => {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => window.open(order.supplierUrl, '_blank')}
+                            onClick={() => window.open(getSupplierUrl(order.supplierUrl), '_blank')}
                             className="flex items-center gap-1"
                           >
                             <ExternalLink className="h-3 w-3" />
