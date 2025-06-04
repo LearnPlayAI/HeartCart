@@ -42,10 +42,9 @@ export default function MyFavourites() {
 
   const { data: favouritesData, isLoading, error } = useQuery({
     queryKey: ['/api/favourites'],
-    queryFn: () => apiRequest('/api/favourites?withProducts=true'),
   });
 
-  const favourites = favouritesData?.data || [];
+  const favourites = favouritesData?.success ? favouritesData.data : [];
 
   // Filter and sort favourites
   const filteredAndSortedFavourites = useMemo(() => {
