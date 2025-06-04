@@ -45,7 +45,11 @@ export default function MyFavourites() {
     queryFn: () => apiRequest('GET', '/api/favourites?withProducts=true'),
   });
 
-  const favourites = favouritesData?.success ? favouritesData.data : [];
+  const favourites = favouritesData?.data || [];
+
+  // Debug: Log the data structure
+  console.log('favouritesData:', favouritesData);
+  console.log('favourites array:', favourites);
 
   // Filter and sort favourites
   const filteredAndSortedFavourites = useMemo(() => {
