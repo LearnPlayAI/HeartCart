@@ -10895,18 +10895,23 @@ export class DatabaseStorage implements IStorage {
     orderId?: number;
   }): Promise<any[]> {
     try {
-      // Get order items from paid orders with their supplier status
+      // Get order items from paid orders with their supplier status and draft URLs
       const query = db
         .select({
           orderItem: orderItems,
           order: orders,
           product: products,
           supplierStatus: orderItemSupplierStatus,
+          productDraft: productDrafts,
         })
         .from(orderItems)
         .innerJoin(orders, eq(orderItems.orderId, orders.id))
         .innerJoin(products, eq(orderItems.productId, products.id))
         .leftJoin(orderItemSupplierStatus, eq(orderItems.id, orderItemSupplierStatus.orderItemId))
+        .leftJoin(productDrafts, and(
+          eq(productDrafts.sku, products.sku),
+          eq(productDrafts.draftStatus, 'ready_to_publish')
+        ))
         .where(
           and(
             or(
@@ -10926,7 +10931,7 @@ export class DatabaseStorage implements IStorage {
         orderId: row.order.id,
         productId: row.product.id,
         productName: row.orderItem.productName || row.product.name,
-        supplierUrl: row.product.supplier || '', // Map supplier field to supplierUrl
+        supplierUrl: row.productDraft?.supplierUrl || row.product.supplier || '', // Use actual product URL from drafts
         quantity: row.orderItem.quantity,
         unitCost: row.product.costPrice || row.orderItem.unitPrice, // Use product costPrice instead of order unitPrice
         totalCost: row.product.costPrice ? 
@@ -10956,7 +10961,9 @@ export class DatabaseStorage implements IStorage {
           costPrice: row.product.costPrice, // Include costPrice in product data
           sku: row.product.sku,
           supplierAvailable: true,
-        }
+          actualSupplierUrl: row.productDraft?.supplierUrl, // Include the actual URL from drafts
+        },
+        customerUnitPrice: row.orderItem.unitPrice, // Add the actual price customer paid
       }));
     } catch (error) {
       logger.error('Error getting order items for supplier management', { error, filters });

@@ -285,6 +285,17 @@ const SupplierOrders = () => {
 
   // Get the specific product URL on the supplier website
   const getProductUrl = (order: SupplierOrder) => {
+    // First, check if we have the actual product URL from database
+    if (order.product.actualSupplierUrl && order.product.actualSupplierUrl.startsWith('http')) {
+      return order.product.actualSupplierUrl;
+    }
+    
+    // If supplierUrl is already a full URL, use it directly
+    if (order.supplierUrl && order.supplierUrl.startsWith('http')) {
+      return order.supplierUrl;
+    }
+    
+    // Fallback to constructed URL if we only have supplier ID
     const baseUrl = getSupplierUrl(order.supplierUrl);
     const sku = order.product.sku;
     
@@ -299,7 +310,7 @@ const SupplierOrders = () => {
       return `${baseUrl}/search?q=${encodeURIComponent(sku)}`;
     }
     
-    // Fallback to supplier homepage if no SKU
+    // Final fallback to supplier homepage
     return baseUrl;
   };
 
