@@ -164,9 +164,10 @@ const FlashDealsSection = () => {
                     showAddToCart={true}
                     promotionInfo={{
                       promotionName: product.promotionName,
-                      promotionDiscount: product.promotionDiscount,
+                      promotionDiscount: product.additionalDiscountPercentage || product.promotionDiscount,
                       promotionDiscountType: product.promotionDiscountType,
-                      promotionEndDate: product.promotionEndDate
+                      promotionEndDate: product.promotionEndDate,
+                      promotionalPrice: product.promotionalPrice
                     }}
                   />
                 </div>

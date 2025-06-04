@@ -31,7 +31,7 @@ const FeaturedProductsSection = () => {
     promo.products?.forEach((pp: any) => {
       productPromotions.set(pp.productId, {
         promotionName: promo.promotionName,
-        promotionDiscount: pp.discountOverride || promo.discountValue,
+        promotionDiscount: pp.additionalDiscountPercentage || pp.discountOverride || promo.discountValue,
         promotionDiscountType: promo.discountType,
         promotionEndDate: promo.endDate,
         promotionalPrice: pp.promotionalPrice ? Number(pp.promotionalPrice) : null
