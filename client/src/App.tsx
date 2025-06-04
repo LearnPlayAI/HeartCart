@@ -38,6 +38,7 @@ import AdminPricing from "@/pages/admin/pricing";
 import AdminAISettings from "@/pages/admin/ai-settings";
 import AdminSuppliers from "@/pages/admin/suppliers";
 import AdminCatalogs from "@/pages/admin/catalogs";
+import SupplierOrders from "@/pages/admin/supplier-orders";
 import ProductEditPage from "@/pages/admin/product-edit";
 import ProductWizardPage from "@/pages/admin/product-wizard";
 import AddSupplier from "@/pages/admin/add-supplier";
@@ -215,6 +216,7 @@ function App() {
               <AdminProtectedRoute path="/admin/promotions/:id/products" component={PromotionProductsPage} />
               <AdminProtectedRoute path="/admin/orders" component={AdminOrders} />
               <AdminProtectedRoute path="/admin/orders/:id" component={AdminOrderDetail} />
+              <AdminProtectedRoute path="/admin/supplier-orders" component={SupplierOrders} />
               <AdminProtectedRoute path="/admin/users" component={UserAdminPageFixed} />
               <AdminProtectedRoute path="/admin/ai-settings" component={AdminAISettings} />
               <AdminProtectedRoute path="/admin/batch-upload" component={BatchUpload} />
