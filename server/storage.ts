@@ -1461,7 +1461,7 @@ export class DatabaseStorage implements IStorage {
           'costPrice': products.costPrice,
           'stock': products.stock,
           'createdAt': products.createdAt,
-          'publishedAt': products.publishedAt,
+          'publishedAt': products.createdAt, // Use createdAt as publishedAt since there's no separate publishedAt field
           'displayOrder': products.displayOrder,
           'brand': products.brand,
           'isActive': products.isActive,
