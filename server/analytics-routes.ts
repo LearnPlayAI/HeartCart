@@ -15,7 +15,7 @@ router.get('/favourites', isAuthenticated, asyncHandler(async (req, res) => {
   
   try {
     // Get basic favourites analytics using existing methods
-    const favourites = await storage.getFavouritesByUser(req.user?.id || 0);
+    const favourites = await storage.getUserFavourites(req.user?.id || 0);
     const totalFavourites = favourites.length;
     
     const analyticsData = {
