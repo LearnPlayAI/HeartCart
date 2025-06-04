@@ -284,12 +284,9 @@ export const DraftDashboard: React.FC = () => {
     setSelectedChildCategory('all'); // Reset child category when parent changes
   };
 
-  // Filter drafts with category filtering and exclude published products
+  // Filter drafts with category filtering
   const filteredDrafts = useMemo(() => {
-    let filtered = enrichedDrafts.filter((draft: ProductDraft) => {
-      // Exclude published products from the drafts view
-      return draft.draftStatus !== 'published';
-    });
+    let filtered = enrichedDrafts;
 
     // Apply category filtering
     if (selectedParentCategory && selectedParentCategory !== 'all') {
