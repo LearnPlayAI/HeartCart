@@ -422,6 +422,11 @@ const SupplierOrders = () => {
                       <CardDescription>
                         Order #{order.customerOrder.orderNumber} • {order.customerOrder.customerName}
                       </CardDescription>
+                      {order.product.sku && (
+                        <div className="text-xs text-muted-foreground font-mono">
+                          SKU: {order.product.sku}
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -459,12 +464,6 @@ const SupplierOrders = () => {
                           <span className="text-muted-foreground">Created:</span>
                           <span>{formatDate(order.createdAt)}</span>
                         </div>
-                        {order.product.sku && (
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">SKU:</span>
-                            <span className="font-mono text-xs">{order.product.sku}</span>
-                          </div>
-                        )}
                       </div>
                     </div>
 
