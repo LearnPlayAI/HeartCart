@@ -10,6 +10,7 @@ import { useCredits } from '@/hooks/use-credits';
 import { formatCurrency } from '@/lib/utils';
 import { Link } from 'wouter';
 import { calculateShippingCost } from '@/utils/pricing';
+import { useQuery } from '@tanstack/react-query';
 
 const CartDrawer = () => {
   const { 
@@ -25,6 +26,14 @@ const CartDrawer = () => {
   
   const { creditBalance, formattedBalance, transactions } = useCredits();
   
+  // Fetch user orders to check for shipped orders after credits were issued
+  const { data: ordersResponse } = useQuery({
+    queryKey: ['/api/orders'],
+    enabled: !!creditBalance // Only fetch if user has credit balance
+  });
+  
+  const userOrders = ordersResponse?.success ? ordersResponse.data : [];
+  
   // Use the cart summary data which already includes all calculations
   const { subtotal, finalTotal, totalDiscount } = cartSummary;
   
@@ -34,7 +43,8 @@ const CartDrawer = () => {
   const { shippingCost: shipping, isShippingWaived, reasonForWaiver } = calculateShippingCost(
     baseShipping,
     transactions || [],
-    availableCredit
+    availableCredit,
+    userOrders
   );
   
   const cartTotal = finalTotal + shipping;

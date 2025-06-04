@@ -167,7 +167,8 @@ export function calculateAutoCreditApplication(
 export function calculateShippingCost(
   baseShippingCost: number,
   creditTransactions: any[],
-  availableCredits: number
+  availableCredits: number,
+  userOrders: any[] = []
 ): { 
   shippingCost: number;
   isShippingWaived: boolean;
@@ -189,18 +190,31 @@ export function calculateShippingCost(
     parseFloat(transaction.amount) > 0
   );
 
-  // Check if any orders have been shipped (would indicate credits are from shipped orders)
-  const shippedOrderCredits = creditTransactions.filter(transaction =>
-    transaction.transactionType === 'earned' && 
-    !transaction.supplierOrderId && // No supplier order ID means it's from a shipped order refund
-    parseFloat(transaction.amount) > 0
-  );
+  // If no credits from unshipped orders, apply normal shipping
+  if (unshippedOrderCredits.length === 0) {
+    return {
+      shippingCost: baseShippingCost,
+      isShippingWaived: false
+    };
+  }
+
+  // Get the earliest credit transaction date from unshipped orders
+  const earliestCreditDate = unshippedOrderCredits.reduce((earliest, transaction) => {
+    const transactionDate = new Date(transaction.createdAt);
+    return !earliest || transactionDate < earliest ? transactionDate : earliest;
+  }, null as Date | null);
+
+  // Check if any orders have been shipped AFTER the credits were issued
+  const ordersShippedAfterCredits = userOrders.filter(order => {
+    if (!order.shippedAt || !earliestCreditDate) return false;
+    const shippedDate = new Date(order.shippedAt);
+    return shippedDate > earliestCreditDate;
+  });
 
   // Free shipping only if:
-  // 1. User has available credits
-  // 2. Credits originated from unshipped orders (have supplierOrderId)
-  // 3. No credits are from shipped orders
-  if (unshippedOrderCredits.length > 0 && shippedOrderCredits.length === 0) {
+  // 1. User has available credits from unshipped orders
+  // 2. No orders have been shipped since the credits were issued
+  if (ordersShippedAfterCredits.length === 0) {
     return {
       shippingCost: 0,
       isShippingWaived: true,

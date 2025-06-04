@@ -116,9 +116,16 @@ export default function CheckoutPage() {
     queryKey: ["/api/promotions/active-with-products"],
   });
 
+  // Fetch user orders to check for shipped orders after credits were issued
+  const { data: ordersResponse } = useQuery({
+    queryKey: ['/api/orders'],
+    enabled: !!creditBalance // Only fetch if user has credit balance
+  });
+
   // Extract cart items from the response
   const cartItems = cartResponse?.data || [];
   const activePromotions = promotionsResponse?.data || [];
+  const userOrders = ordersResponse?.success ? ordersResponse.data : [];
 
   // Create a map of product IDs to their promotional information
   const promotionMap = new Map();
@@ -223,7 +230,8 @@ export default function CheckoutPage() {
   const { shippingCost, isShippingWaived, reasonForWaiver } = calculateShippingCost(
     baseShippingCost,
     transactions || [],
-    availableCredit
+    availableCredit,
+    userOrders
   );
   const safeShippingCost = shippingCost || 0;
   const orderTotal = subtotal + safeShippingCost;
