@@ -139,7 +139,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
       addItem({
         productId: product.id,
         quantity: 1,
-        unitPrice: cartPrice,
+        itemPrice: cartPrice,
         attributeSelections: {}
       });
       
