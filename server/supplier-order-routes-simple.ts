@@ -15,6 +15,23 @@ const updateStatusSchema = z.object({
   expectedDelivery: z.string().optional(),
 });
 
+// GET /api/admin/supplier-orders/order/:orderId - Get supplier orders for a specific order
+router.get('/order/:orderId', isAuthenticated, isAdmin, asyncHandler(async (req, res) => {
+  const orderId = parseInt(req.params.orderId);
+  
+  if (isNaN(orderId)) {
+    return sendError(res, 'Invalid order ID', 400);
+  }
+  
+  try {
+    const supplierOrders = await storage.getSupplierOrdersByOrderId(orderId);
+    return sendSuccess(res, supplierOrders);
+  } catch (error) {
+    console.error('Error fetching supplier orders for order:', error);
+    return sendError(res, 'Failed to fetch supplier orders for order', 500);
+  }
+}));
+
 // GET /api/admin/supplier-orders - Get all order items that need supplier management
 router.get('/', isAuthenticated, isAdmin, asyncHandler(async (req, res) => {
   const { status = 'all', search = '' } = req.query;

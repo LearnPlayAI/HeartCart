@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Link } from 'wouter';
 import { 
   AlertTriangle, 
   Package, 
@@ -11,7 +12,8 @@ import {
   Filter,
   Search,
   Calendar,
-  CreditCard
+  CreditCard,
+  Eye
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -471,8 +473,13 @@ const SupplierOrders = () => {
                       <CardTitle className="text-lg">
                         {order.productName}
                       </CardTitle>
-                      <CardDescription>
-                        Order #{order.customerOrder.orderNumber} • {order.customerOrder.customerName}
+                      <CardDescription className="flex items-center gap-2">
+                        <Link href={`/admin/orders/${order.orderId}`}>
+                          <Button variant="link" size="sm" className="h-auto p-0 text-blue-600 hover:text-blue-800">
+                            Order #{order.customerOrder.orderNumber}
+                          </Button>
+                        </Link>
+                        • {order.customerOrder.customerName}
                       </CardDescription>
                       {order.product.sku && (
                         <div className="text-xs text-muted-foreground font-mono">
@@ -582,6 +589,17 @@ const SupplierOrders = () => {
                     <div>
                       <h4 className="font-medium mb-2">Actions</h4>
                       <div className="space-y-2">
+                        {/* View Order Button */}
+                        <Link href={`/admin/orders/${order.orderId}`}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full flex items-center gap-1"
+                          >
+                            <Eye className="h-3 w-3" />
+                            View Order Details
+                          </Button>
+                        </Link>
                         {order.status === 'pending' && (
                           <>
                             <Button
