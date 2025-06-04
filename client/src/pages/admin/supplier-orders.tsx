@@ -651,6 +651,23 @@ const SupplierOrders = () => {
                           </Button>
                         )}
 
+                        {order.status === 'received' && (
+                          <Button
+                            variant="default"
+                            size="sm"
+                            onClick={() => updateStatusMutation.mutate({ 
+                              orderId: order.id, 
+                              status: 'shipped',
+                              notes: 'Item shipped to customer'
+                            })}
+                            disabled={updateStatusMutation.isPending}
+                            className="w-full flex items-center gap-1"
+                          >
+                            <Truck className="h-3 w-3" />
+                            Mark as Shipped
+                          </Button>
+                        )}
+
                         {order.status === 'unavailable' && (
                           <Button
                             variant="outline"

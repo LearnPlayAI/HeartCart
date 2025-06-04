@@ -76,7 +76,7 @@ async function updateMainOrderStatusBasedOnSupplierOrders(orderItemId: number) {
 
 // Validation schemas
 const updateStatusSchema = z.object({
-  status: z.enum(['pending', 'ordered', 'unavailable', 'received']),
+  status: z.enum(['pending', 'ordered', 'unavailable', 'received', 'shipped']),
   notes: z.string().optional(),
   supplierOrderNumber: z.string().optional(),
   expectedDelivery: z.string().optional(),
