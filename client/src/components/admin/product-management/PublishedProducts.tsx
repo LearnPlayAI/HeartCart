@@ -150,6 +150,13 @@ export const PublishedProducts: React.FC = () => {
         params.append('categoryId', selectedParentCategory);
       }
       
+      if (maxTmyFilter && maxTmyFilter.trim() !== '') {
+        const minTmyThreshold = parseFloat(maxTmyFilter);
+        if (!isNaN(minTmyThreshold)) {
+          params.append('minTmyPercent', String(minTmyThreshold));
+        }
+      }
+      
       const response = await apiRequest('GET', `/api/products?${params.toString()}`);
       return response.json();
     }

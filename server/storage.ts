@@ -1306,7 +1306,7 @@ export class DatabaseStorage implements IStorage {
     offset = 0,
     categoryId?: number,
     search?: string,
-    options?: { includeInactive?: boolean; includeCategoryInactive?: boolean },
+    options?: { includeInactive?: boolean; includeCategoryInactive?: boolean; minTmyPercent?: number },
   ): Promise<{ products: Product[]; total: number }> {
     try {
       console.log('getAllProducts called with:', { limit, offset, categoryId, search, options });
@@ -1372,6 +1372,20 @@ export class DatabaseStorage implements IStorage {
           like(products.discountLabel || "", searchTerm)
         );
         allConditions.push(searchConditions);
+      }
+
+      // Add TMY percentage filter if provided
+      if (options?.minTmyPercent !== undefined && options.minTmyPercent > 0) {
+        // Create SQL condition for TMY calculation: ((effective_price - cost_price) / cost_price * 100) >= minTmyPercent
+        // Use COALESCE to handle nulls and ensure we don't divide by zero
+        const tmyCondition = sql`
+          CASE 
+            WHEN COALESCE(${products.costPrice}, 0) > 0 THEN
+              ((COALESCE(${products.salePrice}, ${products.price}, 0) - COALESCE(${products.costPrice}, 0)) / COALESCE(${products.costPrice}, 1) * 100) >= ${options.minTmyPercent}
+            ELSE FALSE
+          END
+        `;
+        allConditions.push(tmyCondition);
       }
 
       // Handle category filtering with joins if needed
