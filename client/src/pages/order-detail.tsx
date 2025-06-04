@@ -143,10 +143,16 @@ const OrderDetail: React.FC = () => {
   const { 
     data: orderResponse, 
     isLoading, 
-    isError 
+    isError,
+    refetch 
   } = useQuery<{success: boolean; data: OrderType}>({
     queryKey: [`/api/orders/${orderId}`],
     enabled: !!orderId,
+    staleTime: 0, // Always consider data stale
+    gcTime: 0, // Don't cache data for long
+    refetchOnMount: 'always', // Always refetch when component mounts
+    refetchOnWindowFocus: true, // Refetch when window regains focus
+    refetchOnReconnect: true, // Refetch when reconnecting to network
   });
 
   const order = orderResponse?.success ? orderResponse.data : null;
@@ -647,10 +653,16 @@ const OrderDetail: React.FC = () => {
                 <div className="flex justify-between">
                   <span>Status</span>
                   <Badge 
-                    variant={order.paymentStatus === 'paid' || order.status === 'payment received' ? 'default' : 'secondary'}
-                    className={`capitalize ${(order.paymentStatus === 'paid' || order.status === 'payment received') ? 'bg-green-600 hover:bg-green-700' : ''}`}
+                    variant={order.paymentStatus === 'paid' ? 'default' : 'secondary'}
+                    className={`capitalize ${
+                      order.paymentStatus === 'paid' 
+                        ? 'bg-green-600 hover:bg-green-700' 
+                        : order.status === 'payment received' 
+                          ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                          : ''
+                    }`}
                   >
-                    {order.status === 'payment received' ? 'Paid' : order.paymentStatus}
+                    {order.status === 'payment received' ? 'Payment Received' : order.paymentStatus}
                   </Badge>
                 </div>
               </CardContent>
