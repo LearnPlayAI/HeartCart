@@ -103,6 +103,7 @@ export const PublishedProducts: React.FC = () => {
   const [selectedParentCategory, setSelectedParentCategory] = useState<string>('');
   const [selectedChildCategory, setSelectedChildCategory] = useState<string>('');
   const [maxTmyFilter, setMaxTmyFilter] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   
   // Duplicate detection state
   const [showDuplicates, setShowDuplicates] = useState(false);
@@ -132,7 +133,8 @@ export const PublishedProducts: React.FC = () => {
       selectedChildCategory && selectedChildCategory !== 'all' ? selectedChildCategory :
       selectedParentCategory && selectedParentCategory !== 'all' ? selectedParentCategory :
       'all',
-      maxTmyFilter
+      maxTmyFilter,
+      statusFilter
     ],
     queryFn: async () => {
       const params = new URLSearchParams({
@@ -155,6 +157,10 @@ export const PublishedProducts: React.FC = () => {
         if (!isNaN(minTmyThreshold)) {
           params.append('minTmyPercent', String(minTmyThreshold));
         }
+      }
+      
+      if (statusFilter && statusFilter !== 'all') {
+        params.append('status', statusFilter);
       }
       
       const response = await apiRequest('GET', `/api/products?${params.toString()}`);

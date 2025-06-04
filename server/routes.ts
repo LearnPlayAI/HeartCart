@@ -743,7 +743,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/products", 
     validateRequest({ query: productsQuerySchema }),
     withStandardResponse(async (req: Request, res: Response) => {
-      const { limit, offset, categoryId, search, minTmyPercent } = req.query;
+      const { limit, offset, categoryId, search, minTmyPercent, status } = req.query;
       
       const user = req.user as any;
       const isAdmin = user && user.role === 'admin';
@@ -751,7 +751,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const options = { 
         includeInactive: isAdmin, 
         includeCategoryInactive: isAdmin,
-        minTmyPercent: minTmyPercent ? Number(minTmyPercent) : undefined
+        minTmyPercent: minTmyPercent ? Number(minTmyPercent) : undefined,
+        statusFilter: status as string | undefined
       };
       
       // Get products with pagination data

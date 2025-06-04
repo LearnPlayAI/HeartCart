@@ -215,7 +215,8 @@ export const productsQuerySchema = z.object({
     z.literal("all")
   ]).optional(),
   search: z.string().trim().optional(),
-  minTmyPercent: z.coerce.number().min(0).max(1000).optional()
+  minTmyPercent: z.coerce.number().min(0).max(1000).optional(),
+  status: z.enum(['active', 'inactive', 'all']).optional()
 });
 
 /**

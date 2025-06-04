@@ -1306,7 +1306,7 @@ export class DatabaseStorage implements IStorage {
     offset = 0,
     categoryId?: number,
     search?: string,
-    options?: { includeInactive?: boolean; includeCategoryInactive?: boolean; minTmyPercent?: number },
+    options?: { includeInactive?: boolean; includeCategoryInactive?: boolean; minTmyPercent?: number; statusFilter?: string },
   ): Promise<{ products: Product[]; total: number }> {
     try {
       console.log('getAllProducts called with:', { limit, offset, categoryId, search, options });
@@ -1386,6 +1386,15 @@ export class DatabaseStorage implements IStorage {
           END
         `;
         allConditions.push(tmyCondition);
+      }
+
+      // Add status filter if provided (Active/Inactive products)
+      if (options?.statusFilter && options.statusFilter !== 'all') {
+        if (options.statusFilter === 'active') {
+          allConditions.push(eq(products.isActive, true));
+        } else if (options.statusFilter === 'inactive') {
+          allConditions.push(eq(products.isActive, false));
+        }
       }
 
       // Handle category filtering with joins if needed
