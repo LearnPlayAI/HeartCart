@@ -77,7 +77,7 @@ interface OrderItemType {
   quantity: number;
   unitPrice: number;
   totalPrice: number;
-  selectedAttributes: Record<string, string> | null;
+  selectedAttributes: Record<string, string | Record<string, number>> | null;
   attributeDisplayText: string | null;
   createdAt: string;
 }
@@ -368,35 +368,28 @@ const OrderDetail: React.FC = () => {
                           {item.selectedAttributes && Object.keys(item.selectedAttributes).length > 0 && (
                             <div className="mb-2">
                               {Object.entries(item.selectedAttributes).map(([attributeName, value]) => {
-                                // Calculate quantity distribution for each attribute option
-                                const getQuantityBreakdown = (attrValue: string | string[]) => {
-                                  if (Array.isArray(attrValue)) {
-                                    // Count occurrences of each value
-                                    const counts: Record<string, number> = {};
-                                    attrValue.forEach(val => {
-                                      counts[val] = (counts[val] || 0) + 1;
-                                    });
-                                    return counts;
-                                  } else {
-                                    // Single value gets the full item quantity
-                                    return { [attrValue]: item.quantity };
-                                  }
-                                };
-
-                                const quantityBreakdown = getQuantityBreakdown(value);
-
                                 return (
                                   <div key={attributeName} className="flex items-center gap-2 flex-wrap mb-2">
                                     <span className="font-medium text-sm">{attributeName}:</span>
                                     <div className="flex gap-2 flex-wrap">
-                                      {Object.entries(quantityBreakdown).map(([optionValue, count]) => (
-                                        <Badge 
-                                          key={optionValue} 
-                                          className="bg-[#ff69b4] text-[#ffffff] text-xs"
-                                        >
-                                          {optionValue} x{count}
+                                      {typeof value === 'object' && value !== null ? (
+                                        // Handle quantity-based attributes like {"Boy": 2, "Girl": 1}
+                                        Object.entries(value as Record<string, number>)
+                                          .filter(([, qty]) => qty > 0)
+                                          .map(([optionValue, count]) => (
+                                            <Badge 
+                                              key={optionValue} 
+                                              className="bg-[#ff69b4] text-[#ffffff] text-xs"
+                                            >
+                                              {optionValue} x{count}
+                                            </Badge>
+                                          ))
+                                      ) : (
+                                        // Handle simple string values
+                                        <Badge className="bg-[#ff69b4] text-[#ffffff] text-xs">
+                                          {String(value)}
                                         </Badge>
-                                      ))}
+                                      )}
                                     </div>
                                   </div>
                                 );
