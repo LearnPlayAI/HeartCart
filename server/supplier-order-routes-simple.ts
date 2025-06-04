@@ -155,7 +155,7 @@ router.patch('/:id/status', isAuthenticated, isAdmin, asyncHandler(async (req, r
       }
     }
     
-    return sendSuccess(res, updatedOrder);
+    return sendSuccess(res, updatedStatus);
   } catch (error) {
     console.error('Error updating supplier order status:', error);
     return sendError(res, 'Failed to update supplier order status', 500);
