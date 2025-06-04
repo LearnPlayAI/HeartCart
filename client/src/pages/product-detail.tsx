@@ -468,17 +468,45 @@ const ProductDetailContent = ({
             
             {/* Price */}
             <div className="flex items-baseline">
-              <span className="text-3xl font-bold text-[#FF69B4]">
-                {formatCurrency(product.salePrice || product.price)}
-              </span>
-              {product.salePrice && (
+              {promotionInfo ? (
+                // Promotional pricing display
                 <>
+                  <span className="text-3xl font-bold text-[#FF69B4]">
+                    {formatCurrency(
+                      promotionInfo.promotionDiscountType === 'percentage' 
+                        ? product.price - (product.price * promotionInfo.promotionDiscount / 100)
+                        : product.price - promotionInfo.promotionDiscount
+                    )}
+                  </span>
                   <span className="text-gray-500 text-lg ml-2 line-through">
                     {formatCurrency(product.price)}
                   </span>
                   <span className="ml-2 px-2 py-1 bg-[#FF69B4]/10 text-[#FF69B4] rounded-full text-sm">
-                    {discount}% OFF
+                    {promotionInfo.promotionDiscountType === 'percentage' 
+                      ? `${promotionInfo.promotionDiscount}% OFF`
+                      : `${formatCurrency(promotionInfo.promotionDiscount)} OFF`
+                    }
                   </span>
+                  <span className="ml-2 px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">
+                    {promotionInfo.promotionName}
+                  </span>
+                </>
+              ) : (
+                // Regular pricing display
+                <>
+                  <span className="text-3xl font-bold text-[#FF69B4]">
+                    {formatCurrency(product.salePrice || product.price)}
+                  </span>
+                  {product.salePrice && (
+                    <>
+                      <span className="text-gray-500 text-lg ml-2 line-through">
+                        {formatCurrency(product.price)}
+                      </span>
+                      <span className="ml-2 px-2 py-1 bg-[#FF69B4]/10 text-[#FF69B4] rounded-full text-sm">
+                        {discount}% OFF
+                      </span>
+                    </>
+                  )}
                 </>
               )}
             </div>

@@ -49,11 +49,37 @@ export default function MyFavourites() {
     },
   });
 
+  // Fetch active promotions to check if favourited products are promotional
+  const { data: promotionsResponse } = useQuery({
+    queryKey: ['/api/promotions/active-with-products'],
+  });
+
   const favourites = favouritesData?.data || [];
 
   // Debug: Log the data structure
   console.log('favouritesData:', favouritesData);
   console.log('favourites array:', favourites);
+
+  // Create promotional pricing lookup
+  const productPromotions = useMemo(() => {
+    const map = new Map();
+    if (promotionsResponse?.success && promotionsResponse?.data) {
+      const activePromotions = promotionsResponse.data;
+      activePromotions.forEach((promo: any) => {
+        if (promo.products) {
+          promo.products.forEach((pp: any) => {
+            map.set(pp.productId, {
+              promotionName: promo.promotionName,
+              promotionDiscount: pp.discountOverride || promo.discountValue,
+              promotionDiscountType: promo.discountType,
+              promotionEndDate: promo.endDate
+            });
+          });
+        }
+      });
+    }
+    return map;
+  }, [promotionsResponse]);
 
   // Filter and sort favourites
   const filteredAndSortedFavourites = useMemo(() => {
@@ -308,6 +334,7 @@ export default function MyFavourites() {
                     key={favourite.id}
                     product={product}
                     showAddToCart={true}
+                    promotionInfo={productPromotions.get(product.id)}
                   />
                 );
               })}
