@@ -10,6 +10,7 @@ export interface PricingInfo {
   hasDiscount: boolean;
   promotionPrice?: number;
   salePrice?: number;
+  extraPromotionalDiscount?: number; // Extra discount percentage from sale price to promotional price
 }
 
 export interface PromotionInfo {
@@ -32,6 +33,7 @@ export function calculateProductPricing(
   const originalPrice = basePrice;
   let finalPrice = basePrice;
   let totalDiscountPercentage = 0;
+  let extraPromotionalDiscount = 0;
 
   // Apply sale price if available
   if (salePrice && salePrice < basePrice) {
@@ -41,10 +43,17 @@ export function calculateProductPricing(
 
   // Apply promotional pricing
   if (promotionInfo) {
+    const priceBeforePromotion = finalPrice; // This could be base price or sale price
+    
     // Priority 1: Use direct promotional price if available
     if (promotionInfo.promotionalPrice && promotionInfo.promotionalPrice > 0) {
       finalPrice = promotionInfo.promotionalPrice;
       totalDiscountPercentage = ((basePrice - finalPrice) / basePrice) * 100;
+      
+      // Calculate extra promotional discount from the price before promotion
+      if (priceBeforePromotion > finalPrice) {
+        extraPromotionalDiscount = ((priceBeforePromotion - finalPrice) / priceBeforePromotion) * 100;
+      }
     } else {
       // Priority 2: Apply promotional discount calculation
       const promotionDiscount = Number(promotionInfo.promotionDiscount) || 0;
@@ -53,12 +62,17 @@ export function calculateProductPricing(
         // Apply percentage discount to the current price (base or sale)
         const discountAmount = finalPrice * (promotionDiscount / 100);
         finalPrice = finalPrice - discountAmount;
+        extraPromotionalDiscount = promotionDiscount;
         
         // Calculate total discount from original base price
         totalDiscountPercentage = ((basePrice - finalPrice) / basePrice) * 100;
       } else if (promotionInfo.promotionDiscountType === 'fixed') {
         // Apply fixed amount discount
-        finalPrice = Math.max(0, finalPrice - promotionDiscount);
+        const newPrice = Math.max(0, finalPrice - promotionDiscount);
+        if (finalPrice > newPrice) {
+          extraPromotionalDiscount = ((finalPrice - newPrice) / finalPrice) * 100;
+        }
+        finalPrice = newPrice;
         totalDiscountPercentage = ((basePrice - finalPrice) / basePrice) * 100;
       }
     }
@@ -70,7 +84,8 @@ export function calculateProductPricing(
     discountPercentage: Math.round(totalDiscountPercentage),
     hasDiscount: finalPrice < basePrice,
     promotionPrice: promotionInfo ? finalPrice : undefined,
-    salePrice: salePrice || undefined
+    salePrice: salePrice || undefined,
+    extraPromotionalDiscount: Math.round(extraPromotionalDiscount)
   };
 }
 
