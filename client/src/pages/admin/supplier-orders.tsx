@@ -165,13 +165,15 @@ const SupplierOrders = () => {
       if (context?.previousOrders) {
         queryClient.setQueryData(['/api/admin/supplier-orders'], context.previousOrders);
       }
-    },
-    onError: () => {
       toast({
         title: 'Update failed',
         description: 'Could not update supplier order status',
         variant: 'destructive',
       });
+    },
+    onSettled: () => {
+      // Always refetch after mutation settles (success or error)
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/supplier-orders'] });
     },
   });
 
