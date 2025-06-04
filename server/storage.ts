@@ -7203,6 +7203,8 @@ export class DatabaseStorage implements IStorage {
       childCategoryId?: number;
       minTmyPercent?: number;
       statusFilter?: string;
+      sortField?: string;
+      sortOrder?: 'asc' | 'desc';
     },
     userRole?: string
   ): Promise<{ drafts: ProductDraft[], total: number }> {
@@ -7291,11 +7293,36 @@ export class DatabaseStorage implements IStorage {
       const [countResult] = await countQuery;
       const total = countResult?.count || 0;
 
-      // Get paginated results with ordering by last_modified DESC
+      // Get paginated results with dynamic sorting
       let query = db
         .select()
-        .from(productDrafts)
-        .orderBy(desc(productDrafts.lastModified));
+        .from(productDrafts);
+
+      // Apply sorting based on sortField and sortOrder
+      const sortField = options?.sortField || 'lastModified';
+      const sortOrder = options?.sortOrder || 'desc';
+      
+      // Map frontend field names to database columns
+      const sortFieldMap: Record<string, any> = {
+        'name': productDrafts.name,
+        'sku': productDrafts.sku,
+        'lastModified': productDrafts.lastModified,
+        'createdAt': productDrafts.createdAt,
+        'draftStatus': productDrafts.draftStatus,
+        'regularPrice': productDrafts.regularPrice,
+        'salePrice': productDrafts.salePrice,
+        'costPrice': productDrafts.costPrice,
+        'categoryId': productDrafts.categoryId,
+        'isActive': productDrafts.isActive
+      };
+
+      const sortColumn = sortFieldMap[sortField] || productDrafts.lastModified;
+      
+      if (sortOrder === 'asc') {
+        query = query.orderBy(asc(sortColumn));
+      } else {
+        query = query.orderBy(desc(sortColumn));
+      }
 
       if (whereClause) {
         query = query.where(whereClause);

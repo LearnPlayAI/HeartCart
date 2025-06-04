@@ -79,6 +79,10 @@ export const DraftDashboard: React.FC = () => {
   const [maxTmyFilter, setMaxTmyFilter] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
+  // Sorting state
+  const [sortField, setSortField] = useState<string>('lastModified');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
@@ -115,7 +119,7 @@ export const DraftDashboard: React.FC = () => {
 
   // Fetch product drafts with search functionality and pagination
   const { data: draftsData, isLoading: isDraftsLoading, error: draftsError } = useQuery({
-    queryKey: ['/api/product-drafts', debouncedSearchQuery, currentPage, selectedParentCategory, selectedChildCategory, maxTmyFilter, statusFilter],
+    queryKey: ['/api/product-drafts', debouncedSearchQuery, currentPage, selectedParentCategory, selectedChildCategory, maxTmyFilter, statusFilter, sortField, sortOrder],
     queryFn: async () => {
       const searchParams = new URLSearchParams();
       if (debouncedSearchQuery) {
@@ -132,6 +136,12 @@ export const DraftDashboard: React.FC = () => {
       }
       if (statusFilter && statusFilter !== 'all') {
         searchParams.append('statusFilter', statusFilter);
+      }
+      if (sortField) {
+        searchParams.append('sortField', sortField);
+      }
+      if (sortOrder) {
+        searchParams.append('sortOrder', sortOrder);
       }
       searchParams.append('limit', itemsPerPage.toString());
       searchParams.append('offset', ((currentPage - 1) * itemsPerPage).toString());
