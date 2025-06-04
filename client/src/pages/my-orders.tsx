@@ -188,14 +188,14 @@ const MyOrdersPage: React.FC = () => {
   // Helper function to check if order has credits for unavailable items
   const getOrderCreditInfo = (orderId: number) => {
     const orderCredits = creditTransactions.filter((transaction: any) => 
-      transaction.type === 'credit' && 
+      transaction.transactionType === 'earned' && 
       transaction.description && 
       transaction.description.toLowerCase().includes('unavailable') &&
       transaction.orderId === orderId
     );
     
     if (orderCredits.length > 0) {
-      const totalCreditAmount = orderCredits.reduce((sum: number, credit: any) => sum + credit.amount, 0);
+      const totalCreditAmount = orderCredits.reduce((sum: number, credit: any) => sum + parseFloat(credit.amount), 0);
       return {
         hasCredits: true,
         creditAmount: totalCreditAmount,
