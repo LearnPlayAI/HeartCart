@@ -42,7 +42,10 @@ export default function MyFavourites() {
 
   const { data: favouritesData, isLoading, error } = useQuery({
     queryKey: ['/api/favourites', { withProducts: true }],
-    queryFn: () => apiRequest('GET', '/api/favourites?withProducts=true'),
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/favourites?withProducts=true');
+      return await response.json();
+    },
   });
 
   const favourites = favouritesData?.data || [];
