@@ -125,12 +125,14 @@ export const PublishedProducts: React.FC = () => {
   
   // Fetch published products with server-side pagination
   const { data: productsData, isLoading: isProductsLoading, error: productsError } = useQuery({
-    queryKey: ['/api/products', { 
-      limit: itemsPerPage, 
+    queryKey: ['/api/products', 
+      itemsPerPage, 
       offset, 
-      search: searchQuery,
-      categoryId: selectedChildCategory || selectedParentCategory || undefined
-    }],
+      searchQuery,
+      selectedChildCategory && selectedChildCategory !== 'all' ? selectedChildCategory :
+      selectedParentCategory && selectedParentCategory !== 'all' ? selectedParentCategory :
+      'all'
+    ],
     queryFn: async () => {
       const params = new URLSearchParams({
         limit: itemsPerPage.toString(),
