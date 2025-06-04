@@ -126,34 +126,45 @@ router.patch('/:id/status', isAuthenticated, isAdmin, asyncHandler(async (req, r
       return sendError(res, 'Supplier order not found', 404);
     }
     
-    // Handle credit generation for unavailable items
+    // Handle unavailable items: deactivate product and generate credit
     if (validation.data.status === 'unavailable') {
       const orderItem = await storage.getOrderItemById(orderId);
       if (orderItem?.order) {
-        const creditAmount = orderItem.totalPrice.toString();
-        
-        // Create credit transaction
-        await storage.createCreditTransaction({
-          userId: orderItem.order.userId,
-          transactionType: 'earned',
-          amount: creditAmount,
-          description: `Credit for unavailable item: ${orderItem.productName}`,
-          orderId: orderItem.orderId,
-        });
-        
-        // Update user credit balance
-        const currentBalance = await storage.getUserCreditBalance(orderItem.order.userId);
-        const newBalance = parseFloat(currentBalance.toString()) + parseFloat(creditAmount);
-        await storage.updateUserCreditBalance(orderItem.order.userId, newBalance);
-        
-        // Create notification
-        await storage.createNotification({
-          userId: orderItem.order.userId,
-          type: 'credit_issued',
-          title: 'Credit Issued',
-          message: `You have received R${creditAmount} credit for unavailable item: ${orderItem.productName}`,
-          isRead: false,
-        });
+        try {
+          // Deactivate the product since it's unavailable from supplier
+          await storage.updateProduct(orderItem.productId, { isActive: false });
+          console.log(`Product ${orderItem.productId} deactivated due to supplier unavailability`);
+          
+          const creditAmount = orderItem.totalPrice.toString();
+          
+          // Create credit transaction
+          await storage.createCreditTransaction({
+            userId: orderItem.order.userId,
+            transactionType: 'earned',
+            amount: creditAmount,
+            description: `Credit for unavailable item: ${orderItem.productName}`,
+            orderId: orderItem.orderId,
+          });
+          
+          // Update user credit balance
+          const currentBalance = await storage.getUserCreditBalance(orderItem.order.userId);
+          const newBalance = parseFloat(currentBalance.toString()) + parseFloat(creditAmount);
+          await storage.updateUserCreditBalance(orderItem.order.userId, newBalance);
+          
+          // Create notification
+          await storage.createNotification({
+            userId: orderItem.order.userId,
+            type: 'credit_issued',
+            title: 'Credit Issued',
+            message: `You have received R${creditAmount} credit for unavailable item: ${orderItem.productName}`,
+            isRead: false,
+          });
+          
+          console.log(`Credit of R${creditAmount} generated for user ${orderItem.order.userId} for unavailable item ${orderItem.productName}`);
+        } catch (creditError) {
+          console.error('Error processing unavailable item:', creditError);
+          // Continue execution even if credit generation fails
+        }
       }
     }
     
