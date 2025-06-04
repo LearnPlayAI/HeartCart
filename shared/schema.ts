@@ -313,6 +313,68 @@ export const batchUploadErrors = pgTable("batchUploadErrors", {
 });
 
 // =============================================================================
+// FAVOURITES AND ANALYTICS SYSTEM TABLES
+// =============================================================================
+
+// User Favourites table - tracks which products users have favourited
+export const userFavourites = pgTable("userFavourites", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  productId: integer("productId").notNull().references(() => products.id, { onDelete: "cascade" }),
+  createdAt: text("createdAt").default(String(new Date().toISOString())).notNull(),
+}, (table) => {
+  return {
+    userProductUnique: unique().on(table.userId, table.productId),
+    userIdIdx: index("user_favourites_user_id_idx").on(table.userId),
+    productIdIdx: index("user_favourites_product_id_idx").on(table.productId),
+  };
+});
+
+// Product Interactions table - comprehensive tracking of user engagement
+export const productInteractions = pgTable("productInteractions", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").references(() => users.id, { onDelete: "cascade" }),
+  sessionId: text("sessionId").notNull(), // For guest tracking
+  productId: integer("productId").notNull().references(() => products.id, { onDelete: "cascade" }),
+  interactionType: text("interactionType").notNull(), // 'view', 'add_to_cart', 'remove_from_cart', 'favourite', 'unfavourite'
+  ipAddress: text("ipAddress"),
+  userAgent: text("userAgent"),
+  referrer: text("referrer"),
+  createdAt: text("createdAt").default(String(new Date().toISOString())).notNull(),
+}, (table) => {
+  return {
+    userIdIdx: index("product_interactions_user_id_idx").on(table.userId),
+    productIdIdx: index("product_interactions_product_id_idx").on(table.productId),
+    sessionIdIdx: index("product_interactions_session_id_idx").on(table.sessionId),
+    interactionTypeIdx: index("product_interactions_type_idx").on(table.interactionType),
+    createdAtIdx: index("product_interactions_created_at_idx").on(table.createdAt),
+  };
+});
+
+// Abandoned Cart Tracking table - for email recovery campaigns
+export const abandonedCarts = pgTable("abandonedCarts", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").references(() => users.id, { onDelete: "cascade" }),
+  sessionId: text("sessionId").notNull(),
+  cartData: jsonb("cartData").notNull(), // Snapshot of cart items
+  emailSent: boolean("emailSent").default(false).notNull(),
+  discountApplied: boolean("discountApplied").default(false).notNull(),
+  discountCode: text("discountCode"),
+  discountPercentage: integer("discountPercentage"), // 5-15% range
+  recoveryEmailSentAt: text("recoveryEmailSentAt"),
+  recoveredAt: text("recoveredAt"),
+  createdAt: text("createdAt").default(String(new Date().toISOString())).notNull(),
+  updatedAt: text("updatedAt").default(String(new Date().toISOString())).notNull(),
+}, (table) => {
+  return {
+    userIdIdx: index("abandoned_carts_user_id_idx").on(table.userId),
+    sessionIdIdx: index("abandoned_carts_session_id_idx").on(table.sessionId),
+    emailSentIdx: index("abandoned_carts_email_sent_idx").on(table.emailSent),
+    createdAtIdx: index("abandoned_carts_created_at_idx").on(table.createdAt),
+  };
+});
+
+// =============================================================================
 // NEW ATTRIBUTE SYSTEM TABLES
 // Implementing the new hierarchical attribute system design
 // =============================================================================
@@ -498,6 +560,23 @@ export const insertBatchUploadSchema = createInsertSchema(batchUploads).omit({
   updatedAt: true,
 });
 
+// Favourites and Analytics insert schemas
+export const insertUserFavouriteSchema = createInsertSchema(userFavourites).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertProductInteractionSchema = createInsertSchema(productInteractions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertAbandonedCartSchema = createInsertSchema(abandonedCarts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Promotions table for campaign-based promotion management
 export const promotions = pgTable("promotions", {
   id: serial("id").primaryKey(),
@@ -617,6 +696,16 @@ export type InsertCatalog = z.infer<typeof insertCatalogSchema>;
 export type BatchUpload = typeof batchUploads.$inferSelect;
 export type BatchUploadError = typeof batchUploadErrors.$inferSelect;
 
+// Favourites and Analytics types
+export type UserFavourite = typeof userFavourites.$inferSelect;
+export type InsertUserFavourite = z.infer<typeof insertUserFavouriteSchema>;
+
+export type ProductInteraction = typeof productInteractions.$inferSelect;
+export type InsertProductInteraction = z.infer<typeof insertProductInteractionSchema>;
+
+export type AbandonedCart = typeof abandonedCarts.$inferSelect;
+export type InsertAbandonedCart = z.infer<typeof insertAbandonedCartSchema>;
+
 // =============================================================================
 // NEW ATTRIBUTE SYSTEM TYPES
 // =============================================================================
@@ -688,7 +777,9 @@ export const productsRelations = relations(products, ({ one, many }) => ({
     references: [catalogs.id]
   }),
   images: many(productImages),
-  productPromotions: many(productPromotions)
+  productPromotions: many(productPromotions),
+  favourites: many(userFavourites),
+  interactions: many(productInteractions)
 }));
 
 export const productImagesRelations = relations(productImages, ({ one }) => ({
@@ -708,6 +799,45 @@ export const catalogsRelations = relations(catalogs, ({ one, many }) => ({
 
 export const suppliersRelations = relations(suppliers, ({ many }) => ({
   catalogs: many(catalogs)
+}));
+
+// Favourites and Analytics Relations
+export const userFavouritesRelations = relations(userFavourites, ({ one }) => ({
+  user: one(users, {
+    fields: [userFavourites.userId],
+    references: [users.id]
+  }),
+  product: one(products, {
+    fields: [userFavourites.productId],
+    references: [products.id]
+  })
+}));
+
+export const productInteractionsRelations = relations(productInteractions, ({ one }) => ({
+  user: one(users, {
+    fields: [productInteractions.userId],
+    references: [users.id]
+  }),
+  product: one(products, {
+    fields: [productInteractions.productId],
+    references: [products.id]
+  })
+}));
+
+export const abandonedCartsRelations = relations(abandonedCarts, ({ one }) => ({
+  user: one(users, {
+    fields: [abandonedCarts.userId],
+    references: [users.id]
+  })
+}));
+
+// Update users relations to include favourites and interactions
+export const usersRelations = relations(users, ({ many }) => ({
+  favourites: many(userFavourites),
+  interactions: many(productInteractions),
+  abandonedCarts: many(abandonedCarts),
+  orders: many(orders),
+  cartItems: many(cartItems)
 }));
 
 // Orders relations
