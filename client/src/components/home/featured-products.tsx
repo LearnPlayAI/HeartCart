@@ -27,13 +27,14 @@ const FeaturedProductsSection = () => {
   const activePromotions = promotionsResponse?.success ? promotionsResponse.data : [];
   const productPromotions = new Map();
   
-  activePromotions.forEach(promo => {
+  activePromotions?.forEach(promo => {
     promo.products?.forEach((pp: any) => {
       productPromotions.set(pp.productId, {
         promotionName: promo.promotionName,
         promotionDiscount: pp.discountOverride || promo.discountValue,
         promotionDiscountType: promo.discountType,
-        promotionEndDate: promo.endDate
+        promotionEndDate: promo.endDate,
+        promotionalPrice: pp.promotionalPrice ? Number(pp.promotionalPrice) : null
       });
     });
   });

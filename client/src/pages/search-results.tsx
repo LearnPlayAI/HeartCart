@@ -62,6 +62,27 @@ const SearchResults = () => {
   // Extract products from standardized API response
   const products = response?.success ? response.data : [];
   
+  // Fetch active promotions to check if search results include promotional products
+  const { data: promotionsResponse } = useQuery<StandardApiResponse<any[]>>({
+    queryKey: ['/api/promotions/active-with-products'],
+  });
+  
+  // Create a map of product promotions for quick lookup
+  const activePromotions = promotionsResponse?.success ? promotionsResponse.data : [];
+  const productPromotions = new Map();
+  
+  activePromotions?.forEach(promo => {
+    promo.products?.forEach((pp: any) => {
+      productPromotions.set(pp.productId, {
+        promotionName: promo.promotionName,
+        promotionDiscount: pp.discountOverride || promo.discountValue,
+        promotionDiscountType: promo.discountType,
+        promotionEndDate: promo.endDate,
+        promotionalPrice: pp.promotionalPrice ? Number(pp.promotionalPrice) : null
+      });
+    });
+  });
+  
   // Reset page when query changes
   useEffect(() => {
     setPage(1);
@@ -214,6 +235,7 @@ const SearchResults = () => {
                   key={product.id}
                   product={product}
                   showAddToCart={true}
+                  promotionInfo={productPromotions.get(product.id)}
                 />
               ))}
             </div>
