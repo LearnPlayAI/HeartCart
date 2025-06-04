@@ -8235,14 +8235,40 @@ export class DatabaseStorage implements IStorage {
       }
 
       if (existingProductId) {
-        // Update existing product
-        const [updatedProduct] = await db
-          .update(products)
-          .set(productData)
+        // Update existing product - but first get existing data to preserve fields not in draft
+        const [existingProduct] = await db
+          .select()
+          .from(products)
           .where(eq(products.id, existingProductId))
-          .returning();
+          .limit(1);
 
-        product = updatedProduct;
+        if (existingProduct) {
+          // Create update data that preserves existing values when draft values are null/undefined
+          const updateData: Partial<InsertProduct> = {
+            ...productData,
+            // Preserve cost price if draft doesn't have it
+            costPrice: draft.costPrice ? parseFloat(String(draft.costPrice)) : existingProduct.costPrice,
+            // Preserve supplier ID if draft doesn't have it
+            supplierId: draft.supplierId !== undefined ? draft.supplierId : existingProduct.supplierId,
+            // Preserve catalog ID if draft doesn't have it
+            catalogId: draft.catalogId !== undefined ? draft.catalogId : existingProduct.catalogId,
+            // Preserve SKU if draft doesn't have it
+            sku: draft.sku || existingProduct.sku,
+            // Preserve other critical fields that might not be in draft
+            createdAt: existingProduct.createdAt, // Don't overwrite creation date
+            updatedAt: new Date().toISOString(), // Update the modification date
+          };
+
+          const [updatedProduct] = await db
+            .update(products)
+            .set(updateData)
+            .where(eq(products.id, existingProductId))
+            .returning();
+
+          product = updatedProduct;
+        } else {
+          throw new Error(`Existing product ${existingProductId} not found`);
+        }
 
         // Update product attributes using new centralized attribute system
         if (draft.attributes && Array.isArray(draft.attributes)) {
