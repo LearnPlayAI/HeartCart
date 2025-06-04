@@ -164,9 +164,10 @@ router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Respons
       });
     }
 
-    // Process credit application if specified
+    // Validate credit balance if specified, but don't deduct yet
     let finalPaymentStatus = "pending";
     let remainingBalance = orderData.total;
+    let shippingExemption = false;
     
     if (orderData.creditUsed && orderData.creditUsed > 0) {
       // Verify user has sufficient credit balance
@@ -175,6 +176,27 @@ router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Respons
       
       if (orderData.creditUsed > availableCredit) {
         return sendError(res, `Insufficient credit balance. Available: R${availableCredit.toFixed(2)}, Requested: R${orderData.creditUsed.toFixed(2)}`, 400);
+      }
+      
+      // Check if credits qualify for shipping exemption (from unshipped orders)
+      shippingExemption = await storage.checkShippingExemptionForCredits(userId, orderData.creditUsed);
+      
+      if (shippingExemption) {
+        // Recalculate total without shipping costs
+        const subtotalWithoutShipping = orderData.subtotal;
+        const newTotal = subtotalWithoutShipping;
+        
+        // Update order data with exempted shipping
+        orderData.total = newTotal;
+        orderData.shippingCost = 0;
+        
+        logger.info("Shipping exemption applied for credit usage", {
+          userId: userId,
+          creditUsed: orderData.creditUsed,
+          originalTotal: remainingBalance + orderData.creditUsed,
+          newTotal: newTotal,
+          shippingSaved: 85 // R85 shipping cost waived
+        });
       }
       
       // Calculate remaining balance after credit application
@@ -186,29 +208,12 @@ router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Respons
         remainingBalance = 0;
       }
       
-      // Create credit transaction for usage
-      await storage.createCreditTransaction({
-        userId: userId,
-        transactionType: 'used',
-        amount: orderData.creditUsed.toString(),
-        description: `Credit applied to order`,
-        orderId: null, // Will be updated after order creation
-      });
-      
-      // Update customer credit balance
-      const newAvailableBalance = availableCredit - orderData.creditUsed;
-      const currentTotalCredits = parseFloat(creditBalance.totalCreditAmount || '0');
-      
-      await storage.createOrUpdateCustomerCredit(userId, {
-        totalCreditAmount: currentTotalCredits.toString(),
-        availableCreditAmount: newAvailableBalance.toString(),
-      });
-      
-      logger.info("Credit applied to order", {
+      logger.info("Credit validation successful", {
         userId: userId,
         creditUsed: orderData.creditUsed,
         remainingBalance: remainingBalance,
-        newAvailableBalance: newAvailableBalance
+        availableCredit: availableCredit,
+        shippingExemption: shippingExemption
       });
     }
 
@@ -236,20 +241,45 @@ router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Respons
     // Create the order
     const newOrder = await storage.createOrder(order, orderItems);
     
-    // Update credit transaction with order ID if credit was used
+    // ONLY NOW deduct credits after successful order creation
     if (orderData.creditUsed && orderData.creditUsed > 0) {
-      // Find and update the credit transaction we just created
-      const creditTransactions = await storage.getCreditTransactionsByUser(userId);
-      const recentTransaction = creditTransactions.find(
-        t => t.transactionType === 'used' && 
-        t.amount === orderData.creditUsed.toString() && 
-        !t.orderId
-      );
+      // Get fresh credit balance
+      const creditBalance = await storage.getUserCreditBalance(userId);
+      const availableCredit = parseFloat(creditBalance.availableCredits || '0');
       
-      if (recentTransaction) {
-        await storage.updateCreditTransaction(recentTransaction.id, {
+      // Double-check credit availability (safety check)
+      if (orderData.creditUsed <= availableCredit) {
+        // Create credit transaction for usage
+        await storage.createCreditTransaction({
+          userId: userId,
+          transactionType: 'used',
+          amount: orderData.creditUsed.toString(),
+          description: `Credit applied to order #${newOrder.orderNumber}`,
           orderId: newOrder.id,
-          description: `Credit applied to order #${newOrder.orderNumber}`
+        });
+        
+        // Update customer credit balance
+        const newAvailableBalance = availableCredit - orderData.creditUsed;
+        const currentTotalCredits = parseFloat(creditBalance.totalCreditAmount || '0');
+        
+        await storage.createOrUpdateCustomerCredit(userId, {
+          totalCreditAmount: currentTotalCredits.toString(),
+          availableCreditAmount: newAvailableBalance.toString(),
+        });
+        
+        logger.info("Credit successfully deducted after order creation", {
+          userId: userId,
+          orderId: newOrder.id,
+          orderNumber: newOrder.orderNumber,
+          creditUsed: orderData.creditUsed,
+          newAvailableBalance: newAvailableBalance
+        });
+      } else {
+        logger.error("Credit balance changed during order creation", {
+          userId: userId,
+          orderId: newOrder.id,
+          requestedCredit: orderData.creditUsed,
+          actualAvailable: availableCredit
         });
       }
     }

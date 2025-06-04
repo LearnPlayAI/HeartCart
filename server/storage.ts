@@ -10895,6 +10895,68 @@ export class DatabaseStorage implements IStorage {
 
   // Credit System implementations
 
+  async checkShippingExemptionForCredits(userId: number, creditAmount: number): Promise<boolean> {
+    try {
+      // Get credit transactions that would be used (most recent earned credits first)
+      const creditTransactionsList = await db
+        .select()
+        .from(creditTransactions)
+        .where(
+          and(
+            eq(creditTransactions.userId, userId),
+            eq(creditTransactions.transactionType, 'earned'),
+            // Only consider credits that have an associated order (from unavailable items)
+            sql`${creditTransactions.orderId} IS NOT NULL`
+          )
+        )
+        .orderBy(desc(creditTransactions.createdAt));
+
+      let remainingCreditToCheck = creditAmount;
+      
+      // Check each credit transaction to see if it came from an unshipped order
+      for (const transaction of creditTransactionsList) {
+        if (remainingCreditToCheck <= 0) break;
+        
+        const transactionAmount = parseFloat(transaction.amount);
+        const creditToUse = Math.min(remainingCreditToCheck, transactionAmount);
+        
+        // Get the original order details
+        if (transaction.orderId) {
+          const [order] = await db
+            .select()
+            .from(orders)
+            .where(eq(orders.id, transaction.orderId));
+            
+          // If the order hasn't been shipped yet, user gets shipping exemption
+          if (order && order.status !== 'shipped' && order.status !== 'delivered') {
+            logger.info("Shipping exemption granted - credit from unshipped order", {
+              userId,
+              orderId: order.id,
+              orderStatus: order.status,
+              creditAmount: creditToUse
+            });
+            return true;
+          }
+        }
+        
+        remainingCreditToCheck -= creditToUse;
+      }
+      
+      logger.info("No shipping exemption - all credits from shipped orders", {
+        userId,
+        creditAmount
+      });
+      return false;
+    } catch (error) {
+      logger.error("Error checking shipping exemption for credits", {
+        error,
+        userId,
+        creditAmount
+      });
+      return false;
+    }
+  }
+
   async getUserCreditBalance(userId: number): Promise<CustomerCredit> {
     try {
       // First try to get existing credit record
