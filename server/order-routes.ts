@@ -30,7 +30,7 @@ const checkoutOrderSchema = z.object({
     productId: z.number(),
     quantity: z.number().min(1),
     unitPrice: z.number().min(0),
-    productAttributes: z.record(z.string()).optional(),
+    productAttributes: z.record(z.union([z.string(), z.record(z.number())])).optional(),
   })),
   shippingMethod: z.string(),
   shippingCost: z.number(),
@@ -81,20 +81,32 @@ const createOrderSchema = z.object({
     productId: z.number(),
     quantity: z.number(),
     unitPrice: z.number(),
-    productAttributes: z.record(z.string()).optional()
+    productAttributes: z.record(z.union([z.string(), z.record(z.number())])).optional()
   })),
   subtotal: z.number(),
   total: z.number()
 });
 
 // Helper function to generate attribute display text
-function generateAttributeDisplayText(attributes: Record<string, string>): string {
+function generateAttributeDisplayText(attributes: Record<string, string | Record<string, number>>): string {
   if (!attributes || Object.keys(attributes).length === 0) {
     return "";
   }
   
   return Object.entries(attributes)
-    .map(([key, value]) => `${key}: ${value}`)
+    .map(([key, value]) => {
+      if (typeof value === 'string') {
+        return `${key}: ${value}`;
+      } else if (typeof value === 'object' && value !== null) {
+        // Handle quantity-based attributes like {"Boy": 2, "Girl": 1}
+        const selections = Object.entries(value)
+          .filter(([, qty]) => qty > 0)
+          .map(([option, qty]) => qty > 1 ? `${option} x${qty}` : option)
+          .join(', ');
+        return `${key}: ${selections}`;
+      }
+      return `${key}: ${value}`;
+    })
     .join(", ");
 }
 
