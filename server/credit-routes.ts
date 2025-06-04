@@ -32,7 +32,7 @@ router.get("/balance", isAuthenticated, asyncHandler(async (req, res) => {
 }));
 
 // Get user's credit transaction history
-router.get("/transactions", requireAuth, asyncHandler(async (req, res) => {
+router.get("/transactions", isAuthenticated, asyncHandler(async (req, res) => {
   const userId = req.user!.id;
   const page = parseInt(req.query.page as string) || 1;
   const limit = parseInt(req.query.limit as string) || 20;
@@ -60,7 +60,7 @@ router.get("/transactions", requireAuth, asyncHandler(async (req, res) => {
 }));
 
 // Admin route: Add credits to a user
-router.post("/admin/add-credits", requireAuth, asyncHandler(async (req, res) => {
+router.post("/admin/add-credits", isAuthenticated, asyncHandler(async (req, res) => {
   if (req.user?.role !== 'admin') {
     return res.status(403).json({
       success: false,
@@ -93,7 +93,7 @@ router.post("/admin/add-credits", requireAuth, asyncHandler(async (req, res) => 
 }));
 
 // Admin route: Update order item supplier status
-router.put("/admin/supplier-status/:orderItemId", requireAuth, asyncHandler(async (req, res) => {
+router.put("/admin/supplier-status/:orderItemId", isAuthenticated, asyncHandler(async (req, res) => {
   if (req.user?.role !== 'admin') {
     return res.status(403).json({
       success: false,
@@ -141,7 +141,7 @@ router.put("/admin/supplier-status/:orderItemId", requireAuth, asyncHandler(asyn
 }));
 
 // Admin route: Get all supplier order statuses
-router.get("/admin/supplier-orders", requireAuth, asyncHandler(async (req, res) => {
+router.get("/admin/supplier-orders", isAuthenticated, asyncHandler(async (req, res) => {
   if (req.user?.role !== 'admin') {
     return res.status(403).json({
       success: false,
@@ -176,7 +176,7 @@ router.get("/admin/supplier-orders", requireAuth, asyncHandler(async (req, res) 
 }));
 
 // Admin route: Generate credit for specific order item
-router.post("/admin/generate-credit", requireAuth, asyncHandler(async (req, res) => {
+router.post("/admin/generate-credit", isAuthenticated, asyncHandler(async (req, res) => {
   if (req.user?.role !== 'admin') {
     return res.status(403).json({
       success: false,
