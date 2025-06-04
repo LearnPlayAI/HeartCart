@@ -50,6 +50,7 @@ import { registerDatabaseTestRoutes } from "./database-test-routes";
 import { registerApiTestRoutes } from "./api-test-routes";
 import analyticsRoutes from "./analytics-routes";
 import favouritesRoutes from "./favourites-routes";
+import creditRoutes from "./credit-routes";
 import { registerStorageTestRoutes } from "./storage-test-routes";
 import { registerFileManagerTestRoutes } from "./file-manager-test-routes";
 import { validateRequest, idSchema } from './validation-middleware';

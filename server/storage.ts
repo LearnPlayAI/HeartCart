@@ -68,6 +68,16 @@ import {
   abandonedCarts,
   type AbandonedCart,
   type InsertAbandonedCart,
+  // Credit system imports
+  customerCredits,
+  type CustomerCredit,
+  type InsertCustomerCredit,
+  creditTransactions,
+  type CreditTransaction,
+  type InsertCreditTransaction,
+  orderItemSupplierStatus,
+  type OrderItemSupplierStatus,
+  type InsertOrderItemSupplierStatus,
 } from "@shared/schema";
 import { db } from "./db";
 import {
@@ -480,6 +490,19 @@ export interface IStorage {
   updateAbandonedCart(id: number, updates: Partial<InsertAbandonedCart>): Promise<AbandonedCart | undefined>;
   markCartRecovered(id: number): Promise<boolean>;
   getAbandonedCartAnalytics(dateRange?: { from: string; to: string }): Promise<any>;
+
+  // Credit System operations
+  getUserCreditBalance(userId: number): Promise<CustomerCredit>;
+  getUserCreditTransactions(userId: number, limit?: number, offset?: number): Promise<CreditTransaction[]>;
+  addUserCredits(userId: number, amount: number, description: string, orderId?: number): Promise<CreditTransaction>;
+  useUserCredits(userId: number, amount: number, description: string, orderId: number): Promise<CreditTransaction>;
+  createOrUpdateCustomerCredit(userId: number): Promise<CustomerCredit>;
+  
+  // Order Item Supplier Status operations
+  getOrderItemById(orderItemId: number): Promise<(OrderItem & { order?: Order }) | undefined>;
+  updateOrderItemSupplierStatus(orderItemId: number, statusData: Partial<InsertOrderItemSupplierStatus>): Promise<OrderItemSupplierStatus>;
+  getSupplierOrderStatuses(status?: string, limit?: number, offset?: number): Promise<OrderItemSupplierStatus[]>;
+  getOrderItemSupplierStatus(orderItemId: number): Promise<OrderItemSupplierStatus | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -10592,6 +10615,333 @@ export class DatabaseStorage implements IStorage {
       };
     } catch (error) {
       logger.error('Error getting abandoned cart analytics', { error, dateRange });
+      throw error;
+    }
+  }
+
+  // Credit System implementations
+
+  async getUserCreditBalance(userId: number): Promise<CustomerCredit> {
+    try {
+      // First try to get existing credit record
+      const [existingCredit] = await db
+        .select()
+        .from(customerCredits)
+        .where(eq(customerCredits.userId, userId));
+
+      if (existingCredit) {
+        return existingCredit;
+      }
+
+      // If no credit record exists, create one with zero balance
+      return await this.createOrUpdateCustomerCredit(userId);
+    } catch (error) {
+      logger.error('Error getting user credit balance', { error, userId });
+      throw error;
+    }
+  }
+
+  async getUserCreditTransactions(userId: number, limit: number = 20, offset: number = 0): Promise<CreditTransaction[]> {
+    try {
+      const transactions = await db
+        .select()
+        .from(creditTransactions)
+        .where(eq(creditTransactions.userId, userId))
+        .orderBy(desc(creditTransactions.createdAt))
+        .limit(limit)
+        .offset(offset);
+
+      return transactions;
+    } catch (error) {
+      logger.error('Error getting user credit transactions', { error, userId, limit, offset });
+      throw error;
+    }
+  }
+
+  async addUserCredits(userId: number, amount: number, description: string, orderId?: number): Promise<CreditTransaction> {
+    try {
+      // Start transaction to ensure data consistency
+      return await db.transaction(async (tx) => {
+        // Get or create customer credit record
+        let [customerCredit] = await tx
+          .select()
+          .from(customerCredits)
+          .where(eq(customerCredits.userId, userId));
+
+        if (!customerCredit) {
+          // Create new credit record
+          [customerCredit] = await tx
+            .insert(customerCredits)
+            .values({
+              userId,
+              totalCredits: amount.toString(),
+              availableCredits: amount.toString(),
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            })
+            .returning();
+        } else {
+          // Update existing credit record
+          const newTotalCredits = parseFloat(customerCredit.totalCredits) + amount;
+          const newAvailableCredits = parseFloat(customerCredit.availableCredits) + amount;
+
+          [customerCredit] = await tx
+            .update(customerCredits)
+            .set({
+              totalCredits: newTotalCredits.toString(),
+              availableCredits: newAvailableCredits.toString(),
+              updatedAt: new Date().toISOString(),
+            })
+            .where(eq(customerCredits.userId, userId))
+            .returning();
+        }
+
+        // Create transaction record
+        const [transaction] = await tx
+          .insert(creditTransactions)
+          .values({
+            userId,
+            orderId,
+            transactionType: 'earned',
+            amount: amount.toString(),
+            description,
+            createdAt: new Date().toISOString(),
+          })
+          .returning();
+
+        return transaction;
+      });
+    } catch (error) {
+      logger.error('Error adding user credits', { error, userId, amount, description, orderId });
+      throw error;
+    }
+  }
+
+  async useUserCredits(userId: number, amount: number, description: string, orderId: number): Promise<CreditTransaction> {
+    try {
+      return await db.transaction(async (tx) => {
+        // Get customer credit record
+        const [customerCredit] = await tx
+          .select()
+          .from(customerCredits)
+          .where(eq(customerCredits.userId, userId));
+
+        if (!customerCredit) {
+          throw new Error('No credit balance found for user');
+        }
+
+        const availableCredits = parseFloat(customerCredit.availableCredits);
+        if (availableCredits < amount) {
+          throw new Error('Insufficient credit balance');
+        }
+
+        // Update credit balance
+        const newAvailableCredits = availableCredits - amount;
+        await tx
+          .update(customerCredits)
+          .set({
+            availableCredits: newAvailableCredits.toString(),
+            updatedAt: new Date().toISOString(),
+          })
+          .where(eq(customerCredits.userId, userId));
+
+        // Create transaction record
+        const [transaction] = await tx
+          .insert(creditTransactions)
+          .values({
+            userId,
+            orderId,
+            transactionType: 'used',
+            amount: amount.toString(),
+            description,
+            createdAt: new Date().toISOString(),
+          })
+          .returning();
+
+        return transaction;
+      });
+    } catch (error) {
+      logger.error('Error using user credits', { error, userId, amount, description, orderId });
+      throw error;
+    }
+  }
+
+  async createOrUpdateCustomerCredit(userId: number): Promise<CustomerCredit> {
+    try {
+      // Try to get existing record first
+      const [existingCredit] = await db
+        .select()
+        .from(customerCredits)
+        .where(eq(customerCredits.userId, userId));
+
+      if (existingCredit) {
+        return existingCredit;
+      }
+
+      // Create new credit record with zero balance
+      const [newCredit] = await db
+        .insert(customerCredits)
+        .values({
+          userId,
+          totalCredits: '0',
+          availableCredits: '0',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        })
+        .returning();
+
+      return newCredit;
+    } catch (error) {
+      logger.error('Error creating or updating customer credit', { error, userId });
+      throw error;
+    }
+  }
+
+  async getOrderItemById(orderItemId: number): Promise<(OrderItem & { order?: Order }) | undefined> {
+    try {
+      const [orderItem] = await db
+        .select({
+          id: orderItems.id,
+          orderId: orderItems.orderId,
+          productId: orderItems.productId,
+          productName: orderItems.productName,
+          productSku: orderItems.productSku,
+          productImageUrl: orderItems.productImageUrl,
+          quantity: orderItems.quantity,
+          unitPrice: orderItems.unitPrice,
+          totalPrice: orderItems.totalPrice,
+          selectedAttributes: orderItems.selectedAttributes,
+          attributeDisplayText: orderItems.attributeDisplayText,
+          createdAt: orderItems.createdAt,
+          // Join order details
+          order: {
+            id: orders.id,
+            userId: orders.userId,
+            orderNumber: orders.orderNumber,
+            status: orders.status,
+            customerName: orders.customerName,
+            customerEmail: orders.customerEmail,
+            customerPhone: orders.customerPhone,
+            shippingAddress: orders.shippingAddress,
+            shippingCity: orders.shippingCity,
+            shippingPostalCode: orders.shippingPostalCode,
+            shippingMethod: orders.shippingMethod,
+            shippingCost: orders.shippingCost,
+            paymentMethod: orders.paymentMethod,
+            paymentStatus: orders.paymentStatus,
+            paymentReceivedDate: orders.paymentReceivedDate,
+            subtotalAmount: orders.subtotalAmount,
+            totalAmount: orders.totalAmount,
+            creditUsed: orders.creditUsed,
+            remainingBalance: orders.remainingBalance,
+            customerNotes: orders.customerNotes,
+            adminNotes: orders.adminNotes,
+            trackingNumber: orders.trackingNumber,
+            createdAt: orders.createdAt,
+            updatedAt: orders.updatedAt,
+            shippedAt: orders.shippedAt,
+            deliveredAt: orders.deliveredAt,
+            eftPop: orders.eftPop,
+          },
+        })
+        .from(orderItems)
+        .leftJoin(orders, eq(orderItems.orderId, orders.id))
+        .where(eq(orderItems.id, orderItemId));
+
+      if (!orderItem) {
+        return undefined;
+      }
+
+      return {
+        ...orderItem,
+        order: orderItem.order.id ? orderItem.order : undefined,
+      };
+    } catch (error) {
+      logger.error('Error getting order item by ID', { error, orderItemId });
+      throw error;
+    }
+  }
+
+  async updateOrderItemSupplierStatus(orderItemId: number, statusData: Partial<InsertOrderItemSupplierStatus>): Promise<OrderItemSupplierStatus> {
+    try {
+      // First check if a record exists
+      const [existingStatus] = await db
+        .select()
+        .from(orderItemSupplierStatus)
+        .where(eq(orderItemSupplierStatus.orderItemId, orderItemId));
+
+      const now = new Date().toISOString();
+
+      if (existingStatus) {
+        // Update existing record
+        const [updatedStatus] = await db
+          .update(orderItemSupplierStatus)
+          .set({
+            ...statusData,
+            updatedAt: now,
+          })
+          .where(eq(orderItemSupplierStatus.orderItemId, orderItemId))
+          .returning();
+
+        return updatedStatus;
+      } else {
+        // Create new record - need to get order item details first
+        const orderItem = await this.getOrderItemById(orderItemId);
+        if (!orderItem) {
+          throw new Error('Order item not found');
+        }
+
+        const [newStatus] = await db
+          .insert(orderItemSupplierStatus)
+          .values({
+            orderItemId,
+            orderId: orderItem.orderId,
+            productId: orderItem.productId,
+            ...statusData,
+            createdAt: now,
+            updatedAt: now,
+          })
+          .returning();
+
+        return newStatus;
+      }
+    } catch (error) {
+      logger.error('Error updating order item supplier status', { error, orderItemId, statusData });
+      throw error;
+    }
+  }
+
+  async getSupplierOrderStatuses(status?: string, limit: number = 50, offset: number = 0): Promise<OrderItemSupplierStatus[]> {
+    try {
+      let query = db
+        .select()
+        .from(orderItemSupplierStatus)
+        .orderBy(desc(orderItemSupplierStatus.createdAt))
+        .limit(limit)
+        .offset(offset);
+
+      if (status) {
+        query = query.where(eq(orderItemSupplierStatus.supplierStatus, status));
+      }
+
+      const statuses = await query;
+      return statuses;
+    } catch (error) {
+      logger.error('Error getting supplier order statuses', { error, status, limit, offset });
+      throw error;
+    }
+  }
+
+  async getOrderItemSupplierStatus(orderItemId: number): Promise<OrderItemSupplierStatus | undefined> {
+    try {
+      const [status] = await db
+        .select()
+        .from(orderItemSupplierStatus)
+        .where(eq(orderItemSupplierStatus.orderItemId, orderItemId));
+
+      return status;
+    } catch (error) {
+      logger.error('Error getting order item supplier status', { error, orderItemId });
       throw error;
     }
   }
