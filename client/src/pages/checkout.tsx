@@ -109,18 +109,42 @@ export default function CheckoutPage() {
     refetchOnWindowFocus: true // Refetch when window gets focus
   });
 
+  // Fetch active promotions to apply promotional pricing
+  const { data: promotionsResponse } = useQuery({
+    queryKey: ["/api/promotions/active-with-products"],
+  });
+
   // Extract cart items from the response
   const cartItems = cartResponse?.data || [];
+  const activePromotions = promotionsResponse?.data || [];
+
+  // Create a map of product IDs to their promotional information
+  const promotionMap = new Map();
+  activePromotions.forEach((promotion: any) => {
+    if (promotion.promotionProducts) {
+      promotion.promotionProducts.forEach((pp: any) => {
+        promotionMap.set(pp.productId, {
+          promotionName: promotion.promotionName,
+          promotionDiscount: promotion.discountValue.toString(),
+          promotionEndDate: promotion.endDate,
+          promotionalPrice: pp.discountOverride || null
+        });
+      });
+    }
+  });
 
   // Calculate totals using unified promotional pricing system
   const subtotal = Array.isArray(cartItems) ? cartItems.reduce((sum: number, item: any) => {
     let currentPrice = 0;
     if (item.product) {
+      // Get promotional information for this product
+      const promotionInfo = promotionMap.get(item.product.id) || null;
+      
       // Use unified promotional pricing system with correct function signature
       const pricing = calculateProductPricing(
         item.product.price || 0,
         item.product.salePrice,
-        item.product.promotionInfo
+        promotionInfo
       );
       currentPrice = pricing.displayPrice;
     } else {
@@ -739,12 +763,13 @@ export default function CheckoutPage() {
                     <div className="text-right">
                       <div className="text-sm font-semibold text-primary">
                         R{(() => {
-                          // Use unified promotional pricing system with correct function signature
+                          // Use unified promotional pricing system with promotional info from map
                           if (item.product) {
+                            const promotionInfo = promotionMap.get(item.product.id) || null;
                             const pricing = calculateProductPricing(
                               item.product.price || 0,
                               item.product.salePrice,
-                              item.product.promotionInfo
+                              promotionInfo
                             );
                             return (pricing.displayPrice * item.quantity).toFixed(2);
                           } else {
@@ -758,10 +783,11 @@ export default function CheckoutPage() {
                         <div className="text-xs text-gray-500">
                           R{(() => {
                             if (item.product) {
+                              const promotionInfo = promotionMap.get(item.product.id) || null;
                               const pricing = calculateProductPricing(
                                 item.product.price || 0,
                                 item.product.salePrice,
-                                item.product.promotionInfo
+                                promotionInfo
                               );
                               return pricing.displayPrice.toFixed(2);
                             } else {
@@ -772,13 +798,13 @@ export default function CheckoutPage() {
                       )}
                       
                       {/* Show promotional badge if applicable */}
-                      {item.product && item.product.promotionInfo && (
+                      {item.product && promotionMap.get(item.product.id) && (
                         <div className="mt-1">
                           <Badge 
                             variant="secondary" 
                             className="bg-red-100 text-red-700 text-xs py-0 px-1 h-4"
                           >
-                            {getPromotionalBadgeText(item.product.promotionInfo)}
+                            {getPromotionalBadgeText(promotionMap.get(item.product.id))}
                           </Badge>
                         </div>
                       )}
