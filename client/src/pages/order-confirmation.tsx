@@ -17,7 +17,7 @@ interface OrderItem {
   quantity: number;
   unitPrice: number;
   totalPrice: number;
-  selectedAttributes: Record<string, string> | null;
+  selectedAttributes: Record<string, string | Record<string, number>> | null;
   attributeDisplayText: string | null;
   createdAt: string;
 }
@@ -236,35 +236,28 @@ export default function OrderConfirmationPage() {
                           {item.selectedAttributes && Object.keys(item.selectedAttributes).length > 0 && (
                             <div className="text-xs text-gray-600 mt-1">
                               {Object.entries(item.selectedAttributes).map(([attributeName, value]) => {
-                                // Calculate quantity distribution for each attribute option
-                                const getQuantityBreakdown = (attrValue: string | string[]) => {
-                                  if (Array.isArray(attrValue)) {
-                                    // Count occurrences of each value
-                                    const counts: Record<string, number> = {};
-                                    attrValue.forEach(val => {
-                                      counts[val] = (counts[val] || 0) + 1;
-                                    });
-                                    return counts;
-                                  } else {
-                                    // Single value gets the full item quantity
-                                    return { [attrValue]: item.quantity };
-                                  }
-                                };
-
-                                const quantityBreakdown = getQuantityBreakdown(value);
-
                                 return (
                                   <div key={attributeName} className="flex items-center gap-1 flex-wrap mb-1">
                                     <span className="font-medium">{attributeName}:</span>
                                     <div className="flex gap-1 flex-wrap">
-                                      {Object.entries(quantityBreakdown).map(([optionValue, count]) => (
-                                        <span 
-                                          key={optionValue} 
-                                          className="inline-flex items-center px-2 py-0.5 rounded bg-[#ff69b4] text-[#ffffff] text-xs"
-                                        >
-                                          {optionValue} x{count}
+                                      {typeof value === 'object' && value !== null ? (
+                                        // Handle quantity-based attributes like {"Boy": 2, "Girl": 1}
+                                        Object.entries(value as Record<string, number>)
+                                          .filter(([, qty]) => qty > 0)
+                                          .map(([optionValue, count]) => (
+                                            <span 
+                                              key={optionValue} 
+                                              className="inline-flex items-center px-2 py-0.5 rounded bg-[#ff69b4] text-[#ffffff] text-xs"
+                                            >
+                                              {optionValue} x{count}
+                                            </span>
+                                          ))
+                                      ) : (
+                                        // Handle simple string values
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded bg-[#ff69b4] text-[#ffffff] text-xs">
+                                          {String(value)}
                                         </span>
-                                      ))}
+                                      )}
                                     </div>
                                   </div>
                                 );
