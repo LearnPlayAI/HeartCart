@@ -466,6 +466,7 @@ export async function publishProductDraftComplete(draftId: number): Promise<Publ
           draftStatus: 'published',
           originalProductId: productResult.id,
           publishedVersion: (draft.publishedVersion || 0) + 1,
+          publishedAt: toSASTString(), // Set the published timestamp
           lastModified: toSASTString()
         })
         .where(eq(productDrafts.id, draftId));
