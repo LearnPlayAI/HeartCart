@@ -58,6 +58,7 @@ interface SupplierOrder {
     id: number;
     name: string;
     imageUrl?: string;
+    price?: number;
     supplierAvailable: boolean;
   };
 }
@@ -410,11 +411,15 @@ const SupplierOrders = () => {
                           <span>{order.quantity}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Unit Cost:</span>
+                          <span className="text-muted-foreground">Unit Cost (TMY):</span>
                           <span>{formatCurrency(order.unitCost)}</span>
                         </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Customer Price:</span>
+                          <span>{formatCurrency(order.product.price || order.unitCost * 1.5)}</span>
+                        </div>
                         <div className="flex justify-between font-medium">
-                          <span>Total Cost:</span>
+                          <span>Total Cost (TMY):</span>
                           <span>{formatCurrency(order.totalCost)}</span>
                         </div>
                         <div className="flex justify-between">
