@@ -7262,8 +7262,8 @@ export class DatabaseStorage implements IStorage {
       if (options?.minTmyPercent !== undefined && options.minTmyPercent > 0) {
         const tmyCondition = sql`
           CASE 
-            WHEN COALESCE(${productDrafts.costPrice}, 0) > 0 THEN
-              ((COALESCE(${productDrafts.salePrice}, ${productDrafts.regularPrice}, 0) - COALESCE(${productDrafts.costPrice}, 0)) / COALESCE(${productDrafts.costPrice}, 1) * 100) <= ${options.minTmyPercent}
+            WHEN COALESCE(cost_price, 0) > 0 THEN
+              ((COALESCE(sale_price, regular_price, 0) - COALESCE(cost_price, 0)) / COALESCE(cost_price, 1) * 100) <= ${options.minTmyPercent}
             ELSE FALSE
           END
         `;
@@ -7304,19 +7304,22 @@ export class DatabaseStorage implements IStorage {
       
       // Map frontend field names to database columns
       const sortFieldMap: Record<string, any> = {
-        'name': productDrafts.name,
-        'sku': productDrafts.sku,
-        'lastModified': productDrafts.lastModified,
-        'createdAt': productDrafts.createdAt,
-        'draftStatus': productDrafts.draftStatus,
-        'regularPrice': productDrafts.regularPrice,
-        'salePrice': productDrafts.salePrice,
-        'costPrice': productDrafts.costPrice,
-        'categoryId': productDrafts.categoryId,
-        'isActive': productDrafts.isActive
+        'name': sql`name`,
+        'sku': sql`sku`,
+        'lastModified': sql`last_modified`,
+        'createdAt': sql`created_at`,
+        'draftStatus': sql`draft_status`,
+        'regularPrice': sql`regular_price`,
+        'salePrice': sql`sale_price`,
+        'costPrice': sql`cost_price`,
+        'categoryId': sql`category_id`,
+        'parentCategory': sql`category_id`,
+        'childCategory': sql`category_id`,
+        'tmyPercentage': sql`CASE WHEN COALESCE(cost_price, 0) > 0 THEN ((COALESCE(sale_price, regular_price, 0) - COALESCE(cost_price, 0)) / COALESCE(cost_price, 1) * 100) ELSE 0 END`,
+        'isActive': sql`is_active`
       };
 
-      const sortColumn = sortFieldMap[sortField] || productDrafts.lastModified;
+      const sortColumn = sortFieldMap[sortField] || sql`last_modified`;
       
       if (sortOrder === 'asc') {
         query = query.orderBy(asc(sortColumn));
