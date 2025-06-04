@@ -290,10 +290,10 @@ export default function MyFavourites() {
                 : "grid-cols-1"
             }`}>
               {paginatedFavourites.map((favourite: FavouriteWithProduct) => {
-            const { product } = favourite;
-            const imageUrl = product.imageUrl || '/api/placeholder/300/300';
-            
-            return (
+                const { product } = favourite;
+                const imageUrl = product.imageUrl || '/api/placeholder/300/300';
+                
+                return (
               <Card key={favourite.id} className="group hover:shadow-lg transition-shadow duration-200">
                 <CardContent className="p-4">
                   <div className="relative mb-4">
@@ -380,26 +380,67 @@ export default function MyFavourites() {
                   </div>
                 </CardContent>
               </Card>
-            );
-          })}
-        </div>
+                );
+              })}
+            </div>
 
-        {/* Continue Shopping Section */}
-        <div className="mt-12 text-center">
-          <Card className="bg-gradient-to-r from-pink-50 to-purple-50 border-pink-200">
-            <CardContent className="py-8">
-              <h3 className="text-xl font-semibold mb-2">Keep Discovering</h3>
-              <p className="text-gray-600 mb-4">
-                Find more amazing products to add to your favourites.
-              </p>
-              <Link href="/products">
-                <Button className="bg-pink-600 hover:bg-pink-700">
-                  Browse All Products
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center space-x-2 mt-8">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(Math.max(1, page - 1))}
+                  disabled={page === 1}
+                >
+                  Previous
                 </Button>
-              </Link>
-            </CardContent>
-          </Card>
-        </div>
+                
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  const pageNum = Math.max(1, Math.min(totalPages - 4, page - 2)) + i;
+                  if (pageNum > totalPages) return null;
+                  
+                  return (
+                    <Button
+                      key={pageNum}
+                      variant={page === pageNum ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setPage(pageNum)}
+                    >
+                      {pageNum}
+                    </Button>
+                  );
+                })}
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(Math.min(totalPages, page + 1))}
+                  disabled={page === totalPages}
+                >
+                  Next
+                </Button>
+              </div>
+            )}
+
+            {/* Continue Shopping Section */}
+            <div className="mt-12 text-center">
+              <Card className="bg-gradient-to-r from-pink-50 to-purple-50 border-pink-200">
+                <CardContent className="py-8">
+                  <h3 className="text-xl font-semibold mb-2">Keep Discovering</h3>
+                  <p className="text-gray-600 mb-4">
+                    Find more amazing products to add to your favourites.
+                  </p>
+                  <Link href="/products">
+                    <Button className="bg-pink-600 hover:bg-pink-700">
+                      Browse All Products
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
