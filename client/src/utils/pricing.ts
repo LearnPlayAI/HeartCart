@@ -111,3 +111,25 @@ export function getPromotionTimeRemaining(endDate: string) {
   
   return { days, hours, minutes };
 }
+
+/**
+ * Generate promotional badge text in "EXTRA X% OFF" format
+ */
+export function getPromotionalBadgeText(promotionInfo: PromotionInfo): string {
+  if (!promotionInfo) return "";
+  
+  const discount = Number(promotionInfo.promotionDiscount) || 0;
+  
+  if (promotionInfo.promotionDiscountType === 'percentage') {
+    return `EXTRA ${Math.round(discount)}% OFF`;
+  } else if (promotionInfo.promotionDiscountType === 'fixed') {
+    return `EXTRA R${Math.round(discount)} OFF`;
+  }
+  
+  // Fallback for promotional pricing without explicit discount type
+  if (discount > 0) {
+    return `EXTRA ${Math.round(discount)}% OFF`;
+  }
+  
+  return "SPECIAL OFFER";
+}

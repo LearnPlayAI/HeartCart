@@ -14,6 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { calculateProductPricing, getPromotionalBadgeText } from "@/utils/pricing";
 import { 
   CreditCard, 
   Truck, 
@@ -111,19 +112,17 @@ export default function CheckoutPage() {
   // Extract cart items from the response
   const cartItems = cartResponse?.data || [];
 
-  // Calculate totals using current pricing logic (promotional price > sale price > base price)
+  // Calculate totals using unified promotional pricing system
   const subtotal = Array.isArray(cartItems) ? cartItems.reduce((sum: number, item: any) => {
-    // Use the same pricing hierarchy as product cards
     let currentPrice = 0;
     if (item.product) {
-      // Check for promotional price first, then sale price, then regular price
-      if (item.product.promotionalPrice && item.product.promotionalPrice > 0) {
-        currentPrice = item.product.promotionalPrice;
-      } else if (item.product.salePrice && item.product.salePrice > 0) {
-        currentPrice = item.product.salePrice;
-      } else {
-        currentPrice = item.product.price || 0;
-      }
+      // Use unified promotional pricing system with correct function signature
+      const pricing = calculateProductPricing(
+        item.product.price || 0,
+        item.product.salePrice,
+        item.product.promotionInfo
+      );
+      currentPrice = pricing.displayPrice;
     } else {
       // Fallback to stored itemPrice if no product data
       currentPrice = parseFloat(item.itemPrice || 0);
@@ -740,39 +739,47 @@ export default function CheckoutPage() {
                     <div className="text-right">
                       <div className="text-sm font-semibold text-primary">
                         R{(() => {
-                          // Use the same pricing hierarchy as product cards
-                          let currentPrice = 0;
+                          // Use unified promotional pricing system with correct function signature
                           if (item.product) {
-                            if (item.product.promotionalPrice && item.product.promotionalPrice > 0) {
-                              currentPrice = item.product.promotionalPrice;
-                            } else if (item.product.salePrice && item.product.salePrice > 0) {
-                              currentPrice = item.product.salePrice;
-                            } else {
-                              currentPrice = item.product.price || 0;
-                            }
+                            const pricing = calculateProductPricing(
+                              item.product.price || 0,
+                              item.product.salePrice,
+                              item.product.promotionInfo
+                            );
+                            return (pricing.displayPrice * item.quantity).toFixed(2);
                           } else {
-                            currentPrice = parseFloat(item.itemPrice || 0);
+                            // Fallback to itemPrice if no product data
+                            const currentPrice = parseFloat(item.itemPrice || 0);
+                            return (currentPrice * item.quantity).toFixed(2);
                           }
-                          return (currentPrice * item.quantity).toFixed(2);
                         })()}
                       </div>
                       {item.quantity > 1 && (
                         <div className="text-xs text-gray-500">
                           R{(() => {
-                            let currentPrice = 0;
                             if (item.product) {
-                              if (item.product.promotionalPrice && item.product.promotionalPrice > 0) {
-                                currentPrice = item.product.promotionalPrice;
-                              } else if (item.product.salePrice && item.product.salePrice > 0) {
-                                currentPrice = item.product.salePrice;
-                              } else {
-                                currentPrice = item.product.price || 0;
-                              }
+                              const pricing = calculateProductPricing(
+                                item.product.price || 0,
+                                item.product.salePrice,
+                                item.product.promotionInfo
+                              );
+                              return pricing.displayPrice.toFixed(2);
                             } else {
-                              currentPrice = parseFloat(item.itemPrice || 0);
+                              return parseFloat(item.itemPrice || 0).toFixed(2);
                             }
-                            return currentPrice.toFixed(2);
                           })()} each
+                        </div>
+                      )}
+                      
+                      {/* Show promotional badge if applicable */}
+                      {item.product && item.product.promotionInfo && (
+                        <div className="mt-1">
+                          <Badge 
+                            variant="secondary" 
+                            className="bg-red-100 text-red-700 text-xs py-0 px-1 h-4"
+                          >
+                            {getPromotionalBadgeText(item.product.promotionInfo)}
+                          </Badge>
                         </div>
                       )}
                     </div>
