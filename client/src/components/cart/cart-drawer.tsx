@@ -83,20 +83,30 @@ const CartDrawer = () => {
                   <div className="ml-3 flex-1">
                     <h4 className="font-medium text-sm text-gray-800 mb-1">{item.product.name}</h4>
                     <div className="text-[#FF69B4] font-bold text-sm flex items-center gap-2">
-                      {item.itemPrice ? (
-                        <>
-                          {formatCurrency(Number(item.itemPrice))} 
-                          
-                          {/* Show original price if on sale */}
-                          {item.product.salePrice && item.product.price > item.product.salePrice && (
-                            <span className="text-gray-500 line-through text-xs">
-                              {formatCurrency(item.product.price)}
-                            </span>
-                          )}
-                        </>
-                      ) : (
-                        formatCurrency((item.product.salePrice || item.product.price) + (item.priceAdjustment || 0))
-                      )}
+                      {(() => {
+                        // Use the same pricing hierarchy as product cards and checkout
+                        let currentPrice = 0;
+                        if (item.product.promotionalPrice && item.product.promotionalPrice > 0) {
+                          currentPrice = item.product.promotionalPrice;
+                        } else if (item.product.salePrice && item.product.salePrice > 0) {
+                          currentPrice = item.product.salePrice;
+                        } else {
+                          currentPrice = item.product.price || 0;
+                        }
+                        
+                        return (
+                          <>
+                            {formatCurrency(currentPrice + (item.priceAdjustment || 0))}
+                            
+                            {/* Show original price if on sale */}
+                            {(item.product.promotionalPrice || item.product.salePrice) && item.product.price > currentPrice && (
+                              <span className="text-gray-500 line-through text-xs">
+                                {formatCurrency(item.product.price)}
+                              </span>
+                            )}
+                          </>
+                        );
+                      })()}
                     </div>
                     
                     {/* Display selected attributes with quantity breakdown */}

@@ -111,11 +111,26 @@ export default function CheckoutPage() {
   // Extract cart items from the response
   const cartItems = cartResponse?.data || [];
 
-  // Calculate totals
+  // Calculate totals using current pricing logic (promotional price > sale price > base price)
   const subtotal = Array.isArray(cartItems) ? cartItems.reduce((sum: number, item: any) => {
-    const itemPrice = parseFloat(item.itemPrice || 0);
+    // Use the same pricing hierarchy as product cards
+    let currentPrice = 0;
+    if (item.product) {
+      // Check for promotional price first, then sale price, then regular price
+      if (item.product.promotionalPrice && item.product.promotionalPrice > 0) {
+        currentPrice = item.product.promotionalPrice;
+      } else if (item.product.salePrice && item.product.salePrice > 0) {
+        currentPrice = item.product.salePrice;
+      } else {
+        currentPrice = item.product.price || 0;
+      }
+    } else {
+      // Fallback to stored itemPrice if no product data
+      currentPrice = parseFloat(item.itemPrice || 0);
+    }
+    
     const quantity = item.quantity || 0;
-    return sum + (itemPrice * quantity);
+    return sum + (currentPrice * quantity);
   }, 0) : 0;
 
   const form = useForm<CheckoutFormData>({
@@ -724,11 +739,40 @@ export default function CheckoutPage() {
                     {/* Price */}
                     <div className="text-right">
                       <div className="text-sm font-semibold text-primary">
-                        R{(parseFloat(item.itemPrice || 0) * item.quantity).toFixed(2)}
+                        R{(() => {
+                          // Use the same pricing hierarchy as product cards
+                          let currentPrice = 0;
+                          if (item.product) {
+                            if (item.product.promotionalPrice && item.product.promotionalPrice > 0) {
+                              currentPrice = item.product.promotionalPrice;
+                            } else if (item.product.salePrice && item.product.salePrice > 0) {
+                              currentPrice = item.product.salePrice;
+                            } else {
+                              currentPrice = item.product.price || 0;
+                            }
+                          } else {
+                            currentPrice = parseFloat(item.itemPrice || 0);
+                          }
+                          return (currentPrice * item.quantity).toFixed(2);
+                        })()}
                       </div>
                       {item.quantity > 1 && (
                         <div className="text-xs text-gray-500">
-                          R{parseFloat(item.itemPrice || 0).toFixed(2)} each
+                          R{(() => {
+                            let currentPrice = 0;
+                            if (item.product) {
+                              if (item.product.promotionalPrice && item.product.promotionalPrice > 0) {
+                                currentPrice = item.product.promotionalPrice;
+                              } else if (item.product.salePrice && item.product.salePrice > 0) {
+                                currentPrice = item.product.salePrice;
+                              } else {
+                                currentPrice = item.product.price || 0;
+                              }
+                            } else {
+                              currentPrice = parseFloat(item.itemPrice || 0);
+                            }
+                            return currentPrice.toFixed(2);
+                          })()} each
                         </div>
                       )}
                     </div>
