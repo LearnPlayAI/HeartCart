@@ -10909,7 +10909,10 @@ export class DatabaseStorage implements IStorage {
         .leftJoin(orderItemSupplierStatus, eq(orderItems.id, orderItemSupplierStatus.orderItemId))
         .where(
           and(
-            eq(orders.paymentStatus, 'paid'),
+            or(
+              eq(orders.paymentStatus, 'paid'),
+              eq(orders.paymentStatus, 'payment_received')
+            ),
             ...(filters?.status ? [eq(orderItemSupplierStatus.supplierStatus, filters.status)] : []),
             ...(filters?.orderId ? [eq(orders.id, filters.orderId)] : [])
           )
