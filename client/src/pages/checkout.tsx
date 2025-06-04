@@ -220,10 +220,10 @@ export default function CheckoutPage() {
   const baseShippingCost = shippingOptions.find(option => 
     option.id === selectedShippingMethod)?.price || 0;
   
-  const { cost: shippingCost, isWaived: isShippingWaived, reason: reasonForWaiver } = calculateShippingCost(
+  const { shippingCost, isShippingWaived, reasonForWaiver } = calculateShippingCost(
     baseShippingCost,
-    availableCredit,
-    transactions || []
+    transactions || [],
+    availableCredit
   );
   const safeShippingCost = shippingCost || 0;
   const orderTotal = subtotal + safeShippingCost;

@@ -29,7 +29,7 @@ const CartDrawer = () => {
   const { subtotal, finalTotal, totalDiscount } = cartSummary;
   
   // Calculate shipping with exemption logic
-  const availableCredit = creditBalance ? parseFloat(creditBalance.availableCredits) : 0;
+  const availableCredit = creditBalance?.availableCredits ? parseFloat(creditBalance.availableCredits) : 0;
   const baseShipping = subtotal > 0 ? 85 : 0;
   const { shippingCost: shipping, isShippingWaived, reasonForWaiver } = calculateShippingCost(
     baseShipping,
