@@ -283,6 +283,26 @@ const SupplierOrders = () => {
     return supplierMapping[supplierUrlOrId] || `https://supplier${supplierUrlOrId}.co.za`;
   };
 
+  // Get the specific product URL on the supplier website
+  const getProductUrl = (order: SupplierOrder) => {
+    const baseUrl = getSupplierUrl(order.supplierUrl);
+    const sku = order.product.sku;
+    
+    // If we have a SKU, construct the product-specific URL
+    if (sku) {
+      // For DMC Wholesale, use their search functionality with SKU
+      if (baseUrl.includes('dmcwholesale.co.za')) {
+        return `${baseUrl}/search?q=${encodeURIComponent(sku)}`;
+      }
+      
+      // For other suppliers, append SKU to search
+      return `${baseUrl}/search?q=${encodeURIComponent(sku)}`;
+    }
+    
+    // Fallback to supplier homepage if no SKU
+    return baseUrl;
+  };
+
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -491,11 +511,11 @@ const SupplierOrders = () => {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => window.open(getSupplierUrl(order.supplierUrl), '_blank')}
+                            onClick={() => window.open(getProductUrl(order), '_blank')}
                             className="flex items-center gap-1"
                           >
                             <ExternalLink className="h-3 w-3" />
-                            View Supplier
+                            View Product
                           </Button>
                           <Button
                             variant="outline"
