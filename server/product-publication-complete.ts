@@ -163,7 +163,7 @@ export async function publishProductDraftComplete(draftId: number): Promise<Publ
         
         // Pricing Fields - Complete Mapping with correct field names
         price: safeNumber(draft.regularPrice, 0), // Use camelCase field names
-        costPrice: safeNumber(draft.costPrice, 0),
+        costPrice: safeNumber((draft as any).cost_price, 0), // Use snake_case from drafts table
         salePrice: draft.salePrice ? safeNumber(draft.salePrice) : null,
         compareAtPrice: null, // Field doesn't exist in drafts table
         taxRatePercentage: null, // Field doesn't exist in drafts table
