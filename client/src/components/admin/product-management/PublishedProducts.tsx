@@ -141,9 +141,9 @@ export const PublishedProducts: React.FC = () => {
         params.append('search', searchQuery);
       }
       
-      if (selectedChildCategory) {
+      if (selectedChildCategory && selectedChildCategory !== 'all') {
         params.append('categoryId', selectedChildCategory);
-      } else if (selectedParentCategory) {
+      } else if (selectedParentCategory && selectedParentCategory !== 'all') {
         params.append('categoryId', selectedParentCategory);
       }
       
