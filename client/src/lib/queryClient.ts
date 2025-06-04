@@ -66,10 +66,11 @@ export async function apiRequest(
     requestData = data;
     requestOptions = options || {};
   } else {
-    // New pattern: apiRequest(url, { method, body, headers })
+    // New pattern: apiRequest(url, { method, data, headers })
     url = urlOrMethod;
     method = urlOrOptions?.method || 'GET';
-    requestData = urlOrOptions?.body ? JSON.parse(urlOrOptions.body) : undefined;
+    // Check if urlOrOptions has 'data' property (new mutation pattern) or 'body' property (old pattern)
+    requestData = (urlOrOptions as any)?.data || (urlOrOptions?.body ? JSON.parse(urlOrOptions.body) : undefined);
     requestOptions = { headers: urlOrOptions?.headers || {} };
   }
 
