@@ -152,15 +152,7 @@ router.patch('/:id/status', isAuthenticated, isAdmin, asyncHandler(async (req, r
           const newBalance = parseFloat(currentBalance.toString()) + parseFloat(creditAmount);
           await storage.updateUserCreditBalance(orderItem.order.userId, newBalance);
           
-          // Create notification
-          await storage.createNotification({
-            userId: orderItem.order.userId,
-            type: 'credit_issued',
-            title: 'Credit Issued',
-            message: `You have received R${creditAmount} credit for unavailable item: ${orderItem.productName}`,
-            isRead: false,
-          });
-          
+          // Log credit generation for admin reference
           console.log(`Credit of R${creditAmount} generated for user ${orderItem.order.userId} for unavailable item ${orderItem.productName}`);
         } catch (creditError) {
           console.error('Error processing unavailable item:', creditError);
@@ -239,15 +231,7 @@ router.post('/:id/generate-credit', isAuthenticated, isAdmin, asyncHandler(async
       availableCreditAmount: newAvailableBalance.toString(),
     });
     
-    // Create notification
-    await storage.createNotification({
-      userId: orderItem.order.userId,
-      type: 'credit_issued',
-      title: 'Credit Issued',
-      message: `You have received R${creditAmount} credit for unavailable item: ${orderItem.productName}`,
-      isRead: false,
-    });
-    
+    // Log credit generation for admin reference
     console.log(`Credit of R${creditAmount} generated for user ${orderItem.order.userId} for unavailable item ${orderItem.productName}`);
     
     return sendSuccess(res, { 
