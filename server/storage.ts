@@ -7309,6 +7309,9 @@ export class DatabaseStorage implements IStorage {
       if (userRole !== 'admin') {
         conditions.push(eq(productDrafts.createdBy, userId));
       }
+      
+      // Exclude published drafts from the drafts section - they should only appear in Published Products
+      conditions.push(ne(productDrafts.draftStatus, 'published'));
 
       // Add search functionality across multiple columns if search query is provided
       if (options?.search && options.search.trim()) {
