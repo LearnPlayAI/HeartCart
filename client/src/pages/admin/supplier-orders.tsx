@@ -13,7 +13,8 @@ import {
   Search,
   Calendar,
   CreditCard,
-  Eye
+  Eye,
+  Truck
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -236,6 +237,8 @@ const SupplierOrders = () => {
         return <Package className="h-4 w-4" />;
       case 'received':
         return <CheckCircle className="h-4 w-4" />;
+      case 'shipped':
+        return <Truck className="h-4 w-4" />;
       case 'unavailable':
         return <XCircle className="h-4 w-4" />;
       default:
@@ -250,6 +253,8 @@ const SupplierOrders = () => {
       case 'ordered':
         return 'default';
       case 'received':
+        return 'default';
+      case 'shipped':
         return 'default';
       case 'unavailable':
         return 'destructive';
