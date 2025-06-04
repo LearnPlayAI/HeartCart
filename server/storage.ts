@@ -2472,26 +2472,40 @@ export class DatabaseStorage implements IStorage {
         ));
 
       if (existingItem) {
-        // Update quantity and merge attribute selections
+        // Update quantity and merge attribute selections with quantity tracking
         const newQuantity = existingItem.quantity + cartItem.quantity;
         const existingSelections = existingItem.attributeSelections || {};
         const newSelections = cartItem.attributeSelections || {};
         
-        // Merge attribute selections - if same attribute has different values, make it an array
+        // Merge attribute selections with quantity counts
         const mergedSelections: any = { ...existingSelections };
         
-        for (const [key, value] of Object.entries(newSelections)) {
-          if (mergedSelections[key] && mergedSelections[key] !== value) {
-            // Convert to array if different values for same attribute
-            if (Array.isArray(mergedSelections[key])) {
-              if (!mergedSelections[key].includes(value)) {
-                mergedSelections[key].push(value);
-              }
+        for (const [attributeName, value] of Object.entries(newSelections)) {
+          if (!mergedSelections[attributeName]) {
+            // New attribute - store as quantity count object
+            mergedSelections[attributeName] = { [value]: cartItem.quantity };
+          } else if (typeof mergedSelections[attributeName] === 'string') {
+            // Convert old string format to quantity count object
+            const oldValue = mergedSelections[attributeName];
+            if (oldValue === value) {
+              // Same value - add to existing count
+              mergedSelections[attributeName] = { [value]: existingItem.quantity + cartItem.quantity };
             } else {
-              mergedSelections[key] = [mergedSelections[key], value];
+              // Different values - create separate counts
+              mergedSelections[attributeName] = { 
+                [oldValue]: existingItem.quantity, 
+                [value]: cartItem.quantity 
+              };
             }
-          } else if (!mergedSelections[key]) {
-            mergedSelections[key] = value;
+          } else if (typeof mergedSelections[attributeName] === 'object') {
+            // Already in quantity count format
+            if (mergedSelections[attributeName][value]) {
+              // Add to existing count
+              mergedSelections[attributeName][value] += cartItem.quantity;
+            } else {
+              // New value for this attribute
+              mergedSelections[attributeName][value] = cartItem.quantity;
+            }
           }
         }
 
@@ -2516,13 +2530,21 @@ export class DatabaseStorage implements IStorage {
 
         return updatedItem;
       } else {
-        // Insert new item - ensure itemPrice is properly formatted
+        // Insert new item - ensure itemPrice is properly formatted and convert attribute selections to quantity count format
+        const formattedAttributeSelections: any = {};
+        
+        if (cartItem.attributeSelections) {
+          for (const [attributeName, value] of Object.entries(cartItem.attributeSelections)) {
+            formattedAttributeSelections[attributeName] = { [value]: cartItem.quantity };
+          }
+        }
+        
         const itemToInsert = {
           userId: cartItem.userId,
           productId: cartItem.productId,
           quantity: cartItem.quantity,
           itemPrice: String(cartItem.itemPrice), // Convert to string for decimal column
-          attributeSelections: cartItem.attributeSelections || {}
+          attributeSelections: formattedAttributeSelections
         };
 
         console.log(`🔍 NEW CART DEBUG - Inserting:`, itemToInsert);

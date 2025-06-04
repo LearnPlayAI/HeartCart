@@ -103,17 +103,20 @@ const CartDrawer = () => {
                     {item.attributeSelections && Object.keys(item.attributeSelections).length > 0 && (
                       <div className="mt-1 text-xs text-gray-600">
                         {Object.entries(item.attributeSelections).map(([attributeName, value]) => {
-                          // Calculate quantity distribution for each attribute option
-                          const getQuantityBreakdown = (attrValue: string | string[]) => {
-                            if (Array.isArray(attrValue)) {
-                              // Count occurrences of each value
+                          // Handle both old format (string/array) and new format (quantity object)
+                          const getQuantityBreakdown = (attrValue: any) => {
+                            if (typeof attrValue === 'object' && !Array.isArray(attrValue)) {
+                              // New format: {optionValue: quantity}
+                              return attrValue;
+                            } else if (Array.isArray(attrValue)) {
+                              // Old format: array of values
                               const counts: Record<string, number> = {};
                               attrValue.forEach(val => {
                                 counts[val] = (counts[val] || 0) + 1;
                               });
                               return counts;
                             } else {
-                              // Single value gets the full item quantity
+                              // Old format: single value gets the full item quantity
                               return { [attrValue]: item.quantity };
                             }
                           };

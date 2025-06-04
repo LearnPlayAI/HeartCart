@@ -107,7 +107,7 @@ export const cartItems = pgTable("cart_items", {
   productId: integer("productId").notNull().references(() => products.id),
   quantity: integer("quantity").notNull().default(1),
   itemPrice: decimal("itemPrice", { precision: 10, scale: 2 }).notNull(),
-  attributeSelections: jsonb("attributeSelections").default('{}').notNull(), // Store selected attributes like {gender: "For Him", size: "Large"}
+  attributeSelections: jsonb("attributeSelections").default('{}').notNull(), // Store selected attributes with quantities like {gender: {"Boy": 1, "Girl": 2}}
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 }, (table) => {
