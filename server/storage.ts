@@ -11005,18 +11005,68 @@ export class DatabaseStorage implements IStorage {
 
   async getUserCreditBalance(userId: number): Promise<CustomerCredit> {
     try {
-      // First try to get existing credit record
-      const [existingCredit] = await db
+      // Calculate actual balance from all credit transactions
+      const transactions = await db
+        .select()
+        .from(creditTransactions)
+        .where(eq(creditTransactions.userId, userId));
+
+      let totalEarned = 0;
+      let totalUsed = 0;
+
+      for (const transaction of transactions) {
+        const amount = parseFloat(transaction.amount);
+        if (transaction.transactionType === 'earned') {
+          totalEarned += amount;
+        } else if (transaction.transactionType === 'used') {
+          totalUsed += amount;
+        }
+      }
+
+      const totalCreditAmount = totalEarned;
+      const availableCreditAmount = totalEarned - totalUsed;
+
+      // Get or create customer credit record
+      let [existingCredit] = await db
         .select()
         .from(customerCredits)
         .where(eq(customerCredits.userId, userId));
 
-      if (existingCredit) {
-        return existingCredit;
+      if (!existingCredit) {
+        // Create new credit record
+        [existingCredit] = await db
+          .insert(customerCredits)
+          .values({
+            userId,
+            totalCreditAmount: totalCreditAmount.toString(),
+            availableCreditAmount: availableCreditAmount.toString(),
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          })
+          .returning();
+      } else {
+        // Update existing record with calculated values
+        [existingCredit] = await db
+          .update(customerCredits)
+          .set({
+            totalCreditAmount: totalCreditAmount.toString(),
+            availableCreditAmount: availableCreditAmount.toString(),
+            updatedAt: new Date().toISOString(),
+          })
+          .where(eq(customerCredits.userId, userId))
+          .returning();
       }
 
-      // If no credit record exists, create one with zero balance
-      return await this.createOrUpdateCustomerCredit(userId);
+      logger.info('Calculated user credit balance from transactions', {
+        userId,
+        totalEarned,
+        totalUsed,
+        totalCreditAmount,
+        availableCreditAmount,
+        transactionCount: transactions.length
+      });
+
+      return existingCredit;
     } catch (error) {
       logger.error('Error getting user credit balance', { error, userId });
       throw error;
