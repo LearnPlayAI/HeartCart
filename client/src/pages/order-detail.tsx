@@ -33,9 +33,49 @@ import {
   Building2,
   Upload,
   FileCheck,
-  DollarSign
+  DollarSign,
+  ShoppingCart,
+  XCircle
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+
+// Supplier Order interface
+interface SupplierOrder {
+  id: number;
+  orderId: number;
+  productId: number;
+  productName: string;
+  supplierUrl: string;
+  quantity: number;
+  unitCost: number;
+  totalCost: number;
+  status: 'pending' | 'ordered' | 'unavailable' | 'received';
+  supplierOrderNumber?: string;
+  orderDate?: string;
+  expectedDelivery?: string;
+  notes?: string;
+  urlValidationStatus: 'pending' | 'valid' | 'invalid';
+  urlLastChecked?: string;
+  createdAt: string;
+  updatedAt?: string;
+  customerUnitPrice: number;
+  hasCreditGenerated?: boolean;
+  customerOrder: {
+    id: number;
+    orderNumber: string;
+    customerName: string;
+    customerEmail: string;
+  };
+  product: {
+    id: number;
+    name: string;
+    imageUrl?: string;
+    price?: number;
+    sku?: string;
+    supplierAvailable: boolean;
+    actualSupplierUrl?: string;
+  };
+}
 
 // Order interface matching our camelCase schema
 interface OrderType {
@@ -156,6 +196,21 @@ const OrderDetail: React.FC = () => {
   });
 
   const order = orderResponse?.success ? orderResponse.data : null;
+
+  // Fetch supplier order data
+  const { data: supplierOrdersResponse } = useQuery({
+    queryKey: ['/api/admin/supplier-orders/order', orderId],
+    queryFn: async () => {
+      const response = await fetch(`/api/admin/supplier-orders/order/${orderId}`, {
+        credentials: 'include'
+      });
+      if (!response.ok) throw new Error('Failed to fetch supplier orders');
+      return response.json();
+    },
+    enabled: !!orderId
+  });
+
+  const supplierOrders = supplierOrdersResponse?.data || [];
 
   // Copy to clipboard function
   const copyToClipboard = (text: string, label: string) => {
@@ -402,6 +457,32 @@ const OrderDetail: React.FC = () => {
                               })}
                             </div>
                           )}
+
+                          {/* Supplier Status Badge */}
+                          {(() => {
+                            const supplierOrder = supplierOrders.find((so: any) => so.productId === item.productId);
+                            if (!supplierOrder) return null;
+                            
+                            const supplierStatus = supplierOrder.status;
+                            const statusConfig = {
+                              pending: { label: 'Pending', color: 'bg-yellow-100 text-yellow-800', icon: Clock },
+                              ordered: { label: 'Ordered', color: 'bg-blue-100 text-blue-800', icon: Truck },
+                              received: { label: 'Received', color: 'bg-green-100 text-green-800', icon: CheckCircle },
+                              unavailable: { label: 'Unavailable', color: 'bg-red-100 text-red-800', icon: XCircle }
+                            };
+                            
+                            const config = statusConfig[supplierStatus as keyof typeof statusConfig];
+                            if (!config) return null;
+                            
+                            const IconComponent = config.icon;
+                            
+                            return (
+                              <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium mb-2 ${config.color}`}>
+                                <IconComponent className="h-3 w-3 mr-1" />
+                                {config.label}
+                              </div>
+                            );
+                          })()}
 
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                             <div className="flex items-center gap-4 text-sm text-gray-600">
