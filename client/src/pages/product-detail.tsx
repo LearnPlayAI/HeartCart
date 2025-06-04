@@ -11,6 +11,7 @@ import ProductCard from '@/components/product/product-card';
 import { useCart } from '@/hooks/use-cart';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency, calculateDiscount } from '@/lib/utils';
+import { calculateProductPricing } from '@/utils/pricing';
 import { 
   Select,
   SelectContent,
@@ -199,8 +200,16 @@ const ProductDetailContent = ({
     promotionName: productPromotion.promotion.promotionName,
     promotionDiscount: productPromotion.discountOverride || productPromotion.promotion.discountValue,
     promotionDiscountType: productPromotion.promotion.discountType,
-    promotionEndDate: productPromotion.promotion.endDate
+    promotionEndDate: productPromotion.promotion.endDate,
+    promotionalPrice: productPromotion.promotionalPrice ? Number(productPromotion.promotionalPrice) : null
   } : null;
+
+  // Calculate unified pricing using centralized logic
+  const pricing = product ? calculateProductPricing(
+    Number(product.price) || 0,
+    product.salePrice ? Number(product.salePrice) : null,
+    promotionInfo
+  ) : null;
 
   // Get related products based on the same category
   const { data: relatedProducts } = useQuery<Product[]>({
@@ -478,46 +487,23 @@ const ProductDetailContent = ({
             
             {/* Price */}
             <div className="flex items-baseline">
-              {promotionInfo ? (
-                // Promotional pricing display
-                <>
-                  <span className="text-3xl font-bold text-[#FF69B4]">
-                    {formatCurrency(
-                      promotionInfo.promotionDiscountType === 'percentage' 
-                        ? product.price - (product.price * promotionInfo.promotionDiscount / 100)
-                        : product.price - promotionInfo.promotionDiscount
-                    )}
-                  </span>
-                  <span className="text-gray-500 text-lg ml-2 line-through">
-                    {formatCurrency(product.price)}
-                  </span>
-                  <span className="ml-2 px-2 py-1 bg-[#FF69B4]/10 text-[#FF69B4] rounded-full text-sm">
-                    {promotionInfo.promotionDiscountType === 'percentage' 
-                      ? `${promotionInfo.promotionDiscount}% OFF`
-                      : `${formatCurrency(promotionInfo.promotionDiscount)} OFF`
-                    }
-                  </span>
-                  <span className="ml-2 px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">
-                    {promotionInfo.promotionName}
-                  </span>
-                </>
-              ) : (
-                // Regular pricing display
-                <>
-                  <span className="text-3xl font-bold text-[#FF69B4]">
-                    {formatCurrency(product.salePrice || product.price)}
-                  </span>
-                  {product.salePrice && (
-                    <>
-                      <span className="text-gray-500 text-lg ml-2 line-through">
-                        {formatCurrency(product.price)}
-                      </span>
-                      <span className="ml-2 px-2 py-1 bg-[#FF69B4]/10 text-[#FF69B4] rounded-full text-sm">
-                        {discount}% OFF
-                      </span>
-                    </>
-                  )}
-                </>
+              <span className="text-3xl font-bold text-[#FF69B4]">
+                {pricing ? formatCurrency(pricing.displayPrice) : formatCurrency(currentPrice || product.salePrice || product.price)}
+              </span>
+              {pricing?.hasDiscount && (
+                <span className="text-gray-500 text-lg ml-2 line-through">
+                  {formatCurrency(pricing.originalPrice)}
+                </span>
+              )}
+              {promotionInfo && (
+                <span className="ml-2 px-2 py-1 bg-[#FF69B4]/10 text-[#FF69B4] rounded-full text-sm">
+                  EXTRA {Math.round(parseFloat(promotionInfo.promotionDiscount))}% OFF!
+                </span>
+              )}
+              {pricing?.hasDiscount && !promotionInfo && (
+                <span className="ml-2 px-2 py-1 bg-[#FF69B4]/10 text-[#FF69B4] rounded-full text-sm">
+                  {Math.round(pricing.discountPercentage)}% OFF
+                </span>
               )}
             </div>
             

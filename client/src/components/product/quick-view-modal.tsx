@@ -310,7 +310,7 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
     addItem({
       productId: product.id,
       quantity: quantity,
-      itemPrice: basePrice,
+      itemPrice: cartPrice,
       attributeSelections
     });
     
