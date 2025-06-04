@@ -10889,36 +10889,53 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getSupplierOrders(filters?: { 
-    supplierId?: number; 
+  async getOrderItemsForSupplierManagement(filters?: { 
     status?: string; 
-    dateFrom?: string; 
-    dateTo?: string; 
-  }): Promise<SupplierOrder[]> {
+    orderId?: number;
+  }): Promise<any[]> {
     try {
-      let query = db.select().from(supplierOrders);
+      // Get order items from paid orders with their supplier status
+      const query = db
+        .select({
+          orderItem: orderItems,
+          order: orders,
+          product: products,
+          supplierStatus: orderItemSupplierStatus,
+        })
+        .from(orderItems)
+        .innerJoin(orders, eq(orderItems.orderId, orders.id))
+        .innerJoin(products, eq(orderItems.productId, products.id))
+        .leftJoin(orderItemSupplierStatus, eq(orderItems.id, orderItemSupplierStatus.orderItemId))
+        .where(
+          and(
+            eq(orders.paymentStatus, 'paid'),
+            ...(filters?.status ? [eq(orderItemSupplierStatus.supplierStatus, filters.status)] : []),
+            ...(filters?.orderId ? [eq(orders.id, filters.orderId)] : [])
+          )
+        )
+        .orderBy(desc(orders.createdAt));
+
+      const results = await query;
       
-      const conditions = [];
-      if (filters?.supplierId) {
-        conditions.push(eq(supplierOrders.supplierId, filters.supplierId));
-      }
-      if (filters?.status) {
-        conditions.push(eq(supplierOrders.status, filters.status));
-      }
-      if (filters?.dateFrom) {
-        conditions.push(gte(supplierOrders.createdAt, filters.dateFrom));
-      }
-      if (filters?.dateTo) {
-        conditions.push(lte(supplierOrders.createdAt, filters.dateTo));
-      }
-
-      if (conditions.length > 0) {
-        query = query.where(and(...conditions));
-      }
-
-      return await query.orderBy(desc(supplierOrders.createdAt));
+      return results.map(row => ({
+        id: row.orderItem.id,
+        orderId: row.order.id,
+        orderNumber: row.order.orderNumber,
+        productId: row.product.id,
+        productName: row.orderItem.productName,
+        productSku: row.product.sku,
+        quantity: row.orderItem.quantity,
+        unitPrice: row.orderItem.unitPrice,
+        totalPrice: row.orderItem.totalPrice,
+        customerName: row.order.customerName,
+        orderDate: row.order.createdAt,
+        supplierStatus: row.supplierStatus?.supplierStatus || 'pending',
+        supplierOrderPlaced: row.supplierStatus?.supplierOrderPlaced || false,
+        adminNotes: row.supplierStatus?.adminNotes,
+        supplierOrderDate: row.supplierStatus?.supplierOrderDate,
+      }));
     } catch (error) {
-      logger.error('Error getting supplier orders', { error, filters });
+      logger.error('Error getting order items for supplier management', { error, filters });
       throw error;
     }
   }

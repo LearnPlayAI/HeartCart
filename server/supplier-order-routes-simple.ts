@@ -15,19 +15,20 @@ const updateStatusSchema = z.object({
   expectedDelivery: z.string().optional(),
 });
 
-// GET /api/admin/supplier-orders - Get all supplier orders with filtering
+// GET /api/admin/supplier-orders - Get all order items that need supplier management
 router.get('/', isAuthenticated, isAdmin, asyncHandler(async (req, res) => {
   const { status = 'all', search = '' } = req.query;
   
   try {
-    const supplierOrders = await storage.getSupplierOrders({
+    // Get all order items from paid orders that need supplier management
+    const orderItemsWithStatus = await storage.getOrderItemsForSupplierManagement({
       status: status === 'all' ? undefined : status as string,
     });
     
-    return sendSuccess(res, supplierOrders);
+    return sendSuccess(res, orderItemsWithStatus);
   } catch (error) {
-    console.error('Error fetching supplier orders:', error);
-    return sendError(res, 'Failed to fetch supplier orders', 500);
+    console.error('Error fetching supplier order items:', error);
+    return sendError(res, 'Failed to fetch supplier order items', 500);
   }
 }));
 

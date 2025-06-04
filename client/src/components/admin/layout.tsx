@@ -1,7 +1,7 @@
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, ShoppingBag, Package, CreditCard, Users, Settings, BarChart3, LogOut, DollarSign, BrainCircuit, Factory, BookOpen, Tags, FileText, Upload, PlusCircle, Menu, Gift, ChevronLeft, ChevronRight } from "lucide-react";
+import { LayoutDashboard, ShoppingBag, Package, CreditCard, Users, Settings, BarChart3, LogOut, DollarSign, BrainCircuit, Factory, BookOpen, Tags, FileText, Upload, PlusCircle, Menu, Gift, ChevronLeft, ChevronRight, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -29,6 +29,7 @@ function Navigation({ className, isCollapsed, onNavigate }: { className?: string
     { path: "/admin/mass-upload", label: "Mass Upload", icon: Upload },
     { path: "/admin/promotions", label: "Promotions", icon: Gift },
     { path: "/admin/orders", label: "Orders", icon: Package },
+    { path: "/admin/supplier-orders", label: "Supplier Orders", icon: Truck },
     { path: "/admin/categories", label: "Categories", icon: BarChart3 },
     { path: "/admin/global-attributes", label: "Global Attributes", icon: Tags },
     { path: "/admin/pricing", label: "Pricing", icon: DollarSign },
