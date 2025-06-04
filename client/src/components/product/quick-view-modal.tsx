@@ -87,8 +87,16 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
     promotionName: productPromotion.promotion.promotionName,
     promotionDiscount: productPromotion.discountOverride || productPromotion.promotion.discountValue,
     promotionDiscountType: productPromotion.promotion.discountType,
-    promotionEndDate: productPromotion.promotion.endDate
+    promotionEndDate: productPromotion.promotion.endDate,
+    promotionalPrice: productPromotion.promotionalPrice ? Number(productPromotion.promotionalPrice) : null
   } : null;
+
+  // Calculate unified pricing using centralized logic
+  const pricing = product ? calculateProductPricing(
+    Number(product.price) || 0,
+    product.salePrice ? Number(product.salePrice) : null,
+    promotionInfo
+  ) : null;
   
   // Log error to console for debugging
   useEffect(() => {
@@ -284,8 +292,8 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
       }
     }
     
-    // Use base price (sale price if available, otherwise regular price)
-    const basePrice = product.salePrice || product.price;
+    // Use promotional price if available, otherwise fallback to sale price or regular price
+    const cartPrice = pricing ? pricing.displayPrice : (product.salePrice || product.price);
     
     // Format attribute selections for the cart
     const attributeSelections: Record<string, string> = {};
@@ -396,26 +404,18 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <span className="text-xl font-bold text-[#FF69B4]">
-                    {formatCurrency(adjustedPrice)}
+                    {pricing ? formatCurrency(pricing.displayPrice) : formatCurrency(product.price)}
                   </span>
-                  {promotionInfo && (
+                  {pricing?.hasDiscount && (
                     <span className="ml-2 text-sm line-through text-gray-500">
-                      {formatCurrency(basePrice)}
-                    </span>
-                  )}
-                  {!promotionInfo && product.salePrice && product.price > product.salePrice && (
-                    <span className="ml-2 text-sm line-through text-gray-500">
-                      {formatCurrency(product.price)}
+                      {formatCurrency(pricing.originalPrice)}
                     </span>
                   )}
                 </div>
                 {promotionInfo && (
                   <div className="flex items-center gap-2">
                     <Badge variant="destructive" className="bg-red-500 text-white text-xs">
-                      {promotionInfo.promotionDiscountType === 'percentage' 
-                        ? `${promotionInfo.promotionDiscount}% OFF` 
-                        : `R${promotionInfo.promotionDiscount} OFF`
-                      }
+                      EXTRA {Math.round(parseFloat(promotionInfo.promotionDiscount))}% OFF!
                     </Badge>
                     <span className="text-xs text-gray-600">{promotionInfo.promotionName}</span>
                   </div>
