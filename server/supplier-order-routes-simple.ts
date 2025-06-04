@@ -7,6 +7,59 @@ import { sendError, sendSuccess } from './api-response';
 
 const router = Router();
 
+// Helper function to auto-update main order status based on supplier order completion
+async function updateMainOrderStatusBasedOnSupplierOrders(orderItemId: number) {
+  try {
+    // Get the order item to find the main order ID
+    const orderItem = await storage.getOrderItemById(orderItemId);
+    if (!orderItem) return;
+
+    const mainOrderId = orderItem.orderId;
+    
+    // Get all supplier orders for this main order
+    const supplierOrders = await storage.getSupplierOrdersByOrderId(mainOrderId);
+    
+    if (supplierOrders.length === 0) return;
+
+    // Check status distribution
+    const statusCounts = supplierOrders.reduce((acc, order) => {
+      acc[order.status] = (acc[order.status] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const totalItems = supplierOrders.length;
+    const receivedCount = statusCounts['received'] || 0;
+    const orderedCount = statusCounts['ordered'] || 0;
+    const unavailableCount = statusCounts['unavailable'] || 0;
+
+    let newMainOrderStatus = null;
+
+    // Determine new main order status based on supplier order completion
+    if (receivedCount === totalItems) {
+      // All items received - ready to ship
+      newMainOrderStatus = 'processing';
+    } else if (receivedCount + unavailableCount === totalItems) {
+      // All items either received or unavailable - ready to ship available items
+      newMainOrderStatus = 'processing';
+    } else if (orderedCount > 0 && receivedCount + orderedCount + unavailableCount === totalItems) {
+      // All items are either ordered, received, or unavailable - confirmed
+      newMainOrderStatus = 'confirmed';
+    }
+
+    // Update main order status if needed
+    if (newMainOrderStatus) {
+      const currentOrder = await storage.getOrderById(mainOrderId);
+      if (currentOrder && currentOrder.status !== newMainOrderStatus) {
+        await storage.updateOrderStatus(mainOrderId, newMainOrderStatus);
+        console.log(`Main order ${mainOrderId} status auto-updated to: ${newMainOrderStatus}`);
+      }
+    }
+  } catch (error) {
+    console.error('Error auto-updating main order status:', error);
+    // Don't throw error to avoid breaking the main flow
+  }
+}
+
 // Validation schemas
 const updateStatusSchema = z.object({
   status: z.enum(['pending', 'ordered', 'unavailable', 'received']),
@@ -177,6 +230,9 @@ router.patch('/:id/status', isAuthenticated, isAdmin, asyncHandler(async (req, r
         }
       }
     }
+    
+    // Auto-update main order status based on supplier order completion
+    await updateMainOrderStatusBasedOnSupplierOrders(orderId);
     
     return sendSuccess(res, updatedStatus);
   } catch (error) {
