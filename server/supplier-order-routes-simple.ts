@@ -98,13 +98,29 @@ router.patch('/:id/status', isAuthenticated, isAdmin, asyncHandler(async (req, r
   }
   
   try {
+    console.log('PATCH status update - Received request body:', req.body);
+    console.log('PATCH status update - Request body type:', typeof req.body);
+    console.log('PATCH status update - Request body keys:', Object.keys(req.body || {}));
+    
     const validation = updateStatusSchema.safeParse(req.body);
     if (!validation.success) {
+      console.log('PATCH status update - Validation failed:', validation.error);
+      console.log('PATCH status update - Validation error details:', validation.error.issues);
       return sendError(res, 'Invalid status data', 400);
     }
     
-    const updatedOrder = await storage.updateSupplierOrder(orderId, validation.data);
-    if (!updatedOrder) {
+    // The orderId here actually refers to the order item ID (supplier order record ID)
+    // We need to update the orderItemSupplierStatus table
+    const supplierStatusData = {
+      supplierStatus: validation.data.status,
+      adminNotes: validation.data.notes,
+      supplierOrderDate: validation.data.status === 'ordered' ? new Date().toISOString() : undefined,
+      supplierOrderPlaced: validation.data.status === 'ordered',
+      updatedAt: new Date().toISOString()
+    };
+    
+    const updatedStatus = await storage.updateOrderItemSupplierStatus(orderId, supplierStatusData);
+    if (!updatedStatus) {
       return sendError(res, 'Supplier order not found', 404);
     }
     
