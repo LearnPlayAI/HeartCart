@@ -3209,9 +3209,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     for (const promotion of activePromotions) {
       const products = await storage.getPromotionProducts(promotion.id);
+      
+      // Enhance products with calculated promotional pricing information
+      const enhancedProducts = products.map(productPromotion => {
+        const product = productPromotion.product;
+        let calculatedPromotionalPrice = productPromotion.promotionalPrice;
+        let extraDiscountPercentage = 0;
+        
+        // If promotional price is set, calculate extra discount from sale price
+        if (calculatedPromotionalPrice && product.salePrice) {
+          const salePrice = parseFloat(product.salePrice.toString());
+          const promotionalPrice = parseFloat(calculatedPromotionalPrice.toString());
+          
+          if (salePrice > promotionalPrice) {
+            extraDiscountPercentage = Math.round(((salePrice - promotionalPrice) / salePrice) * 100);
+          }
+        }
+        // If no promotional price is set but there's a promotion discount, calculate it
+        else if (!calculatedPromotionalPrice && promotion.discountValue && product.salePrice) {
+          const discountPercentage = parseFloat(promotion.discountValue.toString());
+          const salePrice = parseFloat(product.salePrice.toString());
+          calculatedPromotionalPrice = Math.round(salePrice * (1 - discountPercentage / 100));
+          extraDiscountPercentage = discountPercentage;
+        }
+        
+        return {
+          ...productPromotion,
+          promotionalPrice: calculatedPromotionalPrice,
+          extraDiscountPercentage: extraDiscountPercentage
+        };
+      });
+      
       promotionsWithProducts.push({
         ...promotion,
-        products
+        products: enhancedProducts
       });
     }
     

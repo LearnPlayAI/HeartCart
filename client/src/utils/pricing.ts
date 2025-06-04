@@ -51,6 +51,7 @@ export function calculateProductPricing(
       totalDiscountPercentage = ((basePrice - finalPrice) / basePrice) * 100;
       
       // Calculate extra promotional discount from the price before promotion
+      // Only show extra discount if there's actually a difference from the previous price
       if (priceBeforePromotion > finalPrice) {
         extraPromotionalDiscount = ((priceBeforePromotion - finalPrice) / priceBeforePromotion) * 100;
       }

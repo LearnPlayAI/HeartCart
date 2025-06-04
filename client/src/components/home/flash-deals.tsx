@@ -54,7 +54,9 @@ const FlashDealsSection = () => {
       promotionName: promo.promotionName,
       promotionDiscount: pp.discountOverride || promo.discountValue,
       promotionDiscountType: promo.discountType,
-      promotionEndDate: promo.endDate
+      promotionEndDate: promo.endDate,
+      extraDiscountPercentage: pp.additionalDiscountPercentage || 0, // Use server-calculated extra discount
+      promotionalPrice: pp.promotionalPrice
     })) || []
   );
   
@@ -164,7 +166,7 @@ const FlashDealsSection = () => {
                     showAddToCart={true}
                     promotionInfo={{
                       promotionName: product.promotionName,
-                      promotionDiscount: product.additionalDiscountPercentage || product.promotionDiscount,
+                      promotionDiscount: product.extraDiscountPercentage || product.promotionDiscount,
                       promotionDiscountType: product.promotionDiscountType,
                       promotionEndDate: product.promotionEndDate,
                       promotionalPrice: product.promotionalPrice
