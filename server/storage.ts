@@ -11057,11 +11057,23 @@ export class DatabaseStorage implements IStorage {
         logger.info('Order item supplier status updated', { orderItemId, statusData });
         return updated;
       } else {
-        // Create new record
+        // Get the order item to extract orderId and productId (required fields)
+        const [orderItem] = await db
+          .select()
+          .from(orderItems)
+          .where(eq(orderItems.id, orderItemId));
+
+        if (!orderItem) {
+          throw new Error(`Order item with ID ${orderItemId} not found`);
+        }
+
+        // Create new record with required fields
         const [created] = await db
           .insert(orderItemSupplierStatus)
           .values({
             orderItemId,
+            orderId: orderItem.orderId,
+            productId: orderItem.productId,
             ...statusData,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
