@@ -10674,22 +10674,22 @@ export class DatabaseStorage implements IStorage {
             .insert(customerCredits)
             .values({
               userId,
-              totalCredits: amount.toString(),
-              availableCredits: amount.toString(),
+              totalCreditAmount: amount.toString(),
+              availableCreditAmount: amount.toString(),
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
             })
             .returning();
         } else {
           // Update existing credit record
-          const newTotalCredits = parseFloat(customerCredit.totalCredits) + amount;
-          const newAvailableCredits = parseFloat(customerCredit.availableCredits) + amount;
+          const newTotalCredits = parseFloat(customerCredit.totalCreditAmount) + amount;
+          const newAvailableCredits = parseFloat(customerCredit.availableCreditAmount) + amount;
 
           [customerCredit] = await tx
             .update(customerCredits)
             .set({
-              totalCredits: newTotalCredits.toString(),
-              availableCredits: newAvailableCredits.toString(),
+              totalCreditAmount: newTotalCredits.toString(),
+              availableCreditAmount: newAvailableCredits.toString(),
               updatedAt: new Date().toISOString(),
             })
             .where(eq(customerCredits.userId, userId))

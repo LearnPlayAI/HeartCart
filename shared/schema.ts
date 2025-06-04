@@ -1119,8 +1119,8 @@ export const productPromotionsRelations = relations(productPromotions, ({ one })
 export const customerCredits = pgTable("customerCredits", {
   id: serial("id").primaryKey(),
   userId: integer("userId").notNull().references(() => users.id),
-  totalCredits: decimal("totalCredits", { precision: 10, scale: 2 }).notNull().default('0'),
-  availableCredits: decimal("availableCredits", { precision: 10, scale: 2 }).notNull().default('0'),
+  totalCreditAmount: decimal("totalCreditAmount", { precision: 10, scale: 2 }).notNull().default('0'),
+  availableCreditAmount: decimal("availableCreditAmount", { precision: 10, scale: 2 }).notNull().default('0'),
   createdAt: text("createdAt").default(String(new Date().toISOString())).notNull(),
   updatedAt: text("updatedAt").default(String(new Date().toISOString())).notNull(),
 }, (table) => ({
