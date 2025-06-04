@@ -216,8 +216,11 @@ export default function CheckoutPage() {
   const shippingCost = shippingOptions.find(option => 
     option.id === selectedShippingMethod)?.price || 0;
   
-  const maxCreditAmount = Math.min(creditBalance || 0, subtotal + shippingCost);
-  const finalTotal = Math.max(0, subtotal + shippingCost - applyCreditAmount);
+  // Calculate automatic credit application
+  const availableCredit = creditBalance ? parseFloat(creditBalance.availableCredits || '0') : 0;
+  const orderTotal = subtotal + shippingCost;
+  const autoCreditAmount = Math.min(availableCredit, orderTotal);
+  const finalTotal = Math.max(0, orderTotal - autoCreditAmount);
 
   // Create order mutation with proper response handling
   const createOrderMutation = useMutation({
@@ -350,7 +353,7 @@ export default function CheckoutPage() {
         orderItems,
         subtotal,
         total: finalTotal,
-        creditUsed: applyCreditAmount
+        creditUsed: autoCreditAmount
       };
 
       console.log("Submitting order data:", orderData);
@@ -862,45 +865,18 @@ export default function CheckoutPage() {
 
               <Separator />
 
-              {/* Credit Application Section */}
-              {creditBalance && parseFloat(creditBalance.availableCredits) > 0 && (
+              {/* Auto Credit Application Display */}
+              {autoCreditAmount > 0 && (
                 <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                   <div className="flex items-center gap-2 mb-2">
                     <CreditCard className="h-4 w-4 text-green-600" />
                     <span className="text-sm font-medium text-green-700">
-                      Available Credit: R{parseFloat(creditBalance.availableCredits).toFixed(2)}
+                      Credit Auto-Applied: R{autoCreditAmount.toFixed(2)}
                     </span>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="checkoutCreditAmount" className="text-xs text-gray-600">
-                      Apply Credit Amount
-                    </Label>
-                    <div className="flex gap-2">
-                      <Input
-                        id="checkoutCreditAmount"
-                        type="number"
-                        min="0"
-                        max={maxCreditAmount}
-                        step="0.01"
-                        value={applyCreditAmount}
-                        onChange={(e) => setApplyCreditAmount(Math.min(parseFloat(e.target.value) || 0, maxCreditAmount))}
-                        placeholder="0.00"
-                        className="text-sm"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setApplyCreditAmount(maxCreditAmount)}
-                        className="text-xs whitespace-nowrap"
-                      >
-                        Use Max
-                      </Button>
-                    </div>
-                    <p className="text-xs text-gray-500">
-                      Maximum: R{maxCreditAmount.toFixed(2)}
-                    </p>
-                  </div>
+                  <p className="text-xs text-gray-600">
+                    Available: R{availableCredit.toFixed(2)} • Maximum applied automatically
+                  </p>
                 </div>
               )}
 
@@ -916,20 +892,20 @@ export default function CheckoutPage() {
                   <span>Shipping:</span>
                   <span>{shippingCost === 0 ? "Free" : `R${shippingCost.toFixed(2)}`}</span>
                 </div>
-                {applyCreditAmount > 0 && (
+                {autoCreditAmount > 0 && (
                   <div className="flex justify-between text-sm text-green-600">
                     <span>Credit Applied:</span>
-                    <span>-R{applyCreditAmount.toFixed(2)}</span>
+                    <span>-R{autoCreditAmount.toFixed(2)}</span>
                   </div>
                 )}
                 <Separator />
                 <div className="flex justify-between font-bold">
                   <span>Total:</span>
-                  <span className={applyCreditAmount > 0 ? "text-green-600" : ""}>
+                  <span className={autoCreditAmount > 0 ? "text-green-600" : ""}>
                     R{finalTotal.toFixed(2)}
                   </span>
                 </div>
-                {applyCreditAmount > 0 && (
+                {autoCreditAmount > 0 && (
                   <div className="text-xs text-gray-600">
                     Original total: R{(subtotal + shippingCost).toFixed(2)}
                   </div>
