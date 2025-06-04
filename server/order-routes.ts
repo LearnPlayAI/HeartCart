@@ -84,7 +84,8 @@ const createOrderSchema = z.object({
     productAttributes: z.record(z.union([z.string(), z.record(z.number())])).optional()
   })),
   subtotal: z.number(),
-  total: z.number()
+  total: z.number(),
+  creditUsed: z.number().default(0)
 });
 
 // Helper function to generate attribute display text
@@ -127,7 +128,7 @@ router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Respons
 
     // Validate request body using the checkout form schema
     logger.info("Validating order data", { orderData: req.body });
-    const orderData = checkoutOrderSchema.parse(req.body);
+    const orderData = createOrderSchema.parse(req.body);
     logger.info("Order data validation successful", { orderData });
 
     // Use the order items from the request (checkout form already validates these)
@@ -163,6 +164,54 @@ router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Respons
       });
     }
 
+    // Process credit application if specified
+    let finalPaymentStatus = "pending";
+    let remainingBalance = orderData.total;
+    
+    if (orderData.creditUsed && orderData.creditUsed > 0) {
+      // Verify user has sufficient credit balance
+      const creditBalance = await storage.getUserCreditBalance(userId);
+      const availableCredit = parseFloat(creditBalance.availableCredits || '0');
+      
+      if (orderData.creditUsed > availableCredit) {
+        return sendError(res, `Insufficient credit balance. Available: R${availableCredit.toFixed(2)}, Requested: R${orderData.creditUsed.toFixed(2)}`, 400);
+      }
+      
+      // Calculate remaining balance after credit application
+      remainingBalance = orderData.total - orderData.creditUsed;
+      
+      // If credit covers full amount, mark as paid
+      if (remainingBalance <= 0) {
+        finalPaymentStatus = "paid";
+        remainingBalance = 0;
+      }
+      
+      // Create credit transaction for usage
+      await storage.createCreditTransaction({
+        userId: userId,
+        transactionType: 'used',
+        amount: orderData.creditUsed.toString(),
+        description: `Credit applied to order`,
+        orderId: null, // Will be updated after order creation
+      });
+      
+      // Update customer credit balance
+      const newAvailableBalance = availableCredit - orderData.creditUsed;
+      const currentTotalCredits = parseFloat(creditBalance.totalCreditAmount || '0');
+      
+      await storage.createOrUpdateCustomerCredit(userId, {
+        totalCreditAmount: currentTotalCredits.toString(),
+        availableCreditAmount: newAvailableBalance.toString(),
+      });
+      
+      logger.info("Credit applied to order", {
+        userId: userId,
+        creditUsed: orderData.creditUsed,
+        remainingBalance: remainingBalance,
+        newAvailableBalance: newAvailableBalance
+      });
+    }
+
     // Create order object with new structure
     const order = {
       userId: userId,
@@ -176,14 +225,34 @@ router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Respons
       shippingMethod: orderData.shippingMethod,
       shippingCost: orderData.shippingCost,
       paymentMethod: orderData.paymentMethod,
-      paymentStatus: "pending",
+      paymentStatus: finalPaymentStatus,
       subtotalAmount: orderData.subtotal,
       totalAmount: orderData.total,
       customerNotes: orderData.specialInstructions || null,
+      creditUsed: orderData.creditUsed || 0,
+      remainingBalance: remainingBalance,
     };
 
     // Create the order
     const newOrder = await storage.createOrder(order, orderItems);
+    
+    // Update credit transaction with order ID if credit was used
+    if (orderData.creditUsed && orderData.creditUsed > 0) {
+      // Find and update the credit transaction we just created
+      const creditTransactions = await storage.getCreditTransactionsByUser(userId);
+      const recentTransaction = creditTransactions.find(
+        t => t.transactionType === 'used' && 
+        t.amount === orderData.creditUsed.toString() && 
+        !t.orderId
+      );
+      
+      if (recentTransaction) {
+        await storage.updateCreditTransaction(recentTransaction.id, {
+          orderId: newOrder.id,
+          description: `Credit applied to order #${newOrder.orderNumber}`
+        });
+      }
+    }
 
     logger.info("Order created successfully", {
       orderId: newOrder.id,

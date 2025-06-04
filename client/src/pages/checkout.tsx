@@ -873,6 +873,50 @@ export default function CheckoutPage() {
 
               <Separator />
 
+              {/* Credit Application Section */}
+              {creditBalance && parseFloat(creditBalance.availableCredits) > 0 && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CreditCard className="h-4 w-4 text-green-600" />
+                    <span className="text-sm font-medium text-green-700">
+                      Available Credit: R{parseFloat(creditBalance.availableCredits).toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="checkoutCreditAmount" className="text-xs text-gray-600">
+                      Apply Credit Amount
+                    </Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="checkoutCreditAmount"
+                        type="number"
+                        min="0"
+                        max={maxCreditAmount}
+                        step="0.01"
+                        value={applyCreditAmount}
+                        onChange={(e) => setApplyCreditAmount(Math.min(parseFloat(e.target.value) || 0, maxCreditAmount))}
+                        placeholder="0.00"
+                        className="text-sm"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setApplyCreditAmount(maxCreditAmount)}
+                        className="text-xs whitespace-nowrap"
+                      >
+                        Use Max
+                      </Button>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      Maximum: R{maxCreditAmount.toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <Separator />
+
               {/* Pricing Breakdown */}
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
@@ -892,7 +936,9 @@ export default function CheckoutPage() {
                 <Separator />
                 <div className="flex justify-between font-bold">
                   <span>Total:</span>
-                  <span>R{finalTotal.toFixed(2)}</span>
+                  <span className={applyCreditAmount > 0 ? "text-green-600" : ""}>
+                    R{finalTotal.toFixed(2)}
+                  </span>
                 </div>
                 {applyCreditAmount > 0 && (
                   <div className="text-xs text-gray-600">
