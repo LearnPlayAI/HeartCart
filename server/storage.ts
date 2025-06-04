@@ -1229,12 +1229,21 @@ export class DatabaseStorage implements IStorage {
         }
       }
 
-      // Add search condition if provided
+      // Add comprehensive search condition if provided
       if (search) {
         const searchTerm = `%${search}%`;
         const searchCondition = or(
           like(products.name, searchTerm),
           like(products.description || "", searchTerm),
+          like(products.sku || "", searchTerm),
+          like(products.brand || "", searchTerm),
+          like(products.supplier || "", searchTerm),
+          like(products.metaTitle || "", searchTerm),
+          like(products.metaDescription || "", searchTerm),
+          like(products.metaKeywords || "", searchTerm),
+          like(products.dimensions || "", searchTerm),
+          like(products.specialSaleText || "", searchTerm),
+          like(products.discountLabel || "", searchTerm)
         );
         
         if (countQuery.where) {
@@ -1306,12 +1315,21 @@ export class DatabaseStorage implements IStorage {
       // Build final conditions for both count and data queries
       const allConditions = [...conditions];
       
-      // Add search condition if provided
+      // Add comprehensive search condition if provided
       if (search) {
         const searchTerm = `%${search}%`;
         const searchConditions = or(
           like(products.name, searchTerm),
           like(products.description || "", searchTerm),
+          like(products.sku || "", searchTerm),
+          like(products.brand || "", searchTerm),
+          like(products.supplier || "", searchTerm),
+          like(products.metaTitle || "", searchTerm),
+          like(products.metaDescription || "", searchTerm),
+          like(products.metaKeywords || "", searchTerm),
+          like(products.dimensions || "", searchTerm),
+          like(products.specialSaleText || "", searchTerm),
+          like(products.discountLabel || "", searchTerm)
         );
         allConditions.push(searchConditions);
       }
