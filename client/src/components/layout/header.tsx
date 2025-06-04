@@ -84,8 +84,15 @@ const Header = () => {
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/my-orders" className="cursor-pointer">
+                      <Link href="/my-orders" className="cursor-pointer flex items-center">
+                        <Package className="h-4 w-4 mr-2" />
                         My Orders
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/my-favourites" className="cursor-pointer flex items-center">
+                        <Heart className="h-4 w-4 mr-2" />
+                        My Favourites
                       </Link>
                     </DropdownMenuItem>
                     

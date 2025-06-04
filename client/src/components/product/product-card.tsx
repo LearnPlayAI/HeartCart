@@ -10,6 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import type { Product } from '@shared/schema';
 import { ensureValidImageUrl } from '@/utils/file-manager';
 import { useCountdown } from '@/hooks/use-countdown';
+import { FavouriteHeart } from '@/components/FavouriteHeart';
+import { useAuth } from '@/hooks/use-auth';
 
 // Flash Deal Timer Component 
 const FlashDealTimer = ({ endDate }: { endDate: Date }) => {
@@ -92,6 +94,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
 }) => {
   const { addItem } = useCart();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [quickViewOpen, setQuickViewOpen] = useState(false);
   const [imageError, setImageError] = useState(false);
   
@@ -196,6 +199,16 @@ const ProductCard: React.FC<ProductCardProps> = ({
               className="w-full h-48 object-cover"
               onError={() => setImageError(true)}
             />
+            
+            {/* Favourite Heart - positioned at top right */}
+            <div className="absolute top-2 right-2">
+              <FavouriteHeart
+                productId={product.id}
+                userId={user?.id}
+                className="bg-white/80 backdrop-blur-sm"
+                size={18}
+              />
+            </div>
             
             {/* Promotional overlays */}
             {promotionInfo && (
