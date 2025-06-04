@@ -59,6 +59,7 @@ interface SupplierOrder {
     name: string;
     imageUrl?: string;
     price?: number;
+    sku?: string;
     supplierAvailable: boolean;
   };
 }
@@ -128,12 +129,42 @@ const SupplierOrders = () => {
         method: 'PATCH',
         data: { status, notes },
       }),
+    onMutate: async ({ orderId, status }) => {
+      // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+      await queryClient.cancelQueries({ queryKey: ['/api/admin/supplier-orders'] });
+
+      // Snapshot the previous value
+      const previousOrders = queryClient.getQueryData(['/api/admin/supplier-orders']);
+
+      // Optimistically update to the new value
+      queryClient.setQueryData(['/api/admin/supplier-orders'], (old: any) => {
+        if (!old?.success || !old?.data) return old;
+        
+        return {
+          ...old,
+          data: old.data.map((order: SupplierOrder) =>
+            order.id === orderId ? { ...order, status } : order
+          ),
+        };
+      });
+
+      // Return a context object with the snapshotted value
+      return { previousOrders };
+    },
     onSuccess: () => {
+      // Force cache refresh with more aggressive invalidation
       queryClient.invalidateQueries({ queryKey: ['/api/admin/supplier-orders'] });
+      queryClient.refetchQueries({ queryKey: ['/api/admin/supplier-orders'] });
       toast({
         title: 'Status updated',
         description: 'Supplier order status has been updated',
       });
+    },
+    onError: (err, variables, context) => {
+      // If the mutation fails, use the context returned from onMutate to roll back
+      if (context?.previousOrders) {
+        queryClient.setQueryData(['/api/admin/supplier-orders'], context.previousOrders);
+      }
     },
     onError: () => {
       toast({
@@ -426,6 +457,12 @@ const SupplierOrders = () => {
                           <span className="text-muted-foreground">Created:</span>
                           <span>{formatDate(order.createdAt)}</span>
                         </div>
+                        {order.product.sku && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">SKU:</span>
+                            <span className="font-mono text-xs">{order.product.sku}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
 

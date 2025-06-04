@@ -10950,6 +10950,8 @@ export class DatabaseStorage implements IStorage {
           id: row.product.id,
           name: row.product.name,
           imageUrl: row.product.imageUrl,
+          price: row.product.price,
+          sku: row.product.sku,
           supplierAvailable: true,
         }
       }));
