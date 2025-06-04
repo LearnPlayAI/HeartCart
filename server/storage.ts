@@ -11309,14 +11309,20 @@ export class DatabaseStorage implements IStorage {
               eq(orders.paymentStatus, 'paid'),
               eq(orders.paymentStatus, 'payment_received')
             ),
-            ...(filters?.orderId ? [eq(orders.id, filters.orderId)] : [])
+            ...(filters?.orderId ? [eq(orders.id, filters.orderId)] : []),
+            // Handle status filtering at database level
+            ...(filters?.status && filters.status !== 'pending' ? 
+              [eq(orderItemSupplierStatus.supplierStatus, filters.status)] : []),
+            // For pending status, we want items WITHOUT supplier status entries
+            ...(filters?.status === 'pending' ? 
+              [isNull(orderItemSupplierStatus.supplierStatus)] : [])
           )
         )
         .orderBy(desc(orders.createdAt));
 
       const results = await query;
       
-      const mappedResults = results.map(row => ({
+      return results.map(row => ({
         id: row.orderItem.id,
         orderId: row.order.id,
         productId: row.product.id,
@@ -11356,13 +11362,6 @@ export class DatabaseStorage implements IStorage {
         },
         customerUnitPrice: row.orderItem.unitPrice, // Add the actual price customer paid
       }));
-
-      // Apply status filter at application level after setting defaults
-      if (filters?.status) {
-        return mappedResults.filter(item => item.status === filters.status);
-      }
-
-      return mappedResults;
     } catch (error) {
       logger.error('Error getting order items for supplier management', { error, filters });
       throw error;
