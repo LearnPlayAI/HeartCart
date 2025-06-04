@@ -1375,9 +1375,13 @@ export class DatabaseStorage implements IStorage {
           .where(and(...joinConditions));
 
         dataQuery = db
-          .select({ product: products })
+          .select({ 
+            product: products,
+            draftCostPrice: productDrafts.costPrice 
+          })
           .from(products)
           .innerJoin(categories, eq(products.categoryId, categories.id))
+          .leftJoin(productDrafts, eq(productDrafts.sku, products.sku))
           .where(and(...joinConditions))
           .orderBy(products.displayOrder, products.id)
           .limit(limit)
@@ -1395,8 +1399,12 @@ export class DatabaseStorage implements IStorage {
         }
 
         dataQuery = db
-          .select()
-          .from(products);
+          .select({
+            ...products,
+            draftCostPrice: productDrafts.costPrice
+          })
+          .from(products)
+          .leftJoin(productDrafts, eq(productDrafts.sku, products.sku));
         
         if (whereCondition) {
           dataQuery = dataQuery.where(whereCondition);
@@ -1416,7 +1424,23 @@ export class DatabaseStorage implements IStorage {
         ]);
 
         const total = countResult[0]?.count || 0;
-        const productList = needsJoin ? dataResult.map((row: any) => row.product) : dataResult;
+        let productList: any[];
+        
+        if (needsJoin) {
+          // Process results with cost price from drafts
+          productList = dataResult.map((row: any) => ({
+            ...row.product,
+            // Use draft cost price if available, otherwise use product cost price
+            costPrice: row.draftCostPrice !== null ? row.draftCostPrice : row.product.costPrice
+          }));
+        } else {
+          // Process results with cost price from drafts
+          productList = dataResult.map((row: any) => ({
+            ...row,
+            // Use draft cost price if available, otherwise use product cost price
+            costPrice: row.draftCostPrice !== null ? row.draftCostPrice : row.costPrice
+          }));
+        }
         
         console.log('Products found:', productList.length, 'Total:', total);
         
