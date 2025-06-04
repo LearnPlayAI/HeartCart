@@ -402,9 +402,20 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
                 <h4 className="font-semibold text-sm">Product Options</h4>
                 
                 {productAttributes.map(attribute => {
-                  // Get the selected options for this product's attribute
-                  const productAttributeData = attributeValues?.find(av => av.attributeId === attribute.id);
-                  const availableOptions = productAttributeData?.selectedOptions || [];
+                  // Use attribute.options directly (same as working product detail page)
+                  const availableOptions = attribute.options || [];
+                  
+                  // Debug logging
+                  console.log(`Rendering attribute [${attribute.id}]: `, {
+                    name: attribute.name,
+                    displayName: attribute.displayName,
+                    options: attribute.options,
+                    optionCount: attribute.options?.length,
+                    availableOptions: availableOptions,
+                    value: selectedAttributes[attribute.id]
+                  });
+                  
+                  console.log(`Available options for select [${attribute.id}]:`, availableOptions);
                   
                   return (
                     <div key={attribute.id} className="space-y-1">
