@@ -135,6 +135,11 @@ const SupplierOrders = () => {
   });
 
   const supplierOrders = supplierOrdersResponse?.success ? supplierOrdersResponse.data : [];
+  
+  // Debug logging
+  console.log('Supplier orders response:', supplierOrdersResponse);
+  console.log('Supplier orders array:', supplierOrders);
+  console.log('Array length:', supplierOrders?.length);
 
   const getStatusIcon = (status: string) => {
     switch (status) {

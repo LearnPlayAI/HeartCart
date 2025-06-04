@@ -10924,10 +10924,8 @@ export class DatabaseStorage implements IStorage {
       return results.map(row => ({
         id: row.orderItem.id,
         orderId: row.order.id,
-        orderNumber: row.order.orderNumber,
         productId: row.product.id,
         productName: row.orderItem.productName || row.product.name,
-        productSku: row.product.sku,
         supplierUrl: row.product.supplier || '', // Map supplier field to supplierUrl
         quantity: row.orderItem.quantity,
         unitCost: row.orderItem.unitPrice,
@@ -10941,8 +10939,13 @@ export class DatabaseStorage implements IStorage {
         urlLastChecked: '',
         createdAt: row.order.createdAt,
         updatedAt: row.supplierStatus?.createdAt || row.order.createdAt,
-        customerName: row.order.customerName,
-        orderDateOriginal: row.order.createdAt,
+        customerOrder: {
+          id: row.order.id,
+          orderNumber: row.order.orderNumber,
+          customerName: row.order.customerName,
+          createdAt: row.order.createdAt,
+          status: row.order.status,
+        },
         product: {
           id: row.product.id,
           name: row.product.name,
