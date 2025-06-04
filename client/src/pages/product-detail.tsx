@@ -407,7 +407,7 @@ const ProductDetailContent = ({
       combinationHash: selectedCombination?.combinationHash,
       selectedAttributes,
       globalAttributes: cartGlobalAttributes,
-      adjustedPrice: currentPrice || product.salePrice || product.price
+      adjustedPrice: pricing?.displayPrice || currentPrice || product.salePrice || product.price
     };
     
     addToCart(cartItem);
