@@ -544,8 +544,39 @@ export default function AdminOrderDetail() {
             </Card>
           </div>
 
-          {/* EFT Payment Proof Management */}
-          {order.paymentMethod?.toLowerCase() === 'eft' && (
+          {/* Credit Payment Indicator - Show when order is fully paid with credits */}
+          {order.creditUsed > 0 && order.remainingBalance === 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <span>Credit Payment</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center">
+                      <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
+                      <p className="font-medium text-green-800">
+                        Order Fully Paid with Credits
+                      </p>
+                    </div>
+                    <div className="text-sm text-green-700 space-y-1">
+                      <p>Credit Used: R{order.creditUsed.toFixed(2)}</p>
+                      <p>Remaining Balance: R{order.remainingBalance.toFixed(2)}</p>
+                      <p className="text-xs mt-2 text-green-600">
+                        No additional payment required. Order is ready for processing.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* EFT Payment Proof Management - Only show if order requires actual EFT payment */}
+          {order.paymentMethod?.toLowerCase() === 'eft' && order.remainingBalance > 0 && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">

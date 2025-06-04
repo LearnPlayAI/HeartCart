@@ -208,10 +208,16 @@ router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Respons
       });
     }
 
+    // Determine order status based on payment
+    let orderStatus = "pending";
+    if (finalPaymentStatus === "paid") {
+      orderStatus = "confirmed"; // If fully paid with credits, mark as confirmed and ready for processing
+    }
+
     // Create order object with new structure
     const order = {
       userId: userId,
-      status: "pending",
+      status: orderStatus,
       customerName: `${orderData.customerInfo.firstName} ${orderData.customerInfo.lastName}`,
       customerEmail: orderData.customerInfo.email,
       customerPhone: orderData.customerInfo.phone,
