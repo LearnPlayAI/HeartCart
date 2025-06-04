@@ -3388,13 +3388,21 @@ export class DatabaseStorage implements IStorage {
         const now = new Date();
 
         try {
-          // Update the order with the new status and updatedAt timestamp
+          // Prepare update data with status and updatedAt
+          const updateData: any = {
+            status,
+            updatedAt: now,
+          };
+
+          // If status is shipped, set shippedAt timestamp
+          if (status === 'shipped') {
+            updateData.shippedAt = now;
+          }
+
+          // Update the order with the new status and timestamps
           const [updatedOrder] = await db
             .update(orders)
-            .set({
-              status,
-              updatedAt: now,
-            })
+            .set(updateData)
             .where(eq(orders.id, id))
             .returning();
 
