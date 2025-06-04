@@ -62,8 +62,50 @@ import {
   TrendingUp,
   TrendingDown,
   Trash2,
+  ArrowUpDown,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+
+// SortableHeader component
+interface SortableHeaderProps {
+  field: string;
+  children: React.ReactNode;
+  sortField: string;
+  sortOrder: 'asc' | 'desc';
+  onSort: (field: string) => void;
+  className?: string;
+}
+
+const SortableHeader: React.FC<SortableHeaderProps> = ({ 
+  field, 
+  children, 
+  sortField, 
+  sortOrder, 
+  onSort, 
+  className 
+}) => {
+  const isActive = sortField === field;
+  
+  return (
+    <TableHead 
+      className={`cursor-pointer select-none hover:bg-gray-50 ${className || ''}`}
+      onClick={() => onSort(field)}
+    >
+      <div className="flex items-center gap-1">
+        {children}
+        <ArrowUpDown 
+          className={`h-4 w-4 transition-colors ${
+            isActive 
+              ? sortOrder === 'asc' 
+                ? 'text-blue-600 rotate-180' 
+                : 'text-blue-600' 
+              : 'text-gray-400'
+          }`} 
+        />
+      </div>
+    </TableHead>
+  );
+};
 
 // Utility function for currency formatting
 const formatCurrency = (amount: number) => {
@@ -117,9 +159,27 @@ export const PublishedProducts: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
   
+  // Sorting state
+  const [sortField, setSortField] = useState<string>('displayOrder');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  
   // Hooks
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // Sort handler function
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      // Toggle sort order if same field
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Set new field with ascending order
+      setSortField(field);
+      setSortOrder('asc');
+    }
+    // Reset to first page when sorting changes
+    setCurrentPage(1);
+  };
   
   // Calculate offset for pagination
   const offset = (currentPage - 1) * itemsPerPage;
@@ -134,7 +194,9 @@ export const PublishedProducts: React.FC = () => {
       selectedParentCategory && selectedParentCategory !== 'all' ? selectedParentCategory :
       'all',
       maxTmyFilter,
-      statusFilter
+      statusFilter,
+      sortField,
+      sortOrder
     ],
     queryFn: async () => {
       const params = new URLSearchParams({
@@ -161,6 +223,14 @@ export const PublishedProducts: React.FC = () => {
       
       if (statusFilter && statusFilter !== 'all') {
         params.append('status', statusFilter);
+      }
+      
+      // Add sorting parameters
+      if (sortField) {
+        params.append('sortField', sortField);
+      }
+      if (sortOrder) {
+        params.append('sortOrder', sortOrder);
       }
       
       const response = await apiRequest('GET', `/api/products?${params.toString()}`);
@@ -510,14 +580,50 @@ export const PublishedProducts: React.FC = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>SKU</TableHead>
-                    <TableHead>Product</TableHead>
+                    <SortableHeader 
+                      field="sku" 
+                      sortField={sortField} 
+                      sortOrder={sortOrder} 
+                      onSort={handleSort}
+                    >
+                      SKU
+                    </SortableHeader>
+                    <SortableHeader 
+                      field="name" 
+                      sortField={sortField} 
+                      sortOrder={sortOrder} 
+                      onSort={handleSort}
+                    >
+                      Product
+                    </SortableHeader>
                     <TableHead>Parent Cat</TableHead>
                     <TableHead>Child Cat</TableHead>
-                    <TableHead className="text-right">Prices</TableHead>
+                    <SortableHeader 
+                      field="price" 
+                      sortField={sortField} 
+                      sortOrder={sortOrder} 
+                      onSort={handleSort}
+                      className="text-right"
+                    >
+                      Prices
+                    </SortableHeader>
                     <TableHead className="text-right">Percentage</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Published</TableHead>
+                    <SortableHeader 
+                      field="isActive" 
+                      sortField={sortField} 
+                      sortOrder={sortOrder} 
+                      onSort={handleSort}
+                    >
+                      Status
+                    </SortableHeader>
+                    <SortableHeader 
+                      field="publishedAt" 
+                      sortField={sortField} 
+                      sortOrder={sortOrder} 
+                      onSort={handleSort}
+                    >
+                      Published
+                    </SortableHeader>
                     <TableHead className="w-[100px] text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
