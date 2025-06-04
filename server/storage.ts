@@ -10161,6 +10161,8 @@ export class DatabaseStorage implements IStorage {
       const favourites = await db
         .select({
           id: userFavourites.id,
+          userId: userFavourites.userId,
+          productId: userFavourites.productId,
           createdAt: userFavourites.createdAt,
           product: {
             id: products.id,
@@ -10173,17 +10175,25 @@ export class DatabaseStorage implements IStorage {
             isFeatured: products.isFeatured,
             rating: products.rating,
             reviewCount: products.reviewCount,
+            description: products.description,
+            brand: products.brand,
           }
         })
         .from(userFavourites)
-        .leftJoin(products, eq(userFavourites.productId, products.id))
-        .where(and(
-          eq(userFavourites.userId, userId),
-          eq(products.isActive, true)
-        ))
+        .innerJoin(products, eq(userFavourites.productId, products.id))
+        .where(eq(userFavourites.userId, userId))
         .orderBy(desc(userFavourites.createdAt));
 
-      return favourites;
+      // Filter out favourites where product is null (shouldn't happen with inner join, but safety check)
+      const validFavourites = favourites.filter(fav => fav.product && fav.product.id);
+
+      logger.info('Retrieved user favourites with products', { 
+        userId, 
+        totalFavourites: favourites.length,
+        validFavourites: validFavourites.length
+      });
+
+      return validFavourites;
     } catch (error) {
       logger.error('Error getting user favourites with products', { error, userId });
       throw error;

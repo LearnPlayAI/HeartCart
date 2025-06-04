@@ -20,18 +20,14 @@ export function FavouriteHeart({ productId, userId, className, size = 20 }: Favo
   // Check if product is favourited
   const { data: favouriteStatus, isLoading } = useQuery({
     queryKey: ['/api/favourites/check', productId],
-    queryFn: () => apiRequest(`/api/favourites/check/${productId}`),
     enabled: !!userId, // Only run if user is logged in
   });
 
-  const isFavourited = favouriteStatus?.data?.isFavourited || false;
+  const isFavourited = favouriteStatus?.success && favouriteStatus?.data?.isFavourited || false;
 
   // Add to favourites mutation
   const addToFavouritesMutation = useMutation({
-    mutationFn: () => apiRequest('/api/favourites', {
-      method: 'POST',
-      body: { productId }
-    }),
+    mutationFn: () => apiRequest('POST', '/api/favourites', { productId }),
     onSuccess: (data) => {
       // Immediately update the cache with the new state
       queryClient.setQueryData(['/api/favourites/check', productId], {
