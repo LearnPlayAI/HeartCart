@@ -45,6 +45,7 @@ import {
   Package2,
   Receipt,
   MessageSquare,
+  ShoppingCart
 } from 'lucide-react';
 
 // Types
@@ -330,6 +331,26 @@ export default function AdminOrderDetail() {
   const getSupplierStatus = (productId: number) => {
     const supplierOrder = supplierOrders.find((so: SupplierOrder) => so.productId === productId);
     return supplierOrder?.status || 'pending';
+  };
+
+  // Supplier status badge component
+  const SupplierStatusBadge = ({ status }: { status: 'pending' | 'ordered' | 'unavailable' | 'received' }) => {
+    const statusConfig = {
+      pending: { color: 'bg-yellow-100 text-yellow-800', icon: Clock, label: 'Pending' },
+      ordered: { color: 'bg-blue-100 text-blue-800', icon: ShoppingCart, label: 'Ordered' },
+      received: { color: 'bg-green-100 text-green-800', icon: CheckCircle, label: 'Received' },
+      unavailable: { color: 'bg-red-100 text-red-800', icon: XCircle, label: 'Unavailable' }
+    };
+
+    const config = statusConfig[status];
+    const Icon = config.icon;
+
+    return (
+      <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${config.color}`}>
+        <Icon className="w-3 h-3" />
+        {config.label}
+      </div>
+    );
   };
 
   const updateStatusMutation = useMutation({
@@ -666,6 +687,47 @@ export default function AdminOrderDetail() {
                         {item.attributeDisplayText && (
                           <p className="text-sm text-muted-foreground">{item.attributeDisplayText}</p>
                         )}
+                        
+                        {/* Supplier Status Badge */}
+                        {(() => {
+                          const supplierStatus = supplierOrdersData?.find(so => so.productId === item.productId)?.status;
+                          if (!supplierStatus) return null;
+                          
+                          const statusConfig = {
+                            pending: { 
+                              icon: Clock, 
+                              color: 'text-yellow-600 bg-yellow-100', 
+                              label: 'Pending Order' 
+                            },
+                            ordered: { 
+                              icon: ShoppingCart, 
+                              color: 'text-blue-600 bg-blue-100', 
+                              label: 'Ordered' 
+                            },
+                            received: { 
+                              icon: CheckCircle, 
+                              color: 'text-green-600 bg-green-100', 
+                              label: 'Received' 
+                            },
+                            unavailable: { 
+                              icon: XCircle, 
+                              color: 'text-red-600 bg-red-100', 
+                              label: 'Unavailable' 
+                            }
+                          };
+                          
+                          const config = statusConfig[supplierStatus as keyof typeof statusConfig];
+                          if (!config) return null;
+                          
+                          const IconComponent = config.icon;
+                          
+                          return (
+                            <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium mt-2 ${config.color}`}>
+                              <IconComponent className="h-3 w-3 mr-1" />
+                              {config.label}
+                            </div>
+                          );
+                        })()}
                       </div>
                       
                       <div className="text-right">
