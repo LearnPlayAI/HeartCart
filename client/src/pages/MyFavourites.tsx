@@ -2,11 +2,14 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Heart, ShoppingCart, Eye, Trash2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Heart, ShoppingCart, Eye, Trash2, Search, Filter, SortAsc, SortDesc, Grid, List } from "lucide-react";
 import { Link } from "wouter";
 import { FavouriteHeart } from "@/components/FavouriteHeart";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { useState, useMemo } from "react";
 
 interface Product {
   id: number;
@@ -30,6 +33,12 @@ interface FavouriteWithProduct {
 
 export default function MyFavourites() {
   const { toast } = useToast();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortBy, setSortBy] = useState("newest");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [page, setPage] = useState(1);
+  const itemsPerPage = 12;
 
   const { data: favouritesData, isLoading, error } = useQuery({
     queryKey: ['/api/favourites'],
@@ -37,6 +46,52 @@ export default function MyFavourites() {
   });
 
   const favourites = favouritesData?.data?.favourites || [];
+
+  // Filter and sort favourites
+  const filteredAndSortedFavourites = useMemo(() => {
+    let filtered = favourites.filter((fav: FavouriteWithProduct) => {
+      const matchesSearch = fav.product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           (fav.product.description || "").toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = categoryFilter === "all" || fav.product.categoryName === categoryFilter;
+      return matchesSearch && matchesCategory;
+    });
+
+    // Sort favourites
+    switch (sortBy) {
+      case "newest":
+        filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        break;
+      case "oldest":
+        filtered.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+        break;
+      case "name":
+        filtered.sort((a, b) => a.product.name.localeCompare(b.product.name));
+        break;
+      case "price-low":
+        filtered.sort((a, b) => parseFloat(a.product.price) - parseFloat(b.product.price));
+        break;
+      case "price-high":
+        filtered.sort((a, b) => parseFloat(b.product.price) - parseFloat(a.product.price));
+        break;
+    }
+
+    return filtered;
+  }, [favourites, searchTerm, sortBy, categoryFilter]);
+
+  // Pagination
+  const totalPages = Math.ceil(filteredAndSortedFavourites.length / itemsPerPage);
+  const paginatedFavourites = filteredAndSortedFavourites.slice(
+    (page - 1) * itemsPerPage,
+    page * itemsPerPage
+  );
+
+  // Get unique categories for filter
+  const categories = useMemo(() => {
+    const cats = favourites
+      .map((fav: FavouriteWithProduct) => fav.product.categoryName)
+      .filter((cat): cat is string => !!cat);
+    return Array.from(new Set(cats));
+  }, [favourites]);
 
   if (isLoading) {
     return (
@@ -128,12 +183,113 @@ export default function MyFavourites() {
             My Favourites
           </h1>
           <Badge variant="secondary" className="text-sm">
-            {favourites.length} {favourites.length === 1 ? 'item' : 'items'}
+            {filteredAndSortedFavourites.length} of {favourites.length} {favourites.length === 1 ? 'item' : 'items'}
           </Badge>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {favourites.map((favourite: FavouriteWithProduct) => {
+        {/* Enhanced Filters and Controls */}
+        <div className="mb-6 space-y-4">
+          {/* Search and View Toggle */}
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Search favourites..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant={viewMode === "grid" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setViewMode("grid")}
+              >
+                <Grid className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === "list" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setViewMode("list")}
+              >
+                <List className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Filters */}
+          <div className="flex flex-wrap gap-4 items-center">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-gray-500" />
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="All Categories" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {categories.map((category) => (
+                    <SelectItem key={category} value={category}>
+                      {category}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {sortBy.includes("price") ? <SortDesc className="h-4 w-4 text-gray-500" /> : <SortAsc className="h-4 w-4 text-gray-500" />}
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="newest">Newest First</SelectItem>
+                  <SelectItem value="oldest">Oldest First</SelectItem>
+                  <SelectItem value="name">Name A-Z</SelectItem>
+                  <SelectItem value="price-low">Price: Low to High</SelectItem>
+                  <SelectItem value="price-high">Price: High to Low</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+
+        {/* Results */}
+        {filteredAndSortedFavourites.length === 0 ? (
+          <Card className="text-center py-12">
+            <CardContent>
+              <div className="text-gray-400 mb-4">
+                <Heart className="h-12 w-12 mx-auto" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">No favourites found</h3>
+              <p className="text-gray-600 mb-4">
+                {searchTerm || categoryFilter !== "all" 
+                  ? "Try adjusting your search or filters"
+                  : "Start adding products to your favourites to see them here"
+                }
+              </p>
+              {(searchTerm || categoryFilter !== "all") && (
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setSearchTerm("");
+                    setCategoryFilter("all");
+                  }}
+                >
+                  Clear Filters
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            <div className={`grid gap-6 ${
+              viewMode === "grid" 
+                ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" 
+                : "grid-cols-1"
+            }`}>
+              {paginatedFavourites.map((favourite: FavouriteWithProduct) => {
             const { product } = favourite;
             const imageUrl = product.imageUrl || '/api/placeholder/300/300';
             
