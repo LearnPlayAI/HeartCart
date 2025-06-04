@@ -396,30 +396,57 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
             
             <Separator className="my-2" />
             
-            {/* Simplified attribute selection to fix type issues */}
+            {/* Product attributes with proper dropdown handling */}
             {productAttributes && productAttributes.length > 0 && (
               <div className="space-y-3">
                 <h4 className="font-semibold text-sm">Product Options</h4>
                 
-                {productAttributes.map(attribute => (
-                  <div key={attribute.id} className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <label className="font-medium text-sm">{attribute.displayName || attribute.name}</label>
-                        {attribute.isRequired && (
-                          <span className="text-red-500 ml-1">*</span>
-                        )}
+                {productAttributes.map(attribute => {
+                  // Get the selected options for this product's attribute
+                  const productAttributeData = attributeValues?.find(av => av.attributeId === attribute.id);
+                  const availableOptions = productAttributeData?.selectedOptions || [];
+                  
+                  return (
+                    <div key={attribute.id} className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center">
+                          <label className="font-medium text-sm">{attribute.displayName || attribute.name}</label>
+                          {attribute.isRequired && (
+                            <span className="text-red-500 ml-1">*</span>
+                          )}
+                        </div>
                       </div>
+                      
+                      {availableOptions && availableOptions.length > 0 ? (
+                        // Render dropdown for attributes with predefined options
+                        <Select 
+                          value={selectedAttributes[attribute.id] || ''} 
+                          onValueChange={(value) => handleAttributeChange(attribute.id, value)}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder={`Select ${attribute.displayName || attribute.name}`} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableOptions.map(option => (
+                              <SelectItem key={option.id} value={option.value}>
+                                {option.displayValue || option.value}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        // Render text input for attributes without predefined options
+                        <input
+                          type="text"
+                          className="w-full p-2 border rounded-md"
+                          placeholder={`Enter ${attribute.displayName || attribute.name}`}
+                          value={selectedAttributes[attribute.id] || ''}
+                          onChange={(e) => handleAttributeChange(attribute.id, e.target.value)}
+                        />
+                      )}
                     </div>
-                    <input
-                      type="text"
-                      className="w-full p-2 border rounded-md"
-                      placeholder={`Enter ${attribute.displayName || attribute.name}`}
-                      value={selectedAttributes[attribute.id] || ''}
-                      onChange={(e) => handleAttributeChange(attribute.id, e.target.value)}
-                    />
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
             
