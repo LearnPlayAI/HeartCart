@@ -80,6 +80,14 @@ const Header = () => {
                     <div className="p-2 text-sm font-medium border-b">
                       {user.username}
                     </div>
+                    <div className="p-2 text-xs bg-green-50 border-b">
+                      <div className="flex items-center justify-between">
+                        <span className="text-green-700">Credit Balance:</span>
+                        <span className="font-bold text-green-800">
+                          {balanceLoading ? 'Loading...' : formattedBalance}
+                        </span>
+                      </div>
+                    </div>
                     <DropdownMenuItem asChild>
                       <Link href="/profile-settings" className="cursor-pointer">
                         My Profile
