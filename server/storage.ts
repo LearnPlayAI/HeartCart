@@ -11309,7 +11309,6 @@ export class DatabaseStorage implements IStorage {
               eq(orders.paymentStatus, 'paid'),
               eq(orders.paymentStatus, 'payment_received')
             ),
-            ...(filters?.status ? [eq(orderItemSupplierStatus.supplierStatus, filters.status)] : []),
             ...(filters?.orderId ? [eq(orders.id, filters.orderId)] : [])
           )
         )
@@ -11317,7 +11316,7 @@ export class DatabaseStorage implements IStorage {
 
       const results = await query;
       
-      return results.map(row => ({
+      const mappedResults = results.map(row => ({
         id: row.orderItem.id,
         orderId: row.order.id,
         productId: row.product.id,
@@ -11357,6 +11356,13 @@ export class DatabaseStorage implements IStorage {
         },
         customerUnitPrice: row.orderItem.unitPrice, // Add the actual price customer paid
       }));
+
+      // Apply status filter at application level after setting defaults
+      if (filters?.status) {
+        return mappedResults.filter(item => item.status === filters.status);
+      }
+
+      return mappedResults;
     } catch (error) {
       logger.error('Error getting order items for supplier management', { error, filters });
       throw error;
