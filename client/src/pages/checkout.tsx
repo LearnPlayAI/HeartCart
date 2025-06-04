@@ -178,9 +178,19 @@ export default function CheckoutPage() {
     }
   });
 
-  // Force cart refetch on component mount
+  // Force cart refetch on component mount and handle credit from URL
   useEffect(() => {
     refetchCart();
+    
+    // Parse credit amount from URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const creditParam = urlParams.get('credit');
+    if (creditParam) {
+      const creditAmount = parseFloat(creditParam);
+      if (!isNaN(creditAmount) && creditAmount > 0) {
+        setApplyCreditAmount(creditAmount);
+      }
+    }
   }, [refetchCart]);
 
   // Pre-populate form with user data if available

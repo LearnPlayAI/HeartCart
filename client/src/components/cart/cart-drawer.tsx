@@ -1,9 +1,12 @@
-import { useEffect } from 'react';
-import { XCircle, ShoppingBag, Plus, Minus, Trash2, Tag as TagIcon, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { XCircle, ShoppingBag, Plus, Minus, Trash2, Tag as TagIcon, X, CreditCard } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useCart } from '@/hooks/use-cart';
+import { useCredits } from '@/hooks/use-credits';
 import { formatCurrency } from '@/lib/utils';
 import { Link } from 'wouter';
 
@@ -19,10 +22,18 @@ const CartDrawer = () => {
     isLoading
   } = useCart();
   
+  const { creditBalance, formattedBalance } = useCredits();
+  const [applyCreditAmount, setApplyCreditAmount] = useState(0);
+  
   // Use the cart summary data which already includes all calculations
   const { subtotal, finalTotal, totalDiscount } = cartSummary;
   const shipping = subtotal > 0 ? 85 : 0; // R85 PUDO courier shipping fee
-  const total = finalTotal + shipping;
+  const cartTotal = finalTotal + shipping;
+  
+  // Calculate credit application
+  const availableCredit = creditBalance ? parseFloat(creditBalance.availableCredits) : 0;
+  const maxCreditAmount = Math.min(availableCredit, cartTotal);
+  const finalTotalAfterCredit = Math.max(0, cartTotal - applyCreditAmount);
   
   // Close cart on ESC key
   useEffect(() => {
@@ -205,18 +216,79 @@ const CartDrawer = () => {
                 <span className="font-medium">{formatCurrency(shipping)}</span>
               </div>
               <Separator className="my-2" />
-              <div className="flex justify-between mb-4 text-sm font-bold">
-                <span>Total</span>
-                <span>{formatCurrency(total)}</span>
+              <div className="flex justify-between mb-2 text-sm font-bold">
+                <span>Cart Total</span>
+                <span>{formatCurrency(cartTotal)}</span>
               </div>
-              <Button 
-                className="w-full bg-[#FF69B4] hover:bg-[#FF1493] text-white"
-                asChild
-              >
-                <Link href="/checkout">
-                  <a onClick={closeCart}>Proceed to Checkout</a>
-                </Link>
-              </Button>
+              
+              {/* Credit Application Section */}
+              {availableCredit > 0 && (
+                <div className="my-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CreditCard className="h-4 w-4 text-green-600" />
+                    <span className="text-sm font-medium text-green-700">
+                      Available Credit: {formatCurrency(availableCredit)}
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="creditAmount" className="text-xs text-gray-600">
+                      Apply Credit Amount
+                    </Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="creditAmount"
+                        type="number"
+                        min="0"
+                        max={maxCreditAmount}
+                        step="0.01"
+                        value={applyCreditAmount}
+                        onChange={(e) => setApplyCreditAmount(Math.min(parseFloat(e.target.value) || 0, maxCreditAmount))}
+                        placeholder="0.00"
+                        className="text-sm"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setApplyCreditAmount(maxCreditAmount)}
+                        className="text-xs whitespace-nowrap"
+                      >
+                        Use Max
+                      </Button>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      Maximum: {formatCurrency(maxCreditAmount)}
+                    </p>
+                  </div>
+                </div>
+              )}
+              
+              {/* Applied Credit Display */}
+              {applyCreditAmount > 0 && (
+                <>
+                  <div className="flex justify-between mb-2 text-sm text-green-600">
+                    <span>Store Credit Applied</span>
+                    <span>-{formatCurrency(applyCreditAmount)}</span>
+                  </div>
+                  <Separator className="my-2" />
+                </>
+              )}
+              
+              <div className="flex justify-between mb-4 text-lg font-bold">
+                <span>Final Total</span>
+                <span className={applyCreditAmount > 0 ? "text-green-600" : ""}>
+                  {formatCurrency(finalTotalAfterCredit)}
+                </span>
+              </div>
+              
+              <Link href={`/checkout${applyCreditAmount > 0 ? `?credit=${applyCreditAmount}` : ''}`}>
+                <Button 
+                  className="w-full bg-[#FF69B4] hover:bg-[#FF1493] text-white"
+                  onClick={closeCart}
+                >
+                  Proceed to Checkout
+                </Button>
+              </Link>
               <Button 
                 variant="outline"
                 className="w-full mt-2 border-[#FF69B4] text-[#FF69B4] hover:bg-[#FF69B4]/5"
