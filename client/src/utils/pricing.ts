@@ -174,14 +174,8 @@ export function calculateShippingCost(
   isShippingWaived: boolean;
   reasonForWaiver?: string;
 } {
-  console.log('=== SHIPPING CALCULATION DEBUG ===');
-  console.log('Available credits:', availableCredits);
-  console.log('Credit transactions:', creditTransactions);
-  console.log('User orders:', userOrders);
-
   // Only waive shipping if there are available credits AND they originated from unshipped orders
   if (availableCredits <= 0) {
-    console.log('No available credits - applying normal shipping');
     return {
       shippingCost: baseShippingCost,
       isShippingWaived: false
@@ -196,11 +190,8 @@ export function calculateShippingCost(
     parseFloat(transaction.amount) > 0
   );
 
-  console.log('Unshipped order credits:', unshippedOrderCredits);
-
   // If no credits from unshipped orders, apply normal shipping
   if (unshippedOrderCredits.length === 0) {
-    console.log('No credits from unshipped orders - applying normal shipping');
     return {
       shippingCost: baseShippingCost,
       isShippingWaived: false
@@ -213,23 +204,17 @@ export function calculateShippingCost(
     return !earliest || transactionDate < earliest ? transactionDate : earliest;
   }, null as Date | null);
 
-  console.log('Earliest credit date:', earliestCreditDate);
-
   // Check if any orders have been shipped AFTER the credits were issued
   const ordersShippedAfterCredits = userOrders.filter(order => {
     if (!order.shippedAt || !earliestCreditDate) return false;
     const shippedDate = new Date(order.shippedAt);
-    console.log(`Order ${order.id}: shipped at ${shippedDate}, credit issued at ${earliestCreditDate}`);
     return shippedDate > earliestCreditDate;
   });
-
-  console.log('Orders shipped after credits:', ordersShippedAfterCredits);
 
   // Free shipping only if:
   // 1. User has available credits from unshipped orders
   // 2. No orders have been shipped since the credits were issued
   if (ordersShippedAfterCredits.length === 0) {
-    console.log('No orders shipped after credits - applying free shipping');
     return {
       shippingCost: 0,
       isShippingWaived: true,
@@ -237,7 +222,6 @@ export function calculateShippingCost(
     };
   }
 
-  console.log('Orders have been shipped after credits - applying normal shipping');
   return {
     shippingCost: baseShippingCost,
     isShippingWaived: false

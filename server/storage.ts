@@ -3406,6 +3406,44 @@ export class DatabaseStorage implements IStorage {
             .where(eq(orders.id, id))
             .returning();
 
+          // If order is marked as shipped, update all supplier order items with status "ordered" to "shipped"
+          if (status === 'shipped') {
+            try {
+              // Get all order items for this order
+              const orderItems = await db
+                .select({ id: orderItems.id })
+                .from(orderItems)
+                .where(eq(orderItems.orderId, id));
+
+              // Update supplier status for items that are currently "ordered" to "shipped"
+              for (const item of orderItems) {
+                await db
+                  .update(orderItemSupplierStatus)
+                  .set({
+                    supplierStatus: 'shipped',
+                    updatedAt: now.toISOString()
+                  })
+                  .where(
+                    and(
+                      eq(orderItemSupplierStatus.orderItemId, item.id),
+                      eq(orderItemSupplierStatus.supplierStatus, 'ordered')
+                    )
+                  );
+              }
+
+              logger.info(`Updated supplier order statuses to shipped for order ${id}`, {
+                orderId: id,
+                orderItemCount: orderItems.length
+              });
+            } catch (supplierUpdateError) {
+              logger.error(`Error updating supplier order statuses when marking order as shipped`, {
+                error: supplierUpdateError,
+                orderId: id
+              });
+              // Don't throw error here as the main order update was successful
+            }
+          }
+
           logger.info(`Updated order status`, {
             orderId: id,
             oldStatus,
