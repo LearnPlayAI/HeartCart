@@ -10908,10 +10908,7 @@ export class DatabaseStorage implements IStorage {
         .innerJoin(orders, eq(orderItems.orderId, orders.id))
         .innerJoin(products, eq(orderItems.productId, products.id))
         .leftJoin(orderItemSupplierStatus, eq(orderItems.id, orderItemSupplierStatus.orderItemId))
-        .leftJoin(productDrafts, and(
-          eq(productDrafts.sku, products.sku),
-          eq(productDrafts.draftStatus, 'ready_to_publish')
-        ))
+        .leftJoin(productDrafts, eq(productDrafts.sku, products.sku))
         .where(
           and(
             or(
