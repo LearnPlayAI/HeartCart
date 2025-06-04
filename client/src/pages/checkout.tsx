@@ -121,13 +121,13 @@ export default function CheckoutPage() {
   // Create a map of product IDs to their promotional information
   const promotionMap = new Map();
   activePromotions.forEach((promotion: any) => {
-    if (promotion.promotionProducts) {
-      promotion.promotionProducts.forEach((pp: any) => {
+    if (promotion.products) {
+      promotion.products.forEach((pp: any) => {
         promotionMap.set(pp.productId, {
           promotionName: promotion.promotionName,
           promotionDiscount: promotion.discountValue.toString(),
           promotionEndDate: promotion.endDate,
-          promotionalPrice: pp.discountOverride || null
+          promotionalPrice: pp.promotionalPrice ? parseFloat(pp.promotionalPrice) : null
         });
       });
     }
