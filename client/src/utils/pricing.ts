@@ -173,15 +173,34 @@ export function calculateShippingCost(
   isShippingWaived: boolean;
   reasonForWaiver?: string;
 } {
+  // Only waive shipping if there are available credits AND they originated from unshipped orders
+  if (availableCredits <= 0) {
+    return {
+      shippingCost: baseShippingCost,
+      isShippingWaived: false
+    };
+  }
+
   // Check if any available credits came from unshipped orders
+  // Credits from unshipped orders have supplierOrderId (indicating order cancellation/refund)
   const unshippedOrderCredits = creditTransactions.filter(transaction => 
     transaction.type === 'credit' && 
     transaction.supplierOrderId && 
     transaction.amount > 0
   );
 
-  // If user has credits from unshipped orders and available credits > 0, waive shipping
-  if (unshippedOrderCredits.length > 0 && availableCredits > 0) {
+  // Check if any orders have been shipped (would indicate credits are from shipped orders)
+  const shippedOrderCredits = creditTransactions.filter(transaction =>
+    transaction.type === 'credit' && 
+    !transaction.supplierOrderId && // No supplier order ID means it's from a shipped order refund
+    transaction.amount > 0
+  );
+
+  // Free shipping only if:
+  // 1. User has available credits
+  // 2. Credits originated from unshipped orders (have supplierOrderId)
+  // 3. No credits are from shipped orders
+  if (unshippedOrderCredits.length > 0 && shippedOrderCredits.length === 0) {
     return {
       shippingCost: 0,
       isShippingWaived: true,

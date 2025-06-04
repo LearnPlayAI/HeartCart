@@ -23,15 +23,23 @@ const CartDrawer = () => {
     isLoading
   } = useCart();
   
-  const { creditBalance, formattedBalance } = useCredits();
+  const { creditBalance, formattedBalance, transactions } = useCredits();
   
   // Use the cart summary data which already includes all calculations
   const { subtotal, finalTotal, totalDiscount } = cartSummary;
-  const shipping = subtotal > 0 ? 85 : 0; // R85 PUDO courier shipping fee
+  
+  // Calculate shipping with exemption logic
+  const availableCredit = creditBalance ? parseFloat(creditBalance.availableCredits) : 0;
+  const baseShipping = subtotal > 0 ? 85 : 0;
+  const { shippingCost: shipping, isShippingWaived, reasonForWaiver } = calculateShippingCost(
+    baseShipping,
+    transactions || [],
+    availableCredit
+  );
+  
   const cartTotal = finalTotal + shipping;
   
   // Automatically apply maximum available credits
-  const availableCredit = creditBalance ? parseFloat(creditBalance.availableCredits) : 0;
   const autoCreditAmount = Math.min(availableCredit, cartTotal);
   const finalTotalAfterCredit = Math.max(0, cartTotal - autoCreditAmount);
   
@@ -213,7 +221,17 @@ const CartDrawer = () => {
               </div>
               <div className="flex justify-between mb-2 text-sm">
                 <span className="text-gray-600">Shipping</span>
-                <span className="font-medium">{formatCurrency(shipping)}</span>
+                <div className="text-right">
+                  {isShippingWaived ? (
+                    <div>
+                      <span className="line-through text-gray-400 text-xs">R85.00</span>
+                      <span className="ml-2 font-medium text-green-600">FREE</span>
+                      <div className="text-xs text-green-600">{reasonForWaiver}</div>
+                    </div>
+                  ) : (
+                    <span className="font-medium">{formatCurrency(shipping)}</span>
+                  )}
+                </div>
               </div>
               <Separator className="my-2" />
               <div className="flex justify-between mb-2 text-sm font-bold">

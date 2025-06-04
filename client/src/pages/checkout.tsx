@@ -14,7 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { calculateProductPricing, getPromotionalBadgeText } from "@/utils/pricing";
+import { calculateProductPricing, getPromotionalBadgeText, calculateShippingCost } from "@/utils/pricing";
 import { useCredits } from "@/hooks/use-credits";
 import { 
   CreditCard, 
