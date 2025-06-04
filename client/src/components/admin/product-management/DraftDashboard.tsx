@@ -23,7 +23,7 @@ import {
   Plus, Search, MoreVertical, Edit, Trash2, Copy, ExternalLink, 
   Check, X, Clock, Loader2, Filter, SortAsc, SortDesc, 
   FileQuestion, ShoppingCart, FileCheck, Eye, AlertCircle, Package, GitMerge,
-  ChevronLeft, ChevronRight, TrendingUp, TrendingDown
+  ChevronLeft, ChevronRight, TrendingUp, TrendingDown, ChevronUp, ChevronDown
 } from 'lucide-react';
 
 // Constants
@@ -82,6 +82,38 @@ export const DraftDashboard: React.FC = () => {
   // Sorting state
   const [sortField, setSortField] = useState<string>('lastModified');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
+  // Handle column sorting
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
+    setCurrentPage(1); // Reset to first page when sorting changes
+  };
+
+  // Sortable header component
+  const SortableHeader = ({ field, children, className = "" }: { 
+    field: string; 
+    children: React.ReactNode; 
+    className?: string;
+  }) => (
+    <TableHead 
+      className={`cursor-pointer hover:bg-muted/50 select-none ${className}`}
+      onClick={() => handleSort(field)}
+    >
+      <div className="flex items-center gap-1">
+        {children}
+        {sortField === field && (
+          sortOrder === 'asc' ? 
+            <ChevronUp className="h-4 w-4" /> : 
+            <ChevronDown className="h-4 w-4" />
+        )}
+      </div>
+    </TableHead>
+  );
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);

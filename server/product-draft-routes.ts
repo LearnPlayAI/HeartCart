@@ -253,7 +253,9 @@ export default function registerProductDraftRoutes(router: Router) {
         parentCategoryId: z.string().optional().transform(val => val ? parseInt(val, 10) : undefined),
         childCategoryId: z.string().optional().transform(val => val ? parseInt(val, 10) : undefined),
         minTmyPercent: z.string().optional().transform(val => val ? parseFloat(val) : undefined),
-        statusFilter: z.enum(['all', 'active', 'inactive']).optional()
+        statusFilter: z.enum(['all', 'active', 'inactive']).optional(),
+        sortField: z.string().optional(),
+        sortOrder: z.enum(['asc', 'desc']).optional()
       })
     }),
     asyncHandler(async (req, res) => {
@@ -269,7 +271,9 @@ export default function registerProductDraftRoutes(router: Router) {
         parentCategoryId,
         childCategoryId,
         minTmyPercent,
-        statusFilter
+        statusFilter,
+        sortField,
+        sortOrder
       } = req.query;
 
       const userRole = req.user?.role;
@@ -280,7 +284,9 @@ export default function registerProductDraftRoutes(router: Router) {
         parentCategoryId,
         childCategoryId,
         minTmyPercent,
-        statusFilter
+        statusFilter,
+        sortField,
+        sortOrder
       }, userRole);
       sendSuccess(res, drafts);
     })
