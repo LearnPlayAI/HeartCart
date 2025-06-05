@@ -196,7 +196,7 @@ const ProductDetailContent = ({
       promo.products?.forEach((pp: any) => {
         promotionMap.set(pp.productId, {
           promotionName: promo.promotionName,
-          promotionDiscount: promo.discountValue,
+          promotionDiscount: pp.additionalDiscountPercentage || promo.discountValue,
           promotionEndDate: promo.endDate,
           promotionalPrice: pp.promotionalPrice ? Number(pp.promotionalPrice) : null
         });
