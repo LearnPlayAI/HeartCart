@@ -185,9 +185,16 @@ const ProductDetailContent = ({
 }) => {
   
   // Fetch active promotions for this product
-  const { data: promotionsResponse } = useQuery<any>({
+  const { data: promotionsResponse, isLoading: promotionsLoading } = useQuery<any>({
     queryKey: ['/api/promotions/active-with-products'],
     enabled: !!product?.id,
+  });
+
+  // Add debugging to ensure query is triggered
+  console.log('Promotions query state:', {
+    enabled: !!product?.id,
+    isLoading: promotionsLoading,
+    hasData: !!promotionsResponse
   });
 
   // Find if this product is in any active promotion
