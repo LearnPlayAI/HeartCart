@@ -58,10 +58,8 @@ export function PricingStep({ onNext }: PricingStepProps) {
   };
   
   // Get discount percentage (compare-at price vs regular price)
-  const discountPercentage = calculateDiscountPercentage(
-    draft?.compareAtPrice || draft?.regularPrice, 
-    draft?.regularPrice
-  );
+  // Note: compareAtPrice field doesn't exist in ProductDraft, using regularPrice for display
+  const discountPercentage = null;
   
   // Get sale discount percentage (regular price vs sale price)
   const saleDiscountPercentage = calculateDiscountPercentage(
@@ -81,18 +79,18 @@ export function PricingStep({ onNext }: PricingStepProps) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Regular Price */}
             <div className="space-y-2">
-              <Label htmlFor="price">Regular Price <span className="text-destructive">*</span></Label>
+              <Label htmlFor="regularPrice">Regular Price <span className="text-destructive">*</span></Label>
               <div className="relative">
                 <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
-                  id="price"
+                  id="regularPrice"
                   type="number"
                   min="0"
                   step="0.01"
                   placeholder="0.00"
                   className="pl-9"
-                  value={draft?.price ?? ''}
-                  onChange={(e) => handleNumericChange('price', e.target.value)}
+                  value={draft?.regularPrice ?? ''}
+                  onChange={(e) => handleNumericChange('regularPrice', e.target.value)}
                   required
                 />
               </div>
@@ -114,7 +112,7 @@ export function PricingStep({ onNext }: PricingStepProps) {
                   onChange={(e) => handleNumericChange('costPrice', e.target.value)}
                 />
               </div>
-              {draft?.price && draft?.costPrice && (
+              {draft?.regularPrice && draft?.costPrice && (
                 <div className="text-sm mt-1">
                   <span 
                     className={calculateMargin() && calculateMargin()! < 0 
@@ -128,49 +126,29 @@ export function PricingStep({ onNext }: PricingStepProps) {
               )}
             </div>
             
-            {/* Compare at Price */}
+            {/* Markup Percentage */}
             <div className="space-y-2">
-              <Label htmlFor="compareAtPrice">Compare-at Price</Label>
-              <div className="relative">
-                <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="compareAtPrice"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="0.00"
-                  className="pl-9"
-                  value={draft?.compareAtPrice ?? ''}
-                  onChange={(e) => handleNumericChange('compareAtPrice', e.target.value)}
-                />
-              </div>
-              {discountPercentage && (
-                <div className="text-sm mt-1">
-                  <span className="text-green-600 flex items-center">
-                    <BadgePercent className="h-3 w-3 mr-1" /> 
-                    {discountPercentage}% off
-                  </span>
-                </div>
-              )}
-            </div>
-            
-            {/* Tax Settings */}
-            <div className="space-y-2">
-              <Label htmlFor="taxRatePercentage">Tax Rate (%)</Label>
+              <Label htmlFor="markupPercentage">Markup Percentage (%)</Label>
               <div className="relative">
                 <PercentIcon className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
-                  id="taxRatePercentage"
+                  id="markupPercentage"
                   type="number"
                   min="0"
-                  max="100"
                   step="0.01"
                   placeholder="0.00"
                   className="pl-9"
-                  value={draft?.taxRatePercentage ?? ''}
-                  onChange={(e) => handleNumericChange('taxRatePercentage', e.target.value)}
+                  value={draft?.markupPercentage ?? ''}
+                  onChange={(e) => handleNumericChange('markupPercentage', e.target.value)}
                 />
               </div>
+              {draft?.markupPercentage && (
+                <div className="text-sm mt-1">
+                  <span className="text-muted-foreground">
+                    Markup applied to cost price
+                  </span>
+                </div>
+              )}
             </div>
             
             {/* On Sale Switch */}
@@ -219,20 +197,11 @@ export function PricingStep({ onNext }: PricingStepProps) {
               <Calculator className="mr-2 h-4 w-4" />
               Price Summary
             </h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <div>
                 <div className="text-sm font-medium">Regular Price:</div>
-                <div className="text-lg">{formatPrice(draft?.price)}</div>
+                <div className="text-lg">{formatPrice(draft?.regularPrice)}</div>
               </div>
-              
-              {draft?.compareAtPrice ? (
-                <div>
-                  <div className="text-sm font-medium">Compare-at Price:</div>
-                  <div className="text-lg line-through text-muted-foreground">
-                    {formatPrice(draft?.compareAtPrice)}
-                  </div>
-                </div>
-              ) : null}
               
               {draft?.onSale && draft?.salePrice ? (
                 <div>
