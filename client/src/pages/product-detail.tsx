@@ -182,29 +182,26 @@ const ProductDetailContent = ({
   addToCart: (item: any) => void;
   toast: any;
   queryClient: any;
+  promotionsResponse?: any;
 }) => {
   
-  // Get promotional data using the same approach as ProductCard
-  const { data: promotionsResponse } = useQuery<any>({
-    queryKey: ['/api/promotions/active-with-products'],
-  });
-
-  // Extract promotional info for this specific product
-  const promotionMap = new Map();
-  if (promotionsResponse?.success) {
-    promotionsResponse.data.forEach((promo: any) => {
-      promo.products?.forEach((pp: any) => {
-        promotionMap.set(pp.productId, {
+  // Use React.useMemo to prevent re-render loops
+  const effectivePromotionInfo = React.useMemo(() => {
+    if (!promotionsResponse?.success || !product?.id) return null;
+    
+    for (const promo of promotionsResponse.data) {
+      const productPromotion = promo.products?.find((pp: any) => pp.productId === product.id);
+      if (productPromotion) {
+        return {
           promotionName: promo.promotionName,
-          promotionDiscount: pp.additionalDiscountPercentage || promo.discountValue,
+          promotionDiscount: productPromotion.additionalDiscountPercentage || promo.discountValue,
           promotionEndDate: promo.endDate,
-          promotionalPrice: pp.promotionalPrice ? Number(pp.promotionalPrice) : null
-        });
-      });
-    });
-  }
-
-  const effectivePromotionInfo = product ? promotionMap.get(product.id) || null : null;
+          promotionalPrice: productPromotion.promotionalPrice ? Number(productPromotion.promotionalPrice) : null
+        };
+      }
+    }
+    return null;
+  }, [promotionsResponse, product?.id]);
 
   // Calculate unified pricing using centralized logic
   const pricing = product ? calculateProductPricing(

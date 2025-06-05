@@ -8,7 +8,7 @@ import { ProtectedRoute } from "@/lib/protected-route";
 import Header from "@/components/layout/header";
 import Footer from "@/components/layout/footer";
 import Home from "@/pages/home";
-import ProductDetail from "@/pages/product-detail-new";
+import ProductDetail from "@/pages/product-detail-fixed";
 import Category from "@/pages/category";
 import ProductListing from "@/pages/product-listing";
 import ProductsExample from "@/pages/products-example";
