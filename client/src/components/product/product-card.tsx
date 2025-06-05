@@ -156,7 +156,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
         productId: product.id,
         quantity: 1,
         itemPrice: cartPrice,
-        attributeSelections: {}
+        attributeSelections: null
       });
       
 
@@ -245,7 +245,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 
                 {/* Promotion discount badge - bottom right */}
                 <div className="absolute bottom-2 right-2 bg-red-500 text-white px-2 py-1 text-xs font-bold rounded-full shadow-lg z-10">
-                  EXTRA {pricing.extraPromotionalDiscount || Math.round(parseFloat(promotionInfo.promotionDiscount))}% OFF!
+                  EXTRA {pricing.extraPromotionalDiscount || Math.round(parseFloat(String(promotionInfo.promotionDiscount)))}% OFF!
                 </div>
               </>
             )}
@@ -308,16 +308,15 @@ const ProductCard: React.FC<ProductCardProps> = ({
             </div>
           )}
           
-          {!isFlashDeal && (
-            <div className="flex items-center mt-1 mb-1">
-              <div className="flex text-yellow-400 text-xs">
-                {renderStars(product.rating)}
-              </div>
-              <span className="text-xs text-gray-500 ml-1">
-                {product.rating ? product.rating.toFixed(1) : "0.0"} ({product.reviewCount || 0})
-              </span>
+          {/* Always show rating and reviews for all product cards */}
+          <div className="flex items-center mt-1 mb-1">
+            <div className="flex text-yellow-400 text-xs">
+              {renderStars(product.rating)}
             </div>
-          )}
+            <span className="text-xs text-gray-500 ml-1">
+              {product.rating ? product.rating.toFixed(1) : "0.0"} ({product.reviewCount || 0})
+            </span>
+          </div>
         </div>
       </Link>
       <div className="px-3 pb-3 flex flex-col gap-2">
