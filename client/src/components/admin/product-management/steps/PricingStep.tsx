@@ -17,7 +17,7 @@ import {
   DollarSign,
   BadgePercent
 } from 'lucide-react';
-import { formatPrice, calculateDiscountPercentage, debounce } from '@/lib/utils';
+import { formatPrice, calculateDiscountPercentage, debounce, parsePreciseDecimal } from '@/lib/utils';
 
 interface PricingStepProps {
   onNext: () => void;
@@ -41,42 +41,31 @@ export function PricingStep({ onNext }: PricingStepProps) {
     debouncedSave();
   };
   
-  // Handle numeric input change
+  // Handle numeric input change with precision preservation
   const handleNumericChange = (field: string, rawValue: string) => {
-    // Allow empty value (null)
-    if (rawValue === '') {
-      handleChange(field, null);
-      return;
-    }
-    
-    // Replace commas with periods for decimal input
-    const value = rawValue.replace(',', '.');
-    
-    // Only update if it's a valid number
-    if (!isNaN(parseFloat(value))) {
-      handleChange(field, parseFloat(value));
-    }
+    const preciseValue = parsePreciseDecimal(rawValue, 2);
+    handleChange(field, preciseValue);
   };
   
   // Calculate profit margin
   const calculateMargin = () => {
-    if (!draft?.price || !draft?.costPrice || draft.costPrice <= 0) {
+    if (!draft?.regularPrice || !draft?.costPrice || draft.costPrice <= 0) {
       return null;
     }
     
-    const margin = ((draft.price - draft.costPrice) / draft.price) * 100;
+    const margin = ((draft.regularPrice - draft.costPrice) / draft.regularPrice) * 100;
     return Math.round(margin * 100) / 100; // Round to 2 decimal places
   };
   
-  // Get discount percentage
+  // Get discount percentage (compare-at price vs regular price)
   const discountPercentage = calculateDiscountPercentage(
-    draft?.compareAtPrice, 
-    draft?.price
+    draft?.compareAtPrice || draft?.regularPrice, 
+    draft?.regularPrice
   );
   
-  // Get sale discount percentage
+  // Get sale discount percentage (regular price vs sale price)
   const saleDiscountPercentage = calculateDiscountPercentage(
-    draft?.price, 
+    draft?.regularPrice, 
     draft?.salePrice
   );
   

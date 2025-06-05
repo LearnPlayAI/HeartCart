@@ -227,6 +227,63 @@ export function formatDate(dateString: string | Date): string {
 }
 
 /**
+ * Safely converts string input to number while preserving decimal precision
+ * Prevents JavaScript floating-point precision issues for currency inputs
+ * 
+ * @param rawValue The string value from input field
+ * @param maxDecimalPlaces Maximum decimal places to preserve (default: 2)
+ * @returns Precisely converted number or null for empty/invalid input
+ */
+export function parsePreciseDecimal(rawValue: string, maxDecimalPlaces: number = 2): number | null {
+  // Allow empty value (null)
+  if (rawValue === '' || rawValue === null || rawValue === undefined) {
+    return null;
+  }
+  
+  // Replace commas with periods for decimal input
+  const normalizedValue = rawValue.replace(',', '.');
+  
+  // Validate the input is a valid decimal number
+  const decimalRegex = /^\d*\.?\d*$/;
+  if (!decimalRegex.test(normalizedValue)) {
+    return null; // Return null for invalid input
+  }
+  
+  // Convert to number
+  const numericValue = parseFloat(normalizedValue);
+  if (isNaN(numericValue)) {
+    return null;
+  }
+  
+  // Preserve precision by limiting decimal places without rounding errors
+  if (normalizedValue.includes('.')) {
+    const decimalPlaces = normalizedValue.split('.')[1]?.length || 0;
+    const limitedDecimalPlaces = Math.min(decimalPlaces, maxDecimalPlaces);
+    return parseFloat(numericValue.toFixed(limitedDecimalPlaces));
+  }
+  
+  return numericValue;
+}
+
+/**
+ * Creates a precision-preserving onChange handler for numeric input fields
+ * Specifically designed for currency and pricing inputs
+ * 
+ * @param onValueChange Callback function to handle the converted value
+ * @param maxDecimalPlaces Maximum decimal places to preserve (default: 2)
+ * @returns Input change handler function
+ */
+export function createPreciseNumericHandler(
+  onValueChange: (value: number | null) => void,
+  maxDecimalPlaces: number = 2
+) {
+  return (e: React.ChangeEvent<HTMLInputElement>) => {
+    const preciseValue = parsePreciseDecimal(e.target.value, maxDecimalPlaces);
+    onValueChange(preciseValue);
+  };
+}
+
+/**
  * Determines the display mode of the PWA
  * 
  * @returns The display mode as a string (e.g., 'browser', 'standalone', 'fullscreen', etc.)
