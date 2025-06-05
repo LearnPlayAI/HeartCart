@@ -768,7 +768,7 @@ const ProductDetailView = ({
                   </span>
                   <span className="ml-2 px-2 py-1 bg-[#FF69B4]/10 text-[#FF69B4] rounded-full text-sm">
                     {promotionInfo ? 
-                      Math.round(((promotionInfo?.promotionalPrice ? (product.salePrice || product.price) - promotionInfo.promotionalPrice : 0) / (product.salePrice || product.price)) * 100)
+                      Math.round(((product.price - promotionInfo.promotionalPrice) / product.price) * 100)
                       : discount}% OFF
                   </span>
                 </>
