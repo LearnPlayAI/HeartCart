@@ -7414,13 +7414,9 @@ export class DatabaseStorage implements IStorage {
         conditions.push(tmyCondition);
       }
 
-      // Add status filter if provided (Active/Inactive products)
+      // Add status filter if provided (Draft status filtering)
       if (options?.statusFilter && options.statusFilter !== 'all') {
-        if (options.statusFilter === 'active') {
-          conditions.push(eq(productDrafts.isActive, true));
-        } else if (options.statusFilter === 'inactive') {
-          conditions.push(eq(productDrafts.isActive, false));
-        }
+        conditions.push(eq(productDrafts.draftStatus, options.statusFilter));
       }
 
       const whereClause = conditions.length > 0 ? and(...conditions) : undefined;

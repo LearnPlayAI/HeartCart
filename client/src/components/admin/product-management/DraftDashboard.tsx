@@ -485,6 +485,21 @@ export const DraftDashboard: React.FC = () => {
           </SelectContent>
         </Select>
 
+        {/* Status Filter */}
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-[160px]">
+            <SelectValue placeholder="All Statuses" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Statuses</SelectItem>
+            <SelectItem value="draft">Draft</SelectItem>
+            <SelectItem value="in_review">In Review</SelectItem>
+            <SelectItem value="ready_to_publish">Ready to Publish</SelectItem>
+            <SelectItem value="published">Published</SelectItem>
+            <SelectItem value="rejected">Rejected</SelectItem>
+          </SelectContent>
+        </Select>
+
         {/* Min. TMY % Filter */}
         <div className="relative">
           <Input

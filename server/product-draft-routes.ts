@@ -253,7 +253,7 @@ export default function registerProductDraftRoutes(router: Router) {
         parentCategoryId: z.string().optional().transform(val => val ? parseInt(val, 10) : undefined),
         childCategoryId: z.string().optional().transform(val => val ? parseInt(val, 10) : undefined),
         minTmyPercent: z.string().optional().transform(val => val ? parseFloat(val) : undefined),
-        statusFilter: z.enum(['all', 'active', 'inactive']).optional(),
+        statusFilter: z.enum(['all', 'draft', 'in_review', 'ready_to_publish', 'published', 'rejected']).optional(),
         sortField: z.string().optional(),
         sortOrder: z.enum(['asc', 'desc']).optional()
       })
