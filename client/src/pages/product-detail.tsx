@@ -191,10 +191,26 @@ const ProductDetailContent = ({
   });
 
   // Find if this product is in any active promotion
+  console.log('Debug promotions data:', {
+    promotionsResponse,
+    productId: product?.id,
+    success: promotionsResponse?.success
+  });
+  
   const activePromotions = promotionsResponse?.success ? promotionsResponse.data : [];
+  console.log('Active promotions:', activePromotions);
+  
   const productPromotion = activePromotions
-    .flatMap((promo: any) => promo.products?.map((pp: any) => ({ ...pp, promotion: promo })) || [])
-    .find((pp: any) => pp.productId === product?.id);
+    .flatMap((promo: any) => {
+      console.log('Processing promotion:', promo.promotionName, 'products:', promo.products);
+      return promo.products?.map((pp: any) => ({ ...pp, promotion: promo })) || [];
+    })
+    .find((pp: any) => {
+      console.log('Checking product promotion:', pp.productId, 'against', product?.id);
+      return pp.productId === product?.id;
+    });
+
+  console.log('Found product promotion:', productPromotion);
 
   const promotionInfo = productPromotion ? {
     promotionName: productPromotion.promotion.promotionName,
