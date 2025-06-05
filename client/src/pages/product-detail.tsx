@@ -179,11 +179,17 @@ const ProductDetailContent = ({
   });
 
   // Find if this product is in any active promotion
+  console.log('Product Detail - Raw promotions response:', promotionsResponse);
+  
   // API returns data directly, not wrapped in success/data structure
   const activePromotions = promotionsResponse?.data || promotionsResponse || [];
+  console.log('Product Detail - Active promotions:', activePromotions);
+  
   const productPromotion = activePromotions
     .flatMap((promo: any) => promo.products?.map((pp: any) => ({ ...pp, promotion: promo })) || [])
     .find((pp: any) => pp.productId === product?.id);
+
+  console.log('Product Detail - Found product promotion:', productPromotion);
 
   const promotionInfo = productPromotion ? {
     promotionName: productPromotion.promotion.promotionName,
@@ -192,6 +198,8 @@ const ProductDetailContent = ({
     promotionEndDate: productPromotion.promotion.endDate,
     promotionalPrice: productPromotion.promotionalPrice ? Number(productPromotion.promotionalPrice) : null
   } : null;
+
+  console.log('Product Detail - Final promotion info:', promotionInfo);
 
   // Calculate unified pricing using centralized logic
   const pricing = product ? calculateProductPricing(
