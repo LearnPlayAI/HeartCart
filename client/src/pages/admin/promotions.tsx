@@ -44,8 +44,16 @@ const promotionSchema = z.object({
   endDate: z.string().min(1, "End date is required"),
   isActive: z.boolean().default(true),
   promotionType: z.enum(['percentage', 'fixed', 'bogo']),
-  discountValue: z.union([z.number().min(0), z.literal(0), z.undefined()]).optional(),
-  minimumOrderValue: z.union([z.number().min(0), z.literal(0), z.undefined()]).optional(),
+  discountValue: z.union([
+    z.string().transform((val) => val === '' ? undefined : parseFloat(val)),
+    z.number(),
+    z.undefined()
+  ]).optional(),
+  minimumOrderValue: z.union([
+    z.string().transform((val) => val === '' ? undefined : parseFloat(val)),
+    z.number(),
+    z.undefined()
+  ]).optional(),
 });
 
 type PromotionFormData = z.infer<typeof promotionSchema>;
@@ -166,8 +174,8 @@ export default function PromotionsPage() {
       endDate: "",
       isActive: true,
       promotionType: "percentage",
-      discountValue: 0,
-      minimumOrderValue: 0,
+      discountValue: "",
+      minimumOrderValue: "",
     },
   });
 
@@ -194,8 +202,8 @@ export default function PromotionsPage() {
       endDate: promotion.endDate.split('T')[0],
       isActive: promotion.isActive,
       promotionType: promotion.promotionType,
-      discountValue: promotion.discountValue || 0,
-      minimumOrderValue: promotion.minimumOrderValue || 0,
+      discountValue: promotion.discountValue ? promotion.discountValue.toString() : "",
+      minimumOrderValue: promotion.minimumOrderValue ? promotion.minimumOrderValue.toString() : "",
     });
     setIsEditDialogOpen(true);
   };
@@ -366,7 +374,7 @@ export default function PromotionsPage() {
                             type="number" 
                             placeholder="10" 
                             {...field} 
-                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                            onChange={(e) => field.onChange(e.target.value)}
                           />
                         </FormControl>
                         <FormMessage />
@@ -384,7 +392,7 @@ export default function PromotionsPage() {
                             type="number" 
                             placeholder="100" 
                             {...field} 
-                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                            onChange={(e) => field.onChange(e.target.value)}
                           />
                         </FormControl>
                         <FormMessage />
@@ -629,10 +637,7 @@ export default function PromotionsPage() {
                           type="number" 
                           placeholder="10" 
                           {...field} 
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            field.onChange(value === '' ? undefined : parseFloat(value) || 0);
-                          }}
+                          onChange={(e) => field.onChange(e.target.value)}
                         />
                       </FormControl>
                       <FormMessage />
@@ -650,10 +655,7 @@ export default function PromotionsPage() {
                           type="number" 
                           placeholder="100" 
                           {...field} 
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            field.onChange(value === '' ? undefined : parseFloat(value) || 0);
-                          }}
+                          onChange={(e) => field.onChange(e.target.value)}
                         />
                       </FormControl>
                       <FormMessage />
