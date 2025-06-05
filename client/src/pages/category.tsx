@@ -58,6 +58,10 @@ const CategoryPage = () => {
   const { data: productsResponse, isLoading: isLoadingProducts } = useQuery({
     queryKey: [`/api/products/category/${category?.id}`],
     enabled: !!category?.id,
+    staleTime: 0, // Always fetch fresh data to prevent inactive products from showing
+    gcTime: 0, // Don't keep in cache when component unmounts
+    refetchOnWindowFocus: true, // Refetch when window gains focus
+    refetchOnMount: true, // Always refetch on mount
   });
   
   // Extract the products from the standardized response

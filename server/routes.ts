@@ -3783,26 +3783,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error(`=== CART DEBUG END ===`);
       
       try {
-        // Check if product exists with comprehensive error handling
-        const product = await storage.getProductById(productId);
+        // Check if product exists and is active - only allow active products for customers
+        const product = await storage.getProductById(productId, { includeInactive: false });
         if (!product) {
-          logger.warn(`Attempted to add non-existent product to cart`, {
+          logger.warn(`Attempted to add non-existent or inactive product to cart`, {
             productId,
             userId: user.id,
             requestedQuantity: quantity
           });
           throw new NotFoundError(`Product with ID ${productId} not found`, "product");
-        }
-        
-        // Check if product is active with detailed error context
-        if (!product.isActive) {
-          logger.warn(`Attempted to add inactive product to cart`, {
-            productId,
-            userId: user.id,
-            productName: product.name,
-            requestedQuantity: quantity
-          });
-          throw new BadRequestError(`Cannot add inactive product "${product.name}" to cart`);
         }
         
         // Verify product availability - TeeMeYou doesn't track stock levels, but in future:
