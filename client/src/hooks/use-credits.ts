@@ -38,12 +38,20 @@ export function useCredits() {
   // Get user's credit balance
   const { data: creditBalanceResponse, isLoading: balanceLoading, error: balanceError } = useQuery<CreditBalanceResponse>({
     queryKey: ['/api/credits/balance'],
+    staleTime: 0, // No cache - always fetch fresh credit data
+    gcTime: 0, // Don't keep in cache when component unmounts
+    refetchOnWindowFocus: true, // Refetch when window gains focus
+    refetchOnMount: true, // Always refetch on mount
     refetchInterval: 30000, // Refetch every 30 seconds to keep balance updated
   });
 
   // Get user's credit transaction history
   const { data: transactionsResponse, isLoading: transactionsLoading } = useQuery<CreditTransactionsResponse>({
     queryKey: ['/api/credits/transactions'],
+    staleTime: 0, // No cache - always fetch fresh transaction data
+    gcTime: 0, // Don't keep in cache when component unmounts
+    refetchOnWindowFocus: true, // Refetch when window gains focus
+    refetchOnMount: true, // Always refetch on mount
   });
 
   const creditBalance = creditBalanceResponse?.success ? creditBalanceResponse.data : null;

@@ -143,11 +143,13 @@ const Header = () => {
                 </DropdownMenu>
                 
                 {/* Credit Balance Display */}
-                <div className="flex items-center bg-gradient-to-r from-green-500 to-green-600 text-white px-3 py-1.5 rounded-full shadow-md">
-                  <span className="text-sm font-semibold">
-                    {balanceLoading ? 'Loading...' : `Credit: ${formattedBalance}`}
-                  </span>
-                </div>
+                <Link href="/credit-history">
+                  <div className="flex items-center bg-gradient-to-r from-green-500 to-green-600 text-white px-3 py-1.5 rounded-full shadow-md hover:from-green-600 hover:to-green-700 transition-all duration-200 cursor-pointer">
+                    <span className="text-sm font-semibold">
+                      {balanceLoading ? 'Loading...' : `Credit: ${formattedBalance}`}
+                    </span>
+                  </div>
+                </Link>
                 
                 <Button 
                   variant="ghost" 
