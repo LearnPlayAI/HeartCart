@@ -158,17 +158,6 @@ function PromotionsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header Section - identical to flash deals */}
-      <div className="bg-gradient-to-r from-[#FF69B4] to-[#FF1493] text-white">
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex items-center mb-4">
-            <Link href="/" className="flex items-center text-white hover:text-gray-200 mr-4">
-              <ArrowLeft className="h-5 w-5 mr-1" />
-              Back to Home
-            </Link>
-          </div>
-        </div>
-      </div>
 
       {/* Promotions header section with timer - identical to flash deals */}
       <div className="bg-gradient-to-r from-gray-900 to-gray-800 text-white py-6">
@@ -186,7 +175,7 @@ function PromotionsPage() {
                 return (
                   <div key={promo.id} className="flex items-center text-white/90 text-sm">
                     <Tag className="w-3 h-3 mr-1" />
-                    <span className="mr-2 bg-black text-white px-2 py-1 rounded">{promo.promotionName}</span>
+                    <span className="mr-2 bg-hotpink text-white px-2 py-1 rounded">{promo.promotionName}</span>
                     {timeLeft && (
                       <div className="flex items-center text-xs bg-orange-500 text-white px-2 py-1 rounded">
                         <Clock className="w-3 h-3 mr-1" />
