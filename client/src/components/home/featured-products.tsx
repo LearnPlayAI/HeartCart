@@ -13,6 +13,10 @@ const FeaturedProductsSection = () => {
   
   const { data: response, isLoading, isFetching, error, refetch } = useQuery<StandardApiResponse<Product[]>>({
     queryKey: ['/api/featured-products', { limit, offset: (page - 1) * limit }],
+    staleTime: 0, // Always fetch fresh data to prevent inactive products from showing
+    gcTime: 0, // Don't keep in cache when component unmounts
+    refetchOnWindowFocus: true, // Refetch when window gains focus
+    refetchOnMount: true, // Always refetch on mount
   });
   
   // Fetch active promotions to check if featured products are promotional - no cache for real-time pricing

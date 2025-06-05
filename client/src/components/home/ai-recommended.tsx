@@ -29,8 +29,10 @@ interface ApiFeaturedResponse {
 const AIRecommendedProducts = () => {
   const { data: recommendationsResponse, isLoading, error } = useQuery<ApiRecommendationResponse>({
     queryKey: ['/api/recommendations'],
-    // Return empty array on 401 (not authenticated)
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 0, // Always fetch fresh data to prevent inactive products from showing
+    gcTime: 0, // Don't keep in cache when component unmounts
+    refetchOnWindowFocus: true, // Refetch when window gains focus
+    refetchOnMount: true, // Always refetch on mount
   });
   
   // Extract the recommendations from the standardized response
@@ -40,6 +42,10 @@ const AIRecommendedProducts = () => {
   const { data: fallbackResponse } = useQuery<ApiFeaturedResponse>({
     queryKey: ['/api/featured-products', { limit: 4 }],
     enabled: !!error || !recommendations || recommendations?.products.length === 0,
+    staleTime: 0, // Always fetch fresh data to prevent inactive products from showing
+    gcTime: 0, // Don't keep in cache when component unmounts
+    refetchOnWindowFocus: true, // Refetch when window gains focus
+    refetchOnMount: true, // Always refetch on mount
   });
   
   // Extract the fallback products from the standardized response

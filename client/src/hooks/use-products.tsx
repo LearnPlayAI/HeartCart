@@ -110,7 +110,11 @@ export function useProducts({
     refetch
   } = useQuery<StandardApiResponse<Product[], { total?: number, totalPages?: number }>>({
     queryKey: [endpoint, queryParams],
-    enabled
+    enabled,
+    staleTime: 0, // Always fetch fresh data to prevent inactive products from showing
+    gcTime: 0, // Don't keep in cache when component unmounts
+    refetchOnWindowFocus: true, // Refetch when window gains focus
+    refetchOnMount: true, // Always refetch on mount
   });
   
   // Standardized error handling
@@ -155,6 +159,10 @@ export function useProduct(productIdOrSlug: string | number | undefined, enabled
   } = useQuery<StandardApiResponse<Product>>({
     queryKey: [productIdOrSlug ? `/api/products/${productIdOrSlug}` : ''],
     enabled: !!productIdOrSlug && enabled,
+    staleTime: 0, // Always fetch fresh data to prevent inactive products from showing
+    gcTime: 0, // Don't keep in cache when component unmounts
+    refetchOnWindowFocus: true, // Refetch when window gains focus
+    refetchOnMount: true, // Always refetch on mount
   });
   
   // Standardized error handling
@@ -229,6 +237,10 @@ export function useFeaturedProducts(limit = 8) {
     error
   } = useQuery<StandardApiResponse<Product[]>>({
     queryKey: ['/api/featured-products', { limit }],
+    staleTime: 0, // Always fetch fresh data to prevent inactive products from showing
+    gcTime: 0, // Don't keep in cache when component unmounts
+    refetchOnWindowFocus: true, // Refetch when window gains focus
+    refetchOnMount: true, // Always refetch on mount
   });
   
   // Standardized error handling
