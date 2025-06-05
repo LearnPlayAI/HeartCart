@@ -185,7 +185,7 @@ const ProductDetailContent = ({
   promotionsResponse?: any;
 }) => {
   
-  // Use React.useMemo to prevent re-render loops
+  // Extract promotional info for this specific product from props
   const effectivePromotionInfo = React.useMemo(() => {
     if (!promotionsResponse?.success || !product?.id) return null;
     
