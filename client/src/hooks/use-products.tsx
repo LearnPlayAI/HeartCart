@@ -201,6 +201,10 @@ export function useRelatedProducts(productId: number | undefined, limit = 4, ena
   } = useQuery<StandardApiResponse<Product[]>>({
     queryKey: [productId ? `/api/products/${productId}/related` : '', { limit }],
     enabled: !!productId && enabled,
+    staleTime: 0, // Always fetch fresh data to prevent inactive products from showing
+    gcTime: 0, // Don't keep in cache when component unmounts
+    refetchOnWindowFocus: true, // Refetch when window gains focus
+    refetchOnMount: true, // Always refetch on mount
   });
   
   // Standardized error handling
