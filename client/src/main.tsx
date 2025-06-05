@@ -4,6 +4,13 @@ import { queryClient } from "./lib/queryClient";
 import App from "./App";
 import "./index.css";
 
+// Global error handling for unhandled promise rejections
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('Unhandled promise rejection:', event.reason);
+  // Prevent the default behavior (which would be to log the error to console)
+  event.preventDefault();
+});
+
 // Suppress harmless ResizeObserver errors that can occur during authentication state changes
 window.addEventListener('error', (event) => {
   if (event.message?.includes('ResizeObserver loop completed with undelivered notifications')) {

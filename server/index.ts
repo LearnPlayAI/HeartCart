@@ -7,6 +7,29 @@ import { errorHandlerMiddleware, notFoundMiddleware } from "./error-handler";
 import { logger } from "./logger";
 import crypto from "crypto";
 
+// Global error handlers for unhandled promises and exceptions
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error('Unhandled promise rejection', {
+    reason: reason instanceof Error ? reason.message : String(reason),
+    stack: reason instanceof Error ? reason.stack : undefined,
+    promise: promise.toString()
+  });
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  logger.error('Uncaught exception', {
+    message: error.message,
+    stack: error.stack,
+    name: error.name
+  });
+  console.error('Uncaught Exception:', error);
+  // Don't exit the process in development to keep the server running
+  if (process.env.NODE_ENV === 'production') {
+    process.exit(1);
+  }
+});
+
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));

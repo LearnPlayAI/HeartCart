@@ -137,6 +137,11 @@ const ProductCard: React.FC<ProductCardProps> = ({
     try {
       // Check if product has required attributes by fetching attributes
       const attributesResponse = await fetch(`/api/product-attributes/product/${product.id}/attributes`);
+      
+      if (!attributesResponse.ok) {
+        throw new Error(`Failed to fetch product attributes: ${attributesResponse.status}`);
+      }
+      
       const attributesData = await attributesResponse.json();
       
       if (attributesData.success && attributesData.data.length > 0) {
@@ -146,7 +151,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
         if (hasRequiredAttributes) {
           // Open quick view modal instead of adding directly to cart
           setQuickViewOpen(true);
-          
           return;
         }
       }
@@ -159,6 +163,11 @@ const ProductCard: React.FC<ProductCardProps> = ({
         attributeSelections: {}
       });
       
+      toast({
+        title: "Added to cart",
+        description: `${product.name} has been added to your cart.`,
+        duration: 2000,
+      });
 
     } catch (error) {
       console.error('Error adding item to cart:', error);
