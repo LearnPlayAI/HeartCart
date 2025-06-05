@@ -69,11 +69,6 @@ const ProductDetailBySlug = () => {
     queryKey: [`/api/products/slug/${slug}`],
     enabled: !!slug,
   });
-
-  // Fetch active promotions
-  const { data: promotionsData } = useQuery({
-    queryKey: ['/api/promotions/active-with-products'],
-  });
   
   return (
     <ProductDetailContent 
@@ -176,10 +171,11 @@ const ProductDetailContent = ({
   queryClient: any;
 }) => {
   
-  // Fetch active promotions for this product
+  // Fetch active promotions for this product (only if not already fetched)
   const { data: promotionsResponse } = useQuery<any>({
     queryKey: ['/api/promotions/active-with-products'],
     enabled: !!product?.id,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes to prevent refetching
   });
 
   // Find if this product is in any active promotion
