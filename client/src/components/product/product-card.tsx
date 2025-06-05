@@ -293,7 +293,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
               
               {/* Inactive Badge - Only visible to admins */}
               {user?.role === 'admin' && product.isActive === false && (
-                <Badge className="bg-[#FF1493] hover:bg-[#FF69B4] text-white text-xs px-2 py-1 rounded-md font-medium">
+                <Badge className="bg-red-600 hover:bg-red-700 text-white text-xs px-2 py-1 rounded-md font-medium">
                   INACTIVE
                 </Badge>
               )}
