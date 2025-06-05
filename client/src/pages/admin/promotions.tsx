@@ -44,8 +44,8 @@ const promotionSchema = z.object({
   endDate: z.string().min(1, "End date is required"),
   isActive: z.boolean().default(true),
   promotionType: z.enum(['percentage', 'fixed', 'bogo']),
-  discountValue: z.number().min(0).optional(),
-  minimumOrderValue: z.number().min(0).optional(),
+  discountValue: z.union([z.number().min(0), z.literal(0), z.undefined()]).optional(),
+  minimumOrderValue: z.union([z.number().min(0), z.literal(0), z.undefined()]).optional(),
 });
 
 type PromotionFormData = z.infer<typeof promotionSchema>;
@@ -629,7 +629,10 @@ export default function PromotionsPage() {
                           type="number" 
                           placeholder="10" 
                           {...field} 
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            field.onChange(value === '' ? undefined : parseFloat(value) || 0);
+                          }}
                         />
                       </FormControl>
                       <FormMessage />
@@ -647,7 +650,10 @@ export default function PromotionsPage() {
                           type="number" 
                           placeholder="100" 
                           {...field} 
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            field.onChange(value === '' ? undefined : parseFloat(value) || 0);
+                          }}
                         />
                       </FormControl>
                       <FormMessage />
