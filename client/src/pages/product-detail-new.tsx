@@ -171,6 +171,27 @@ const ProductDetailView = ({
     }>,
     totalAdjustment: number
   } | null>(null);
+
+  // Fetch active promotions for this product
+  const { data: promotionsResponse } = useQuery<any>({
+    queryKey: ['/api/promotions/active-with-products'],
+    enabled: !!product?.id,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes to prevent refetching
+  });
+
+  // Find if this product is in any active promotion
+  const activePromotions = promotionsResponse?.data || promotionsResponse || [];
+  const productPromotion = activePromotions
+    .flatMap((promo: any) => promo.products?.map((pp: any) => ({ ...pp, promotion: promo })) || [])
+    .find((pp: any) => pp.productId === product?.id);
+
+  const promotionInfo = productPromotion ? {
+    promotionName: productPromotion.promotion.promotionName,
+    promotionDiscount: productPromotion.extraDiscountPercentage || productPromotion.discountOverride || productPromotion.promotion.discountValue,
+    promotionDiscountType: productPromotion.promotion.promotionType,
+    promotionEndDate: productPromotion.promotion.endDate,
+    promotionalPrice: productPromotion.promotionalPrice ? Number(productPromotion.promotionalPrice) : null
+  } : null;
   
   // Get related products based on category
   const { 
@@ -578,13 +599,13 @@ const ProductDetailView = ({
                 return null;
               })()}
               
-              {/* Discount Badge - positioned in lower right */}
-              {product.discountLabel && (
+              {/* Promotional Badge - positioned in lower right */}
+              {promotionInfo && promotionInfo.promotionDiscount > 0 && (
                 <div className="absolute bottom-2 right-2">
                   <Badge 
-                    className="bg-blue-500 hover:bg-blue-600 text-white text-xs px-2 py-1 rounded-md shadow-sm"
+                    className="bg-red-500 hover:bg-red-600 text-white text-xs px-2 py-1 rounded-md shadow-sm"
                   >
-                    {product.discountLabel}
+                    EXTRA {promotionInfo.promotionDiscount}% OFF!
                   </Badge>
                 </div>
               )}
