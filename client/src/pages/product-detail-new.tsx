@@ -172,11 +172,14 @@ const ProductDetailView = ({
     totalAdjustment: number
   } | null>(null);
 
-  // Fetch active promotions for this product
+  // Fetch active promotions for this product - no cache for real-time pricing
   const { data: promotionsResponse } = useQuery<any>({
-    queryKey: ['/api/promotions/active-with-products'],
+    queryKey: ['/api/promotions/active-with-products', product?.id],
     enabled: !!product?.id,
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes to prevent refetching
+    staleTime: 0, // No cache - always fetch fresh promotional data
+    gcTime: 0, // Don't keep in cache when component unmounts
+    refetchOnWindowFocus: true, // Refetch when window gains focus
+    refetchOnMount: true, // Always refetch on mount
   });
 
   // Find if this product is in any active promotion
@@ -767,7 +770,7 @@ const ProductDetailView = ({
                     {formatCurrency(promotionInfo ? (product.salePrice || product.price) : product.price)}
                   </span>
                   <span className="ml-2 px-2 py-1 bg-[#FF69B4]/10 text-[#FF69B4] rounded-full text-sm">
-                    {promotionInfo ? 
+                    {promotionInfo && promotionInfo.promotionalPrice ? 
                       Math.round(((product.price - promotionInfo.promotionalPrice) / product.price) * 100)
                       : discount}% OFF
                   </span>
