@@ -116,7 +116,7 @@ const FlashDealsSection = () => {
               return (
                 <div key={promo.id} className="flex items-center text-white/90 text-sm">
                   <Tag className="w-3 h-3 mr-1" />
-                  <span className="mr-2">{promo.promotionName}</span>
+                  <span className="mr-2 bg-black text-white px-2 py-1 rounded">{promo.promotionName}</span>
                   {timeLeft && (
                     <div className="flex items-center text-xs bg-white/20 px-2 py-1 rounded">
                       <Clock className="w-3 h-3 mr-1" />
