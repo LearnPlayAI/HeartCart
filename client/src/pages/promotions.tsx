@@ -132,6 +132,10 @@ function PromotionCard({ promotion }: { promotion: Promotion }) {
 function PromotionsPage() {
   const { data: response, isLoading, error } = useQuery<any>({
     queryKey: ['/api/promotions'],
+    staleTime: 0, // No cache - always fetch fresh promotional data
+    gcTime: 0, // Don't keep in cache when component unmounts
+    refetchOnWindowFocus: true, // Refetch when window gains focus
+    refetchOnMount: true, // Always refetch on mount
   });
 
   const promotions = response?.data || [];
