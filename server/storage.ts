@@ -11404,10 +11404,7 @@ export class DatabaseStorage implements IStorage {
         .leftJoin(creditTransactions, eq(creditTransactions.supplierOrderId, orderItems.id))
         .where(
           and(
-            or(
-              eq(orders.paymentStatus, 'paid'),
-              eq(orders.paymentStatus, 'payment_received')
-            ),
+            eq(orders.paymentStatus, 'payment_received'),
             ...(filters?.orderId ? [eq(orders.id, filters.orderId)] : []),
             // Handle status filtering at database level
             ...(filters?.status && filters.status !== 'pending' ? 
