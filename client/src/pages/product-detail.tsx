@@ -179,15 +179,16 @@ const ProductDetailContent = ({
   });
 
   // Find if this product is in any active promotion
-  const activePromotions = promotionsResponse?.success ? promotionsResponse.data : [];
+  // API returns data directly, not wrapped in success/data structure
+  const activePromotions = promotionsResponse?.data || promotionsResponse || [];
   const productPromotion = activePromotions
     .flatMap((promo: any) => promo.products?.map((pp: any) => ({ ...pp, promotion: promo })) || [])
     .find((pp: any) => pp.productId === product?.id);
 
   const promotionInfo = productPromotion ? {
     promotionName: productPromotion.promotion.promotionName,
-    promotionDiscount: productPromotion.discountOverride || productPromotion.promotion.discountValue,
-    promotionDiscountType: productPromotion.promotion.discountType,
+    promotionDiscount: productPromotion.extraDiscountPercentage || productPromotion.discountOverride || productPromotion.promotion.discountValue,
+    promotionDiscountType: productPromotion.promotion.promotionType,
     promotionEndDate: productPromotion.promotion.endDate,
     promotionalPrice: productPromotion.promotionalPrice ? Number(productPromotion.promotionalPrice) : null
   } : null;
