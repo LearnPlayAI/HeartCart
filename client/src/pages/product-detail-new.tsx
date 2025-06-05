@@ -599,16 +599,7 @@ const ProductDetailView = ({
                 return null;
               })()}
               
-              {/* Promotional Badge - positioned in lower right */}
-              {promotionInfo && promotionInfo.promotionDiscount > 0 && (
-                <div className="absolute bottom-2 right-2">
-                  <Badge 
-                    className="bg-red-500 hover:bg-red-600 text-white text-xs px-2 py-1 rounded-md shadow-sm"
-                  >
-                    EXTRA {promotionInfo.promotionDiscount}% OFF!
-                  </Badge>
-                </div>
-              )}
+
             </div>
             
             {/* Thumbnail gallery showing both main image and additional images */}
@@ -768,19 +759,35 @@ const ProductDetailView = ({
             {/* Price */}
             <div className="flex items-baseline">
               <span className="text-3xl font-bold text-[#FF69B4]">
-                {formatCurrency(product.salePrice || product.price)}
+                {formatCurrency(promotionInfo?.promotionalPrice || product.salePrice || product.price)}
               </span>
-              {product.salePrice && (
+              {(product.salePrice || promotionInfo) && (
                 <>
                   <span className="text-gray-500 text-lg ml-2 line-through">
-                    {formatCurrency(product.price)}
+                    {formatCurrency(promotionInfo ? (product.salePrice || product.price) : product.price)}
                   </span>
                   <span className="ml-2 px-2 py-1 bg-[#FF69B4]/10 text-[#FF69B4] rounded-full text-sm">
-                    {discount}% OFF
+                    {promotionInfo ? 
+                      Math.round(((promotionInfo?.promotionalPrice ? (product.salePrice || product.price) - promotionInfo.promotionalPrice : 0) / (product.salePrice || product.price)) * 100)
+                      : discount}% OFF
                   </span>
                 </>
               )}
             </div>
+            
+            {/* Promotional Info - positioned below price */}
+            {promotionInfo && promotionInfo.promotionDiscount > 0 && (
+              <div className="flex items-center gap-3 mt-2">
+                <Badge 
+                  className="bg-red-500 hover:bg-red-600 text-white text-xs px-2 py-1 rounded-md shadow-sm"
+                >
+                  EXTRA {promotionInfo.promotionDiscount}% OFF!
+                </Badge>
+                <span className="text-sm font-medium text-gray-700">
+                  {promotionInfo.promotionName}
+                </span>
+              </div>
+            )}
             
             {/* Product code or SKU could go here instead */}
             
