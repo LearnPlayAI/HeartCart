@@ -1,9 +1,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Clock, Tag, Zap, ArrowRight } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Clock, Tag, Zap, ArrowLeft } from 'lucide-react';
+import { Card } from '@/components/ui/card';
 import ProductCard from '@/components/product/product-card';
 import { Link } from 'wouter';
 import type { Product } from '@shared/schema';
@@ -28,130 +26,91 @@ interface Promotion {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
-  promotionProducts?: PromotionProduct[];
 }
 
-function getTimeRemaining(endDate: string) {
-  const end = new Date(endDate).getTime();
+interface PromotionWithProducts extends Promotion {
+  products: PromotionProduct[];
+}
+
+// Calculate countdown timer for promotions (same as flash-deals)
+const getTimeRemaining = (endDate: string) => {
   const now = new Date().getTime();
+  const end = new Date(endDate).getTime();
   const timeLeft = end - now;
-
+  
   if (timeLeft <= 0) return null;
-
+  
   const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
   const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
   const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
-
-  if (days > 0) return `${days}d ${hours}h left`;
-  if (hours > 0) return `${hours}h ${minutes}m left`;
-  return `${minutes}m left`;
-}
-
-function PromotionCard({ promotion }: { promotion: Promotion }) {
-  const timeLeft = getTimeRemaining(promotion.endDate);
-  const products = promotion.promotionProducts || [];
-
-  return (
-    <Card className="overflow-hidden">
-      <CardHeader className="bg-gradient-to-r from-[#FF69B4] to-[#FF1493] text-white">
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center text-lg">
-            <Tag className="mr-2 w-5 h-5" />
-            {promotion.promotionName}
-          </CardTitle>
-          {timeLeft && (
-            <Badge variant="secondary" className="bg-white/20 text-white">
-              <Clock className="mr-1 w-3 h-3" />
-              {timeLeft}
-            </Badge>
-          )}
-        </div>
-        {promotion.description && (
-          <p className="text-white/90 text-sm mt-2">{promotion.description}</p>
-        )}
-        <div className="flex items-center gap-2 mt-2">
-          <Badge variant="secondary" className="bg-white/20 text-white">
-            {promotion.discountType === 'percentage' 
-              ? `${promotion.discountValue}% OFF` 
-              : `R${promotion.discountValue} OFF`
-            }
-          </Badge>
-          <Badge variant="secondary" className="bg-white/20 text-white">
-            {products.length} product{products.length !== 1 ? 's' : ''}
-          </Badge>
-        </div>
-      </CardHeader>
-      
-      <CardContent className="p-4">
-        {products.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {products.slice(0, 8).map((promotionProduct) => {
-              // Create product with embedded promotion data for unified pricing system
-              const productWithPromotion = {
-                ...promotionProduct.product,
-                promotionInfo: {
-                  promotionName: promotion.promotionName,
-                  promotionDiscount: promotionProduct.additionalDiscountPercentage ? 
-                    promotionProduct.additionalDiscountPercentage.toString() : 
-                    promotion.discountValue.toString(),
-                  promotionEndDate: promotion.endDate,
-                  promotionalPrice: promotionProduct.promotionalPrice || promotionProduct.discountOverride || null
-                }
-              };
-              
-              return (
-                <ProductCard 
-                  key={promotionProduct.id} 
-                  product={productWithPromotion}
-                />
-              );
-            })}
-          </div>
-        ) : (
-          <div className="text-center py-8 text-gray-500">
-            <Zap className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-            <p>No products in this promotion yet</p>
-          </div>
-        )}
-        
-        {products.length > 8 && (
-          <div className="mt-4 text-center">
-            <Link href={`/promotion/${promotion.id}`}>
-              <Button variant="outline" className="w-full">
-                View all {products.length} products
-                <ArrowRight className="ml-2 w-4 h-4" />
-              </Button>
-            </Link>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
+  
+  return { days, hours, minutes };
+};
 
 function PromotionsPage() {
-  const { data: response, isLoading, error } = useQuery<any>({
-    queryKey: ['/api/promotions'],
+  // Fetch active promotions with their products using the exact same API as flash deals
+  interface ApiResponse {
+    success: boolean;
+    data: PromotionWithProducts[];
+  }
+  
+  const { data: response, isLoading, error, refetch } = useQuery<ApiResponse>({
+    queryKey: ['/api/promotions/active-with-products'],
     staleTime: 0, // No cache - always fetch fresh promotional data
     gcTime: 0, // Don't keep in cache when component unmounts
     refetchOnWindowFocus: true, // Refetch when window gains focus
     refetchOnMount: true, // Always refetch on mount
   });
-
-  const promotions = response?.data || [];
-  const activePromotions = promotions.filter((promo) => promo.isActive);
-  const upcomingPromotions = promotions.filter((promo) => 
-    !promo.isActive && new Date(promo.startDate) > new Date()
+  
+  // Extract active promotions and their products (same as flash-deals)
+  const activePromotions = response?.success ? response.data : [];
+  const allPromotionProducts = activePromotions.flatMap(promo => 
+    promo.products?.map(pp => ({
+      ...pp.product,
+      salePrice: pp.promotionalPrice || pp.product?.salePrice || 0,
+      originalSalePrice: pp.product?.salePrice || 0,
+      promotionName: promo.promotionName,
+      promotionDiscount: pp.discountOverride || promo.discountValue,
+      promotionDiscountType: promo.discountType,
+      promotionEndDate: promo.endDate,
+      extraDiscountPercentage: pp.additionalDiscountPercentage || 0,
+      promotionalPrice: pp.promotionalPrice
+    })) || []
   );
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="animate-pulse space-y-6">
-          <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-          <div className="grid gap-6">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="h-64 bg-gray-200 rounded-lg"></div>
+      <div className="min-h-screen bg-gray-50">
+        {/* Header Section */}
+        <div className="bg-gradient-to-r from-[#FF69B4] to-[#FF1493] text-white">
+          <div className="container mx-auto px-4 py-8">
+            <div className="flex items-center mb-4">
+              <Link href="/" className="flex items-center text-white hover:text-gray-200 mr-4">
+                <ArrowLeft className="h-5 w-5 mr-1" />
+                Back to Home
+              </Link>
+            </div>
+            <div className="flex items-center">
+              <Zap className="h-8 w-8 mr-3" />
+              <div>
+                <h1 className="text-3xl font-bold">All Promotions</h1>
+                <p className="text-lg opacity-90">Loading amazing deals...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Loading Content */}
+        <div className="container mx-auto px-4 py-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+            {Array.from({ length: 8 }).map((_, index) => (
+              <Card key={index} className="h-64 animate-pulse bg-gray-100">
+                <div className="h-36 bg-gray-200 rounded-t-lg"></div>
+                <div className="p-2">
+                  <div className="h-3 bg-gray-200 rounded w-3/4 mb-2"></div>
+                  <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                </div>
+              </Card>
             ))}
           </div>
         </div>
@@ -161,87 +120,134 @@ function PromotionsPage() {
 
   if (error) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center py-12">
-          <Zap className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-          <h2 className="text-xl font-semibold text-gray-600 mb-2">
-            Unable to load promotions
-          </h2>
-          <p className="text-gray-500">
-            Please try again later or contact support if the problem persists.
-          </p>
+      <div className="min-h-screen bg-gray-50">
+        {/* Header Section */}
+        <div className="bg-gradient-to-r from-[#FF69B4] to-[#FF1493] text-white">
+          <div className="container mx-auto px-4 py-8">
+            <div className="flex items-center mb-4">
+              <Link href="/" className="flex items-center text-white hover:text-gray-200 mr-4">
+                <ArrowLeft className="h-5 w-5 mr-1" />
+                Back to Home
+              </Link>
+            </div>
+            <div className="flex items-center">
+              <Zap className="h-8 w-8 mr-3" />
+              <div>
+                <h1 className="text-3xl font-bold">All Promotions</h1>
+                <p className="text-lg opacity-90">Failed to load promotions</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Error Content */}
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center py-8">
+            <div className="text-red-500 mb-2">Failed to load promotional deals</div>
+            <button 
+              className="px-4 py-2 rounded-md border border-[#FF69B4] text-[#FF69B4] hover:bg-[#FF69B4] hover:text-white transition-colors"
+              onClick={() => refetch()}
+            >
+              Retry
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Page Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2 flex items-center">
-          <Zap className="mr-3 text-[#FF69B4]" />
-          Special Promotions
-        </h1>
-        <p className="text-gray-600">
-          Discover amazing deals and limited-time offers on your favorite products
-        </p>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header Section - identical to flash deals */}
+      <div className="bg-gradient-to-r from-[#FF69B4] to-[#FF1493] text-white">
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex items-center mb-4">
+            <Link href="/" className="flex items-center text-white hover:text-gray-200 mr-4">
+              <ArrowLeft className="h-5 w-5 mr-1" />
+              Back to Home
+            </Link>
+          </div>
+          <div className="flex items-center">
+            <Zap className="h-8 w-8 mr-3" />
+            <div>
+              <h1 className="text-3xl font-bold">All Promotions</h1>
+              <p className="text-lg opacity-90">Discover amazing deals and limited-time offers!</p>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Active Promotions */}
-      {activePromotions.length > 0 && (
-        <section className="mb-12">
-          <h2 className="text-2xl font-semibold text-gray-900 mb-6 flex items-center">
-            <Tag className="mr-2 text-[#FF69B4]" />
+      {/* Promotions header section with timer - identical to flash deals */}
+      <div className="bg-gradient-to-r from-gray-900 to-gray-800 text-white py-6">
+        <div className="container mx-auto px-4">
+          <h2 className="text-2xl font-bold mb-4 flex items-center">
+            <Zap className="mr-2 text-[#FF69B4]" />
             Active Promotions
-            <Badge variant="secondary" className="ml-2 bg-[#FF69B4]/10 text-[#FF69B4]">
-              {activePromotions.length} active
-            </Badge>
           </h2>
-          <div className="grid gap-6">
-            {activePromotions.map(promotion => (
-              <PromotionCard key={promotion.id} promotion={promotion} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Upcoming Promotions */}
-      {upcomingPromotions.length > 0 && (
-        <section className="mb-12">
-          <h2 className="text-2xl font-semibold text-gray-900 mb-6 flex items-center">
-            <Clock className="mr-2 text-gray-500" />
-            Coming Soon
-            <Badge variant="secondary" className="ml-2 bg-gray-100 text-gray-600">
-              {upcomingPromotions.length} upcoming
-            </Badge>
-          </h2>
-          <div className="grid gap-6">
-            {upcomingPromotions.map(promotion => (
-              <PromotionCard key={promotion.id} promotion={promotion} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* No Promotions State */}
-      {promotions.length === 0 && (
-        <div className="text-center py-16">
-          <Zap className="w-20 h-20 mx-auto mb-6 text-gray-300" />
-          <h2 className="text-2xl font-semibold text-gray-600 mb-4">
-            No promotions available
-          </h2>
-          <p className="text-gray-500 mb-6 max-w-md mx-auto">
-            Check back soon for exciting deals and special offers on our products.
-          </p>
-          <Link href="/">
-            <Button className="bg-[#FF69B4] hover:bg-[#FF1493]">
-              Continue Shopping
-              <ArrowRight className="ml-2 w-4 h-4" />
-            </Button>
-          </Link>
+          
+          {/* Show active promotion timers - identical to flash deals */}
+          {activePromotions.length > 0 && (
+            <div className="flex flex-wrap gap-3">
+              {activePromotions.map((promo) => {
+                const timeLeft = getTimeRemaining(promo.endDate);
+                return (
+                  <div key={promo.id} className="flex items-center text-white/90 text-sm">
+                    <Tag className="w-3 h-3 mr-1" />
+                    <span className="mr-2 bg-black text-white px-2 py-1 rounded">{promo.promotionName}</span>
+                    {timeLeft && (
+                      <div className="flex items-center text-xs bg-orange-500 text-white px-2 py-1 rounded">
+                        <Clock className="w-3 h-3 mr-1" />
+                        {timeLeft.days > 0 
+                          ? `${timeLeft.days}d ${timeLeft.hours}h left`
+                          : `${timeLeft.hours}h ${timeLeft.minutes}m left`
+                        }
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
-      )}
+      </div>
+
+      {/* Products grid - EXACTLY the same as flash deals */}
+      <div className="p-4 bg-[#ff68b32e]">
+        <div className="container mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+            {allPromotionProducts.length > 0 ? (
+              // Show promotion products - identical logic to flash deals
+              allPromotionProducts.map((product: any) => {
+                const soldPercentage = Math.floor((product.id * 17) % 100);
+                
+                return (
+                  <div key={`${product.id}-${product.promotionName}`} className="relative">
+                    <ProductCard
+                      product={product}
+                      isFlashDeal={true}
+                      soldPercentage={soldPercentage}
+                      showAddToCart={true}
+                      promotionInfo={{
+                        promotionName: product.promotionName,
+                        promotionDiscount: product.extraDiscountPercentage || product.promotionDiscount,
+                        promotionDiscountType: product.promotionDiscountType,
+                        promotionEndDate: product.promotionEndDate,
+                        promotionalPrice: product.promotionalPrice
+                      }}
+                    />
+                  </div>
+                );
+              })
+            ) : (
+              // Show empty state - identical to flash deals
+              <div className="col-span-full text-center py-8">
+                <div className="text-gray-500 mb-2">No promotional deals available at the moment</div>
+                <div className="text-sm text-gray-400">Check back later for exciting deals!</div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
