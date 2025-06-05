@@ -211,6 +211,15 @@ const ProductDetailContent = ({
     promotionInfo
   ) : null;
 
+  // Debug promotional pricing
+  console.log(`Product detail for product ${product?.id}:`, {
+    productName: product?.name,
+    basePrice: product?.price,
+    salePrice: product?.salePrice,
+    promotionInfo,
+    pricing
+  });
+
   // Get related products based on the same category
   const { data: relatedProducts } = useQuery<Product[]>({
     queryKey: ['/api/products/category', product?.categoryId, { limit: 5 }],
@@ -496,8 +505,8 @@ const ProductDetailContent = ({
                 </span>
               )}
               {promotionInfo && (
-                <span className="ml-2 px-2 py-1 bg-[#FF69B4]/10 text-[#FF69B4] rounded-full text-sm">
-                  EXTRA {Math.round(parseFloat(promotionInfo.promotionDiscount))}% OFF!
+                <span className="ml-2 px-2 py-1 bg-red-500 text-white rounded-full text-sm font-bold">
+                  EXTRA {pricing?.extraPromotionalDiscount || Math.round(parseFloat(promotionInfo.promotionDiscount))}% OFF!
                 </span>
               )}
               {pricing?.hasDiscount && !promotionInfo && (
