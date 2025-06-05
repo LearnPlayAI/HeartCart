@@ -167,13 +167,6 @@ function PromotionsPage() {
               Back to Home
             </Link>
           </div>
-          <div className="flex items-center">
-            <Zap className="h-8 w-8 mr-3" />
-            <div>
-              <h1 className="text-3xl font-bold">All Promotions</h1>
-              <p className="text-lg opacity-90">Discover amazing deals and limited-time offers!</p>
-            </div>
-          </div>
         </div>
       </div>
 
