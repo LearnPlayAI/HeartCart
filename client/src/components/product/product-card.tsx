@@ -283,14 +283,21 @@ const ProductCard: React.FC<ProductCardProps> = ({
               )}
             </div>
             
-            {/* Discount Percentage Badge */}
-            {pricing.hasDiscount && (
-              <div className="ml-2">
+            <div className="ml-2 flex flex-col gap-1">
+              {/* Discount Percentage Badge */}
+              {pricing.hasDiscount && (
                 <Badge className="bg-[#FF69B4] hover:bg-[#FF1493] text-white text-xs px-2 py-1 rounded-md font-medium">
                   {pricing.discountPercentage}% OFF
                 </Badge>
-              </div>
-            )}
+              )}
+              
+              {/* Inactive Badge - Only visible to admins */}
+              {user?.role === 'admin' && product.isActive === false && (
+                <Badge className="bg-red-600 hover:bg-red-700 text-white text-xs px-2 py-1 rounded-md font-medium">
+                  INACTIVE
+                </Badge>
+              )}
+            </div>
           </div>
           
           {isFlashDeal && (
