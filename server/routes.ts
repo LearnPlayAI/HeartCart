@@ -4192,7 +4192,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           throw new BadRequestError(`Attribute "${attributeName}" not found in cart item`);
         }
         
-        // Handle both array and single value attributes
+        // Handle different attribute selection formats
         let updatedSelections = { ...currentSelections };
         let shouldDecreaseQuantity = false;
         
@@ -4214,10 +4214,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
           } else {
             updatedSelections[attributeName] = filteredArray;
           }
+        } else if (typeof currentSelections[attributeName] === 'object' && currentSelections[attributeName] !== null) {
+          // Handle object-based attribute selections with counts (e.g., {"Boy": 1, "Girl": 1})
+          const attributeObject = currentSelections[attributeName] as Record<string, number>;
+          
+          if (!(attributeValue in attributeObject)) {
+            throw new BadRequestError(`Attribute value "${attributeValue}" not found in "${attributeName}"`);
+          }
+          
+          // Decrease the count for this specific attribute value
+          const updatedAttributeObject = { ...attributeObject };
+          
+          if (updatedAttributeObject[attributeValue] > 1) {
+            // Decrease count by 1
+            updatedAttributeObject[attributeValue] -= 1;
+          } else {
+            // Remove the attribute value entirely if count would become 0
+            delete updatedAttributeObject[attributeValue];
+          }
+          
+          // Check if any attribute values remain
+          if (Object.keys(updatedAttributeObject).length === 0) {
+            // Remove the entire attribute if no values left
+            delete updatedSelections[attributeName];
+          } else {
+            updatedSelections[attributeName] = updatedAttributeObject;
+          }
+          
+          shouldDecreaseQuantity = true;
         } else {
-          // Single value attribute
+          // Single value attribute (string)
           if (currentSelections[attributeName] !== attributeValue) {
-            throw new BadRequestError(`Attribute value "${attributeValue}" does not match current value`);
+            throw new BadRequestError(`Attribute value "${attributeValue}" does not match current value "${currentSelections[attributeName]}"`);
           }
           
           // Remove the entire attribute
