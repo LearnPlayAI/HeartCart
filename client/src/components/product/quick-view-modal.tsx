@@ -414,9 +414,9 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
                 </div>
                 {promotionInfo && (
                   <div className="flex items-center gap-2">
-                    <Badge variant="destructive" className="bg-red-500 text-white text-xs">
-                      EXTRA {Math.round(parseFloat(promotionInfo.promotionDiscount))}% OFF!
-                    </Badge>
+                    <div className="bg-red-500 text-white px-2 py-1 text-xs font-bold rounded-full shadow-lg">
+                      EXTRA {pricing?.extraPromotionalDiscount || Math.round(parseFloat(promotionInfo.promotionDiscount))}% OFF!
+                    </div>
                     <span className="text-xs text-gray-600">{promotionInfo.promotionName}</span>
                   </div>
                 )}
