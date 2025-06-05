@@ -42,6 +42,10 @@ const FlashDealsSection = () => {
   
   const { data: response, isLoading, error, refetch } = useQuery<ApiResponse>({
     queryKey: ['/api/promotions/active-with-products'],
+    staleTime: 0, // No cache - always fetch fresh promotional data
+    gcTime: 0, // Don't keep in cache when component unmounts
+    refetchOnWindowFocus: true, // Refetch when window gains focus
+    refetchOnMount: true, // Always refetch on mount
   });
   
   // Extract active promotions and their products

@@ -111,9 +111,13 @@ export default function CheckoutPage() {
     refetchOnWindowFocus: true // Refetch when window gets focus
   });
 
-  // Fetch active promotions to apply promotional pricing
+  // Fetch active promotions to apply promotional pricing - no cache for real-time pricing
   const { data: promotionsResponse } = useQuery({
     queryKey: ["/api/promotions/active-with-products"],
+    staleTime: 0, // No cache - always fetch fresh promotional data
+    gcTime: 0, // Don't keep in cache when component unmounts
+    refetchOnWindowFocus: true, // Refetch when window gains focus
+    refetchOnMount: true, // Always refetch on mount
   });
 
   // Fetch user orders to check for shipped orders after credits were issued

@@ -49,9 +49,13 @@ export default function MyFavourites() {
     },
   });
 
-  // Fetch active promotions to check if favourited products are promotional
+  // Fetch active promotions to check if favourited products are promotional - no cache for real-time pricing
   const { data: promotionsResponse } = useQuery({
     queryKey: ['/api/promotions/active-with-products'],
+    staleTime: 0, // No cache - always fetch fresh promotional data
+    gcTime: 0, // Don't keep in cache when component unmounts
+    refetchOnWindowFocus: true, // Refetch when window gains focus
+    refetchOnMount: true, // Always refetch on mount
   });
 
   const favourites = favouritesData?.data || [];

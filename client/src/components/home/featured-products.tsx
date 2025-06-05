@@ -15,9 +15,13 @@ const FeaturedProductsSection = () => {
     queryKey: ['/api/featured-products', { limit, offset: (page - 1) * limit }],
   });
   
-  // Fetch active promotions to check if featured products are promotional
+  // Fetch active promotions to check if featured products are promotional - no cache for real-time pricing
   const { data: promotionsResponse } = useQuery<StandardApiResponse<any[]>>({
     queryKey: ['/api/promotions/active-with-products'],
+    staleTime: 0, // No cache - always fetch fresh promotional data
+    gcTime: 0, // Don't keep in cache when component unmounts
+    refetchOnWindowFocus: true, // Refetch when window gains focus
+    refetchOnMount: true, // Always refetch on mount
   });
   
   // Extract the featured products from the standardized response

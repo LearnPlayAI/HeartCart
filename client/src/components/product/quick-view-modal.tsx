@@ -71,10 +71,14 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
   const isLoadingProduct = isLoadingProductFromId || isLoadingProductFromSlug;
   const productError = productIdError || productSlugError;
 
-  // Fetch active promotions for this product
+  // Fetch active promotions for this product - no cache for real-time pricing
   const { data: promotionsResponse } = useQuery<StandardApiResponse<any[]>>({
-    queryKey: ['/api/promotions/active-with-products'],
+    queryKey: ['/api/promotions/active-with-products', product?.id],
     enabled: !!product?.id && open,
+    staleTime: 0, // No cache - always fetch fresh promotional data
+    gcTime: 0, // Don't keep in cache when component unmounts
+    refetchOnWindowFocus: true, // Refetch when window gains focus
+    refetchOnMount: true, // Always refetch on mount
   });
 
   // Find if this product is in any active promotion

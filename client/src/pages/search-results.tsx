@@ -62,9 +62,13 @@ const SearchResults = () => {
   // Extract products from standardized API response
   const products = response?.success ? response.data : [];
   
-  // Fetch active promotions to check if search results include promotional products
+  // Fetch active promotions to check if search results include promotional products - no cache for real-time pricing
   const { data: promotionsResponse } = useQuery<StandardApiResponse<any[]>>({
     queryKey: ['/api/promotions/active-with-products'],
+    staleTime: 0, // No cache - always fetch fresh promotional data
+    gcTime: 0, // Don't keep in cache when component unmounts
+    refetchOnWindowFocus: true, // Refetch when window gains focus
+    refetchOnMount: true, // Always refetch on mount
   });
   
   // Create a map of product promotions for quick lookup
