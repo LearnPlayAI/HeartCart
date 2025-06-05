@@ -486,19 +486,24 @@ const ProductDetailContent = ({
             </div>
             
             {/* Price */}
-            <div className="flex items-baseline">
-              <span className="text-3xl font-bold text-[#FF69B4]">
-                {pricing ? formatCurrency(pricing.displayPrice) : formatCurrency(currentPrice || product.salePrice || product.price)}
-              </span>
-              {pricing?.hasDiscount && (
-                <span className="text-gray-500 text-lg ml-2 line-through">
-                  {formatCurrency(pricing.originalPrice)}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-3xl font-bold text-[#FF69B4]">
+                  {pricing ? formatCurrency(pricing.displayPrice) : formatCurrency(currentPrice || product.salePrice || product.price)}
                 </span>
-              )}
+                {pricing?.hasDiscount && (
+                  <span className="text-gray-500 text-lg ml-2 line-through">
+                    {formatCurrency(pricing.originalPrice)}
+                  </span>
+                )}
+              </div>
               {promotionInfo && (
-                <span className="ml-2 px-2 py-1 bg-[#FF69B4]/10 text-[#FF69B4] rounded-full text-sm">
-                  EXTRA {Math.round(parseFloat(promotionInfo.promotionDiscount))}% OFF!
-                </span>
+                <div className="flex items-center gap-2">
+                  <div className="bg-red-500 text-white px-2 py-1 text-xs font-bold rounded-full shadow-lg">
+                    EXTRA {pricing?.extraPromotionalDiscount || Math.round(parseFloat(promotionInfo.promotionDiscount))}% OFF!
+                  </div>
+                  <span className="text-xs text-gray-600">{promotionInfo.promotionName}</span>
+                </div>
               )}
               {pricing?.hasDiscount && !promotionInfo && (
                 <span className="ml-2 px-2 py-1 bg-[#FF69B4]/10 text-[#FF69B4] rounded-full text-sm">
