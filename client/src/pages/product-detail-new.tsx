@@ -110,9 +110,12 @@ export default function ProductDetailNew() {
     if (!product || !pricing) return;
 
     addItem({
+      userId: 1, // This will be populated by the server based on session
       productId: product.id,
       quantity,
       attributeSelections: selectedAttributes,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     });
 
     toast({
