@@ -27,17 +27,9 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { 
-  Product, 
-  CategoryAttribute, 
-  CategoryAttributeOption, 
-  ProductAttributeCombination,
-  GlobalAttribute,
-  GlobalAttributeOption
+  Product
 } from '@shared/schema';
-import { 
-  ProductGlobalAttributeResponse,
-  CartGlobalAttribute
-} from '@/types/attribute-types';
+
 
 // This is a wrapper component that determines which path is matched and renders
 // the actual ProductDetail component with the right identifier
@@ -210,6 +202,8 @@ const ProductDetailContent = ({
     product.salePrice ? Number(product.salePrice) : null,
     promotionInfo
   ) : null;
+
+
 
   // Get related products based on the same category
   const { data: relatedProducts } = useQuery<Product[]>({
