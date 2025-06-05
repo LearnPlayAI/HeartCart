@@ -13,7 +13,7 @@ type CartContextType = {
   isOpen: boolean;
   openCart: () => void;
   closeCart: () => void;
-  addItem: (item: Omit<CartItemWithDiscounts, 'id' | 'discountData' | 'totalDiscount' | 'itemPrice'>) => void;
+  addItem: (item: { productId: number; quantity: number; itemPrice: number; attributeSelections: Record<string, string> | null }) => void;
   updateItemQuantity: (id: number, quantity: number) => void;
   removeItem: (id: number) => void;
   removeAttributeOption: (cartItemId: number, attributeName: string, attributeValue: string) => void;

@@ -154,9 +154,6 @@ export const queryClient = new QueryClient({
       refetchOnWindowFocus: false,
       staleTime: Infinity,
       retry: false,
-      onError: (error: Error) => {
-        console.error('Query error caught by global handler:', error);
-      },
     },
     mutations: {
       retry: false,
