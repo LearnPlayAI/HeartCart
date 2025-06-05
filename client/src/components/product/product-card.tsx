@@ -100,19 +100,32 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const [quickViewOpen, setQuickViewOpen] = useState(false);
   const [imageError, setImageError] = useState(false);
   
+  // Check if product has embedded promotional data (like Special deals section)
+  const hasEmbeddedPromotion = !!(product as any).promotionName;
+  
+  // Create promotion info from embedded properties if they exist
+  const effectivePromotionInfo = hasEmbeddedPromotion ? {
+    promotionName: (product as any).promotionName,
+    promotionDiscount: (product as any).promotionDiscount,
+    promotionDiscountType: (product as any).promotionDiscountType,
+    promotionEndDate: (product as any).promotionEndDate,
+    promotionalPrice: (product as any).promotionalPrice
+  } : promotionInfo;
+
   // Debug promotional info
   console.log(`ProductCard for product ${product.id}:`, {
     productName: product.name,
     basePrice: product.price,
     salePrice: product.salePrice,
-    promotionInfo: promotionInfo
+    hasEmbeddedPromotion,
+    effectivePromotionInfo
   });
 
   // Calculate unified pricing using centralized logic
   const pricing = calculateProductPricing(
     Number(product.price) || 0,
     product.salePrice ? Number(product.salePrice) : null,
-    promotionInfo
+    effectivePromotionInfo
   );
   
   console.log(`Calculated pricing for product ${product.id}:`, pricing);
@@ -121,12 +134,12 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const cartPrice = getCartPrice(
     Number(product.price) || 0,
     product.salePrice ? Number(product.salePrice) : null,
-    promotionInfo
+    effectivePromotionInfo
   );
   
   console.log(`Cart price for product ${product.id}:`, {
     cartPrice,
-    promotionInfo,
+    effectivePromotionInfo,
     displayPrice: pricing.displayPrice
   });
   
@@ -231,11 +244,11 @@ const ProductCard: React.FC<ProductCardProps> = ({
             </div>
             
             {/* Promotional overlays */}
-            {promotionInfo && (
+            {effectivePromotionInfo && (
               <>
                 {/* Time remaining indicator - top left of image */}
                 {(() => {
-                  const timeLeft = getPromotionTimeRemaining(promotionInfo.promotionEndDate);
+                  const timeLeft = getPromotionTimeRemaining(effectivePromotionInfo.promotionEndDate);
                   return timeLeft && (
                     <div className="absolute top-2 left-2 bg-orange-500 text-white px-2 py-1 text-xs rounded shadow-lg z-10 flex items-center">
                       <Clock className="w-3 h-3 mr-1" />
@@ -249,18 +262,18 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 
                 {/* Promotion name tag - top right */}
                 <div className="absolute top-2 right-2 bg-black/70 text-white px-2 py-1 text-xs rounded shadow-lg z-10">
-                  {promotionInfo.promotionName}
+                  {effectivePromotionInfo.promotionName}
                 </div>
                 
                 {/* Promotion discount badge - bottom right */}
                 <div className="absolute bottom-2 right-2 bg-red-500 text-white px-2 py-1 text-xs font-bold rounded-full shadow-lg z-10">
-                  EXTRA {pricing.extraPromotionalDiscount || Math.round(Number(promotionInfo.promotionDiscount))}% OFF!
+                  EXTRA {pricing.extraPromotionalDiscount || Math.round(Number(effectivePromotionInfo.promotionDiscount))}% OFF!
                 </div>
               </>
             )}
 
             {/* Regular discount badge - positioned in lower right when no promotion */}
-            {!promotionInfo && product.discountLabel && (
+            {!effectivePromotionInfo && product.discountLabel && (
               <div className="absolute bottom-2 right-2">
                 <Badge 
                   className="inline-flex items-center border font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent hover:bg-blue-600 text-white text-xs px-2 py-1 rounded-md shadow-sm bg-[#1ac20c]"
