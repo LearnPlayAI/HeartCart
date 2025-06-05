@@ -158,7 +158,6 @@ function PromotionsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-
       {/* Promotions header section with timer - identical to flash deals */}
       <div className="bg-gradient-to-r from-gray-900 to-gray-800 text-white py-6">
         <div className="container mx-auto px-4">
@@ -175,7 +174,7 @@ function PromotionsPage() {
                 return (
                   <div key={promo.id} className="flex items-center text-white/90 text-sm">
                     <Tag className="w-3 h-3 mr-1" />
-                    <span className="mr-2 bg-hotpink text-white px-2 py-1 rounded">{promo.promotionName}</span>
+                    <span className="mr-2 text-white px-2 py-1 rounded bg-[#ff69b4]">{promo.promotionName}</span>
                     {timeLeft && (
                       <div className="flex items-center text-xs bg-orange-500 text-white px-2 py-1 rounded">
                         <Clock className="w-3 h-3 mr-1" />
@@ -192,14 +191,13 @@ function PromotionsPage() {
           )}
         </div>
       </div>
-
       {/* Products grid - EXACTLY the same as flash deals */}
       <div className="p-4 bg-[#ff68b32e]">
         <div className="container mx-auto">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
             {allPromotionProducts.length > 0 ? (
               // Show promotion products - identical logic to flash deals
-              allPromotionProducts.map((product: any) => {
+              (allPromotionProducts.map((product: any) => {
                 const soldPercentage = Math.floor((product.id * 17) % 100);
                 
                 return (
@@ -219,13 +217,13 @@ function PromotionsPage() {
                     />
                   </div>
                 );
-              })
+              }))
             ) : (
               // Show empty state - identical to flash deals
-              <div className="col-span-full text-center py-8">
+              (<div className="col-span-full text-center py-8">
                 <div className="text-gray-500 mb-2">No promotional deals available at the moment</div>
                 <div className="text-sm text-gray-400">Check back later for exciting deals!</div>
-              </div>
+              </div>)
             )}
           </div>
         </div>
