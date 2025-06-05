@@ -184,54 +184,33 @@ const ProductDetailContent = ({
   queryClient: any;
 }) => {
   
-  // Fetch active promotions for this product
-  const { data: promotionsResponse, isLoading: promotionsLoading } = useQuery<any>({
+  // Get promotional data using the same approach as ProductCard
+  const { data: promotionsResponse } = useQuery<any>({
     queryKey: ['/api/promotions/active-with-products'],
-    enabled: !!product?.id,
   });
 
-  // Add debugging to ensure query is triggered
-  console.log('Promotions query state:', {
-    enabled: !!product?.id,
-    isLoading: promotionsLoading,
-    hasData: !!promotionsResponse
-  });
-
-  // Find if this product is in any active promotion
-  console.log('Debug promotions data:', {
-    promotionsResponse,
-    productId: product?.id,
-    success: promotionsResponse?.success
-  });
-  
-  const activePromotions = promotionsResponse?.success ? promotionsResponse.data : [];
-  console.log('Active promotions:', activePromotions);
-  
-  const productPromotion = activePromotions
-    .flatMap((promo: any) => {
-      console.log('Processing promotion:', promo.promotionName, 'products:', promo.products);
-      return promo.products?.map((pp: any) => ({ ...pp, promotion: promo })) || [];
-    })
-    .find((pp: any) => {
-      console.log('Checking product promotion:', pp.productId, 'against', product?.id);
-      return pp.productId === product?.id;
+  // Extract promotional info for this specific product
+  const promotionMap = new Map();
+  if (promotionsResponse?.success) {
+    promotionsResponse.data.forEach((promo: any) => {
+      promo.products?.forEach((pp: any) => {
+        promotionMap.set(pp.productId, {
+          promotionName: promo.promotionName,
+          promotionDiscount: promo.discountValue,
+          promotionEndDate: promo.endDate,
+          promotionalPrice: pp.promotionalPrice ? Number(pp.promotionalPrice) : null
+        });
+      });
     });
+  }
 
-  console.log('Found product promotion:', productPromotion);
-
-  const promotionInfo = productPromotion ? {
-    promotionName: productPromotion.promotion.promotionName,
-    promotionDiscount: productPromotion.discountOverride || productPromotion.promotion.discountValue,
-    promotionDiscountType: productPromotion.promotion.discountType,
-    promotionEndDate: productPromotion.promotion.endDate,
-    promotionalPrice: productPromotion.promotionalPrice ? Number(productPromotion.promotionalPrice) : null
-  } : null;
+  const effectivePromotionInfo = product ? promotionMap.get(product.id) || null : null;
 
   // Calculate unified pricing using centralized logic
   const pricing = product ? calculateProductPricing(
     Number(product.price) || 0,
     product.salePrice ? Number(product.salePrice) : null,
-    promotionInfo
+    effectivePromotionInfo
   ) : null;
 
   // Debug promotional pricing
@@ -239,7 +218,7 @@ const ProductDetailContent = ({
     productName: product?.name,
     basePrice: product?.price,
     salePrice: product?.salePrice,
-    promotionInfo,
+    effectivePromotionInfo,
     pricing
   });
 
@@ -527,12 +506,12 @@ const ProductDetailContent = ({
                   {formatCurrency(pricing.originalPrice)}
                 </span>
               )}
-              {promotionInfo && (
+              {effectivePromotionInfo && (
                 <span className="ml-2 px-2 py-1 bg-red-500 text-white rounded-full text-sm font-bold">
-                  EXTRA {pricing?.extraPromotionalDiscount || Math.round(parseFloat(promotionInfo.promotionDiscount))}% OFF!
+                  EXTRA {pricing?.extraPromotionalDiscount || Math.round(parseFloat(effectivePromotionInfo.promotionDiscount))}% OFF!
                 </span>
               )}
-              {pricing?.hasDiscount && !promotionInfo && (
+              {pricing?.hasDiscount && !effectivePromotionInfo && (
                 <span className="ml-2 px-2 py-1 bg-[#FF69B4]/10 text-[#FF69B4] rounded-full text-sm">
                   {Math.round(pricing.discountPercentage)}% OFF
                 </span>
