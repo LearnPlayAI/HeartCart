@@ -86,17 +86,17 @@ function PromotionCard({ promotion }: { promotion: Promotion }) {
         {products.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {products.slice(0, 8).map((promotionProduct) => {
-              // Create product with embedded promotion data exactly like Special deals section
+              // Create product with embedded promotion data for unified pricing system
               const productWithPromotion = {
                 ...promotionProduct.product,
-                salePrice: promotionProduct.promotionalPrice || promotionProduct.product?.salePrice || 0,
-                originalSalePrice: promotionProduct.product?.salePrice || 0,
-                promotionName: promotion.promotionName,
-                promotionDiscount: promotionProduct.discountOverride || promotion.discountValue,
-                promotionDiscountType: promotion.discountType,
-                promotionEndDate: promotion.endDate,
-                extraDiscountPercentage: promotionProduct.additionalDiscountPercentage || 0,
-                promotionalPrice: promotionProduct.promotionalPrice
+                promotionInfo: {
+                  promotionName: promotion.promotionName,
+                  promotionDiscount: promotionProduct.additionalDiscountPercentage ? 
+                    promotionProduct.additionalDiscountPercentage.toString() : 
+                    promotion.discountValue.toString(),
+                  promotionEndDate: promotion.endDate,
+                  promotionalPrice: promotionProduct.promotionalPrice || promotionProduct.discountOverride || null
+                }
               };
               
               return (

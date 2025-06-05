@@ -157,9 +157,6 @@ export const queryClient = new QueryClient({
     },
     mutations: {
       retry: false,
-      onError: (error: Error) => {
-        console.error('Mutation error caught by global handler:', error);
-      },
     },
   },
 });

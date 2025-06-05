@@ -182,42 +182,34 @@ const ProductDetailContent = ({
   addToCart: (item: any) => void;
   toast: any;
   queryClient: any;
-  promotionsResponse?: any;
 }) => {
   
-  // Extract promotional info for this specific product from props
-  const effectivePromotionInfo = React.useMemo(() => {
-    if (!promotionsResponse?.success || !product?.id) return null;
-    
-    for (const promo of promotionsResponse.data) {
-      const productPromotion = promo.products?.find((pp: any) => pp.productId === product.id);
-      if (productPromotion) {
-        return {
-          promotionName: promo.promotionName,
-          promotionDiscount: productPromotion.additionalDiscountPercentage || promo.discountValue,
-          promotionEndDate: promo.endDate,
-          promotionalPrice: productPromotion.promotionalPrice ? Number(productPromotion.promotionalPrice) : null
-        };
-      }
-    }
-    return null;
-  }, [promotionsResponse, product?.id]);
+  // Fetch active promotions for this product
+  const { data: promotionsResponse } = useQuery<any>({
+    queryKey: ['/api/promotions/active-with-products'],
+    enabled: !!product?.id,
+  });
+
+  // Find if this product is in any active promotion
+  const activePromotions = promotionsResponse?.success ? promotionsResponse.data : [];
+  const productPromotion = activePromotions
+    .flatMap((promo: any) => promo.products?.map((pp: any) => ({ ...pp, promotion: promo })) || [])
+    .find((pp: any) => pp.productId === product?.id);
+
+  const promotionInfo = productPromotion ? {
+    promotionName: productPromotion.promotion.promotionName,
+    promotionDiscount: productPromotion.discountOverride || productPromotion.promotion.discountValue,
+    promotionDiscountType: productPromotion.promotion.discountType,
+    promotionEndDate: productPromotion.promotion.endDate,
+    promotionalPrice: productPromotion.promotionalPrice ? Number(productPromotion.promotionalPrice) : null
+  } : null;
 
   // Calculate unified pricing using centralized logic
   const pricing = product ? calculateProductPricing(
     Number(product.price) || 0,
     product.salePrice ? Number(product.salePrice) : null,
-    effectivePromotionInfo
+    promotionInfo
   ) : null;
-
-  // Debug promotional pricing
-  console.log(`Product detail for product ${product?.id}:`, {
-    productName: product?.name,
-    basePrice: product?.price,
-    salePrice: product?.salePrice,
-    effectivePromotionInfo,
-    pricing
-  });
 
   // Get related products based on the same category
   const { data: relatedProducts } = useQuery<Product[]>({
@@ -503,12 +495,12 @@ const ProductDetailContent = ({
                   {formatCurrency(pricing.originalPrice)}
                 </span>
               )}
-              {effectivePromotionInfo && (
-                <span className="ml-2 px-2 py-1 bg-red-500 text-white rounded-full text-sm font-bold">
-                  EXTRA {pricing?.extraPromotionalDiscount || Math.round(parseFloat(effectivePromotionInfo.promotionDiscount))}% OFF!
+              {promotionInfo && (
+                <span className="ml-2 px-2 py-1 bg-[#FF69B4]/10 text-[#FF69B4] rounded-full text-sm">
+                  EXTRA {Math.round(parseFloat(promotionInfo.promotionDiscount))}% OFF!
                 </span>
               )}
-              {pricing?.hasDiscount && !effectivePromotionInfo && (
+              {pricing?.hasDiscount && !promotionInfo && (
                 <span className="ml-2 px-2 py-1 bg-[#FF69B4]/10 text-[#FF69B4] rounded-full text-sm">
                   {Math.round(pricing.discountPercentage)}% OFF
                 </span>
