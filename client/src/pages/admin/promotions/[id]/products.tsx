@@ -66,6 +66,10 @@ export default function PromotionProductsPage() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [selectedParentCategoryId, setSelectedParentCategoryId] = useState<number | null>(null);
   const [promotionalPrices, setPromotionalPrices] = useState<Record<number, string>>({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalProducts, setTotalProducts] = useState(0);
+  const [shouldLoadProducts, setShouldLoadProducts] = useState(true);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -92,31 +96,50 @@ export default function PromotionProductsPage() {
 
   const categories = categoriesData?.data || [];
 
-  // Fetch products search results with enhanced parameters
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [productSearchQuery, selectedCategoryId, selectedParentCategoryId]);
+
+  // Fetch products with comprehensive pagination and filtering
   const { data: productsData, isLoading: isSearching } = useQuery({
-    queryKey: ['/api/search', { 
-      q: productSearchQuery,
+    queryKey: ['/api/products', { 
+      search: productSearchQuery,
       categoryId: selectedCategoryId,
-      parentCategoryId: selectedParentCategoryId 
+      parentCategoryId: selectedParentCategoryId,
+      page: currentPage,
+      limit: 20
     }],
-    enabled: productSearchQuery.length > 2,
+    enabled: shouldLoadProducts,
     queryFn: async () => {
       const params = new URLSearchParams({
-        q: productSearchQuery,
         limit: '20',
-        offset: '0'
+        offset: ((currentPage - 1) * 20).toString()
       });
       
+      // Add search query if provided
+      if (productSearchQuery.trim()) {
+        params.set('search', productSearchQuery.trim());
+      }
+      
+      // Add category filtering
       if (selectedCategoryId) {
         params.set('categoryId', selectedCategoryId.toString());
-      }
-      if (selectedParentCategoryId) {
+      } else if (selectedParentCategoryId) {
         params.set('parentCategoryId', selectedParentCategoryId.toString());
       }
       
-      const response = await fetch(`/api/search?${params}`);
-      if (!response.ok) throw new Error('Search failed');
-      return response.json();
+      const response = await fetch(`/api/products?${params}`);
+      if (!response.ok) throw new Error('Failed to fetch products');
+      const data = await response.json();
+      
+      // Update pagination state
+      if (data.success && data.meta) {
+        setTotalProducts(data.meta.total || 0);
+        setTotalPages(Math.ceil((data.meta.total || 0) / 20));
+      }
+      
+      return data;
     }
   });
 
@@ -380,10 +403,19 @@ export default function PromotionProductsPage() {
                   </div>
                 </div>
 
-                {(selectedParentCategoryId || selectedCategoryId) && (
+                {(selectedParentCategoryId || selectedCategoryId || productSearchQuery.trim()) && (
                   <div className="flex items-center gap-2 pt-2">
                     <Filter className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Filters active:</span>
+                    <span className="text-sm text-muted-foreground">Active filters:</span>
+                    {productSearchQuery.trim() && (
+                      <Badge variant="secondary" className="text-xs">
+                        Search: "{productSearchQuery.trim()}"
+                        <X 
+                          className="h-3 w-3 ml-1 cursor-pointer" 
+                          onClick={() => setProductSearchQuery("")}
+                        />
+                      </Badge>
+                    )}
                     {selectedParentCategoryId && (
                       <Badge variant="secondary" className="text-xs">
                         {categories.find((cat: any) => cat.id === selectedParentCategoryId)?.name || 'Unknown'}
@@ -410,13 +442,28 @@ export default function PromotionProductsPage() {
                   </div>
                 )}
 
-                {productSearchQuery.length > 2 && (
-                  <div className="space-y-4">
-                    {isSearching ? (
-                      <div className="p-8 text-center text-muted-foreground">
-                        Searching products...
+                {/* Product Results Section */}
+                <div className="space-y-4">
+                  {/* Results Summary */}
+                  {!isSearching && productsData?.success && (
+                    <div className="flex items-center justify-between py-2">
+                      <p className="text-sm text-muted-foreground">
+                        Showing {((currentPage - 1) * 20) + 1}-{Math.min(currentPage * 20, totalProducts)} of {totalProducts} products
+                      </p>
+                      <div className="text-sm text-muted-foreground">
+                        Page {currentPage} of {totalPages}
                       </div>
-                    ) : productsData?.data?.length > 0 ? (
+                    </div>
+                  )}
+
+                  {isSearching ? (
+                    <div className="p-8 text-center text-muted-foreground">
+                      <Search className="h-8 w-8 mx-auto mb-2 animate-pulse" />
+                      Loading products...
+                    </div>
+                  ) : productsData?.success && productsData?.data?.length > 0 ? (
+                    <>
+                      {/* Products Grid */}
                       <div className="grid gap-4">
                         {productsData.data.map((product: Product) => (
                           <Card key={product.id} className="p-4">
@@ -429,16 +476,28 @@ export default function PromotionProductsPage() {
                                     className="w-16 h-16 object-cover rounded-lg"
                                   />
                                 )}
-                                <div>
+                                <div className="flex-1">
                                   <h4 className="font-semibold">{product.name}</h4>
                                   <p className="text-sm text-muted-foreground">
                                     SKU: {product.sku} | Price: R{product.price}
+                                    {product.salePrice && product.salePrice !== product.price && (
+                                      <span className="ml-2 text-green-600">Sale: R{product.salePrice}</span>
+                                    )}
                                   </p>
+                                  {product.category && (
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                      {product.category.parentCategory?.name && (
+                                        <span>{product.category.parentCategory.name} → </span>
+                                      )}
+                                      {product.category.name}
+                                    </p>
+                                  )}
                                 </div>
                               </div>
                               <Button
                                 onClick={() => handleAddProduct(product)}
                                 disabled={addProductToPromotionMutation.isPending || isProductInPromotion(product.id)}
+                                size="sm"
                               >
                                 {isProductInPromotion(product.id) ? (
                                   "Already Added"
@@ -453,20 +512,69 @@ export default function PromotionProductsPage() {
                           </Card>
                         ))}
                       </div>
-                    ) : (
-                      <div className="p-8 text-center text-muted-foreground">
-                        No products found matching "{productSearchQuery}"
-                      </div>
-                    )}
-                  </div>
-                )}
 
-                {productSearchQuery.length <= 2 && (
-                  <div className="p-8 text-center text-muted-foreground">
-                    <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>Type at least 3 characters to search for products</p>
-                  </div>
-                )}
+                      {/* Pagination Controls */}
+                      {totalPages > 1 && (
+                        <div className="flex items-center justify-center space-x-2 pt-6">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                            disabled={currentPage === 1 || isSearching}
+                          >
+                            Previous
+                          </Button>
+                          
+                          {/* Page Numbers */}
+                          <div className="flex items-center space-x-1">
+                            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                              let pageNum;
+                              if (totalPages <= 5) {
+                                pageNum = i + 1;
+                              } else if (currentPage <= 3) {
+                                pageNum = i + 1;
+                              } else if (currentPage >= totalPages - 2) {
+                                pageNum = totalPages - 4 + i;
+                              } else {
+                                pageNum = currentPage - 2 + i;
+                              }
+                              
+                              return (
+                                <Button
+                                  key={pageNum}
+                                  variant={currentPage === pageNum ? "default" : "outline"}
+                                  size="sm"
+                                  onClick={() => setCurrentPage(pageNum)}
+                                  disabled={isSearching}
+                                >
+                                  {pageNum}
+                                </Button>
+                              );
+                            })}
+                          </div>
+                          
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                            disabled={currentPage === totalPages || isSearching}
+                          >
+                            Next
+                          </Button>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="p-8 text-center text-muted-foreground">
+                      <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>
+                        {productSearchQuery.trim() || selectedCategoryId || selectedParentCategoryId
+                          ? "No products found matching your criteria"
+                          : "No products available"}
+                      </p>
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
