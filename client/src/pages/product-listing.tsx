@@ -1184,16 +1184,43 @@ const ProductListing = () => {
                               </div>
                               <Button 
                                 className="bg-[#FF69B4] hover:bg-[#FF1493] text-white"
-                                onClick={(e) => {
+                                onClick={async (e) => {
                                   e.preventDefault();
                                   e.stopPropagation();
-                                  addItem({
-                                    productId: product.id,
-                                    quantity: 1,
-                                    itemPrice: product.salePrice || product.price,
-                                    attributeSelections: {}
-                                  });
                                   
+                                  try {
+                                    // Check if product has required attributes by fetching attributes
+                                    const attributesResponse = await fetch(`/api/product-attributes/product/${product.id}/attributes`);
+                                    const attributesData = await attributesResponse.json();
+                                    
+                                    if (attributesData.success && attributesData.data.length > 0) {
+                                      // Check if any attributes are required
+                                      const hasRequiredAttributes = attributesData.data.some((attr: any) => attr.isRequired);
+                                      
+                                      if (hasRequiredAttributes) {
+                                        // Navigate to product detail page instead of adding directly to cart
+                                        window.location.href = `/product/id/${product.id}`;
+                                        return;
+                                      }
+                                    }
+                                    
+                                    // If no required attributes, add directly to cart
+                                    addItem({
+                                      productId: product.id,
+                                      quantity: 1,
+                                      itemPrice: product.salePrice || product.price,
+                                      attributeSelections: {}
+                                    });
+                                  } catch (error) {
+                                    console.error('Error checking product attributes:', error);
+                                    // Fallback: add to cart anyway
+                                    addItem({
+                                      productId: product.id,
+                                      quantity: 1,
+                                      itemPrice: product.salePrice || product.price,
+                                      attributeSelections: {}
+                                    });
+                                  }
                                 }}
                               >
                                 Add to Cart
