@@ -11,6 +11,8 @@ class ScrollManager {
   private scrollPositions = new Map<string, ScrollPosition>();
   private lastLocation: string = '';
   private previousLocation: string = '';
+  private lastFullUrl: string = '';
+  private previousFullUrl: string = '';
   private isListeningToScroll = false;
 
   static getInstance(): ScrollManager {
@@ -78,12 +80,25 @@ class ScrollManager {
     this.lastLocation = location;
   }
 
+  setLastFullUrl(url: string): void {
+    this.previousFullUrl = this.lastFullUrl;
+    this.lastFullUrl = url;
+  }
+
   getLastLocation(): string {
     return this.lastLocation;
   }
 
   getPreviousLocation(): string {
     return this.previousLocation;
+  }
+
+  getLastFullUrl(): string {
+    return this.lastFullUrl;
+  }
+
+  getPreviousFullUrl(): string {
+    return this.previousFullUrl;
   }
 
   isProductDetailPage(path: string): boolean {
@@ -122,6 +137,7 @@ export const useScrollToTop = () => {
   useEffect(() => {
     const currentPath = location;
     const previousPath = lastLocationRef.current;
+    const currentFullUrl = window.location.pathname + window.location.search;
 
     // Start scroll tracking for product listing pages
     if (scrollManager.isProductListingPage(currentPath)) {
@@ -135,6 +151,7 @@ export const useScrollToTop = () => {
 
     // Update scroll manager location tracking
     scrollManager.setLastLocation(currentPath);
+    scrollManager.setLastFullUrl(currentFullUrl);
 
     // Product detail pages should ALWAYS start at the top
     if (scrollManager.isProductDetailPage(currentPath)) {
@@ -223,9 +240,15 @@ export const useNavigateBack = () => {
   
   return {
     goBack: () => {
+      const previousFullUrl = scrollManager.getPreviousFullUrl();
       const previousLocation = scrollManager.getPreviousLocation();
-      if (previousLocation) {
-        // Use history.back() to maintain browser history
+      
+      if (previousFullUrl && scrollManager.isProductListingPage(previousLocation)) {
+        // Navigate to the exact URL with query parameters preserved
+        window.history.replaceState(null, '', previousFullUrl);
+        window.location.href = previousFullUrl;
+      } else if (previousLocation) {
+        // Use history.back() for other cases
         window.history.back();
       } else {
         // Fallback to home page if no previous location
@@ -233,6 +256,7 @@ export const useNavigateBack = () => {
       }
     },
     getPreviousLocation: () => scrollManager.getPreviousLocation(),
+    getPreviousFullUrl: () => scrollManager.getPreviousFullUrl(),
     hasPreviousLocation: () => !!scrollManager.getPreviousLocation()
   };
 };
