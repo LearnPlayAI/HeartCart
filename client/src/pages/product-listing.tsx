@@ -3,7 +3,7 @@ import { useLocation, Link } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet';
 import { StandardApiResponse } from '@/types/api';
-import { useProductListingScroll } from '@/hooks/use-scroll-management';
+import { useProductListingScroll, usePaginationStateRestoration } from '@/hooks/use-scroll-management';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/hooks/use-cart';
 import { useToast } from '@/hooks/use-toast';

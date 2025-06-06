@@ -6,9 +6,17 @@ interface ScrollPosition {
   y: number;
 }
 
+interface PageState {
+  scrollPosition: ScrollPosition;
+  currentPage: number;
+  totalPages: number;
+  timestamp: number;
+}
+
 class ScrollManager {
   private static instance: ScrollManager;
   private scrollPositions = new Map<string, ScrollPosition>();
+  private pageStates = new Map<string, PageState>();
   private lastLocation: string = '';
   private previousLocation: string = '';
   private lastFullUrl: string = '';
@@ -99,6 +107,60 @@ class ScrollManager {
 
   getPreviousFullUrl(): string {
     return this.previousFullUrl;
+  }
+
+  // Session storage methods for pagination state
+  savePageState(path: string, currentPage: number, totalPages: number): void {
+    const scrollPosition = this.getScrollPosition(path) || { x: 0, y: window.scrollY };
+    const pageState: PageState = {
+      scrollPosition,
+      currentPage,
+      totalPages,
+      timestamp: Date.now()
+    };
+    
+    try {
+      sessionStorage.setItem(`pageState_${path}`, JSON.stringify(pageState));
+      this.pageStates.set(path, pageState);
+    } catch (error) {
+      console.warn('Failed to save page state to sessionStorage:', error);
+    }
+  }
+
+  getPageState(path: string): PageState | null {
+    try {
+      // First check memory cache
+      const memoryState = this.pageStates.get(path);
+      if (memoryState) {
+        return memoryState;
+      }
+
+      // Then check sessionStorage
+      const stored = sessionStorage.getItem(`pageState_${path}`);
+      if (stored) {
+        const pageState = JSON.parse(stored) as PageState;
+        // Only return if timestamp is recent (within 30 minutes)
+        if (Date.now() - pageState.timestamp < 30 * 60 * 1000) {
+          this.pageStates.set(path, pageState);
+          return pageState;
+        } else {
+          // Clean up expired state
+          sessionStorage.removeItem(`pageState_${path}`);
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to retrieve page state from sessionStorage:', error);
+    }
+    return null;
+  }
+
+  clearPageState(path: string): void {
+    this.pageStates.delete(path);
+    try {
+      sessionStorage.removeItem(`pageState_${path}`);
+    } catch (error) {
+      console.warn('Failed to clear page state from sessionStorage:', error);
+    }
   }
 
   isProductDetailPage(path: string): boolean {
@@ -216,6 +278,10 @@ export const useScrollPositionManager = () => {
     saveScrollPosition: (path: string) => scrollManager.saveScrollPosition(path),
     getScrollPosition: (path: string) => scrollManager.getScrollPosition(path),
     clearScrollPosition: (path: string) => scrollManager.clearScrollPosition(path),
+    savePageState: (path: string, currentPage: number, totalPages: number) => 
+      scrollManager.savePageState(path, currentPage, totalPages),
+    getPageState: (path: string) => scrollManager.getPageState(path),
+    clearPageState: (path: string) => scrollManager.clearPageState(path)
   };
 };
 
@@ -240,13 +306,11 @@ export const useNavigateBack = () => {
   
   return {
     goBack: () => {
-      const previousFullUrl = scrollManager.getPreviousFullUrl();
       const previousLocation = scrollManager.getPreviousLocation();
       
-      if (previousFullUrl && scrollManager.isProductListingPage(previousLocation)) {
-        // Navigate to the exact URL with query parameters preserved
-        window.history.replaceState(null, '', previousFullUrl);
-        window.location.href = previousFullUrl;
+      if (previousLocation && scrollManager.isProductListingPage(previousLocation)) {
+        // For product listing pages, use history.back() to trigger our pagination restoration
+        window.history.back();
       } else if (previousLocation) {
         // Use history.back() for other cases
         window.history.back();
@@ -258,5 +322,53 @@ export const useNavigateBack = () => {
     getPreviousLocation: () => scrollManager.getPreviousLocation(),
     getPreviousFullUrl: () => scrollManager.getPreviousFullUrl(),
     hasPreviousLocation: () => !!scrollManager.getPreviousLocation()
+  };
+};
+
+// Hook for pagination state restoration in product listing pages
+export const usePaginationStateRestoration = (
+  currentPage: number,
+  totalPages: number,
+  setCurrentPage: (page: number) => void
+) => {
+  const [location] = useLocation();
+  const scrollManager = ScrollManager.getInstance();
+  const hasRestoredRef = useRef(false);
+
+  // Save current pagination state whenever it changes
+  useEffect(() => {
+    if (scrollManager.isProductListingPage(location) && currentPage > 0) {
+      scrollManager.savePageState(location, currentPage, totalPages);
+    }
+  }, [location, currentPage, totalPages, scrollManager]);
+
+  // Restore pagination state when returning from product detail pages
+  useEffect(() => {
+    if (!hasRestoredRef.current && scrollManager.isProductListingPage(location)) {
+      const previousLocation = scrollManager.getPreviousLocation();
+      
+      // Check if we're coming back from a product detail page
+      if (scrollManager.isProductDetailPage(previousLocation)) {
+        const savedPageState = scrollManager.getPageState(location);
+        
+        if (savedPageState && savedPageState.currentPage !== currentPage) {
+          setCurrentPage(savedPageState.currentPage);
+          hasRestoredRef.current = true;
+        }
+      }
+    }
+  }, [location, currentPage, setCurrentPage, scrollManager]);
+
+  // Reset restoration flag when navigating to different paths
+  useEffect(() => {
+    return () => {
+      hasRestoredRef.current = false;
+    };
+  }, [location]);
+
+  return {
+    savePageState: (page: number, total: number) => 
+      scrollManager.savePageState(location, page, total),
+    getSavedPageState: () => scrollManager.getPageState(location)
   };
 };
