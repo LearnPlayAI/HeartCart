@@ -1,4 +1,4 @@
-const https = require('https');
+import https from 'https';
 
 const PUDO_API_KEY = process.env.PUDO_API_KEY;
 
