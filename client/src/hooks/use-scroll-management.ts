@@ -11,12 +11,50 @@ class ScrollManager {
   private scrollPositions = new Map<string, ScrollPosition>();
   private lastLocation: string = '';
   private previousLocation: string = '';
+  private isListeningToScroll = false;
 
   static getInstance(): ScrollManager {
     if (!ScrollManager.instance) {
       ScrollManager.instance = new ScrollManager();
     }
     return ScrollManager.instance;
+  }
+
+  private handleScroll = () => {
+    if (this.lastLocation && this.isProductListingPage(this.lastLocation)) {
+      this.saveScrollPosition(this.lastLocation);
+    }
+  };
+
+  private handleBeforeUnload = () => {
+    if (this.lastLocation) {
+      this.saveScrollPosition(this.lastLocation);
+    }
+  };
+
+  private handlePopState = (event: PopStateEvent) => {
+    // When back button is pressed, save current scroll position
+    if (this.lastLocation) {
+      this.saveScrollPosition(this.lastLocation);
+    }
+  };
+
+  startScrollTracking(): void {
+    if (!this.isListeningToScroll) {
+      window.addEventListener('scroll', this.handleScroll, { passive: true });
+      window.addEventListener('beforeunload', this.handleBeforeUnload);
+      window.addEventListener('popstate', this.handlePopState);
+      this.isListeningToScroll = true;
+    }
+  }
+
+  stopScrollTracking(): void {
+    if (this.isListeningToScroll) {
+      window.removeEventListener('scroll', this.handleScroll);
+      window.removeEventListener('beforeunload', this.handleBeforeUnload);
+      window.removeEventListener('popstate', this.handlePopState);
+      this.isListeningToScroll = false;
+    }
   }
 
   saveScrollPosition(path: string): void {
@@ -85,6 +123,11 @@ export const useScrollToTop = () => {
     const currentPath = location;
     const previousPath = lastLocationRef.current;
 
+    // Start scroll tracking for product listing pages
+    if (scrollManager.isProductListingPage(currentPath)) {
+      scrollManager.startScrollTracking();
+    }
+
     // Always save scroll position before navigation
     if (previousPath) {
       scrollManager.saveScrollPosition(previousPath);
@@ -100,19 +143,38 @@ export const useScrollToTop = () => {
       return;
     }
 
-    // Determine if we should preserve scroll position for other pages
-    const shouldPreserveScroll = scrollManager.shouldPreserveScroll(previousPath, currentPath);
-
-    if (shouldPreserveScroll) {
-      // Check if we're returning to a previous page that had saved scroll position
+    // Check if we're coming back from a product detail page to a listing page
+    const isBackFromProductDetail = scrollManager.isProductDetailPage(previousPath) && scrollManager.isProductListingPage(currentPath);
+    
+    if (isBackFromProductDetail) {
+      // Restore scroll position when coming back from product detail
       const savedPosition = scrollManager.getScrollPosition(currentPath);
       if (savedPosition) {
-        // Restore scroll position after a short delay to ensure DOM is ready
+        // Use requestAnimationFrame for better timing with DOM updates
+        requestAnimationFrame(() => {
+          setTimeout(() => {
+            window.scrollTo({
+              left: savedPosition.x,
+              top: savedPosition.y,
+              behavior: 'instant'
+            });
+          }, 250);
+        });
+      } else {
+        window.scrollTo(0, 0);
+      }
+    } else if (scrollManager.isProductListingPage(currentPath)) {
+      // For fresh navigation to product listing pages, check if we have saved position
+      const savedPosition = scrollManager.getScrollPosition(currentPath);
+      if (savedPosition && scrollManager.shouldPreserveScroll(previousPath, currentPath)) {
         setTimeout(() => {
-          window.scrollTo(savedPosition.x, savedPosition.y);
+          window.scrollTo({
+            left: savedPosition.x,
+            top: savedPosition.y,
+            behavior: 'instant'
+          });
         }, 100);
       } else {
-        // If no saved position, scroll to top
         window.scrollTo(0, 0);
       }
     } else {
@@ -122,6 +184,11 @@ export const useScrollToTop = () => {
 
     // Update last location reference
     lastLocationRef.current = currentPath;
+
+    // Cleanup function to stop tracking when component unmounts
+    return () => {
+      scrollManager.stopScrollTracking();
+    };
   }, [location]);
 };
 
