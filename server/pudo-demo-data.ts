@@ -30,7 +30,7 @@ const samplePudoLockers: InsertPudoLocker[] = [
     name: "PUDO Cresta Shopping Centre",
     latitude: -26.1123,
     longitude: 27.9876,
-    address: "Cresta Shopping Centre, Beyers Naude Drive, Randburg",
+    address: "220 Beyers Naude Drive, Cresta, Randburg, 2194, South Africa",
     town: "Randburg",
     postalCode: "2194",
     openingHours: [
@@ -43,10 +43,7 @@ const samplePudoLockers: InsertPudoLocker[] = [
       { day: "Sunday", open_time: "10:00", close_time: "16:00" }
     ],
     lockerType: { id: 1, name: "Standard Locker" },
-    availableBoxTypes: [
-      { id: 1, name: "Small", type: "S", width: 35, height: 35, length: 45, weight: 10 },
-      { id: 2, name: "Medium", type: "M", width: 35, height: 50, length: 60, weight: 20 }
-    ],
+    availableBoxTypes: null,
     isActive: true,
     lastSyncedAt: new Date().toISOString()
   },

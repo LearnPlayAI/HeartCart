@@ -7019,24 +7019,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // PUDO LOCKER INTEGRATION ROUTES
   // =============================================================================
 
-  // Sync PUDO lockers from API (admin only)
+  // Sync PUDO lockers from demo data (admin only)
   app.post('/api/admin/pudo/sync', isAdmin, asyncHandler(async (req: Request, res: Response) => {
     try {
-      const result = await pudoService.syncLockersFromApi();
+      const { populatePudoLockers } = await import('./pudo-demo-data');
+      const result = await populatePudoLockers();
       res.json({
         success: true,
         data: {
-          message: `Successfully synced ${result.synced} lockers`,
-          synced: result.synced,
-          errors: result.errors
+          message: `Successfully populated ${result.count} lockers`,
+          synced: result.count,
+          errors: []
         }
       });
     } catch (error) {
-      logger.error('Failed to sync PUDO lockers', { error });
+      logger.error('Failed to populate PUDO lockers', { error });
       res.status(500).json({
         success: false,
         error: {
-          message: error instanceof Error ? error.message : 'Failed to sync PUDO lockers'
+          message: error instanceof Error ? error.message : 'Failed to populate PUDO lockers'
         }
       });
     }
