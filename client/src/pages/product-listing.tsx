@@ -131,8 +131,9 @@ const ProductListing = () => {
   useEffect(() => {
     const savedPage = sessionStorage.getItem('productListingPage');
     const savedScroll = sessionStorage.getItem('productListingScrollPosition');
+    const targetProductId = sessionStorage.getItem('productListingTargetProduct');
     
-    console.log('Checking for saved pagination state:', { savedPage, savedScroll });
+    console.log('Checking for saved pagination state:', { savedPage, savedScroll, targetProductId });
     
     if (savedPage && parseInt(savedPage) > 1) {
       const targetPage = parseInt(savedPage);
@@ -146,17 +147,33 @@ const ProductListing = () => {
       // Update component state
       setPage(targetPage);
       
-      // Restore scroll position after a brief delay
+      // Restore scroll position after a brief delay to allow content to load
       if (savedScroll) {
         setTimeout(() => {
-          console.log('Restoring scroll position to:', savedScroll);
-          window.scrollTo(0, parseInt(savedScroll));
-        }, 100);
+          // Try to scroll to the specific product first
+          if (targetProductId) {
+            const targetElement = document.querySelector(`[data-product-id="${targetProductId}"]`);
+            if (targetElement) {
+              const elementRect = targetElement.getBoundingClientRect();
+              const absoluteElementTop = elementRect.top + window.scrollY;
+              const center = absoluteElementTop - (window.innerHeight / 2) + (targetElement.clientHeight / 2);
+              console.log('Restoring scroll to target product:', targetProductId, 'at position:', center);
+              window.scrollTo(0, Math.max(0, center));
+            } else {
+              console.log('Target product not found, using saved scroll position:', parseInt(savedScroll));
+              window.scrollTo(0, parseInt(savedScroll));
+            }
+          } else {
+            console.log('Restoring scroll position to:', savedScroll);
+            window.scrollTo(0, parseInt(savedScroll));
+          }
+        }, 300);
       }
       
       // Clear saved state after restoration
       sessionStorage.removeItem('productListingPage');
       sessionStorage.removeItem('productListingScrollPosition');
+      sessionStorage.removeItem('productListingTargetProduct');
     }
   }, []); // Run only on mount
   
@@ -1045,18 +1062,33 @@ const ProductListing = () => {
                 ) : (
                   <div className="space-y-4">
                     {filteredProducts.map(product => (
-                      <div key={product.id} className="bg-white rounded-lg shadow-md overflow-hidden">
+                      <div key={product.id} data-product-id={product.id} className="bg-white rounded-lg shadow-md overflow-hidden">
                         <div className="flex flex-col sm:flex-row">
                           <div className="w-full sm:w-1/4">
                             <Link 
                               href={`/product/${product.slug}`} 
                               className="block"
-                              onClick={() => {
+                              onClick={(event) => {
                                 // Save current pagination state before navigating
                                 const currentPage = parseInt(searchParams.get('page') || '1');
                                 sessionStorage.setItem('productListingPage', currentPage.toString());
-                                sessionStorage.setItem('productListingScrollPosition', window.scrollY.toString());
-                                console.log('Saved pagination state on product click:', { page: currentPage, scroll: window.scrollY });
+                                
+                                // Save more precise scroll position relative to this product
+                                const productElement = (event.currentTarget as HTMLElement).closest('[data-product-id]') as HTMLElement;
+                                if (productElement) {
+                                  const rect = productElement.getBoundingClientRect();
+                                  const relativePosition = rect.top + window.scrollY;
+                                  sessionStorage.setItem('productListingScrollPosition', relativePosition.toString());
+                                  sessionStorage.setItem('productListingTargetProduct', product.id.toString());
+                                  console.log('Saved pagination state on product click:', { 
+                                    page: currentPage, 
+                                    scroll: relativePosition, 
+                                    productId: product.id 
+                                  });
+                                } else {
+                                  sessionStorage.setItem('productListingScrollPosition', window.scrollY.toString());
+                                  console.log('Saved pagination state on product click (fallback):', { page: currentPage, scroll: window.scrollY });
+                                }
                               }}
                             >
                               <img 

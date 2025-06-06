@@ -199,8 +199,30 @@ const ProductCard: React.FC<ProductCardProps> = ({
   
   // All product cards will use a consistent design based on the Featured Products style
   return (
-    <div className="product-card bg-white rounded-lg shadow-sm overflow-hidden w-full max-w-sm mx-auto">
-      <Link href={`/product/id/${product.id}`} className="block relative">
+    <div data-product-id={product.id} className="product-card bg-white rounded-lg shadow-sm overflow-hidden w-full max-w-sm mx-auto">
+      <Link href={`/product/id/${product.id}`} className="block relative" onClick={(event) => {
+        // Save pagination and scroll state when clicking product from grid view
+        const urlParams = new URLSearchParams(window.location.search);
+        const currentPage = parseInt(urlParams.get('page') || '1');
+        sessionStorage.setItem('productListingPage', currentPage.toString());
+        
+        // Save more precise scroll position relative to this product
+        const productElement = (event.currentTarget as HTMLElement).closest('[data-product-id]') as HTMLElement;
+        if (productElement) {
+          const rect = productElement.getBoundingClientRect();
+          const relativePosition = rect.top + window.scrollY;
+          sessionStorage.setItem('productListingScrollPosition', relativePosition.toString());
+          sessionStorage.setItem('productListingTargetProduct', product.id.toString());
+          console.log('Saved pagination state on product click (grid):', { 
+            page: currentPage, 
+            scroll: relativePosition, 
+            productId: product.id 
+          });
+        } else {
+          sessionStorage.setItem('productListingScrollPosition', window.scrollY.toString());
+          console.log('Saved pagination state on product click (grid fallback):', { page: currentPage, scroll: window.scrollY });
+        }
+      }}>
         {imageError ? (
           <div className="w-full h-48 bg-gray-100 flex items-center justify-center">
             <ImageOff className="w-10 h-10 text-gray-400" />
