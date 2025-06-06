@@ -118,6 +118,9 @@ const ProductListing = () => {
   const [page, setPage] = useState(parseInt(searchParams.get('page') || '1'));
   const limit = 20;
   
+  // Initialize scroll management
+  useProductListingScroll();
+  
   // Fetch categories
   const { 
     data: categoriesResponse, 
@@ -170,6 +173,9 @@ const ProductListing = () => {
   const products = productsResponse?.success ? productsResponse.data : [];
   const totalProducts = productsResponse?.meta?.total || products.length;
   const totalPages = Math.ceil(totalProducts / limit);
+  
+  // Initialize pagination state restoration after data is available
+  usePaginationStateRestoration(page, totalPages, setPage);
   
   // Fetch categories with children for hierarchical filtering
   const { 
