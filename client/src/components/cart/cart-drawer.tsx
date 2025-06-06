@@ -59,36 +59,29 @@ const CartDrawer = () => {
   
   // Auto-scroll to bottom when new item is added to cart
   useEffect(() => {
-    if (recentlyAddedItemId && isOpen) {
-      console.log('Auto-scroll triggered for item:', recentlyAddedItemId, 'Cart open:', isOpen);
+    if (recentlyAddedItemId && isOpen && cartItems && cartItems.length > 0) {
+      console.log('Auto-scroll triggered for item:', recentlyAddedItemId, 'Cart items count:', cartItems.length);
       
-      // Wait for cart to fully open and items to render
+      // Wait for cart to fully open and new item to be added to DOM
       const scrollTimer = setTimeout(() => {
         if (cartListRef.current) {
           console.log('Scrolling container found, height:', cartListRef.current.scrollHeight);
           console.log('Current scroll position:', cartListRef.current.scrollTop);
           
-          // Try multiple scroll methods to ensure it works
-          cartListRef.current.scrollTop = cartListRef.current.scrollHeight;
-          
-          // Also try the smooth scrollTo method
-          setTimeout(() => {
-            if (cartListRef.current) {
-              cartListRef.current.scrollTo({
-                top: cartListRef.current.scrollHeight,
-                behavior: 'smooth'
-              });
-              console.log('Scrolled to bottom, new position:', cartListRef.current.scrollTop);
-            }
-          }, 100);
+          // Scroll to bottom to show the newly added item
+          cartListRef.current.scrollTo({
+            top: cartListRef.current.scrollHeight,
+            behavior: 'smooth'
+          });
+          console.log('Scrolled to bottom to show new item');
         } else {
           console.log('Cart list ref not found');
         }
-      }, 800); // Increased delay to ensure cart is fully opened and rendered
+      }, 200); // Shorter delay since we're now waiting for cartItems to be populated
       
       return () => clearTimeout(scrollTimer);
     }
-  }, [recentlyAddedItemId, isOpen]);
+  }, [recentlyAddedItemId, isOpen, cartItems]);
 
   // Close cart on ESC key
   useEffect(() => {
