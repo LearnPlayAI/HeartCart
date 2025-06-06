@@ -335,45 +335,47 @@ export const usePaginationStateRestoration = (
   const scrollManager = ScrollManager.getInstance();
   const hasRestoredRef = useRef(false);
 
-  // Save current pagination state whenever it changes
+  // Save current page to sessionStorage when it changes
   useEffect(() => {
-    if (scrollManager.isProductListingPage(location) && currentPage > 0) {
-      scrollManager.savePageState(location, currentPage, totalPages);
+    if (location === '/products' && currentPage > 1) {
+      sessionStorage.setItem('productListingPage', currentPage.toString());
+      console.log('Saved page to sessionStorage:', currentPage);
     }
-  }, [location, currentPage, totalPages, scrollManager]);
+  }, [location, currentPage]);
 
-  // Restore pagination state when returning from product detail pages
+  // Handle popstate events for pagination restoration
   useEffect(() => {
-    console.log('Pagination restoration check:', {
-      hasRestored: hasRestoredRef.current,
-      location,
-      currentPage,
-      isProductListing: scrollManager.isProductListingPage(location)
-    });
-    
-    if (!hasRestoredRef.current && scrollManager.isProductListingPage(location)) {
-      const previousLocation = scrollManager.getPreviousLocation();
-      console.log('Previous location:', previousLocation);
+    const handlePopState = () => {
+      console.log('PopState detected, checking for pagination restoration');
       
-      // Check if we're coming back from a product detail page
-      if (scrollManager.isProductDetailPage(previousLocation)) {
-        const savedPageState = scrollManager.getPageState(location);
-        console.log('Saved page state:', savedPageState);
+      // Only restore on product listing page
+      if (window.location.pathname === '/products' && !hasRestoredRef.current) {
+        const savedPage = sessionStorage.getItem('productListingPage');
+        console.log('Checking saved page from sessionStorage:', savedPage);
         
-        if (savedPageState && savedPageState.currentPage !== currentPage) {
-          console.log('Restoring pagination from', currentPage, 'to', savedPageState.currentPage);
-          setCurrentPage(savedPageState.currentPage);
+        if (savedPage && parseInt(savedPage) !== currentPage && parseInt(savedPage) > 1) {
+          console.log('Restoring pagination to page:', savedPage);
+          setCurrentPage(parseInt(savedPage));
           hasRestoredRef.current = true;
+          
+          // Reset the flag after a delay
+          setTimeout(() => {
+            hasRestoredRef.current = false;
+          }, 1000);
         }
       }
-    }
-  }, [location, currentPage, setCurrentPage, scrollManager]);
-
-  // Reset restoration flag when navigating to different paths
-  useEffect(() => {
-    return () => {
-      hasRestoredRef.current = false;
     };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [currentPage, setCurrentPage]);
+
+  // Clear sessionStorage when leaving products page
+  useEffect(() => {
+    if (location !== '/products') {
+      sessionStorage.removeItem('productListingPage');
+      hasRestoredRef.current = false;
+    }
   }, [location]);
 
   return {
