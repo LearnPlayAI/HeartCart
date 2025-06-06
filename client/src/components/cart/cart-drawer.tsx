@@ -60,26 +60,31 @@ const CartDrawer = () => {
   // Auto-scroll to bottom when new item is added to cart
   useEffect(() => {
     if (recentlyAddedItemId && isOpen && cartItems && cartItems.length > 0) {
-      console.log('Auto-scroll triggered for item:', recentlyAddedItemId, 'Cart items count:', cartItems.length);
+      // Check if the recently added item is actually in the cart data
+      const itemExists = cartItems.some(item => item.productId === recentlyAddedItemId);
       
-      // Wait for cart to fully open and new item to be added to DOM
-      const scrollTimer = setTimeout(() => {
-        if (cartListRef.current) {
-          console.log('Scrolling container found, height:', cartListRef.current.scrollHeight);
-          console.log('Current scroll position:', cartListRef.current.scrollTop);
-          
-          // Scroll to bottom to show the newly added item
-          cartListRef.current.scrollTo({
-            top: cartListRef.current.scrollHeight,
-            behavior: 'smooth'
-          });
-          console.log('Scrolled to bottom to show new item');
-        } else {
-          console.log('Cart list ref not found');
-        }
-      }, 200); // Shorter delay since we're now waiting for cartItems to be populated
-      
-      return () => clearTimeout(scrollTimer);
+      if (itemExists) {
+        console.log('Auto-scroll triggered for item:', recentlyAddedItemId, 'Cart items count:', cartItems.length);
+        
+        // Wait for cart drawer to be fully open and item to be rendered in DOM
+        const scrollTimer = setTimeout(() => {
+          if (cartListRef.current) {
+            console.log('Scrolling container found, height:', cartListRef.current.scrollHeight);
+            console.log('Current scroll position:', cartListRef.current.scrollTop);
+            
+            // Scroll to bottom to show the newly added item
+            cartListRef.current.scrollTo({
+              top: cartListRef.current.scrollHeight,
+              behavior: 'smooth'
+            });
+            console.log('Scrolled to bottom to show new item');
+          } else {
+            console.log('Cart list ref not found');
+          }
+        }, 200); // Wait for cart drawer animation and DOM render
+        
+        return () => clearTimeout(scrollTimer);
+      }
     }
   }, [recentlyAddedItemId, isOpen, cartItems]);
 
