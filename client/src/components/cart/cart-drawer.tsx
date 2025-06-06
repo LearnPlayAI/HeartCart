@@ -103,20 +103,29 @@ const CartDrawer = () => {
         ) : (
           <>
             <div className="flex-1 overflow-y-auto p-4">
-              {cartItems.map((item) => (
-                <div key={item.id} className="flex py-4 border-b border-gray-200">
-                  <img 
-                    src={item.product.imageUrl as string || '/placeholder-product.jpg'}
-                    alt={item.product.name || 'Product'}
-                    className="w-20 h-20 object-cover rounded-md"
-                  />
-                  <div className="ml-3 flex-1">
-                    <h4 className="font-medium text-sm text-gray-800 mb-1">{item.product.name}</h4>
+              {cartItems.map((item) => {
+                const isRecentlyAdded = recentlyAddedItemId === item.productId;
+                return (
+                  <div 
+                    key={item.id} 
+                    className={`flex py-4 border-b border-gray-200 transition-all duration-300 ${
+                      isRecentlyAdded 
+                        ? 'bg-green-50 border-green-200 ring-2 ring-green-300 ring-opacity-50' 
+                        : ''
+                    }`}
+                  >
+                    <img 
+                      src={item.product?.imageUrl as string || '/placeholder-product.jpg'}
+                      alt={item.product?.name || 'Product'}
+                      className="w-20 h-20 object-cover rounded-md"
+                    />
+                    <div className="ml-3 flex-1">
+                      <h4 className="font-medium text-sm text-gray-800 mb-1">{item.product?.name}</h4>
                     <div className="text-[#FF69B4] font-bold text-sm flex items-center gap-2">
                       {(() => {
                         // Use the stored item price which includes promotional calculations
                         const itemPrice = Number(item.itemPrice) || 0;
-                        const originalPrice = Number(item.product.price) || 0;
+                        const originalPrice = Number(item.product?.price) || 0;
                         const hasDiscount = itemPrice < originalPrice;
                         
                         return (
@@ -222,7 +231,8 @@ const CartDrawer = () => {
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
             
             <div className="p-4 border-t border-gray-200 bg-gray-50">
