@@ -5,7 +5,15 @@ import NodeGeocoder from 'node-geocoder';
 
 // Initialize geocoder for address to coordinates conversion
 const geocoder = NodeGeocoder({
-  provider: 'openstreetmap'
+  provider: 'openstreetmap',
+  httpAdapter: 'https',
+  formatter: null,
+  extra: {
+    userAgent: 'TeeMeYou-ECommerce/1.0 (contact@teemeyou.com)',
+    headers: {
+      'User-Agent': 'TeeMeYou-ECommerce/1.0 (contact@teemeyou.com)'
+    }
+  }
 });
 
 export interface PudoApiLocker {
