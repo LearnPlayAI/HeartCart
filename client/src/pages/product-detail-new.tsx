@@ -136,6 +136,7 @@ const ProductDetailView = ({
   const { toast } = useToast();
   const { addItem } = useCart();
   const { calculatePriceAdjustments: calculatePriceAdjustmentsOriginal } = useAttributeDiscounts();
+  const { goBack } = useNavigateBack();
   
   // Memoize the price adjustment calculation to prevent re-renders
   const calculatePriceAdjustments = useCallback(
@@ -551,6 +552,19 @@ const ProductDetailView = ({
       </Helmet>
       
       <div className="container mx-auto px-4 py-6">
+        {/* Back Button */}
+        <div className="mb-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={goBack}
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 p-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back
+          </Button>
+        </div>
+        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Product Images */}
           <div>
