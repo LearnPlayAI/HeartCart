@@ -2,6 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, Link } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet';
+
+// Extend Window interface for scroll restoration
+declare global {
+  interface Window {
+    scrollRestorationData?: {
+      savedScroll: string;
+      targetProductId: string;
+    };
+  }
+}
 import { StandardApiResponse } from '@/types/api';
 import { useProductListingScroll, usePaginationStateRestoration } from '@/hooks/use-scroll-management';
 import { Button } from '@/components/ui/button';
@@ -147,33 +157,13 @@ const ProductListing = () => {
       // Update component state
       setPage(targetPage);
       
-      // Restore scroll position after a brief delay to allow content to load
-      if (savedScroll) {
-        setTimeout(() => {
-          // Try to scroll to the specific product first
-          if (targetProductId) {
-            const targetElement = document.querySelector(`[data-product-id="${targetProductId}"]`);
-            if (targetElement) {
-              const elementRect = targetElement.getBoundingClientRect();
-              const absoluteElementTop = elementRect.top + window.scrollY;
-              const center = absoluteElementTop - (window.innerHeight / 2) + (targetElement.clientHeight / 2);
-              console.log('Restoring scroll to target product:', targetProductId, 'at position:', center);
-              window.scrollTo(0, Math.max(0, center));
-            } else {
-              console.log('Target product not found, using saved scroll position:', parseInt(savedScroll));
-              window.scrollTo(0, parseInt(savedScroll));
-            }
-          } else {
-            console.log('Restoring scroll position to:', savedScroll);
-            window.scrollTo(0, parseInt(savedScroll));
-          }
-        }, 300);
+      // Store the restoration data globally so the products loading effect can handle it
+      if (savedScroll && targetProductId) {
+        window.scrollRestorationData = {
+          savedScroll,
+          targetProductId
+        };
       }
-      
-      // Clear saved state after restoration
-      sessionStorage.removeItem('productListingPage');
-      sessionStorage.removeItem('productListingScrollPosition');
-      sessionStorage.removeItem('productListingTargetProduct');
     }
   }, []); // Run only on mount
   
@@ -232,6 +222,40 @@ const ProductListing = () => {
   const products = productsResponse?.success ? productsResponse.data : [];
   const totalProducts = productsResponse?.meta?.total || products.length;
   const totalPages = Math.ceil(totalProducts / limit);
+  
+  // Handle scroll restoration after products have loaded
+  useEffect(() => {
+    if (!isLoadingProducts && products.length > 0 && window.scrollRestorationData) {
+      const { savedScroll, targetProductId } = window.scrollRestorationData;
+      
+      console.log('Products loaded, attempting scroll restoration:', { savedScroll, targetProductId });
+      
+      setTimeout(() => {
+        if (targetProductId) {
+          const targetElement = document.querySelector(`[data-product-id="${targetProductId}"]`);
+          if (targetElement) {
+            const elementRect = targetElement.getBoundingClientRect();
+            const absoluteElementTop = elementRect.top + window.scrollY;
+            const center = absoluteElementTop - (window.innerHeight / 2) + (targetElement.clientHeight / 2);
+            console.log('Restoring scroll to target product:', targetProductId, 'at position:', center);
+            window.scrollTo(0, Math.max(0, center));
+          } else {
+            console.log('Target product not found after products loaded, using saved scroll position:', parseInt(savedScroll));
+            window.scrollTo(0, parseInt(savedScroll));
+          }
+        } else if (savedScroll) {
+          console.log('No target product, restoring scroll position to:', savedScroll);
+          window.scrollTo(0, parseInt(savedScroll));
+        }
+        
+        // Clear the restoration data and sessionStorage
+        delete window.scrollRestorationData;
+        sessionStorage.removeItem('productListingPage');
+        sessionStorage.removeItem('productListingScrollPosition');
+        sessionStorage.removeItem('productListingTargetProduct');
+      }, 300); // Increased delay to ensure DOM is ready
+    }
+  }, [isLoadingProducts, products]);
   
   // Initialize pagination state restoration after data is available
   usePaginationStateRestoration(page, totalPages, setPage);
