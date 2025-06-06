@@ -433,8 +433,8 @@ export default function PromotionProductsPage() {
                     )}
                     {selectedCategoryId && (
                       <Badge variant="secondary" className="text-xs">
-                        {categories
-                          .find((cat: any) => cat.id === selectedParentCategoryId)
+                        {categoriesWithChildren
+                          .find((cat: any) => cat.category.id === selectedParentCategoryId)
                           ?.children?.find((child: any) => child.id === selectedCategoryId)?.name || 'Unknown'}
                         <X 
                           className="h-3 w-3 ml-1 cursor-pointer" 
