@@ -1199,8 +1199,8 @@ const ProductListing = () => {
                                     promotionalPrice: productPromotion.promotionalPrice ? Number(productPromotion.promotionalPrice) : null
                                   } : null;
 
-                                  const pricingResult = calculateProductPricing(product.price, product.salePrice, promotionInfo);
-                                  const cartPricing = getCartPrice(product.price, product.salePrice, promotionInfo);
+                                  const pricingResult = calculateProductPricing(product.price, product.salePrice, promotionInfo || undefined);
+                                  const cartPricing = getCartPrice(product.price, product.salePrice, promotionInfo || undefined);
 
                                   console.log(`List view pricing for product ${product.id}:`, {
                                     productName: product.name,
@@ -1286,7 +1286,7 @@ const ProductListing = () => {
                                       promotionalPrice: productPromotion.promotionalPrice ? Number(productPromotion.promotionalPrice) : null
                                     } : null;
 
-                                    const cartPricing = getCartPrice(product, promotionInfo);
+                                    const cartPricing = getCartPrice(product.price, product.salePrice, promotionInfo || undefined);
                                     
                                     addItem({
                                       productId: product.id,
