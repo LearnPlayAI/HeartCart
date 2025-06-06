@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, Link } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet';
+import { useProductListingScroll } from '@/hooks/use-scroll-management';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
@@ -21,6 +22,7 @@ import type { StandardApiResponse } from '@/types/api';
 
 const SearchResults = () => {
   const [location] = useLocation();
+  useProductListingScroll();
   
   // Get query from URL using both location and window.location
   const urlSearchParams = new URLSearchParams(window.location.search);

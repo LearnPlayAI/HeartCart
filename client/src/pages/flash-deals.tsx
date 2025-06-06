@@ -2,11 +2,14 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Zap, ArrowLeft } from 'lucide-react';
 import { Link } from 'wouter';
+import { useProductListingScroll } from '@/hooks/use-scroll-management';
 import { Product } from '../../../shared/schema';
 import ProductCard from '@/components/product/product-card';
 import { Card } from '@/components/ui/card';
 
 const FlashDealsPage = () => {
+  useProductListingScroll();
+  
   // Define the standardized API response type
   interface ApiResponse {
     success: boolean;

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useRoute, Link } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet';
+import { useProductListingScroll } from '@/hooks/use-scroll-management';
 import { Button } from '@/components/ui/button';
 import { 
   Select, 
@@ -28,6 +29,7 @@ import type { Product, Category, CategoryAttribute, CategoryAttributeOption } fr
 
 const CategoryPage = () => {
   const [match, params] = useRoute('/category/:slug');
+  useProductListingScroll();
   const slug = params?.slug;
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [sortBy, setSortBy] = useState('default');
