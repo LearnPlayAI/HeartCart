@@ -926,7 +926,10 @@ export default function PricingPage() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => setCurrentPage(totalPages)}
+                              onClick={() => {
+                                setCurrentPage(totalPages);
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                              }}
                               className="w-8"
                             >
                               {totalPages}
@@ -937,7 +940,10 @@ export default function PricingPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setCurrentPage(currentPage + 1)}
+                        onClick={() => {
+                          setCurrentPage(currentPage + 1);
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }}
                         disabled={currentPage === totalPages}
                       >
                         Next
