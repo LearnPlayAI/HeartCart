@@ -328,7 +328,7 @@ const ProductDetailView = ({
       setSelectedAttributeValues([]);
       setPriceAdjustments(null);
     }
-  }, [selectedAttributes, attributeValues, product, productAttributes]);
+  }, [selectedAttributes, attributeValues, product?.id, productAttributes]);
   
   // Handle quantity change (memoized to prevent recreating on each render)
   const handleQuantityChange = useCallback((newQuantity: number) => {
