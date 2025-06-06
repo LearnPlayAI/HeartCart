@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { XCircle, ShoppingBag, Plus, Minus, Trash2, Tag as TagIcon, X, CreditCard } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
@@ -27,6 +27,9 @@ const CartDrawer = () => {
   
   const { creditBalance, formattedBalance, transactions } = useCredits();
   
+  // Ref for auto-scrolling to highlighted item
+  const cartListRef = useRef<HTMLDivElement>(null);
+  
   // Fetch user orders to check for shipped orders after credits were issued
   const { data: ordersResponse } = useQuery({
     queryKey: ['/api/orders'],
@@ -54,6 +57,25 @@ const CartDrawer = () => {
   const autoCreditAmount = Math.min(availableCredit, cartTotal);
   const finalTotalAfterCredit = Math.max(0, cartTotal - autoCreditAmount);
   
+  // Auto-scroll to highlighted item when cart has many items
+  useEffect(() => {
+    if (recentlyAddedItemId && isOpen && cartListRef.current) {
+      const highlightedElement = cartListRef.current.querySelector(
+        `[data-product-id="${recentlyAddedItemId}"]`
+      ) as HTMLElement;
+      
+      if (highlightedElement) {
+        // Small delay to ensure the highlighting animation starts first
+        setTimeout(() => {
+          highlightedElement.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center'
+          });
+        }, 100);
+      }
+    }
+  }, [recentlyAddedItemId, isOpen]);
+
   // Close cart on ESC key
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -102,12 +124,13 @@ const CartDrawer = () => {
           </div>
         ) : (
           <>
-            <div className="flex-1 overflow-y-auto p-4">
+            <div ref={cartListRef} className="flex-1 overflow-y-auto p-4">
               {cartItems.map((item) => {
                 const isRecentlyAdded = recentlyAddedItemId === item.productId;
                 return (
                   <div 
-                    key={item.id} 
+                    key={item.id}
+                    data-product-id={item.productId}
                     className={`flex py-4 border-b border-gray-200 transition-all duration-300 ${
                       isRecentlyAdded 
                         ? 'bg-green-50 border-green-200 ring-2 ring-green-300 ring-opacity-50' 
