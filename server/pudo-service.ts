@@ -6,7 +6,6 @@ import NodeGeocoder from 'node-geocoder';
 // Initialize geocoder for address to coordinates conversion
 const geocoder = NodeGeocoder({
   provider: 'openstreetmap',
-  httpAdapter: 'https',
   formatter: null,
   extra: {
     userAgent: 'TeeMeYou-ECommerce/1.0 (contact@teemeyou.com)',
@@ -173,12 +172,16 @@ export class PudoService {
   }
 
   /**
-   * Convert address to coordinates using geocoding
+   * Convert address to coordinates using geocoding with fallback for SA cities
    */
   async geocodeAddress(address: string): Promise<{ lat: number; lng: number } | null> {
     try {
       console.log(`Geocoding address: ${address}`);
-      const results = await geocoder.geocode(address);
+      
+      // Add delay to respect rate limits
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const results = await geocoder.geocode(address + ', South Africa');
       
       if (results && results.length > 0) {
         const result = results[0];
@@ -189,12 +192,45 @@ export class PudoService {
         };
       }
       
-      console.log('No geocoding results found');
-      return null;
+      console.log('No geocoding results found, using fallback');
+      return this.getFallbackCoordinates(address);
     } catch (error) {
       console.error('Geocoding error:', error);
-      return null;
+      return this.getFallbackCoordinates(address);
     }
+  }
+
+  /**
+   * Get fallback coordinates for major South African cities
+   */
+  private getFallbackCoordinates(address: string): { lat: number; lng: number } | null {
+    const cityCoordinates: Record<string, { lat: number; lng: number }> = {
+      'johannesburg': { lat: -26.2041, lng: 28.0473 },
+      'cape town': { lat: -33.9249, lng: 18.4241 },
+      'durban': { lat: -29.8587, lng: 31.0218 },
+      'pretoria': { lat: -25.7479, lng: 28.2293 },
+      'bloemfontein': { lat: -29.1217, lng: 26.2146 },
+      'port elizabeth': { lat: -33.9608, lng: 25.6022 },
+      'pietermaritzburg': { lat: -29.6088, lng: 30.3796 },
+      'randburg': { lat: -26.0935, lng: 28.0094 },
+      'sandton': { lat: -26.1076, lng: 28.0567 },
+      'centurion': { lat: -25.8601, lng: 28.1888 },
+      'midrand': { lat: -25.9885, lng: 28.1293 },
+      'roodepoort': { lat: -26.1625, lng: 27.8744 },
+      'kempton park': { lat: -26.1011, lng: 28.2305 }
+    };
+    
+    const addressLower = address.toLowerCase();
+    for (const [city, coords] of Object.entries(cityCoordinates)) {
+      if (addressLower.includes(city)) {
+        console.log(`Using fallback coordinates for ${city}`);
+        return coords;
+      }
+    }
+    
+    // Default to Johannesburg if no city match found
+    console.log('Using default Johannesburg coordinates');
+    return cityCoordinates['johannesburg'];
   }
 
   /**
