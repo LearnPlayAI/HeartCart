@@ -1305,7 +1305,6 @@ const ProductListing = () => {
                                     addItem({
                                       productId: product.id,
                                       quantity: 1,
-                                      itemPrice: product.salePrice || product.price,
                                       attributeSelections: {}
                                     });
                                   }
