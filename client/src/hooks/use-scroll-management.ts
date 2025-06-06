@@ -84,7 +84,14 @@ export const useScrollToTop = () => {
       scrollManager.saveScrollPosition(previousPath);
     }
 
-    // Determine if we should preserve scroll position
+    // Product detail pages should ALWAYS start at the top
+    if (scrollManager.isProductDetailPage(currentPath)) {
+      window.scrollTo(0, 0);
+      lastLocationRef.current = currentPath;
+      return;
+    }
+
+    // Determine if we should preserve scroll position for other pages
     const shouldPreserveScroll = scrollManager.shouldPreserveScroll(previousPath, currentPath);
 
     if (shouldPreserveScroll) {
@@ -95,6 +102,9 @@ export const useScrollToTop = () => {
         setTimeout(() => {
           window.scrollTo(savedPosition.x, savedPosition.y);
         }, 100);
+      } else {
+        // If no saved position, scroll to top
+        window.scrollTo(0, 0);
       }
     } else {
       // For all other navigation, scroll to top
