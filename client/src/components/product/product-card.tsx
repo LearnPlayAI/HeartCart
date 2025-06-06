@@ -156,10 +156,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
         productId: product.id,
         quantity: 1,
         itemPrice: cartPrice,
-        attributeSelections: null,
-        userId: user?.id || 0,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        attributeSelections: {}
       });
       
 
