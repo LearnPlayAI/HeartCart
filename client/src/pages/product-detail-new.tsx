@@ -28,6 +28,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { 
   Star, 
   StarHalf, 
@@ -37,7 +42,11 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
-  ArrowLeft
+  ArrowLeft,
+  ChevronDown,
+  Clock,
+  Shield,
+  Palette
 } from 'lucide-react';
 import { useCart } from '@/hooks/use-cart';
 import { useToast } from '@/hooks/use-toast';
@@ -958,6 +967,69 @@ const ProductDetailView = ({
                   <p>No description available.</p>
                 )}
               </div>
+            </div>
+
+            {/* Disclaimers Section */}
+            <div className="mt-8 space-y-2">
+              {/* Order Timeline Disclaimer */}
+              <Collapsible>
+                <CollapsibleTrigger className="flex items-center justify-between w-full p-3 text-left text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="flex items-center">
+                    <Clock className="h-4 w-4 mr-2 text-[#FF69B4]" />
+                    Order timeline
+                  </div>
+                  <ChevronDown className="h-4 w-4" />
+                </CollapsibleTrigger>
+                <CollapsibleContent className="px-3 pb-3 text-sm text-gray-600">
+                  <div className="pt-2 border-t border-gray-100">
+                    Although we keep stock of certain items, we promote a huge range of products. For that reason, we need to pre-order stock as needed from our supplier. In order to do this as efficiently as possible, we consolidate weekly orders by a Monday, 20:00.
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+
+              {/* Product Warranty Disclaimer */}
+              <Collapsible>
+                <CollapsibleTrigger className="flex items-center justify-between w-full p-3 text-left text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="flex items-center">
+                    <Shield className="h-4 w-4 mr-2 text-[#FF69B4]" />
+                    Product warranty
+                  </div>
+                  <ChevronDown className="h-4 w-4" />
+                </CollapsibleTrigger>
+                <CollapsibleContent className="px-3 pb-3 text-sm text-gray-600">
+                  <div className="pt-2 border-t border-gray-100 space-y-2">
+                    <p>• Products with a purchase price less than R500, has a 7 day warranty</p>
+                    <p>• Products with a purchase price of R500 or more, has a 30 day warranty</p>
+                    <p>• In cases where products need to be returned, follow the steps detailed under Damages and Returns in the general Terms & Conditions.</p>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+
+              {/* Colour and Size Disclaimer */}
+              <Collapsible>
+                <CollapsibleTrigger className="flex items-center justify-between w-full p-3 text-left text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="flex items-center">
+                    <Palette className="h-4 w-4 mr-2 text-[#FF69B4]" />
+                    Colour and size disclaimer
+                  </div>
+                  <ChevronDown className="h-4 w-4" />
+                </CollapsibleTrigger>
+                <CollapsibleContent className="px-3 pb-3 text-sm text-gray-600">
+                  <div className="pt-2 border-t border-gray-100 space-y-3">
+                    <p>The details of the products, descriptions or specifications (for example weight, colour, size, etc.) are only approximate values. There may be slight variations in the product design and pattern as compared to the images shown on our website.</p>
+                    
+                    <div>
+                      <p className="font-medium text-gray-700 mb-1">Colour Disclaimer:</p>
+                      <p>Due to variations in monitor settings and display output of digital photography, we assume no responsibility and makes no guarantees regarding colour matches of products. We cannot guarantee that the colours displayed on our website will exactly match the colour of the product.</p>
+                    </div>
+                    
+                    <div>
+                      <p className="font-medium text-gray-700 mb-1">Size Disclaimer:</p>
+                      <p>We make every effort in providing as accurate information as possible in regard to the product sizing and dimensions. However, due to the nature of the manufacturing process, from time to time product sizing may vary slightly. Please always allow for 3-5 cm difference.</p>
+                    </div>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
             </div>
           </div>
         </div>
