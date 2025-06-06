@@ -48,6 +48,13 @@ const checkoutSchema = z.object({
     required_error: "Please select a shipping method"
   }),
   
+  // PUDO Locker Selection
+  selectedLockerId: z.number().optional(),
+  lockerCode: z.string().optional(),
+  lockerName: z.string().optional(),
+  lockerAddress: z.string().optional(),
+  maxDeliveryDistance: z.number().default(10),
+  
   // Payment Method
   paymentMethod: z.enum(["eft"], {
     required_error: "Please select a payment method"
@@ -96,6 +103,13 @@ export default function CheckoutPage() {
   const queryClient = useQueryClient();
   const [isProcessing, setIsProcessing] = useState(false);
   const { creditBalance, formattedBalance, balanceLoading, transactions } = useCredits();
+  
+  // PUDO locker state
+  const [availableLockers, setAvailableLockers] = useState<any[]>([]);
+  const [lockersLoading, setLockersLoading] = useState(false);
+  const [selectedLocker, setSelectedLocker] = useState<any>(null);
+  const [searchDistance, setSearchDistance] = useState(10);
+  const [lockerSuggestion, setLockerSuggestion] = useState<string>("");
 
   // Fetch current user details
   const { data: user } = useQuery({
