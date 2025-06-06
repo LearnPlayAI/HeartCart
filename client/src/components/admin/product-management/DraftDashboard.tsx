@@ -782,7 +782,9 @@ export const DraftDashboard: React.FC = () => {
                 size="sm"
                 onClick={() => {
                   setCurrentPage(prev => Math.max(1, prev - 1));
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                  setTimeout(() => {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }, 50);
                 }}
                 disabled={currentPage === 1}
               >
@@ -797,7 +799,9 @@ export const DraftDashboard: React.FC = () => {
                 size="sm"
                 onClick={() => {
                   setCurrentPage(prev => Math.min(totalPages, prev + 1));
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                  setTimeout(() => {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }, 50);
                 }}
                 disabled={currentPage >= totalPages}
               >
