@@ -47,6 +47,7 @@ import {
 } from 'lucide-react';
 import ProductCard from '@/components/product/product-card';
 import CategorySidebar from '@/components/ui/category-sidebar';
+import QuickViewModal from '@/components/product/quick-view-modal';
 import type { Product, Category } from '@shared/schema';
 import { Input } from '@/components/ui/input';
 import { formatCurrency } from '@/lib/utils';
@@ -101,6 +102,10 @@ const ProductListing = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [sortBy, setSortBy] = useState(searchParams.get('sort') || 'default');
+  
+  // Quick view modal state
+  const [quickViewOpen, setQuickViewOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [priceRange, setPriceRange] = useState([0, 5000]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(searchParams.get('category'));
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(() => {
@@ -1266,8 +1271,9 @@ const ProductListing = () => {
                                       const hasRequiredAttributes = attributesData.data.some((attr: any) => attr.isRequired);
                                       
                                       if (hasRequiredAttributes) {
-                                        // Navigate to product detail page instead of adding directly to cart
-                                        window.location.href = `/product/id/${product.id}`;
+                                        // Open quick view modal instead of adding directly to cart
+                                        setSelectedProduct(product);
+                                        setQuickViewOpen(true);
                                         return;
                                       }
                                     }
@@ -1291,7 +1297,6 @@ const ProductListing = () => {
                                     addItem({
                                       productId: product.id,
                                       quantity: 1,
-                                      itemPrice: cartPricing.cartPrice,
                                       attributeSelections: {}
                                     });
                                   } catch (error) {
@@ -1371,6 +1376,15 @@ const ProductListing = () => {
           </div>
         </div>
       </div>
+      
+      {/* Quick View Modal */}
+      {selectedProduct && (
+        <QuickViewModal
+          open={quickViewOpen}
+          onOpenChange={setQuickViewOpen}
+          productId={selectedProduct.id}
+        />
+      )}
     </>
   );
 };
