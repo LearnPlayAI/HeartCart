@@ -234,46 +234,139 @@ export class PudoService {
   }
 
   /**
-   * Find nearest lockers to an address
+   * Find lockers by city and province match
    */
   async findNearestLockers(
     address: string, 
     maxDistance: number = 10, 
-    limit: number = 3
+    limit: number = 8
   ): Promise<LockerSearchResult[]> {
-    // First geocode the address
-    const coordinates = await this.geocodeAddress(address);
-    if (!coordinates) {
-      throw new Error('Could not geocode the provided address');
-    }
+    console.log(`Finding lockers for address: ${address}`);
 
-    // Get all active lockers from cache
-    const lockers = await db
+    // Parse the address to extract city and province
+    const { city, province } = this.parseUserAddress(address);
+    console.log(`Parsed address - City: ${city}, Province: ${province}`);
+
+    // Get all active lockers
+    const allLockers = await db
       .select()
       .from(pudoLockers)
       .where(eq(pudoLockers.isActive, true));
 
-    // Calculate distances and filter by max distance
-    const lockersWithDistance: LockerSearchResult[] = lockers
+    // Score and filter lockers based on location match
+    const scoredLockers = allLockers
       .map(locker => {
-        const distance = this.calculateDistance(
-          coordinates.lat,
-          coordinates.lng,
-          locker.latitude,
-          locker.longitude
-        );
-
+        const score = this.calculateLocationScore(locker, city, province);
         return {
           locker,
-          distance,
-          distanceText: this.formatDistance(distance)
+          score,
+          distance: 100 - score, // Convert score to pseudo-distance
+          distanceText: score > 80 ? 'Same area' : score > 50 ? 'Nearby' : 'Regional'
         };
       })
-      .filter(result => result.distance <= maxDistance)
-      .sort((a, b) => a.distance - b.distance)
+      .filter(item => item.score > 0)
+      .sort((a, b) => b.score - a.score)
       .slice(0, limit);
 
-    return lockersWithDistance;
+    console.log(`Found ${scoredLockers.length} matching lockers`);
+    return scoredLockers;
+  }
+
+  /**
+   * Parse user address to extract city and province
+   */
+  private parseUserAddress(address: string): { city: string; province: string } {
+    const addressLower = address.toLowerCase();
+    
+    // South African provinces mapping
+    const provinceMap: Record<string, string> = {
+      'gauteng': 'gauteng',
+      'western cape': 'western cape',
+      'kwazulu-natal': 'kwazulu-natal',
+      'eastern cape': 'eastern cape',
+      'northern cape': 'northern cape',
+      'free state': 'free state',
+      'limpopo': 'limpopo',
+      'mpumalanga': 'mpumalanga',
+      'north west': 'north west'
+    };
+
+    // Extract province
+    let province = 'gauteng'; // Default to Gauteng
+    for (const [key, value] of Object.entries(provinceMap)) {
+      if (addressLower.includes(key)) {
+        province = value;
+        break;
+      }
+    }
+
+    // Extract city from address parts
+    const parts = address.split(',').map(p => p.trim());
+    let city = parts.find(part => 
+      part.toLowerCase().includes('randburg') ||
+      part.toLowerCase().includes('johannesburg') ||
+      part.toLowerCase().includes('sandton') ||
+      part.toLowerCase().includes('cape town') ||
+      part.toLowerCase().includes('durban')
+    ) || parts[0] || 'randburg';
+
+    return { 
+      city: city.toLowerCase().trim(),
+      province: province.toLowerCase().trim()
+    };
+  }
+
+  /**
+   * Calculate location matching score
+   */
+  private calculateLocationScore(locker: PudoLocker, userCity: string, userProvince: string): number {
+    let score = 0;
+    const lockerAddress = locker.address.toLowerCase();
+    const lockerTown = locker.town.toLowerCase();
+
+    // Exact city match (highest priority)
+    if (lockerTown.includes(userCity) || lockerAddress.includes(userCity)) {
+      score += 100;
+    }
+
+    // Suburb/area match for major cities
+    if (userCity.includes('randburg') && (lockerAddress.includes('randburg') || lockerTown.includes('randburg'))) {
+      score += 95;
+    }
+
+    if (userCity.includes('johannesburg') && (
+      lockerAddress.includes('johannesburg') ||
+      lockerAddress.includes('sandton') ||
+      lockerAddress.includes('rosebank') ||
+      lockerAddress.includes('midrand')
+    )) {
+      score += 90;
+    }
+
+    // Province match
+    if (lockerAddress.includes(userProvince)) {
+      score += 50;
+    }
+
+    // Major metropolitan area matching
+    if (userProvince === 'gauteng' && (
+      lockerAddress.includes('gauteng') ||
+      lockerAddress.includes('johannesburg') ||
+      lockerAddress.includes('pretoria') ||
+      lockerAddress.includes('sandton')
+    )) {
+      score += 40;
+    }
+
+    // Postal code proximity for Gauteng area
+    if (userProvince === 'gauteng' && locker.postalCode) {
+      const postalCode = locker.postalCode.toString();
+      if (postalCode.startsWith('1') || postalCode.startsWith('2')) {
+        score += 30;
+      }
+    }
+
+    return score;
   }
 
   /**
