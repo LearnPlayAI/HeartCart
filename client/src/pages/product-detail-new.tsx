@@ -36,11 +36,13 @@ import {
   ShoppingCart,
   ChevronLeft,
   ChevronRight,
-  X
+  X,
+  ArrowLeft
 } from 'lucide-react';
 import { useCart } from '@/hooks/use-cart';
 import { useToast } from '@/hooks/use-toast';
 import { useAttributeDiscounts } from '@/hooks/use-attribute-discounts';
+import { useNavigateBack } from '@/hooks/use-scroll-management';
 import { formatCurrency, calculateDiscount } from '@/lib/utils';
 import { ensureValidImageUrl } from '@/utils/file-manager';
 import ProductCard from '@/components/product/product-card';

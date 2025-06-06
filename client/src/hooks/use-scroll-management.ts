@@ -10,6 +10,7 @@ class ScrollManager {
   private static instance: ScrollManager;
   private scrollPositions = new Map<string, ScrollPosition>();
   private lastLocation: string = '';
+  private previousLocation: string = '';
 
   static getInstance(): ScrollManager {
     if (!ScrollManager.instance) {
@@ -35,11 +36,16 @@ class ScrollManager {
   }
 
   setLastLocation(location: string): void {
+    this.previousLocation = this.lastLocation;
     this.lastLocation = location;
   }
 
   getLastLocation(): string {
     return this.lastLocation;
+  }
+
+  getPreviousLocation(): string {
+    return this.previousLocation;
   }
 
   isProductDetailPage(path: string): boolean {
@@ -83,6 +89,9 @@ export const useScrollToTop = () => {
     if (previousPath) {
       scrollManager.saveScrollPosition(previousPath);
     }
+
+    // Update scroll manager location tracking
+    scrollManager.setLastLocation(currentPath);
 
     // Product detail pages should ALWAYS start at the top
     if (scrollManager.isProductDetailPage(currentPath)) {
@@ -139,4 +148,24 @@ export const useProductListingScroll = () => {
       }
     };
   }, [location]);
+};
+
+// Hook for back navigation with scroll position restoration
+export const useNavigateBack = () => {
+  const scrollManager = ScrollManager.getInstance();
+  
+  return {
+    goBack: () => {
+      const previousLocation = scrollManager.getPreviousLocation();
+      if (previousLocation) {
+        // Use history.back() to maintain browser history
+        window.history.back();
+      } else {
+        // Fallback to home page if no previous location
+        window.location.href = '/';
+      }
+    },
+    getPreviousLocation: () => scrollManager.getPreviousLocation(),
+    hasPreviousLocation: () => !!scrollManager.getPreviousLocation()
+  };
 };
