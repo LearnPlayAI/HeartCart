@@ -58,7 +58,7 @@ const CategoryPage = () => {
   }, [categoryResponse]);
   
   const { data: productsResponse, isLoading: isLoadingProducts } = useQuery({
-    queryKey: [`/api/products`, { categoryId: category?.id }],
+    queryKey: [`/api/products?categoryId=${category?.id}&limit=20&offset=0`],
     enabled: !!category?.id,
     staleTime: 0, // Always fetch fresh data to prevent inactive products from showing
     gcTime: 0, // Don't keep in cache when component unmounts
