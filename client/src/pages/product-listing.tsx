@@ -769,7 +769,7 @@ const ProductListing = () => {
           {/* Filters Sidebar */}
           <div 
             className={`${
-              isFilterOpen ? 'fixed inset-0 z-40 bg-white' : 'hidden'
+              isFilterOpen ? 'fixed inset-0 z-50 bg-white' : 'hidden'
             } md:relative md:block md:w-64 md:flex-shrink-0`}
           >
             <div className={`${
