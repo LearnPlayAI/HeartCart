@@ -59,19 +59,32 @@ const CartDrawer = () => {
   
   // Auto-scroll to bottom when new item is added to cart
   useEffect(() => {
-    if (recentlyAddedItemId && isOpen && cartListRef.current) {
+    if (recentlyAddedItemId && isOpen) {
+      console.log('Auto-scroll triggered for item:', recentlyAddedItemId, 'Cart open:', isOpen);
+      
       // Wait for cart to fully open and items to render
       const scrollTimer = setTimeout(() => {
         if (cartListRef.current) {
-          console.log('Auto-scrolling to bottom for recently added item:', recentlyAddedItemId);
+          console.log('Scrolling container found, height:', cartListRef.current.scrollHeight);
+          console.log('Current scroll position:', cartListRef.current.scrollTop);
           
-          // Simply scroll to bottom to show newest items
-          cartListRef.current.scrollTo({
-            top: cartListRef.current.scrollHeight,
-            behavior: 'smooth'
-          });
+          // Try multiple scroll methods to ensure it works
+          cartListRef.current.scrollTop = cartListRef.current.scrollHeight;
+          
+          // Also try the smooth scrollTo method
+          setTimeout(() => {
+            if (cartListRef.current) {
+              cartListRef.current.scrollTo({
+                top: cartListRef.current.scrollHeight,
+                behavior: 'smooth'
+              });
+              console.log('Scrolled to bottom, new position:', cartListRef.current.scrollTop);
+            }
+          }, 100);
+        } else {
+          console.log('Cart list ref not found');
         }
-      }, 600); // Delay to ensure cart is fully opened and rendered
+      }, 800); // Increased delay to ensure cart is fully opened and rendered
       
       return () => clearTimeout(scrollTimer);
     }
