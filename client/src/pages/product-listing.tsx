@@ -976,7 +976,18 @@ const ProductListing = () => {
                   variant="outline"
                   className="border-[#FF69B4] text-[#FF69B4] hover:bg-[#FF69B4] hover:text-white mr-2"
                   disabled={page === 1}
-                  onClick={() => setPage(prev => Math.max(prev - 1, 1))}
+                  onClick={() => {
+                    const newPage = Math.max(page - 1, 1);
+                    setPage(newPage);
+                    // Update URL parameter
+                    const newUrl = new URL(window.location.href);
+                    if (newPage === 1) {
+                      newUrl.searchParams.delete('page');
+                    } else {
+                      newUrl.searchParams.set('page', newPage.toString());
+                    }
+                    window.history.pushState({}, '', newUrl.toString());
+                  }}
                 >
                   Previous
                 </Button>
@@ -987,7 +998,14 @@ const ProductListing = () => {
                   variant="outline"
                   className="border-[#FF69B4] text-[#FF69B4] hover:bg-[#FF69B4] hover:text-white"
                   disabled={page >= totalPages}
-                  onClick={() => setPage(prev => Math.min(prev + 1, totalPages))}
+                  onClick={() => {
+                    const newPage = Math.min(page + 1, totalPages);
+                    setPage(newPage);
+                    // Update URL parameter
+                    const newUrl = new URL(window.location.href);
+                    newUrl.searchParams.set('page', newPage.toString());
+                    window.history.pushState({}, '', newUrl.toString());
+                  }}
                 >
                   Next
                 </Button>
@@ -1132,7 +1150,18 @@ const ProductListing = () => {
                     variant="outline"
                     className="border-[#FF69B4] text-[#FF69B4] hover:bg-[#FF69B4] hover:text-white mr-2"
                     disabled={page === 1}
-                    onClick={() => setPage(prev => Math.max(prev - 1, 1))}
+                    onClick={() => {
+                      const newPage = Math.max(page - 1, 1);
+                      setPage(newPage);
+                      // Update URL parameter
+                      const newUrl = new URL(window.location.href);
+                      if (newPage === 1) {
+                        newUrl.searchParams.delete('page');
+                      } else {
+                        newUrl.searchParams.set('page', newPage.toString());
+                      }
+                      window.history.pushState({}, '', newUrl.toString());
+                    }}
                   >
                     Previous
                   </Button>
@@ -1143,7 +1172,14 @@ const ProductListing = () => {
                     variant="outline"
                     className="border-[#FF69B4] text-[#FF69B4] hover:bg-[#FF69B4] hover:text-white"
                     disabled={page >= totalPages}
-                    onClick={() => setPage(prev => Math.min(prev + 1, totalPages))}
+                    onClick={() => {
+                      const newPage = Math.min(page + 1, totalPages);
+                      setPage(newPage);
+                      // Update URL parameter
+                      const newUrl = new URL(window.location.href);
+                      newUrl.searchParams.set('page', newPage.toString());
+                      window.history.pushState({}, '', newUrl.toString());
+                    }}
                   >
                     Next
                   </Button>
