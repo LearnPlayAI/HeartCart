@@ -213,8 +213,16 @@ export interface IStorage {
     offset?: number,
     categoryId?: number,
     search?: string,
-    options?: { includeInactive?: boolean; includeCategoryInactive?: boolean },
-  ): Promise<Product[]>;
+    options?: { 
+      includeInactive?: boolean; 
+      includeCategoryInactive?: boolean;
+      parentCategoryId?: number;
+      minTmyPercent?: number;
+      statusFilter?: string;
+      sortField?: string;
+      sortOrder?: 'asc' | 'desc';
+    },
+  ): Promise<{ products: Product[]; total: number }>;
   getProductById(
     id: number,
     options?: { includeInactive?: boolean; includeCategoryInactive?: boolean },
@@ -1309,6 +1317,7 @@ export class DatabaseStorage implements IStorage {
     options?: { 
       includeInactive?: boolean; 
       includeCategoryInactive?: boolean; 
+      parentCategoryId?: number;
       minTmyPercent?: number; 
       statusFilter?: string;
       sortField?: string;

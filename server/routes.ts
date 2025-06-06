@@ -743,7 +743,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/products", 
     validateRequest({ query: productsQuerySchema }),
     withStandardResponse(async (req: Request, res: Response) => {
-      const { limit, offset, categoryId, search, minTmyPercent, status, sortField, sortOrder } = req.query;
+      const { limit, offset, categoryId, parentCategoryId, search, minTmyPercent, status, sortField, sortOrder } = req.query;
       
       const user = req.user as any;
       const isAdmin = user && user.role === 'admin';
@@ -760,13 +760,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get products with pagination data
       // Handle categoryId: if it's "all" or undefined, don't filter by category
       const categoryFilter = (categoryId && categoryId !== "all") ? Number(categoryId) : undefined;
+      const parentCategoryFilter = parentCategoryId ? Number(parentCategoryId) : undefined;
       
       const result = await storage.getAllProducts(
         Number(limit), 
         Number(offset), 
         categoryFilter, 
         search as string | undefined, 
-        options
+        { ...options, parentCategoryId: parentCategoryFilter }
       );
       
       // Calculate pagination metadata
