@@ -203,26 +203,25 @@ export default function CheckoutPage() {
     }
   });
 
-  // Function to find PUDO lockers based on user address
-  const findPudoLockers = async (address: string, maxDistance: number = 10) => {
+  // Function to find PUDO lockers based on user city and province
+  const findPudoLockers = async (address: string) => {
     setLockersLoading(true);
     try {
-      const response = await apiRequest('POST', '/api/pudo/find-lockers', { address, maxDistance });
+      const response = await apiRequest('POST', '/api/pudo/find-lockers', { address });
       
       if (response.success) {
         setAvailableLockers(response.data.lockers);
-        setSearchDistance(response.data.searchDistance);
-        setLockerSuggestion(response.data.suggestion || "");
+        setLockerSuggestion("");
         
         if (response.data.lockers.length > 0) {
           toast({
             title: "PUDO Lockers Found",
-            description: `Found ${response.data.lockers.length} nearby lockers within ${response.data.searchDistance}km`
+            description: `Found ${response.data.lockers.length} lockers in your area`
           });
         } else {
           toast({
             title: "No Lockers Found",
-            description: "No PUDO lockers found in your area. Please try increasing the search distance.",
+            description: "No PUDO lockers found in your area.",
             variant: "destructive"
           });
         }
@@ -245,9 +244,8 @@ export default function CheckoutPage() {
     const [addressLine1, city, province] = watchedAddress;
     if (addressLine1 && city && province) {
       const fullAddress = `${addressLine1}, ${city}, ${province}`;
-      const distance = form.getValues('maxDeliveryDistance') || 10;
       const timeoutId = setTimeout(() => {
-        findPudoLockers(fullAddress, distance);
+        findPudoLockers(fullAddress);
       }, 1000); // Debounce API calls
       
       return () => clearTimeout(timeoutId);
