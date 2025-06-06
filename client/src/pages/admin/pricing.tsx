@@ -893,7 +893,10 @@ export default function PricingPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setCurrentPage(currentPage - 1)}
+                        onClick={() => {
+                          setCurrentPage(currentPage - 1);
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }}
                         disabled={currentPage === 1}
                       >
                         <ChevronLeft className="h-4 w-4" />
@@ -907,7 +910,10 @@ export default function PricingPage() {
                               key={pageNum}
                               variant={pageNum === currentPage ? "default" : "outline"}
                               size="sm"
-                              onClick={() => setCurrentPage(pageNum)}
+                              onClick={() => {
+                                setCurrentPage(pageNum);
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                              }}
                               className="w-8"
                             >
                               {pageNum}

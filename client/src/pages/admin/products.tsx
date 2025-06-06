@@ -76,7 +76,10 @@ export default function AdminProducts() {
   const currentItems = products ? products.slice(indexOfFirstItem, indexOfLastItem) : [];
   const totalPages = products ? Math.ceil(products.length / itemsPerPage) : 0;
 
-  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
+  const paginate = (pageNumber: number) => {
+    setCurrentPage(pageNumber);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
   
   // Handle edit product - EXACT same function as pricing page
   const handleEditProduct = async (productId: number) => {
