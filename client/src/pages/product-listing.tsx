@@ -769,9 +769,13 @@ const ProductListing = () => {
           {/* Filters Sidebar */}
           <div 
             className={`${
-              isFilterOpen ? 'fixed inset-0 z-40 bg-white p-4 overflow-y-auto' : 'hidden'
+              isFilterOpen ? 'fixed inset-0 z-40 bg-white' : 'hidden'
             } md:relative md:block md:w-64 md:flex-shrink-0`}
           >
+            <div className={`${
+              isFilterOpen ? 'h-full overflow-y-auto p-4' : ''
+            } md:overflow-visible md:p-0 md:h-auto`}
+            >
             {isFilterOpen && (
               <div className="flex justify-between items-center mb-4 md:hidden">
                 <h2 className="text-lg font-medium">Filters</h2>
@@ -965,6 +969,7 @@ const ProductListing = () => {
                 </Button>
               </div>
             )}
+            </div>
           </div>
           
           {/* Products Grid */}
