@@ -531,6 +531,7 @@ export const PublishedProducts: React.FC = () => {
                   <Button
                     variant="outline"
                     size="sm"
+                    style={{ backgroundColor: '#ec4899' }}
                     onClick={() => {
                       setCurrentPage(prev => Math.max(1, prev - 1));
                       setTimeout(() => {
@@ -548,6 +549,7 @@ export const PublishedProducts: React.FC = () => {
                   <Button
                     variant="outline"
                     size="sm"
+                    style={{ backgroundColor: '#ec4899' }}
                     onClick={() => {
                       setCurrentPage(prev => Math.min(Math.ceil(totalProducts / itemsPerPage), prev + 1));
                       setTimeout(() => {
