@@ -6,6 +6,7 @@ import { useCart } from '@/hooks/use-cart';
 import { formatCurrency, calculateDiscount } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import QuickViewModal from './quick-view-modal';
+import DisclaimersModal from './disclaimers-modal';
 import { Badge } from '@/components/ui/badge';
 import type { Product } from '@shared/schema';
 import { ensureValidImageUrl } from '@/utils/file-manager';
@@ -99,6 +100,13 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const { user } = useAuth();
   const [quickViewOpen, setQuickViewOpen] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [disclaimersModalOpen, setDisclaimersModalOpen] = useState(false);
+  const [pendingCartItem, setPendingCartItem] = useState<{
+    productId: number;
+    quantity: number;
+    itemPrice: number;
+    attributeSelections: Record<string, string>;
+  } | null>(null);
   
   // Debug promotional info
   console.log(`ProductCard for product ${product.id}:`, {
@@ -151,13 +159,14 @@ const ProductCard: React.FC<ProductCardProps> = ({
         }
       }
       
-      // If no required attributes, add directly to cart using calculated cart price
-      addItem({
+      // If no required attributes, prepare cart item and show disclaimers modal
+      setPendingCartItem({
         productId: product.id,
         quantity: 1,
         itemPrice: cartPrice,
         attributeSelections: {}
       });
+      setDisclaimersModalOpen(true);
       
 
     } catch (error) {
@@ -169,6 +178,22 @@ const ProductCard: React.FC<ProductCardProps> = ({
         variant: "destructive",
         duration: 3000,
       });
+    }
+  };
+
+  const handleAcceptDisclaimers = () => {
+    if (pendingCartItem) {
+      addItem(pendingCartItem);
+      toast({
+        title: "Added to cart",
+        description: `${product.name} has been added to your cart.`,
+        variant: "default",
+        duration: 3000,
+      });
+      
+      // Reset state
+      setPendingCartItem(null);
+      setDisclaimersModalOpen(false);
     }
   };
   
