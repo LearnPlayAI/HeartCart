@@ -51,6 +51,13 @@ import type { Product, Category } from '@shared/schema';
 import { Input } from '@/components/ui/input';
 import { formatCurrency } from '@/lib/utils';
 import type { Attribute, AttributeOption, CategoryAttribute } from '@/types/attribute-types';
+import { 
+  calculateProductPricing, 
+  getCartPrice, 
+  isPromotionActive, 
+  getPromotionTimeRemaining,
+  type PromotionInfo 
+} from '@/utils/pricing';
 
 // Availability filter options (replaced stock filter)
 const availabilityOptions = [
@@ -281,6 +288,16 @@ const ProductListing = () => {
     enabled: !!products,
   });
   const filterableAttributes = filterableAttributesResponse?.success ? filterableAttributesResponse.data : [];
+  
+  // Fetch active promotions for pricing calculations
+  const { data: promotionsResponse } = useQuery<any>({
+    queryKey: ['/api/promotions/active-with-products'],
+    staleTime: 0, // No cache - always fetch fresh promotional data
+    gcTime: 0, // Don't keep in cache when component unmounts
+    refetchOnWindowFocus: true, // Refetch when window gains focus
+    refetchOnMount: true, // Always refetch on mount
+  });
+  const activePromotions = promotionsResponse?.data || promotionsResponse || [];
   
   // Handle API errors
   useEffect(() => {
@@ -1168,19 +1185,70 @@ const ProductListing = () => {
                             </div>
                             <div className="flex justify-between items-end">
                               <div>
-                                <div className="flex items-baseline">
-                                  <span className="text-xl text-[#FF69B4] font-bold">
-                                    {formatCurrency(product.salePrice || product.price)}
-                                  </span>
-                                  {product.salePrice && (
-                                    <span className="ml-2 text-gray-500 text-sm line-through">
-                                      {formatCurrency(product.price)}
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="text-sm text-gray-500 mt-1">
-                                  Available from our suppliers
-                                </div>
+                                {(() => {
+                                  // Find promotion for this product
+                                  const productPromotion = activePromotions
+                                    .flatMap((promo: any) => promo.products?.map((pp: any) => ({ ...pp, promotion: promo })) || [])
+                                    .find((pp: any) => pp.productId === product.id);
+
+                                  const promotionInfo = productPromotion ? {
+                                    promotionName: productPromotion.promotion.promotionName,
+                                    promotionDiscount: productPromotion.extraDiscountPercentage || productPromotion.discountOverride || productPromotion.promotion.discountValue,
+                                    promotionDiscountType: productPromotion.promotion.promotionType,
+                                    promotionEndDate: productPromotion.promotion.endDate,
+                                    promotionalPrice: productPromotion.promotionalPrice ? Number(productPromotion.promotionalPrice) : null
+                                  } : null;
+
+                                  const pricingResult = calculateProductPricing(product.price, product.salePrice, promotionInfo);
+                                  const cartPricing = getCartPrice(product.price, product.salePrice, promotionInfo);
+
+                                  console.log(`List view pricing for product ${product.id}:`, {
+                                    productName: product.name,
+                                    basePrice: product.price,
+                                    salePrice: product.salePrice,
+                                    promotionInfo,
+                                    pricingResult,
+                                    cartPricing
+                                  });
+
+                                  return (
+                                    <div className="flex items-baseline">
+                                      <span className="text-xl text-[#FF69B4] font-bold">
+                                        {formatCurrency(pricingResult.displayPrice)}
+                                      </span>
+                                      {pricingResult.hasDiscount && (
+                                        <span className="ml-2 text-gray-500 text-sm line-through">
+                                          {formatCurrency(pricingResult.originalPrice)}
+                                        </span>
+                                      )}
+                                      {pricingResult.hasDiscount && (
+                                        <Badge variant="secondary" className="ml-2 bg-red-100 text-red-600 text-xs">
+                                          -{pricingResult.discountPercentage}%
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  );
+                                })()}
+                                {(() => {
+                                  // Show promotion info if available
+                                  const productPromotion = activePromotions
+                                    .flatMap((promo: any) => promo.products?.map((pp: any) => ({ ...pp, promotion: promo })) || [])
+                                    .find((pp: any) => pp.productId === product.id);
+
+                                  if (productPromotion) {
+                                    return (
+                                      <div className="text-xs text-[#FF69B4] mt-1 font-medium">
+                                        🎉 {productPromotion.promotion.promotionName}
+                                      </div>
+                                    );
+                                  }
+
+                                  return (
+                                    <div className="text-sm text-gray-500 mt-1">
+                                      Available from our suppliers
+                                    </div>
+                                  );
+                                })()}
                               </div>
                               <Button 
                                 className="bg-[#FF69B4] hover:bg-[#FF1493] text-white"
@@ -1205,10 +1273,25 @@ const ProductListing = () => {
                                     }
                                     
                                     // If no required attributes, add directly to cart
+                                    // Calculate correct promotional price for cart
+                                    const productPromotion = activePromotions
+                                      .flatMap((promo: any) => promo.products?.map((pp: any) => ({ ...pp, promotion: promo })) || [])
+                                      .find((pp: any) => pp.productId === product.id);
+
+                                    const promotionInfo = productPromotion ? {
+                                      promotionName: productPromotion.promotion.promotionName,
+                                      promotionDiscount: productPromotion.extraDiscountPercentage || productPromotion.discountOverride || productPromotion.promotion.discountValue,
+                                      promotionDiscountType: productPromotion.promotion.promotionType,
+                                      promotionEndDate: productPromotion.promotion.endDate,
+                                      promotionalPrice: productPromotion.promotionalPrice ? Number(productPromotion.promotionalPrice) : null
+                                    } : null;
+
+                                    const cartPricing = getCartPrice(product, promotionInfo);
+                                    
                                     addItem({
                                       productId: product.id,
                                       quantity: 1,
-                                      itemPrice: product.salePrice || product.price,
+                                      itemPrice: cartPricing.cartPrice,
                                       attributeSelections: {}
                                     });
                                   } catch (error) {
