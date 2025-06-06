@@ -57,39 +57,21 @@ const CartDrawer = () => {
   const autoCreditAmount = Math.min(availableCredit, cartTotal);
   const finalTotalAfterCredit = Math.max(0, cartTotal - autoCreditAmount);
   
-  // Auto-scroll to highlighted item when cart has many items
+  // Auto-scroll to bottom when new item is added to cart
   useEffect(() => {
     if (recentlyAddedItemId && isOpen && cartListRef.current) {
       // Wait for cart to fully open and items to render
       const scrollTimer = setTimeout(() => {
         if (cartListRef.current) {
-          console.log('Auto-scrolling for recently added item:', recentlyAddedItemId);
+          console.log('Auto-scrolling to bottom for recently added item:', recentlyAddedItemId);
           
-          // First scroll to bottom immediately to show newest items
+          // Simply scroll to bottom to show newest items
           cartListRef.current.scrollTo({
             top: cartListRef.current.scrollHeight,
             behavior: 'smooth'
           });
-          
-          // Then find and scroll to the highlighted item after a short delay
-          setTimeout(() => {
-            const highlightedElement = cartListRef.current?.querySelector(
-              `[data-product-id="${recentlyAddedItemId}"]`
-            ) as HTMLElement;
-            
-            if (highlightedElement) {
-              console.log('Found highlighted element, scrolling to it');
-              highlightedElement.scrollIntoView({
-                behavior: 'smooth',
-                block: 'center',
-                inline: 'nearest'
-              });
-            } else {
-              console.log('Highlighted element not found, staying at bottom');
-            }
-          }, 500);
         }
-      }, 500); // Increased delay to ensure cart is fully opened
+      }, 600); // Delay to ensure cart is fully opened and rendered
       
       return () => clearTimeout(scrollTimer);
     }
