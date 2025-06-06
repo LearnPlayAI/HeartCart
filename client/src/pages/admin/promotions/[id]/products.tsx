@@ -94,7 +94,14 @@ export default function PromotionProductsPage() {
     queryKey: ['/api/categories/main/with-children'],
   });
 
-  const categories = categoriesData?.data || [];
+  const categoriesWithChildren = categoriesData?.success ? categoriesData.data : [];
+  
+  // Extract parent categories and organize children
+  const parentCategories = categoriesWithChildren.map((item: any) => item.category);
+  const getChildCategories = (parentId: number) => {
+    const parentItem = categoriesWithChildren.find((item: any) => item.category.id === parentId);
+    return parentItem?.children || [];
+  };
 
   // Reset page when filters change
   useEffect(() => {
@@ -368,12 +375,10 @@ export default function PromotionProductsPage() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All categories</SelectItem>
-                        {categories.map((category: any) => (
-                          category.id && (
-                            <SelectItem key={category.id} value={category.id.toString()}>
-                              {category.name || 'Unnamed Category'}
-                            </SelectItem>
-                          )
+                        {parentCategories.map((category: any) => (
+                          <SelectItem key={category.id} value={category.id.toString()}>
+                            {category.name}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -391,13 +396,11 @@ export default function PromotionProductsPage() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All subcategories</SelectItem>
-                        {selectedParentCategoryId && categories
-                          .find((cat: any) => cat.id === selectedParentCategoryId)
-                          ?.children?.map((child: any) => (
-                            <SelectItem key={child.id} value={child.id.toString()}>
-                              {child.name}
-                            </SelectItem>
-                          ))}
+                        {selectedParentCategoryId && getChildCategories(selectedParentCategoryId).map((child: any) => (
+                          <SelectItem key={child.id} value={child.id.toString()}>
+                            {child.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -418,7 +421,7 @@ export default function PromotionProductsPage() {
                     )}
                     {selectedParentCategoryId && (
                       <Badge variant="secondary" className="text-xs">
-                        {categories.find((cat: any) => cat.id === selectedParentCategoryId)?.name || 'Unknown'}
+                        {parentCategories.find((cat: any) => cat.id === selectedParentCategoryId)?.name || 'Unknown'}
                         <X 
                           className="h-3 w-3 ml-1 cursor-pointer" 
                           onClick={() => {
