@@ -524,15 +524,53 @@ export const PublishedProducts: React.FC = () => {
                 {totalProducts} {totalProducts === 1 ? 'product' : 'products'} found
               </CardDescription>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={detectDuplicates}
-              className="flex items-center gap-2"
-            >
-              <GitMerge className="h-4 w-4" />
-              Find Duplicates
-            </Button>
+            <div className="flex items-center space-x-4">
+              {/* Top Pagination Controls */}
+              {totalProducts > itemsPerPage && (
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setCurrentPage(prev => Math.max(1, prev - 1));
+                      setTimeout(() => {
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }, 50);
+                    }}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Previous
+                  </Button>
+                  <span className="text-sm">
+                    Page {currentPage} of {Math.ceil(totalProducts / itemsPerPage)}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setCurrentPage(prev => Math.min(Math.ceil(totalProducts / itemsPerPage), prev + 1));
+                      setTimeout(() => {
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }, 50);
+                    }}
+                    disabled={currentPage >= Math.ceil(totalProducts / itemsPerPage)}
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={detectDuplicates}
+                className="flex items-center gap-2"
+              >
+                <GitMerge className="h-4 w-4" />
+                Find Duplicates
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="p-0">
