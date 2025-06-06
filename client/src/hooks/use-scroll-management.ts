@@ -344,14 +344,24 @@ export const usePaginationStateRestoration = (
 
   // Restore pagination state when returning from product detail pages
   useEffect(() => {
+    console.log('Pagination restoration check:', {
+      hasRestored: hasRestoredRef.current,
+      location,
+      currentPage,
+      isProductListing: scrollManager.isProductListingPage(location)
+    });
+    
     if (!hasRestoredRef.current && scrollManager.isProductListingPage(location)) {
       const previousLocation = scrollManager.getPreviousLocation();
+      console.log('Previous location:', previousLocation);
       
       // Check if we're coming back from a product detail page
       if (scrollManager.isProductDetailPage(previousLocation)) {
         const savedPageState = scrollManager.getPageState(location);
+        console.log('Saved page state:', savedPageState);
         
         if (savedPageState && savedPageState.currentPage !== currentPage) {
+          console.log('Restoring pagination from', currentPage, 'to', savedPageState.currentPage);
           setCurrentPage(savedPageState.currentPage);
           hasRestoredRef.current = true;
         }
