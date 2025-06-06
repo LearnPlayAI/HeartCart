@@ -81,7 +81,7 @@ const CartDrawer = () => {
           } else {
             console.log('Cart list ref not found');
           }
-        }, 200); // Wait for cart drawer animation and DOM render
+        }, 100); // Reduced delay for faster scroll response
         
         return () => clearTimeout(scrollTimer);
       }

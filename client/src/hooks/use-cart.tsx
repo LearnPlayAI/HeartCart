@@ -127,11 +127,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         setIsOpen(true);
         setRecentlyAddedItemId(variables.productId);
         
-        // Auto-close cart after 2 seconds and clear highlight
+        // Auto-close cart after 5 seconds and clear highlight
         setTimeout(() => {
           setRecentlyAddedItemId(null);
           setIsOpen(false);
-        }, 2000);
+        }, 5000);
       }
     },
     onError: (error) => {
