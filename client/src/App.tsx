@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { CartProvider } from "@/hooks/use-cart";
 import { AuthProvider } from "@/hooks/use-auth";
 import { FavouritesProvider } from "@/hooks/use-favourites";
+import { ScrollManager } from "@/components/scroll-manager";
 import { ProtectedRoute } from "@/lib/protected-route";
 import Header from "@/components/layout/header";
 import Footer from "@/components/layout/footer";
@@ -136,9 +137,10 @@ function App() {
       <FavouritesProvider>
         <CartProvider>
           <TooltipProvider>
-            <Toaster />
-            <SessionExpiryWarning />
-            <div className="flex flex-col min-h-screen">
+            <ScrollManager>
+              <Toaster />
+              <SessionExpiryWarning />
+              <div className="flex flex-col min-h-screen">
             <Switch>
               {/* Admin Routes - No header/footer */}
               <AdminProtectedRoute path="/admin" component={AdminDashboard} />
@@ -270,6 +272,7 @@ function App() {
               </Route>
             </Switch>
           </div>
+            </ScrollManager>
         </TooltipProvider>
       </CartProvider>
       </FavouritesProvider>
