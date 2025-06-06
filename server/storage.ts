@@ -869,8 +869,6 @@ export class DatabaseStorage implements IStorage {
     options?: { includeInactive?: boolean },
   ): Promise<{ category: Category; children: Category[] } | undefined> {
     try {
-      console.log(`getCategoryWithChildren called for categoryId: ${categoryId}, options:`, options);
-      
       // Build conditions for parent category
       const categoryConditions: SQL<unknown>[] = [
         eq(categories.id, categoryId),
@@ -879,10 +877,7 @@ export class DatabaseStorage implements IStorage {
       // Only filter by isActive if we're not including inactive categories
       if (!options?.includeInactive) {
         categoryConditions.push(eq(categories.isActive, true));
-        console.log(`Adding isActive=true condition for parent category`);
       }
-
-      console.log(`Querying for parent category with conditions: categoryId=${categoryId}, includeInactive=${!!options?.includeInactive}`);
 
       // Get the category
       const [category] = await db
@@ -890,10 +885,7 @@ export class DatabaseStorage implements IStorage {
         .from(categories)
         .where(and(...categoryConditions));
 
-      console.log(`Parent category query result:`, category ? { id: category.id, name: category.name, isActive: category.isActive } : 'not found');
-
       if (!category) {
-        console.log(`Category ${categoryId} not found, returning undefined`);
         return undefined;
       }
 
@@ -905,10 +897,7 @@ export class DatabaseStorage implements IStorage {
       // Only filter by isActive if we're not including inactive categories
       if (!options?.includeInactive) {
         childrenConditions.push(eq(categories.isActive, true));
-        console.log(`Adding isActive=true condition for child categories`);
       }
-
-      console.log(`Querying for child categories with parentId=${categoryId}, includeInactive=${!!options?.includeInactive}`);
 
       // Get the children
       const children = await db
@@ -916,10 +905,6 @@ export class DatabaseStorage implements IStorage {
         .from(categories)
         .where(and(...childrenConditions))
         .orderBy(asc(categories.displayOrder), asc(categories.name));
-
-      console.log(`Child categories query result: found ${children.length} children:`, 
-        children.map(c => ({ id: c.id, name: c.name, isActive: c.isActive, parentId: c.parentId }))
-      );
 
       return { category, children };
     } catch (error) {
@@ -1344,24 +1329,14 @@ export class DatabaseStorage implements IStorage {
       // Add category filter if provided
       if (categoryId) {
         try {
-          console.log(`Starting category filtering for categoryId: ${categoryId}`);
-          
           // Get the category with its children to support parent category filtering
           const categoryWithChildren = await this.getCategoryWithChildren(
             categoryId,
             { includeInactive: options?.includeCategoryInactive }
           );
 
-          console.log(`getCategoryWithChildren result:`, {
-            found: !!categoryWithChildren,
-            category: categoryWithChildren?.category,
-            childrenCount: categoryWithChildren?.children?.length || 0,
-            children: categoryWithChildren?.children?.map(c => ({ id: c.id, name: c.name })) || []
-          });
-
           // If category doesn't exist or is inactive, return empty result
           if (!categoryWithChildren) {
-            console.log(`Category ${categoryId} not found or inactive, returning empty result`);
             return { products: [], total: 0 };
           }
 
