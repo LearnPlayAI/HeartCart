@@ -13,7 +13,7 @@ type CartContextType = {
   isOpen: boolean;
   openCart: () => void;
   closeCart: () => void;
-  addItem: (item: Omit<CartItemWithDiscounts, 'id' | 'discountData' | 'totalDiscount' | 'itemPrice'>) => void;
+  addItem: (item: { productId: number; quantity: number; itemPrice: number; attributeSelections: Record<string, string> | null }) => void;
   updateItemQuantity: (id: number, quantity: number) => void;
   removeItem: (id: number) => void;
   removeAttributeOption: (cartItemId: number, attributeName: string, attributeValue: string) => void;
@@ -265,7 +265,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const closeCart = () => setIsOpen(false);
   
   // Clean addItem implementation that extracts only what the server needs
-  const addItem = (item: Omit<CartItemWithDiscounts, 'id' | 'discountData' | 'totalDiscount'> & { itemPrice: number }) => {
+  const addItem = (item: { productId: number; quantity: number; itemPrice: number; attributeSelections: Record<string, string> | null }) => {
     console.log('🔍 ADD ITEM DEBUG - Received item in cart hook:', item);
     console.log('🔍 ADD ITEM DEBUG - attributeSelections field:', item.attributeSelections);
     

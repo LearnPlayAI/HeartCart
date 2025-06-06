@@ -1297,14 +1297,17 @@ const ProductListing = () => {
                                     addItem({
                                       productId: product.id,
                                       quantity: 1,
+                                      itemPrice: cartPricing,
                                       attributeSelections: {}
                                     });
                                   } catch (error) {
                                     console.error('Error checking product attributes:', error);
                                     // Fallback: add to cart anyway
+                                    const fallbackCartPricing = getCartPrice(product.price, product.salePrice, undefined);
                                     addItem({
                                       productId: product.id,
                                       quantity: 1,
+                                      itemPrice: fallbackCartPricing,
                                       attributeSelections: {}
                                     });
                                   }
