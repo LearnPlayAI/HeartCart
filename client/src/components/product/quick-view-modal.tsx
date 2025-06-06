@@ -15,6 +15,7 @@ import { StandardApiResponse } from '@/types/api';
 import { Product } from '@shared/schema';
 import { ensureValidImageUrl } from '@/utils/file-manager';
 import { calculateProductPricing } from '@/utils/pricing';
+import DisclaimersModal from './disclaimers-modal';
 import { 
   Attribute, 
   AttributeOption, 
@@ -40,6 +41,13 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
   const [quantity, setQuantity] = useState(1);
   const [selectedAttributes, setSelectedAttributes] = useState<Record<number, string>>({});
   const [currentImage, setCurrentImage] = useState<string | null>(null);
+  const [disclaimersModalOpen, setDisclaimersModalOpen] = useState(false);
+  const [pendingCartItem, setPendingCartItem] = useState<{
+    productId: number;
+    quantity: number;
+    itemPrice: number;
+    attributeSelections: Record<string, string>;
+  } | null>(null);
   const { addItem } = useCart();
   const [, navigate] = useLocation();
   const { toast } = useToast();
@@ -311,17 +319,31 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
       });
     }
     
-    addItem({
+    // Prepare cart item and show disclaimers modal
+    setPendingCartItem({
       productId: product.id,
       quantity: quantity,
       itemPrice: cartPrice,
       attributeSelections
     });
-    
+    setDisclaimersModalOpen(true);
+  };
 
-    
-    // Close the modal after adding to cart
-    onOpenChange(false);
+  const handleAcceptDisclaimers = () => {
+    if (pendingCartItem) {
+      addItem(pendingCartItem);
+      toast({
+        title: "Added to cart",
+        description: `${product.name} has been added to your cart.`,
+        variant: "default",
+        duration: 3000,
+      });
+      
+      // Reset state and close modals
+      setPendingCartItem(null);
+      setDisclaimersModalOpen(false);
+      onOpenChange(false);
+    }
   };
   
   // Calculate promotional price if available
@@ -573,5 +595,14 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
         </div>
       </DialogContent>
     </Dialog>
+
+    {/* Disclaimers Modal */}
+    <DisclaimersModal
+      open={disclaimersModalOpen}
+      onOpenChange={setDisclaimersModalOpen}
+      onAccept={handleAcceptDisclaimers}
+      productName={product.name}
+    />
+    </>
   );
 }

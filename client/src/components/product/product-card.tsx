@@ -396,6 +396,14 @@ const ProductCard: React.FC<ProductCardProps> = ({
         onOpenChange={setQuickViewOpen}
         productId={product.id}
       />
+      
+      {/* Disclaimers Modal */}
+      <DisclaimersModal
+        open={disclaimersModalOpen}
+        onOpenChange={setDisclaimersModalOpen}
+        onAccept={handleAcceptDisclaimers}
+        productName={product.name}
+      />
     </div>
   );
 };
