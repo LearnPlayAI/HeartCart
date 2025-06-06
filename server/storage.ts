@@ -1366,6 +1366,39 @@ export class DatabaseStorage implements IStorage {
           );
           throw categoryError; // Rethrow so the route handler can catch it and send a proper error response
         }
+      } else if (options?.parentCategoryId) {
+        // Handle parent category filtering when no specific category is provided
+        try {
+          // Get the parent category with its children
+          const parentCategoryWithChildren = await this.getCategoryWithChildren(
+            options.parentCategoryId,
+            { includeInactive: options?.includeCategoryInactive }
+          );
+
+          // If parent category doesn't exist or is inactive, return empty result
+          if (!parentCategoryWithChildren) {
+            return { products: [], total: 0 };
+          }
+
+          // Collect all child category IDs (not including the parent itself for this filter)
+          const childCategoryIds = parentCategoryWithChildren.children.map(child => child.id);
+          
+          console.log(`Parent category filtering: parentCategoryId=${options.parentCategoryId}, childCategoryIds=[${childCategoryIds.join(', ')}]`);
+          
+          // Filter products by any of the child category IDs
+          if (childCategoryIds.length > 0) {
+            conditions.push(inArray(products.categoryId, childCategoryIds));
+          } else {
+            // If parent has no children, return empty result
+            return { products: [], total: 0 };
+          }
+        } catch (categoryError) {
+          console.error(
+            `Error checking parent category ${options.parentCategoryId} and children:`,
+            categoryError,
+          );
+          throw categoryError; // Rethrow so the route handler can catch it and send a proper error response
+        }
       }
 
       // Build final conditions for both count and data queries
