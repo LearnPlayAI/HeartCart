@@ -2520,7 +2520,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const { AIImageDownloader } = await import('./ai-image-downloader');
         
         // Extract image URLs from the supplier page
-        const imageUrls = await AIImageDownloader.extractImagesFromUrl(supplierUrl);
+        let imageUrls;
+        try {
+          imageUrls = await AIImageDownloader.extractImagesFromUrl(supplierUrl);
+        } catch (extractError: any) {
+          // Handle specific extraction errors with detailed messages
+          return res.json({
+            success: false,
+            message: extractError.message || "Failed to extract images from supplier page",
+            images: [],
+            errors: [extractError.message || "Failed to access the supplier website"]
+          });
+        }
         
         if (imageUrls.length === 0) {
           return res.json({
@@ -2545,7 +2556,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         });
         
-      } catch (error) {
+      } catch (error: any) {
         console.error('AI Image Extract Error:', error);
         return res.status(500).json({
           success: false,
