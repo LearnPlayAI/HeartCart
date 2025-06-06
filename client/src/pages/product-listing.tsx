@@ -1189,8 +1189,9 @@ const ProductListing = () => {
                                   e.stopPropagation();
                                   addItem({
                                     productId: product.id,
-                                    product,
-                                    quantity: 1
+                                    quantity: 1,
+                                    itemPrice: product.salePrice || product.price,
+                                    attributeSelections: {}
                                   });
                                   
                                 }}
