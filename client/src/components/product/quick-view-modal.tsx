@@ -362,6 +362,7 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
   const adjustedPrice = promotionInfo ? calculatePromotionalPrice(basePrice, promotionInfo) : basePrice;
   
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[95vw] sm:max-w-[600px] lg:max-w-[800px] max-h-[90vh] overflow-y-auto" aria-describedby="quick-view-description">
         <DialogHeader>
