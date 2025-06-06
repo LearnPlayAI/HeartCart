@@ -164,14 +164,6 @@ export const orders = pgTable("orders", {
   
   // EFT Proof of Payment
   eftPop: text("eftPop"), // File path to the EFT proof of payment PDF document
-  
-  // PUDO Locker Information
-  selectedLockerId: integer("selectedLockerId"),
-  lockerCode: text("lockerCode"), // PUDO locker code like "CG54"
-  lockerName: text("lockerName"), // PUDO locker name for display
-  lockerAddress: text("lockerAddress"), // Full address of selected locker
-  lockerOpeningHours: jsonb("lockerOpeningHours"), // Store opening hours JSON
-  maxDeliveryDistance: doublePrecision("maxDeliveryDistance"), // User's preferred max distance in KM
 });
 
 // Order items table - camelCase version with full attribute support
@@ -325,36 +317,6 @@ export const batchUploadErrors = pgTable("batchUploadErrors", {
   type: varchar("type", { length: 50 }).notNull(),
   severity: varchar("severity", { length: 50 }).notNull(),
   createdAt: text("createdAt").default(String(new Date().toISOString())).notNull(),
-});
-
-// =============================================================================
-// PUDO LOCKER SYSTEM TABLES
-// =============================================================================
-
-// PUDO Lockers table - caches all locker data from PUDO API
-export const pudoLockers = pgTable("pudoLockers", {
-  id: serial("id").primaryKey(),
-  code: text("code").notNull().unique(), // PUDO locker code like "CG54"
-  name: text("name").notNull(), // Display name like "Sasol Rivonia Uplifted"
-  latitude: doublePrecision("latitude").notNull(),
-  longitude: doublePrecision("longitude").notNull(),
-  address: text("address").notNull(),
-  town: text("town"),
-  postalCode: text("postalCode"),
-  province: text("province"), // Added province for location matching
-  openingHours: jsonb("openingHours").notNull(), // Array of opening hours by day
-  lockerType: jsonb("lockerType"), // Type information from PUDO
-  availableBoxTypes: jsonb("availableBoxTypes"), // Array of available box types
-  isActive: boolean("isActive").default(true).notNull(),
-  lastSyncedAt: text("lastSyncedAt").default(String(new Date().toISOString())).notNull(),
-  createdAt: text("createdAt").default(String(new Date().toISOString())).notNull(),
-  updatedAt: text("updatedAt").default(String(new Date().toISOString())).notNull(),
-}, (table) => {
-  return {
-    codeIdx: index("pudo_lockers_code_idx").on(table.code),
-    locationIdx: index("pudo_lockers_location_idx").on(table.latitude, table.longitude),
-    townProvinceIdx: index("pudo_lockers_town_province_idx").on(table.town, table.province),
-  };
 });
 
 // =============================================================================
@@ -891,16 +853,7 @@ export const ordersRelations = relations(orders, ({ one, many }) => ({
     fields: [orders.userId],
     references: [users.id]
   }),
-  orderItems: many(orderItems),
-  selectedLocker: one(pudoLockers, {
-    fields: [orders.selectedLockerId],
-    references: [pudoLockers.id]
-  })
-}));
-
-// PUDO Lockers relations
-export const pudoLockersRelations = relations(pudoLockers, ({ many }) => ({
-  orders: many(orders)
+  orderItems: many(orderItems)
 }));
 
 // Order items relations
@@ -1249,17 +1202,6 @@ export const insertSystemSettingSchema = createInsertSchema(systemSettings);
 // Export ProductDraft type
 export type ProductDraft = typeof productDrafts.$inferSelect;
 export type InsertProductDraft = z.infer<typeof insertProductDraftSchema>;
-
-// PUDO Locker types and schemas
-export type PudoLocker = typeof pudoLockers.$inferSelect;
-export type InsertPudoLocker = typeof pudoLockers.$inferInsert;
-
-export const insertPudoLockerSchema = createInsertSchema(pudoLockers).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-  lastSyncedAt: true,
-});
 
 // Credit system relations
 export const customerCreditsRelations = relations(customerCredits, ({ one, many }) => ({

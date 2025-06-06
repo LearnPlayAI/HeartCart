@@ -48,12 +48,6 @@ const checkoutSchema = z.object({
     required_error: "Please select a shipping method"
   }),
   
-  // PUDO Locker Selection
-  selectedLockerId: z.number().optional(),
-  lockerCode: z.string().optional(),
-  lockerName: z.string().optional(),
-  lockerAddress: z.string().optional(),
-  
   // Payment Method
   paymentMethod: z.enum(["eft"], {
     required_error: "Please select a payment method"
@@ -102,13 +96,6 @@ export default function CheckoutPage() {
   const queryClient = useQueryClient();
   const [isProcessing, setIsProcessing] = useState(false);
   const { creditBalance, formattedBalance, balanceLoading, transactions } = useCredits();
-  
-  // PUDO locker state
-  const [availableLockers, setAvailableLockers] = useState<any[]>([]);
-  const [lockersLoading, setLockersLoading] = useState(false);
-  const [selectedLocker, setSelectedLocker] = useState<any>(null);
-  const [searchDistance, setSearchDistance] = useState(10);
-  const [lockerSuggestion, setLockerSuggestion] = useState<string>("");
 
   // Fetch current user details
   const { data: user } = useQuery({
@@ -197,73 +184,9 @@ export default function CheckoutPage() {
       shippingMethod: "pudo",
       paymentMethod: "eft",
       specialInstructions: "",
-      saveDetails: false,
-      maxDeliveryDistance: 10
+      saveDetails: false
     }
   });
-
-  // Function to find PUDO lockers based on user city and province
-  const findPudoLockers = async (address: string) => {
-    setLockersLoading(true);
-    try {
-      const response = await apiRequest('POST', '/api/pudo/find-lockers', { address });
-      
-      if (response.success) {
-        setAvailableLockers(response.data.lockers);
-        setLockerSuggestion("");
-        
-        if (response.data.lockers.length > 0) {
-          toast({
-            title: "PUDO Lockers Found",
-            description: `Found ${response.data.lockers.length} lockers in your area`
-          });
-        } else {
-          toast({
-            title: "No Lockers Found",
-            description: "No PUDO lockers found in your area.",
-            variant: "destructive"
-          });
-        }
-      }
-    } catch (error) {
-      console.error('Failed to find PUDO lockers:', error);
-      toast({
-        title: "Error Finding Lockers",
-        description: "Failed to find PUDO lockers. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setLockersLoading(false);
-    }
-  };
-
-  // Auto-find lockers when address changes
-  const watchedAddress = form.watch(['addressLine1', 'city', 'province']);
-  useEffect(() => {
-    const [addressLine1, city, province] = watchedAddress;
-    if (addressLine1 && city && province) {
-      const fullAddress = `${addressLine1}, ${city}, ${province}`;
-      const timeoutId = setTimeout(() => {
-        findPudoLockers(fullAddress);
-      }, 1000); // Debounce API calls
-      
-      return () => clearTimeout(timeoutId);
-    }
-  }, [watchedAddress]);
-
-  // Handle locker selection
-  const handleLockerSelection = (locker: any) => {
-    setSelectedLocker(locker);
-    form.setValue('selectedLockerId', locker.id);
-    form.setValue('lockerCode', locker.code);
-    form.setValue('lockerName', locker.name);
-    form.setValue('lockerAddress', locker.address);
-    
-    toast({
-      title: "PUDO Locker Selected",
-      description: `Selected ${locker.name} - ${locker.distance}km away`
-    });
-  };
 
   // Force cart refetch on component mount
   useEffect(() => {
@@ -705,162 +628,6 @@ export default function CheckoutPage() {
                 </RadioGroup>
               </CardContent>
             </Card>
-
-            {/* PUDO Locker Selection */}
-            {selectedShippingMethod === "pudo" && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <MapPin className="h-5 w-5" />
-                    Select PUDO Locker
-                  </CardTitle>
-                  <CardDescription>
-                    Choose your preferred collection locker. Lockers are automatically found based on your address.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Distance Controls */}
-                  <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
-                    <Label htmlFor="maxDistance" className="text-sm font-medium">
-                      Max Distance:
-                    </Label>
-                    <select
-                      id="maxDistance"
-                      value={searchDistance}
-                      onChange={(e) => {
-                        const newDistance = parseInt(e.target.value);
-                        setSearchDistance(newDistance);
-                        form.setValue('maxDeliveryDistance', newDistance);
-                        
-                        // Re-search if address is available
-                        const addressLine1 = form.getValues('addressLine1');
-                        const city = form.getValues('city');
-                        const province = form.getValues('province');
-                        if (addressLine1 && city && province) {
-                          const fullAddress = `${addressLine1}, ${city}, ${province}`;
-                          findPudoLockers(fullAddress, newDistance);
-                        }
-                      }}
-                      className="px-3 py-1 border rounded-md text-sm"
-                    >
-                      <option value={5}>5km</option>
-                      <option value={10}>10km</option>
-                      <option value={25}>25km</option>
-                      <option value={50}>50km</option>
-                      <option value={100}>100km</option>
-                    </select>
-                    
-                    {lockersLoading && (
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <div className="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full"></div>
-                        Finding lockers...
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Suggestion Message */}
-                  {lockerSuggestion && (
-                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
-                      {lockerSuggestion}
-                    </div>
-                  )}
-
-                  {/* Available Lockers */}
-                  {availableLockers.length > 0 ? (
-                    <div className="space-y-3">
-                      <div className="text-sm font-medium text-gray-700">
-                        Found {availableLockers.length} lockers within {searchDistance}km:
-                      </div>
-                      <RadioGroup
-                        value={selectedLocker?.id?.toString() || ""}
-                        onValueChange={(value) => {
-                          const locker = availableLockers.find(l => l.id.toString() === value);
-                          if (locker) handleLockerSelection(locker);
-                        }}
-                      >
-                        {availableLockers.map((locker) => (
-                          <div key={locker.id} className="border rounded-lg p-4 hover:bg-gray-50">
-                            <div className="flex items-start space-x-3">
-                              <RadioGroupItem 
-                                value={locker.id.toString()} 
-                                id={`locker-${locker.id}`}
-                                className="mt-1"
-                              />
-                              <Label 
-                                htmlFor={`locker-${locker.id}`} 
-                                className="flex-1 cursor-pointer"
-                              >
-                                <div className="space-y-2">
-                                  <div className="flex items-center justify-between">
-                                    <div className="font-medium text-gray-900">
-                                      {locker.name}
-                                    </div>
-                                    <div className="text-sm font-medium text-blue-600">
-                                      {locker.distanceText}
-                                    </div>
-                                  </div>
-                                  
-                                  <div className="text-sm text-gray-600">
-                                    <div className="flex items-start gap-1">
-                                      <MapPin className="h-3 w-3 mt-0.5 text-gray-400" />
-                                      {locker.address}
-                                    </div>
-                                  </div>
-                                  
-                                  <div className="text-xs text-gray-500">
-                                    Code: {locker.code}
-                                  </div>
-                                  
-                                  {locker.openingHours && locker.openingHours.length > 0 && (
-                                    <div className="text-xs text-gray-500">
-                                      <strong>Hours:</strong> {locker.openingHours[0]?.openTime} - {locker.openingHours[0]?.closeTime}
-                                    </div>
-                                  )}
-                                </div>
-                              </Label>
-                            </div>
-                          </div>
-                        ))}
-                      </RadioGroup>
-                    </div>
-                  ) : (
-                    !lockersLoading && (
-                      <div className="text-center py-8 text-gray-500">
-                        <MapPin className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-                        <div className="text-sm">
-                          {form.getValues('addressLine1') && form.getValues('city') ? 
-                            "No lockers found in your area. Try increasing the search distance." :
-                            "Enter your address above to find nearby PUDO lockers."
-                          }
-                        </div>
-                      </div>
-                    )
-                  )}
-
-                  {/* Selected Locker Summary */}
-                  {selectedLocker && (
-                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                      <div className="flex items-start gap-3">
-                        <div className="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                          <Package className="h-4 w-4 text-green-600" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="font-medium text-green-900">
-                            Selected: {selectedLocker.name}
-                          </div>
-                          <div className="text-sm text-green-700">
-                            {selectedLocker.address} • {selectedLocker.distanceText}
-                          </div>
-                          <div className="text-xs text-green-600 mt-1">
-                            Collection Code: {selectedLocker.code}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
 
             {/* Credit Application */}
             {creditBalance > 0 && (

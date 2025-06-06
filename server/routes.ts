@@ -48,7 +48,6 @@ import { adminRoutes } from "./admin-routes";
 import { registerAuthTestRoutes } from "./auth-test-routes";
 import { registerDatabaseTestRoutes } from "./database-test-routes";
 import { registerApiTestRoutes } from "./api-test-routes";
-import { pudoService } from "./pudo-service";
 import analyticsRoutes from "./analytics-routes";
 import favouritesRoutes from "./favourites-routes";
 import creditRoutes from "./credit-routes";
@@ -7014,127 +7013,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register supplier order management routes
   app.use('/api/admin/supplier-orders', supplierOrderRoutes);
-
-  // =============================================================================
-  // PUDO LOCKER INTEGRATION ROUTES
-  // =============================================================================
-
-  // Sync PUDO lockers from API (admin only)
-  app.post('/api/admin/pudo/sync', isAdmin, asyncHandler(async (req: Request, res: Response) => {
-    try {
-      const result = await pudoService.syncLockersFromApi();
-      res.json({
-        success: true,
-        data: {
-          message: `Successfully synced ${result.synced} lockers`,
-          synced: result.synced,
-          errors: result.errors
-        }
-      });
-    } catch (error) {
-      logger.error('Failed to sync PUDO lockers', { error });
-      res.status(500).json({
-        success: false,
-        error: {
-          message: error instanceof Error ? error.message : 'Failed to sync PUDO lockers'
-        }
-      });
-    }
-  }));
-
-  // Find nearest PUDO lockers for an address
-  app.post('/api/pudo/find-lockers', asyncHandler(async (req: Request, res: Response) => {
-    try {
-      const { address, maxDistance = 10 } = req.body;
-      
-      if (!address || typeof address !== 'string') {
-        return res.status(400).json({
-          success: false,
-          error: { message: 'Address is required' }
-        });
-      }
-
-      // Check if cache needs refresh and auto-sync if needed
-      const shouldRefresh = await pudoService.shouldRefreshCache();
-      if (shouldRefresh) {
-        logger.info('Auto-syncing PUDO lockers cache');
-        try {
-          await pudoService.syncLockersFromApi();
-        } catch (syncError) {
-          logger.warn('Failed to auto-sync PUDO cache, proceeding with existing data', { error: syncError });
-        }
-      }
-
-      const result = await pudoService.findLockersWithFallback(address, maxDistance, 100);
-      
-      res.json({
-        success: true,
-        data: {
-          lockers: result.lockers,
-          searchDistance: result.searchDistance,
-          suggestion: result.suggestion
-        }
-      });
-    } catch (error) {
-      logger.error('Failed to find PUDO lockers', { error, address: req.body.address });
-      res.status(500).json({
-        success: false,
-        error: {
-          message: error instanceof Error ? error.message : 'Failed to find PUDO lockers'
-        }
-      });
-    }
-  }));
-
-  // Get locker details by code
-  app.get('/api/pudo/locker/:code', asyncHandler(async (req: Request, res: Response) => {
-    try {
-      const { code } = req.params;
-      const locker = await pudoService.getLockerByCode(code);
-      
-      if (!locker) {
-        return res.status(404).json({
-          success: false,
-          error: { message: 'Locker not found' }
-        });
-      }
-      
-      res.json({
-        success: true,
-        data: locker
-      });
-    } catch (error) {
-      logger.error('Failed to get locker details', { error, code: req.params.code });
-      res.status(500).json({
-        success: false,
-        error: {
-          message: 'Failed to get locker details'
-        }
-      });
-    }
-  }));
-
-  // Check cache status (admin only)
-  app.get('/api/admin/pudo/cache-status', isAdmin, asyncHandler(async (req: Request, res: Response) => {
-    try {
-      const shouldRefresh = await pudoService.shouldRefreshCache();
-      res.json({
-        success: true,
-        data: {
-          shouldRefresh,
-          message: shouldRefresh ? 'Cache needs refresh' : 'Cache is up to date'
-        }
-      });
-    } catch (error) {
-      logger.error('Failed to check PUDO cache status', { error });
-      res.status(500).json({
-        success: false,
-        error: {
-          message: 'Failed to check cache status'
-        }
-      });
-    }
-  }));
 
   const httpServer = createServer(app);
   return httpServer;
