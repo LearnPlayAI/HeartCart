@@ -20,6 +20,7 @@ type CartContextType = {
   clearCart: () => void;
   cartSummary: CartSummary;
   isLoading: boolean;
+  recentlyAddedItemId: number | null;
 };
 
 const defaultCartContext: CartContextType = {
@@ -38,13 +39,15 @@ const defaultCartContext: CartContextType = {
     totalDiscount: 0,
     finalTotal: 0
   },
-  isLoading: false
+  isLoading: false,
+  recentlyAddedItemId: null
 };
 
 const CartContext = createContext<CartContextType>(defaultCartContext);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [recentlyAddedItemId, setRecentlyAddedItemId] = useState<number | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
@@ -115,10 +118,20 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         throw error;
       }
     },
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       // Only invalidate queries if not redirected for auth
       if (!data?.redirected) {
         queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
+        
+        // Auto-open cart and highlight the newly added item
+        setIsOpen(true);
+        setRecentlyAddedItemId(variables.productId);
+        
+        // Auto-close cart after 2 seconds and clear highlight
+        setTimeout(() => {
+          setRecentlyAddedItemId(null);
+          setIsOpen(false);
+        }, 2000);
       }
     },
     onError: (error) => {
@@ -301,7 +314,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         removeAttributeOption,
         clearCart,
         cartSummary,
-        isLoading
+        isLoading,
+        recentlyAddedItemId
       }}
     >
       {children}

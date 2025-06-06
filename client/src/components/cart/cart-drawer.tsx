@@ -21,7 +21,8 @@ const CartDrawer = () => {
     removeItem,
     removeAttributeOption,
     cartSummary,
-    isLoading
+    isLoading,
+    recentlyAddedItemId
   } = useCart();
   
   const { creditBalance, formattedBalance, transactions } = useCredits();
