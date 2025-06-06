@@ -24,6 +24,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
+import DisclaimersModal from '@/components/product/disclaimers-modal';
 import { 
   Accordion, 
   AccordionContent, 
@@ -106,6 +107,16 @@ const ProductListing = () => {
   // Quick view modal state
   const [quickViewOpen, setQuickViewOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  
+  // Disclaimers modal state
+  const [disclaimersModalOpen, setDisclaimersModalOpen] = useState(false);
+  const [pendingCartItem, setPendingCartItem] = useState<{
+    productId: number;
+    quantity: number;
+    itemPrice: number;
+    attributeSelections: Record<string, string>;
+    productName: string;
+  } | null>(null);
   const [priceRange, setPriceRange] = useState([0, 5000]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(searchParams.get('category'));
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(() => {
@@ -417,6 +428,29 @@ const ProductListing = () => {
       newSearchParams.delete('includeChildren');
     }
     setLocation(`/products?${newSearchParams.toString()}`);
+  };
+
+  // Handle disclaimer acceptance
+  const handleAcceptDisclaimers = () => {
+    if (pendingCartItem) {
+      addItem({
+        productId: pendingCartItem.productId,
+        quantity: pendingCartItem.quantity,
+        itemPrice: pendingCartItem.itemPrice,
+        attributeSelections: pendingCartItem.attributeSelections
+      });
+      
+      toast({
+        title: "Added to cart",
+        description: `${pendingCartItem.productName} has been added to your cart.`,
+        variant: "default",
+        duration: 3000,
+      });
+      
+      // Reset state and close modal
+      setPendingCartItem(null);
+      setDisclaimersModalOpen(false);
+    }
   };
   
   // Handle attribute filter changes
@@ -1278,7 +1312,7 @@ const ProductListing = () => {
                                       }
                                     }
                                     
-                                    // If no required attributes, add directly to cart
+                                    // If no required attributes, show disclaimers modal before adding to cart
                                     // Calculate correct promotional price for cart
                                     const productPromotion = activePromotions
                                       .flatMap((promo: any) => promo.products?.map((pp: any) => ({ ...pp, promotion: promo })) || [])
@@ -1294,22 +1328,27 @@ const ProductListing = () => {
 
                                     const cartPricing = getCartPrice(product.price, product.salePrice, promotionInfo || undefined);
                                     
-                                    addItem({
+                                    // Prepare cart item and show disclaimers modal
+                                    setPendingCartItem({
                                       productId: product.id,
                                       quantity: 1,
                                       itemPrice: cartPricing,
-                                      attributeSelections: {}
+                                      attributeSelections: {},
+                                      productName: product.name
                                     });
+                                    setDisclaimersModalOpen(true);
                                   } catch (error) {
                                     console.error('Error checking product attributes:', error);
-                                    // Fallback: add to cart anyway
+                                    // Fallback: show disclaimers modal before adding to cart
                                     const fallbackCartPricing = getCartPrice(product.price, product.salePrice, undefined);
-                                    addItem({
+                                    setPendingCartItem({
                                       productId: product.id,
                                       quantity: 1,
                                       itemPrice: fallbackCartPricing,
-                                      attributeSelections: {}
+                                      attributeSelections: {},
+                                      productName: product.name
                                     });
+                                    setDisclaimersModalOpen(true);
                                   }
                                 }}
                               >
@@ -1387,6 +1426,13 @@ const ProductListing = () => {
           productId={selectedProduct.id}
         />
       )}
+
+      {/* Disclaimers Modal */}
+      <DisclaimersModal
+        open={disclaimersModalOpen}
+        onOpenChange={setDisclaimersModalOpen}
+        onAccept={handleAcceptDisclaimers}
+      />
     </>
   );
 };
