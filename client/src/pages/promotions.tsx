@@ -4,6 +4,7 @@ import { Clock, Tag, Zap, ArrowLeft } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import ProductCard from '@/components/product/product-card';
 import { Link } from 'wouter';
+import { useProductListingScroll } from '@/hooks/use-scroll-management';
 import type { Product } from '@shared/schema';
 
 interface PromotionProduct {
@@ -48,6 +49,8 @@ const getTimeRemaining = (endDate: string) => {
 };
 
 function PromotionsPage() {
+  useProductListingScroll();
+  
   // Fetch active promotions with their products using the exact same API as flash deals
   interface ApiResponse {
     success: boolean;
