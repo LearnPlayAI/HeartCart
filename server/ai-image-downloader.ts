@@ -36,13 +36,46 @@ export class AIImageDownloader {
    */
   static async extractImagesFromUrl(supplierUrl: string): Promise<string[]> {
     try {
-      const response = await axios.get(supplierUrl, {
-        timeout: this.TIMEOUT,
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        }
-      });
+      // Enhanced headers to mimic a real browser more closely
+      const headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+        'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+        'Sec-Ch-Ua-Mobile': '?0',
+        'Sec-Ch-Ua-Platform': '"Windows"',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Sec-Fetch-User': '?1',
+        'Upgrade-Insecure-Requests': '1'
+      };
+
+      // Try multiple strategies with different headers
+      let response;
+      try {
+        response = await axios.get(supplierUrl, {
+          timeout: this.TIMEOUT,
+          headers,
+          maxRedirects: 5,
+          validateStatus: (status) => status < 400
+        });
+      } catch (firstError: any) {
+        // Fallback with simpler headers
+        logger.warn('First attempt failed, trying with simpler headers:', firstError.message);
+        response = await axios.get(supplierUrl, {
+          timeout: this.TIMEOUT,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (compatible; ImageBot/1.0)',
+            'Accept': 'text/html,*/*'
+          },
+          maxRedirects: 5,
+          validateStatus: (status) => status < 400
+        });
+      }
 
       const html = response.data;
       const imageUrls: string[] = [];
@@ -83,9 +116,21 @@ export class AIImageDownloader {
 
       // Remove duplicates based on filename and return
       return this.deduplicateByFilename(imageUrls);
-    } catch (error) {
+    } catch (error: any) {
       logger.error('Error extracting images from URL:', error);
-      return [];
+      
+      // Provide more specific error information
+      if (error.response?.status === 403) {
+        throw new Error('Website blocked access - the supplier website has anti-bot protection that prevents automatic image extraction');
+      } else if (error.response?.status === 404) {
+        throw new Error('Page not found - please check the supplier URL is correct');
+      } else if (error.code === 'ENOTFOUND') {
+        throw new Error('Cannot reach website - please check the supplier URL is valid');
+      } else if (error.code === 'ETIMEDOUT') {
+        throw new Error('Request timed out - the supplier website is taking too long to respond');
+      }
+      
+      throw new Error(`Failed to extract images: ${error.message || 'Unknown error occurred'}`);
     }
   }
 

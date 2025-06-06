@@ -521,7 +521,7 @@ export const DraftDashboard: React.FC = () => {
             <div>
               <CardTitle>All Product Drafts</CardTitle>
               <CardDescription>
-                {filteredDrafts.length} {filteredDrafts.length === 1 ? 'draft' : 'drafts'} found
+                {totalFilteredDrafts} {totalFilteredDrafts === 1 ? 'draft' : 'drafts'} found
               </CardDescription>
             </div>
             <div className="flex items-center space-x-4">
