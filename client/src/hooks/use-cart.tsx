@@ -261,7 +261,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       productId: item.productId,
       quantity: item.quantity,
       itemPrice: item.itemPrice,
-      attributeSelections: item.attributeSelections
+      attributeSelections: item.attributeSelections || {} // Ensure it's always an object, never null
     };
     
     console.log('🔍 ADD ITEM DEBUG - Sending to mutation:', cartItemData);
