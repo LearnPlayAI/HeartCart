@@ -118,6 +118,48 @@ const ProductListing = () => {
   const [page, setPage] = useState(parseInt(searchParams.get('page') || '1'));
   const limit = 20;
   
+  // Debug pagination state
+  useEffect(() => {
+    console.log('Product listing page state:', {
+      page,
+      urlPage: searchParams.get('page'),
+      location: window.location.href
+    });
+  }, [page, searchParams]);
+
+  // Restore pagination state when returning from product detail pages
+  useEffect(() => {
+    const savedPage = sessionStorage.getItem('productListingPage');
+    const savedScroll = sessionStorage.getItem('productListingScrollPosition');
+    
+    console.log('Checking for saved pagination state:', { savedPage, savedScroll });
+    
+    if (savedPage && parseInt(savedPage) > 1) {
+      const targetPage = parseInt(savedPage);
+      console.log('Restoring pagination to page:', targetPage);
+      
+      // Update URL to match restored page
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.set('page', targetPage.toString());
+      window.history.replaceState({}, '', newUrl.toString());
+      
+      // Update component state
+      setPage(targetPage);
+      
+      // Restore scroll position after a brief delay
+      if (savedScroll) {
+        setTimeout(() => {
+          console.log('Restoring scroll position to:', savedScroll);
+          window.scrollTo(0, parseInt(savedScroll));
+        }, 100);
+      }
+      
+      // Clear saved state after restoration
+      sessionStorage.removeItem('productListingPage');
+      sessionStorage.removeItem('productListingScrollPosition');
+    }
+  }, []); // Run only on mount
+  
   // Initialize scroll management
   useProductListingScroll();
   
@@ -988,7 +1030,17 @@ const ProductListing = () => {
                       <div key={product.id} className="bg-white rounded-lg shadow-md overflow-hidden">
                         <div className="flex flex-col sm:flex-row">
                           <div className="w-full sm:w-1/4">
-                            <Link href={`/product/${product.slug}`} className="block">
+                            <Link 
+                              href={`/product/${product.slug}`} 
+                              className="block"
+                              onClick={() => {
+                                // Save current pagination state before navigating
+                                const currentPage = parseInt(searchParams.get('page') || '1');
+                                sessionStorage.setItem('productListingPage', currentPage.toString());
+                                sessionStorage.setItem('productListingScrollPosition', window.scrollY.toString());
+                                console.log('Saved pagination state on product click:', { page: currentPage, scroll: window.scrollY });
+                              }}
+                            >
                               <img 
                                 src={product.imageUrl || ''} 
                                 alt={product.name} 
@@ -998,7 +1050,17 @@ const ProductListing = () => {
                           </div>
                           <div className="w-full sm:w-3/4 p-4 flex flex-col justify-between">
                             <div>
-                              <Link href={`/product/${product.slug}`} className="block">
+                              <Link 
+                                href={`/product/${product.slug}`} 
+                                className="block"
+                                onClick={() => {
+                                  // Save current pagination state before navigating
+                                  const currentPage = parseInt(searchParams.get('page') || '1');
+                                  sessionStorage.setItem('productListingPage', currentPage.toString());
+                                  sessionStorage.setItem('productListingScrollPosition', window.scrollY.toString());
+                                  console.log('Saved pagination state on product title click:', { page: currentPage, scroll: window.scrollY });
+                                }}
+                              >
                                 <h3 className="text-lg font-medium text-gray-800 hover:text-[#FF69B4] mb-2">
                                   {product.name}
                                 </h3>
