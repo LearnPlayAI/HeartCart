@@ -53,7 +53,6 @@ const checkoutSchema = z.object({
   lockerCode: z.string().optional(),
   lockerName: z.string().optional(),
   lockerAddress: z.string().optional(),
-  maxDeliveryDistance: z.number().default(10),
   
   // Payment Method
   paymentMethod: z.enum(["eft"], {

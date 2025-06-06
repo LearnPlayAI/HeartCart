@@ -10,6 +10,7 @@ const samplePudoLockers: InsertPudoLocker[] = [
     longitude: 28.0094,
     address: "375 Hendrik Potgieter Road, Randburg Square, Randburg, 2194, South Africa",
     town: "Randburg",
+    province: "Gauteng",
     postalCode: "2194",
     openingHours: [
       { day: "Monday", open_time: "08:00", close_time: "20:00" },

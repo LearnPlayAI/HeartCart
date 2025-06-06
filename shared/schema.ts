@@ -341,6 +341,7 @@ export const pudoLockers = pgTable("pudoLockers", {
   address: text("address").notNull(),
   town: text("town"),
   postalCode: text("postalCode"),
+  province: text("province"), // Added province for location matching
   openingHours: jsonb("openingHours").notNull(), // Array of opening hours by day
   lockerType: jsonb("lockerType"), // Type information from PUDO
   availableBoxTypes: jsonb("availableBoxTypes"), // Array of available box types
@@ -352,6 +353,7 @@ export const pudoLockers = pgTable("pudoLockers", {
   return {
     codeIdx: index("pudo_lockers_code_idx").on(table.code),
     locationIdx: index("pudo_lockers_location_idx").on(table.latitude, table.longitude),
+    townProvinceIdx: index("pudo_lockers_town_province_idx").on(table.town, table.province),
   };
 });
 
