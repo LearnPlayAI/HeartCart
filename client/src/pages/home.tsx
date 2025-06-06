@@ -8,9 +8,11 @@ import { CategorySidebarDrawer } from '@/components/ui/category-sidebar-drawer';
 import { Helmet } from 'react-helmet';
 import { useLocation } from 'wouter';
 import { AlertCircle } from 'lucide-react';
+import { useProductListingScroll } from '@/hooks/use-scroll-management';
 
 const Home = () => {
   const [, setLocation] = useLocation();
+  useProductListingScroll();
 
   return (
     <>

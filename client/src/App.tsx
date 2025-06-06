@@ -141,140 +141,140 @@ function App() {
               <Toaster />
               <SessionExpiryWarning />
               <div className="flex flex-col min-h-screen">
-            <Switch>
-              {/* Admin Routes - No header/footer */}
-              <AdminProtectedRoute path="/admin" component={AdminDashboard} />
-              <AdminProtectedRoute path="/admin/suppliers" component={AdminSuppliers} />
-              <AdminProtectedRoute path="/admin/suppliers/new" component={AddSupplier} />
-              <AdminProtectedRoute path="/admin/suppliers/:id/edit" component={EditSupplier} />
-              <AdminProtectedRoute path="/admin/catalogs" component={AdminCatalogs} />
-              <AdminProtectedRoute path="/admin/catalogs/new" component={AddCatalog} />
-              <AdminProtectedRoute path="/admin/catalogs/:id/edit" component={EditCatalog} />
-              <AdminProtectedRoute path="/admin/catalogs/:id/products" component={CatalogProducts} />
-              <AdminProtectedRoute path="/admin/products" component={AdminProducts} />
-              
-              {/* Original Product Routes (Commented out to use new implementation) */}
-              {/* <AdminProtectedRoute path="/admin/products/new" component={ProductEditPage} /> */}
-              {/* <AdminProtectedRoute path="/admin/products/:id/edit" component={ProductEditPage} /> */}
-              <AdminProtectedRoute path="/admin/products/:id/images" component={ProductImages} />
-              <AdminProtectedRoute path="/admin/products/:productId/attributes" component={ProductAttributes} />
-              
-              {/* New Product Management System */}
-              <AdminProtectedRoute path="/admin/product-management" component={React.lazy(() => import("@/pages/admin/product-management"))} />
-              <AdminProtectedRoute path="/admin/products/manage" component={React.lazy(() => import("@/pages/admin/product-management"))} />
-              <AdminProtectedRoute path="/admin/catalogs/:catalogId/products/manage" component={React.lazy(() => import("@/pages/admin/product-management"))} />
-              <AdminProtectedRoute path="/admin/product-wizard/:id?" component={React.lazy(() => import("@/pages/admin/product-wizard"))} />
-              <AdminProtectedRoute path="/admin/mass-upload" component={React.lazy(() => import("@/pages/admin/mass-upload"))} />
-              
-              {/* Redirect current routes to new product management */}
-              <Route path="/admin/products/new">
-                {() => {
-                  const [_, navigate] = useLocation();
-                  React.useEffect(() => {
-                    navigate('/admin/products/manage', { replace: true });
-                  }, [navigate]);
-                  return <div className="p-8 text-center">Redirecting to new product management system...</div>;
-                }}
-              </Route>
-              <Route path="/admin/products/:id/edit">
-                {(params) => {
-                  const [_, navigate] = useLocation();
-                  React.useEffect(() => {
-                    navigate(`/admin/products/manage/${params.id}`, { replace: true });
-                  }, [params.id, navigate]);
-                  return <div className="p-8 text-center">Redirecting to new product management system...</div>;
-                }}
-              </Route>
-              <Route path="/admin/catalogs/:catalogId/products/new">
-                {(params) => {
-                  const [_, navigate] = useLocation();
-                  React.useEffect(() => {
-                    navigate(`/admin/catalogs/${params.catalogId}/products/manage`, { replace: true });
-                  }, [params.catalogId, navigate]);
-                  return <div className="p-8 text-center">Redirecting to new product management system...</div>;
-                }}
-              </Route>
-              
-              {/* Product wizard routes */}
-              <AdminProtectedRoute path="/admin/products/wizard/:id?" component={ProductWizardPage} />
-              <Route path="/admin/catalogs/:catalogId/products/wizard">
-                {(params) => {
-                  const [_, navigate] = useLocation();
-                  React.useEffect(() => {
-                    navigate(`/admin/catalogs/${params.catalogId}/products/manage`, { replace: true });
-                  }, [params.catalogId, navigate]);
-                  return <div className="p-8 text-center">Redirecting to new product management system...</div>;
-                }}
-              </Route>
-              <AdminProtectedRoute path="/admin/categories" component={AdminCategories} />
-              <AdminProtectedRoute path="/admin/categories/:categoryId/attributes" component={CategoryAttributes} />
-              <AdminProtectedRoute path="/admin/category-attributes/:categoryId" component={CategoryAttributes} />
-              <AdminProtectedRoute path="/admin/global-attributes" component={GlobalAttributes} />
-              <AdminProtectedRoute path="/admin/attributes/new" component={AttributeEditor} />
-              <AdminProtectedRoute path="/admin/attributes/:id/edit" component={AttributeEditor} />
-              <AdminProtectedRoute path="/admin/attributes/:id/options" component={AttributeOptionEditor} />
-              <AdminProtectedRoute path="/admin/pricing" component={AdminPricing} />
-              <AdminProtectedRoute path="/admin/promotions" component={PromotionsPage} />
-              <AdminProtectedRoute path="/admin/promotions/:id/products" component={PromotionProductsPage} />
-              <AdminProtectedRoute path="/admin/orders" component={AdminOrders} />
-              <AdminProtectedRoute path="/admin/orders/:id" component={AdminOrderDetail} />
-              <AdminProtectedRoute path="/admin/supplier-orders" component={SupplierOrders} />
-              <AdminProtectedRoute path="/admin/users" component={UserAdminPageFixed} />
-              <AdminProtectedRoute path="/admin/ai-settings" component={AdminAISettings} />
-              <AdminProtectedRoute path="/admin/batch-upload" component={BatchUpload} />
-              <AdminProtectedRoute path="/admin/auth-test" component={AuthTestDashboard} />
-              
-              {/* Developer Routes - No header/footer */}
-              <DeveloperProtectedRoute path="/developer" component={DeveloperDashboard} />
-              <DeveloperProtectedRoute path="/developer/auth-tests" component={AuthTestsPage} />
-              <DeveloperProtectedRoute path="/developer/database-tests" component={DatabaseTestsPage} />
-              <DeveloperProtectedRoute path="/developer/url-handling-test" component={URLHandlingTestPage} />
-              <DeveloperProtectedRoute path="/developer/ai-tests" component={DeveloperDashboard} />
-              <DeveloperProtectedRoute path="/developer/storage-tests" component={StorageTestsPage} />
-              <DeveloperProtectedRoute path="/developer/api-tests" component={ApiTestsPage} />
-              <DeveloperProtectedRoute path="/developer/ecommerce-tests" component={DeveloperDashboard} />
-              <DeveloperProtectedRoute path="/developer/attribute-tests" component={DeveloperDashboard} />
-              <DeveloperProtectedRoute path="/developer/ui-tests" component={DeveloperDashboard} />
-              <DeveloperProtectedRoute path="/developer/performance-tests" component={DeveloperDashboard} />
-              <DeveloperProtectedRoute path="/developer/debug-console" component={DeveloperDashboard} />
-              
-              {/* Regular Routes - With header/footer */}
-              <Route path="*">
-                <div className="flex flex-col min-h-screen">
-                  <Header />
-                  <main className="flex-1">
-                    <Switch>
-                      <Route path="/"><Home /></Route>
-                      <Route path="/product/id/:id"><ProductDetail /></Route>
-                      <Route path="/product/:slug"><ProductDetail /></Route>
-                      <Route path="/category/:slug"><Category /></Route>
-                      <Route path="/flash-deals"><FlashDeals /></Route>
-                      <Route path="/promotions"><CustomerPromotionsPage /></Route>
-                      <Route path="/products"><ProductListing /></Route>
-                      <Route path="/products-example"><ProductsExample /></Route>
-                      <ProtectedRoute path="/checkout" component={Checkout} />
-                      <ProtectedRoute path="/order-confirmation/:id" component={OrderConfirmation} />
-                      <Route path="/search"><SearchResults /></Route>
-                      <ProtectedRoute path="/profile" component={Profile} />
-                      <ProtectedRoute path="/profile-settings" component={ProfileSettings} />
-                      <ProtectedRoute path="/my-orders" component={MyOrders} />
-                      <ProtectedRoute path="/my-favourites" component={MyFavourites} />
-                      <ProtectedRoute path="/credit-history" component={CreditHistory} />
-                      <ProtectedRoute path="/order/:id" component={OrderDetail} />
-                      <ProtectedRoute path="/orders/:id" component={OrderDetail} />
-                      <Route path="/auth"><AuthPage /></Route>
-                      <Route><NotFound /></Route>
-                    </Switch>
-                  </main>
-                  <Footer />
-                  <CartDrawer />
-                </div>
-              </Route>
-            </Switch>
-          </div>
+                <Switch>
+                  {/* Admin Routes - No header/footer */}
+                  <AdminProtectedRoute path="/admin" component={AdminDashboard} />
+                  <AdminProtectedRoute path="/admin/suppliers" component={AdminSuppliers} />
+                  <AdminProtectedRoute path="/admin/suppliers/new" component={AddSupplier} />
+                  <AdminProtectedRoute path="/admin/suppliers/:id/edit" component={EditSupplier} />
+                  <AdminProtectedRoute path="/admin/catalogs" component={AdminCatalogs} />
+                  <AdminProtectedRoute path="/admin/catalogs/new" component={AddCatalog} />
+                  <AdminProtectedRoute path="/admin/catalogs/:id/edit" component={EditCatalog} />
+                  <AdminProtectedRoute path="/admin/catalogs/:id/products" component={CatalogProducts} />
+                  <AdminProtectedRoute path="/admin/products" component={AdminProducts} />
+                  
+                  {/* Original Product Routes (Commented out to use new implementation) */}
+                  {/* <AdminProtectedRoute path="/admin/products/new" component={ProductEditPage} /> */}
+                  {/* <AdminProtectedRoute path="/admin/products/:id/edit" component={ProductEditPage} /> */}
+                  <AdminProtectedRoute path="/admin/products/:id/images" component={ProductImages} />
+                  <AdminProtectedRoute path="/admin/products/:productId/attributes" component={ProductAttributes} />
+                  
+                  {/* New Product Management System */}
+                  <AdminProtectedRoute path="/admin/product-management" component={React.lazy(() => import("@/pages/admin/product-management"))} />
+                  <AdminProtectedRoute path="/admin/products/manage" component={React.lazy(() => import("@/pages/admin/product-management"))} />
+                  <AdminProtectedRoute path="/admin/catalogs/:catalogId/products/manage" component={React.lazy(() => import("@/pages/admin/product-management"))} />
+                  <AdminProtectedRoute path="/admin/product-wizard/:id?" component={React.lazy(() => import("@/pages/admin/product-wizard"))} />
+                  <AdminProtectedRoute path="/admin/mass-upload" component={React.lazy(() => import("@/pages/admin/mass-upload"))} />
+                  
+                  {/* Redirect current routes to new product management */}
+                  <Route path="/admin/products/new">
+                    {() => {
+                      const [_, navigate] = useLocation();
+                      React.useEffect(() => {
+                        navigate('/admin/products/manage', { replace: true });
+                      }, [navigate]);
+                      return <div className="p-8 text-center">Redirecting to new product management system...</div>;
+                    }}
+                  </Route>
+                  <Route path="/admin/products/:id/edit">
+                    {(params) => {
+                      const [_, navigate] = useLocation();
+                      React.useEffect(() => {
+                        navigate(`/admin/products/manage/${params.id}`, { replace: true });
+                      }, [params.id, navigate]);
+                      return <div className="p-8 text-center">Redirecting to new product management system...</div>;
+                    }}
+                  </Route>
+                  <Route path="/admin/catalogs/:catalogId/products/new">
+                    {(params) => {
+                      const [_, navigate] = useLocation();
+                      React.useEffect(() => {
+                        navigate(`/admin/catalogs/${params.catalogId}/products/manage`, { replace: true });
+                      }, [params.catalogId, navigate]);
+                      return <div className="p-8 text-center">Redirecting to new product management system...</div>;
+                    }}
+                  </Route>
+                  
+                  {/* Product wizard routes */}
+                  <AdminProtectedRoute path="/admin/products/wizard/:id?" component={ProductWizardPage} />
+                  <Route path="/admin/catalogs/:catalogId/products/wizard">
+                    {(params) => {
+                      const [_, navigate] = useLocation();
+                      React.useEffect(() => {
+                        navigate(`/admin/catalogs/${params.catalogId}/products/manage`, { replace: true });
+                      }, [params.catalogId, navigate]);
+                      return <div className="p-8 text-center">Redirecting to new product management system...</div>;
+                    }}
+                  </Route>
+                  <AdminProtectedRoute path="/admin/categories" component={AdminCategories} />
+                  <AdminProtectedRoute path="/admin/categories/:categoryId/attributes" component={CategoryAttributes} />
+                  <AdminProtectedRoute path="/admin/category-attributes/:categoryId" component={CategoryAttributes} />
+                  <AdminProtectedRoute path="/admin/global-attributes" component={GlobalAttributes} />
+                  <AdminProtectedRoute path="/admin/attributes/new" component={AttributeEditor} />
+                  <AdminProtectedRoute path="/admin/attributes/:id/edit" component={AttributeEditor} />
+                  <AdminProtectedRoute path="/admin/attributes/:id/options" component={AttributeOptionEditor} />
+                  <AdminProtectedRoute path="/admin/pricing" component={AdminPricing} />
+                  <AdminProtectedRoute path="/admin/promotions" component={PromotionsPage} />
+                  <AdminProtectedRoute path="/admin/promotions/:id/products" component={PromotionProductsPage} />
+                  <AdminProtectedRoute path="/admin/orders" component={AdminOrders} />
+                  <AdminProtectedRoute path="/admin/orders/:id" component={AdminOrderDetail} />
+                  <AdminProtectedRoute path="/admin/supplier-orders" component={SupplierOrders} />
+                  <AdminProtectedRoute path="/admin/users" component={UserAdminPageFixed} />
+                  <AdminProtectedRoute path="/admin/ai-settings" component={AdminAISettings} />
+                  <AdminProtectedRoute path="/admin/batch-upload" component={BatchUpload} />
+                  <AdminProtectedRoute path="/admin/auth-test" component={AuthTestDashboard} />
+                  
+                  {/* Developer Routes - No header/footer */}
+                  <DeveloperProtectedRoute path="/developer" component={DeveloperDashboard} />
+                  <DeveloperProtectedRoute path="/developer/auth-tests" component={AuthTestsPage} />
+                  <DeveloperProtectedRoute path="/developer/database-tests" component={DatabaseTestsPage} />
+                  <DeveloperProtectedRoute path="/developer/url-handling-test" component={URLHandlingTestPage} />
+                  <DeveloperProtectedRoute path="/developer/ai-tests" component={DeveloperDashboard} />
+                  <DeveloperProtectedRoute path="/developer/storage-tests" component={StorageTestsPage} />
+                  <DeveloperProtectedRoute path="/developer/api-tests" component={ApiTestsPage} />
+                  <DeveloperProtectedRoute path="/developer/ecommerce-tests" component={DeveloperDashboard} />
+                  <DeveloperProtectedRoute path="/developer/attribute-tests" component={DeveloperDashboard} />
+                  <DeveloperProtectedRoute path="/developer/ui-tests" component={DeveloperDashboard} />
+                  <DeveloperProtectedRoute path="/developer/performance-tests" component={DeveloperDashboard} />
+                  <DeveloperProtectedRoute path="/developer/debug-console" component={DeveloperDashboard} />
+                  
+                  {/* Regular Routes - With header/footer */}
+                  <Route path="*">
+                    <div className="flex flex-col min-h-screen">
+                      <Header />
+                      <main className="flex-1">
+                        <Switch>
+                          <Route path="/"><Home /></Route>
+                          <Route path="/product/id/:id"><ProductDetail /></Route>
+                          <Route path="/product/:slug"><ProductDetail /></Route>
+                          <Route path="/category/:slug"><Category /></Route>
+                          <Route path="/flash-deals"><FlashDeals /></Route>
+                          <Route path="/promotions"><CustomerPromotionsPage /></Route>
+                          <Route path="/products"><ProductListing /></Route>
+                          <Route path="/products-example"><ProductsExample /></Route>
+                          <ProtectedRoute path="/checkout" component={Checkout} />
+                          <ProtectedRoute path="/order-confirmation/:id" component={OrderConfirmation} />
+                          <Route path="/search"><SearchResults /></Route>
+                          <ProtectedRoute path="/profile" component={Profile} />
+                          <ProtectedRoute path="/profile-settings" component={ProfileSettings} />
+                          <ProtectedRoute path="/my-orders" component={MyOrders} />
+                          <ProtectedRoute path="/my-favourites" component={MyFavourites} />
+                          <ProtectedRoute path="/credit-history" component={CreditHistory} />
+                          <ProtectedRoute path="/order/:id" component={OrderDetail} />
+                          <ProtectedRoute path="/orders/:id" component={OrderDetail} />
+                          <Route path="/auth"><AuthPage /></Route>
+                          <Route><NotFound /></Route>
+                        </Switch>
+                      </main>
+                      <Footer />
+                      <CartDrawer />
+                    </div>
+                  </Route>
+                </Switch>
+              </div>
             </ScrollManager>
-        </TooltipProvider>
-      </CartProvider>
+          </TooltipProvider>
+        </CartProvider>
       </FavouritesProvider>
     </AuthProvider>
   );
