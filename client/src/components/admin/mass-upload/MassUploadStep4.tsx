@@ -139,6 +139,8 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
         });
         
         if (duplicateDraft) {
+          console.log(`✓ Step 1: SKU match found for ${product.sku} with draft ${duplicateDraft.sku}`);
+          
           // Store existing draft data for pricing comparison
           product.existingDraft = {
             id: duplicateDraft.id,
@@ -149,7 +151,7 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
             draftStatus: duplicateDraft.draftStatus
           };
 
-          // Compare pricing to detect changes
+          // Step 2: Compare pricing to detect differences
           const pricingChanges = [];
           if (Math.abs(product.regularPrice - (duplicateDraft.price || 0)) > 0.01) {
             pricingChanges.push(`Regular price: R${(duplicateDraft.price || 0).toFixed(2)} → R${product.regularPrice.toFixed(2)}`);
@@ -161,6 +163,9 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
             pricingChanges.push(`Cost price: R${(duplicateDraft.costPrice || 0).toFixed(2)} → R${product.costPrice.toFixed(2)}`);
           }
 
+          console.log(`✓ Step 2: Price comparison for ${product.sku} - ${pricingChanges.length} differences found`);
+
+          // Mark as duplicate regardless of pricing differences
           product.isDuplicate = true;
           product.isSelected = false; // Default to deselected for duplicates
           product.hasPriceChanges = pricingChanges.length > 0;
@@ -218,6 +223,8 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
           });
           
           if (duplicateProduct) {
+            console.log(`✓ Step 1: SKU match found for ${product.sku} with published product ${duplicateProduct.sku}`);
+            
             product.existingProduct = {
               id: duplicateProduct.id,
               name: duplicateProduct.name,
@@ -226,6 +233,7 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
               costPrice: duplicateProduct.costPrice || 0
             };
 
+            // Step 2: Compare pricing to detect differences  
             const pricingChanges = [];
             if (Math.abs(product.regularPrice - (duplicateProduct.price || 0)) > 0.01) {
               pricingChanges.push(`Regular price: R${(duplicateProduct.price || 0).toFixed(2)} → R${product.regularPrice.toFixed(2)}`);
@@ -237,6 +245,9 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
               pricingChanges.push(`Cost price: R${(duplicateProduct.costPrice || 0).toFixed(2)} → R${product.costPrice.toFixed(2)}`);
             }
 
+            console.log(`✓ Step 2: Price comparison for ${product.sku} with published product - ${pricingChanges.length} differences found`);
+
+            // Mark as duplicate regardless of pricing differences
             product.isDuplicate = true;
             product.isSelected = false;
             product.hasPriceChanges = pricingChanges.length > 0;
