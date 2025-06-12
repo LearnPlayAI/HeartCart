@@ -1017,9 +1017,27 @@ export const DraftDashboard: React.FC = () => {
                             SKU: {product.sku || 'No SKU'} | Draft ID: {product.id}
                             {product.originalProductId && ` | Product ID: ${product.originalProductId}`}
                           </p>
-                          <p className="text-xs text-gray-500">
-                            Status: {product.draftStatus} | Step: {getStepDisplayName(product.wizardStep)}
-                          </p>
+                          <div className="flex gap-4 text-xs text-gray-500">
+                            <span>Status: {product.draftStatus}</span>
+                            <span>Step: {getStepDisplayName(product.wizardStep)}</span>
+                          </div>
+                          <div className="flex gap-4 text-sm mt-1">
+                            {product.costPrice && (
+                              <span className="text-gray-600">
+                                Cost: R{Number(product.costPrice).toFixed(2)}
+                              </span>
+                            )}
+                            {product.regularPrice && (
+                              <span className="text-gray-800 font-medium">
+                                Regular: R{Number(product.regularPrice).toFixed(2)}
+                              </span>
+                            )}
+                            {product.salePrice && (
+                              <span className="text-red-600 font-medium">
+                                Sale: R{Number(product.salePrice).toFixed(2)}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
