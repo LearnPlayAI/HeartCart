@@ -53,6 +53,7 @@ interface ProductDraft {
   updatedAt: string;
   isPublished: boolean;
   publishedProductId: number | null;
+  originalProductId: number | null;
   categoryName?: string; // From join
   parentCategoryName?: string; // From enrichment
   childCategoryName?: string; // From enrichment
@@ -983,7 +984,7 @@ export const DraftDashboard: React.FC = () => {
                           <h4 className="font-medium">{product.name}</h4>
                           <p className="text-sm text-gray-600">
                             SKU: {product.sku || 'No SKU'} | Draft ID: {product.id}
-                            {product.publishedProductId && ` | Product ID: ${product.publishedProductId}`}
+                            {product.originalProductId && ` | Product ID: ${product.originalProductId}`}
                           </p>
                           <p className="text-xs text-gray-500">
                             Status: {product.draftStatus} | Step: {getStepDisplayName(product.wizardStep)}
@@ -998,7 +999,7 @@ export const DraftDashboard: React.FC = () => {
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
-                        {!product.publishedProductId && (
+                        {!product.originalProductId && (
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button
