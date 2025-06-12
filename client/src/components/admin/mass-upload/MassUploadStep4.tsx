@@ -289,15 +289,25 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
           
           console.log(`Searching for category: "${searchName}" -> normalized: "${normalizedSearch}"`);
           console.log(`Parent ID filter: ${parentId}`);
+          console.log(`Total categories available: ${categories.length}`);
           
           // Log all available categories for debugging
           const availableCategories = categories.filter((c: any) => 
-            parentId !== undefined ? c.parentId === parentId : !c.parentId
+            parentId !== undefined ? c.parentId === parentId : c.level === 0
           );
-          console.log('Available categories:', availableCategories.map((c: any) => ({
+          console.log('Available categories for this search:', availableCategories.map((c: any) => ({
             id: c.id,
             name: c.name,
+            level: c.level,
             normalized: normalizeText(c.name),
+            parentId: c.parentId
+          })));
+          
+          // Also log first few categories from the full list
+          console.log('Sample from all categories:', categories.slice(0, 5).map((c: any) => ({
+            id: c.id,
+            name: c.name,
+            level: c.level,
             parentId: c.parentId
           })));
           
