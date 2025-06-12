@@ -28,8 +28,8 @@ export interface CSVProduct {
   validationWarnings?: string[];
   isValid?: boolean;
   // Resolved category IDs
-  parentCategoryId?: number;
-  childCategoryId?: number;
+  parentCategoryId?: number | null;
+  childCategoryId?: number | null;
   // Draft ID after creation
   draftId?: number;
   // Duplicate checking for draft records
@@ -47,6 +47,20 @@ export interface CSVProduct {
   needsCategoryAssignment?: boolean;
   assignedParentCategoryId?: number | null;
   assignedChildCategoryId?: number | null;
+  // Price update handling for existing products
+  existingProduct?: {
+    id: number;
+    name: string;
+    price: number;
+    salePrice?: number;
+    costPrice: number;
+  };
+  hasPriceChanges?: boolean;
+  priceUpdateOptions?: {
+    updateCost: boolean;
+    updateSale: boolean;
+    updateRegular: boolean;
+  };
 }
 
 export interface MassUploadData {
