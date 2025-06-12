@@ -70,11 +70,27 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
         errors.push('Product URL is required');
       }
 
-      // Check for SKU duplicates in drafts
+      // Check for SKU duplicates in drafts (with partial matching)
       if (product.sku && product.sku.trim()) {
-        const duplicateDraft = (existingDrafts as any)?.drafts?.find((draft: any) => 
-          draft.sku && draft.sku.toLowerCase() === product.sku.toLowerCase()
-        );
+        const productSku = product.sku.toLowerCase().trim();
+        
+        // Find exact match or partial matches in draft SKUs
+        const duplicateDraft = (existingDrafts as any)?.drafts?.find((draft: any) => {
+          if (!draft.sku) return false;
+          
+          const draftSku = draft.sku.toLowerCase().trim();
+          
+          // Check for exact match
+          if (draftSku === productSku) return true;
+          
+          // Check if product SKU is contained in draft SKU (multiple SKUs scenario)
+          if (draftSku.includes(productSku)) return true;
+          
+          // Check if draft SKU is contained in product SKU
+          if (productSku.includes(draftSku)) return true;
+          
+          return false;
+        });
         
         if (duplicateDraft) {
           // Store existing draft data for pricing comparison
@@ -105,15 +121,28 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
           product.priceChanges = pricingChanges;
 
           if (pricingChanges.length > 0) {
-            warnings.push(`SKU "${product.sku}" exists with pricing differences. Select to update: ${pricingChanges.join(', ')}`);
+            warnings.push(`SKU "${product.sku}" matches existing draft "${duplicateDraft.sku}" with pricing differences. Select to update: ${pricingChanges.join(', ')}`);
           } else {
-            warnings.push(`SKU "${product.sku}" already exists with identical pricing (Status: ${duplicateDraft.draftStatus})`);
+            warnings.push(`SKU "${product.sku}" matches existing draft "${duplicateDraft.sku}" with identical pricing (Status: ${duplicateDraft.draftStatus})`);
           }
         } else {
-          // Check published products for duplicates
-          const duplicateProduct = (publishedProducts as any)?.products?.find((prod: any) => 
-            prod.sku && prod.sku.toLowerCase() === product.sku.toLowerCase()
-          );
+          // Check published products for duplicates (with partial matching)
+          const duplicateProduct = (publishedProducts as any)?.products?.find((prod: any) => {
+            if (!prod.sku) return false;
+            
+            const publishedSku = prod.sku.toLowerCase().trim();
+            
+            // Check for exact match
+            if (publishedSku === productSku) return true;
+            
+            // Check if product SKU is contained in published SKU (multiple SKUs scenario)
+            if (publishedSku.includes(productSku)) return true;
+            
+            // Check if published SKU is contained in product SKU
+            if (productSku.includes(publishedSku)) return true;
+            
+            return false;
+          });
           
           if (duplicateProduct) {
             product.existingProduct = {
@@ -140,7 +169,7 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
             product.hasPriceChanges = pricingChanges.length > 0;
             product.priceChanges = pricingChanges;
 
-            warnings.push(`SKU "${product.sku}" exists in published products. Cannot update published products through mass upload.`);
+            warnings.push(`SKU "${product.sku}" matches published product "${duplicateProduct.sku}". Cannot update published products through mass upload.`);
           } else {
             product.isSelected = true; // Default to selected for non-duplicates
           }

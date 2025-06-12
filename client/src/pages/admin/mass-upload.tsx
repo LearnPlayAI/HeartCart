@@ -27,9 +27,6 @@ export interface CSVProduct {
   validationErrors?: string[];
   validationWarnings?: string[];
   isValid?: boolean;
-  // Resolved category IDs
-  parentCategoryId?: number | null;
-  childCategoryId?: number | null;
   // Draft ID after creation
   draftId?: number;
   // Duplicate checking for draft records
@@ -43,10 +40,6 @@ export interface CSVProduct {
   };
   isDuplicate?: boolean;
   isSelected?: boolean;
-  // Category assignment for products with missing categories
-  needsCategoryAssignment?: boolean;
-  assignedParentCategoryId?: number | null;
-  assignedChildCategoryId?: number | null;
   // Price update handling for existing products
   existingProduct?: {
     id: number;
