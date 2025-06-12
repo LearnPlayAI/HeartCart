@@ -83,11 +83,32 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
           // Check for exact match
           if (draftSku === productSku) return true;
           
-          // Check if product SKU is contained in draft SKU (multiple SKUs scenario)
-          if (draftSku.includes(productSku)) return true;
+          // Parse multiple SKUs from draft (patterns like "DM6666=blue,DM7777=red")
+          const draftSkus = draftSku.split(',').map((s: string) => {
+            // Extract SKU part before '=' if present
+            const skuPart = s.split('=')[0].trim();
+            return skuPart;
+          });
           
-          // Check if draft SKU is contained in product SKU
-          if (productSku.includes(draftSku)) return true;
+          // Check if any draft SKU matches the product SKU
+          for (const sku of draftSkus) {
+            if (sku === productSku) return true;
+            if (sku.includes(productSku) || productSku.includes(sku)) return true;
+          }
+          
+          // Also check if product SKU contains multiple SKUs
+          const productSkus = productSku.split(',').map((s: string) => {
+            const skuPart = s.split('=')[0].trim();
+            return skuPart;
+          });
+          
+          // Check for any matches between product SKUs and draft SKUs
+          for (const pSku of productSkus) {
+            for (const dSku of draftSkus) {
+              if (pSku === dSku) return true;
+              if (pSku.includes(dSku) || dSku.includes(pSku)) return true;
+            }
+          }
           
           return false;
         });
@@ -135,11 +156,32 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
             // Check for exact match
             if (publishedSku === productSku) return true;
             
-            // Check if product SKU is contained in published SKU (multiple SKUs scenario)
-            if (publishedSku.includes(productSku)) return true;
+            // Parse multiple SKUs from published product (patterns like "DM6666=blue,DM7777=red")
+            const publishedSkus = publishedSku.split(',').map((s: string) => {
+              // Extract SKU part before '=' if present
+              const skuPart = s.split('=')[0].trim();
+              return skuPart;
+            });
             
-            // Check if published SKU is contained in product SKU
-            if (productSku.includes(publishedSku)) return true;
+            // Check if any published SKU matches the product SKU
+            for (const sku of publishedSkus) {
+              if (sku === productSku) return true;
+              if (sku.includes(productSku) || productSku.includes(sku)) return true;
+            }
+            
+            // Also check if product SKU contains multiple SKUs
+            const productSkus = productSku.split(',').map((s: string) => {
+              const skuPart = s.split('=')[0].trim();
+              return skuPart;
+            });
+            
+            // Check for any matches between product SKUs and published SKUs
+            for (const pSku of productSkus) {
+              for (const pubSku of publishedSkus) {
+                if (pSku === pubSku) return true;
+                if (pSku.includes(pubSku) || pubSku.includes(pSku)) return true;
+              }
+            }
             
             return false;
           });

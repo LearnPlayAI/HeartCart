@@ -7,7 +7,7 @@ import { useLocation } from 'wouter';
 import { MassUploadStep1 } from '@/components/admin/mass-upload/MassUploadStep1';
 import { MassUploadStep2 } from '@/components/admin/mass-upload/MassUploadStep2';
 import { MassUploadStep3 } from '@/components/admin/mass-upload/MassUploadStep3';
-import { MassUploadStep4 } from '@/components/admin/mass-upload/MassUploadStep4_Simple';
+import { MassUploadStep4 } from '@/components/admin/mass-upload/MassUploadStep4';
 import { MassUploadStep5 } from '@/components/admin/mass-upload/MassUploadStep5';
 import { MassUploadStep6 } from '@/components/admin/mass-upload/MassUploadStep6';
 
