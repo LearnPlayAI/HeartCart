@@ -49,8 +49,15 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
 
   const validateProducts = () => {
     console.log('Starting validation with products:', data.products.length);
-    console.log('Existing drafts:', (existingDrafts as any)?.drafts?.length || 0);
-    console.log('Published products:', (publishedProducts as any)?.products?.length || 0);
+    console.log('Existing drafts data:', existingDrafts);
+    console.log('Published products data:', publishedProducts);
+    
+    // Extract drafts from API response
+    const draftsArray = (existingDrafts as any)?.data?.drafts || (existingDrafts as any)?.drafts || [];
+    const productsArray = (publishedProducts as any)?.data?.products || (publishedProducts as any)?.products || [];
+    
+    console.log('Drafts array length:', draftsArray.length);
+    console.log('Products array length:', productsArray.length);
 
     const validatedProducts = data.products.map(product => {
       const errors: string[] = [];
@@ -75,13 +82,19 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
         const productSku = product.sku.toLowerCase().trim();
         
         // Find exact match or partial matches in draft SKUs
-        const duplicateDraft = (existingDrafts as any)?.drafts?.find((draft: any) => {
+        const duplicateDraft = draftsArray.find((draft: any) => {
           if (!draft.sku) return false;
           
           const draftSku = draft.sku.toLowerCase().trim();
           
+          // Log the comparison for debugging
+          console.log(`Comparing product SKU "${productSku}" with draft SKU "${draftSku}"`);
+          
           // Check for exact match
-          if (draftSku === productSku) return true;
+          if (draftSku === productSku) {
+            console.log(`✓ Exact match found: ${productSku} === ${draftSku}`);
+            return true;
+          }
           
           // Parse multiple SKUs from draft (patterns like "DM6666=blue,DM7777=red")
           const draftSkus = draftSku.split(',').map((s: string) => {
@@ -92,8 +105,14 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
           
           // Check if any draft SKU matches the product SKU
           for (const sku of draftSkus) {
-            if (sku === productSku) return true;
-            if (sku.includes(productSku) || productSku.includes(sku)) return true;
+            if (sku === productSku) {
+              console.log(`✓ Partial match found: ${productSku} matches parsed draft SKU ${sku}`);
+              return true;
+            }
+            if (sku.includes(productSku) || productSku.includes(sku)) {
+              console.log(`✓ Substring match found: ${productSku} ~ ${sku}`);
+              return true;
+            }
           }
           
           // Also check if product SKU contains multiple SKUs
@@ -105,8 +124,14 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
           // Check for any matches between product SKUs and draft SKUs
           for (const pSku of productSkus) {
             for (const dSku of draftSkus) {
-              if (pSku === dSku) return true;
-              if (pSku.includes(dSku) || dSku.includes(pSku)) return true;
+              if (pSku === dSku) {
+                console.log(`✓ Multi-SKU match found: ${pSku} === ${dSku}`);
+                return true;
+              }
+              if (pSku.includes(dSku) || dSku.includes(pSku)) {
+                console.log(`✓ Multi-SKU substring match found: ${pSku} ~ ${dSku}`);
+                return true;
+              }
             }
           }
           
@@ -148,7 +173,7 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
           }
         } else {
           // Check published products for duplicates (with partial matching)
-          const duplicateProduct = (publishedProducts as any)?.products?.find((prod: any) => {
+          const duplicateProduct = productsArray.find((prod: any) => {
             if (!prod.sku) return false;
             
             const publishedSku = prod.sku.toLowerCase().trim();
