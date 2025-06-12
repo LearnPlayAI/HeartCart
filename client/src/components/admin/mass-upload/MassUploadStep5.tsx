@@ -60,6 +60,13 @@ export function MassUploadStep5({ data, onUpdate, onNext, onPrevious }: MassUplo
   const categories = categoriesData?.data || [];
   const parentCategories = categories.filter((c: any) => c.level === 0);
 
+  // Auto-run revalidation when categories are loaded
+  React.useEffect(() => {
+    if (categories.length > 0 && data.products.length > 0) {
+      handleRevalidate();
+    }
+  }, [categories.length, data.products.length]);
+
   // Create category mutation
   const createCategoryMutation = useMutation({
     mutationFn: async (categoryData: any) => {
@@ -138,31 +145,79 @@ export function MassUploadStep5({ data, onUpdate, onNext, onPrevious }: MassUplo
   };
 
   const handleRevalidate = () => {
-    // Re-run validation logic similar to Step 4
+    console.log('Available categories:', categories.map((c: any) => ({ id: c.id, name: c.name, level: c.level, parentId: c.parentId })));
+    
+    // Re-run validation logic - check if products need category assignment
     const validatedProducts = data.products.map(product => {
       const errors: string[] = [];
       const warnings: string[] = [];
 
-      // Validate parent category
-      const parentCategory = categories.find((c: any) => 
-        c.name.toLowerCase() === product.parentCategory.toLowerCase() && c.level === 0
-      );
-      if (!parentCategory) {
-        errors.push(`Parent category "${product.parentCategory}" not found`);
+      // Check if product needs category assignment (from Step 4)
+      if (product.needsCategoryAssignment) {
+        // If no parent category is assigned yet, it's still missing
+        if (!product.assignedParentCategoryId) {
+          warnings.push(`Product "${product.title}" has no category assignments. You can assign categories below.`);
+        }
       } else {
-        product.parentCategoryId = parentCategory.id;
-      }
+        // Product has categories from CSV - try to find them
+        console.log(`Looking for parent category: "${product.parentCategory}"`);
+        const parentCategory = categories.find((c: any) => 
+          c.name.toLowerCase() === product.parentCategory.toLowerCase() && c.level === 0
+        );
+        
+        if (parentCategory) {
+          console.log(`Found parent category: ${parentCategory.name} (ID: ${parentCategory.id})`);
+          product.parentCategoryId = parentCategory.id;
+          product.assignedParentCategoryId = parentCategory.id;
 
-      // Validate child category
-      const childCategory = categories.find((c: any) => 
-        c.name.toLowerCase() === product.childCategory.toLowerCase() && 
-        c.level === 1 && 
-        c.parentId === parentCategory?.id
-      );
-      if (!childCategory && parentCategory) {
-        errors.push(`Child category "${product.childCategory}" not found under "${product.parentCategory}"`);
-      } else if (childCategory) {
-        product.childCategoryId = childCategory.id;
+          // Look for child category
+          console.log(`Looking for child category: "${product.childCategory}" under parent ID: ${parentCategory.id}`);
+          const childCategory = categories.find((c: any) => 
+            c.name.toLowerCase() === product.childCategory.toLowerCase() && 
+            c.level === 1 && 
+            c.parentId === parentCategory.id
+          );
+          
+          if (childCategory) {
+            console.log(`Found child category: ${childCategory.name} (ID: ${childCategory.id})`);
+            product.childCategoryId = childCategory.id;
+            product.assignedChildCategoryId = childCategory.id;
+          } else if (product.childCategory && product.childCategory.trim() !== '' && product.childCategory !== 'Mass Upload') {
+            warnings.push(`Child category "${product.childCategory}" not found under "${product.parentCategory}"`);
+          } else {
+            // If child category is "Mass Upload" or empty, we can auto-assign the child "Mass Upload" category
+            const massUploadChild = categories.find((c: any) => 
+              c.name === 'Mass Upload' && c.level === 1 && c.parentId === parentCategory.id
+            );
+            if (massUploadChild) {
+              console.log(`Auto-assigning Mass Upload child category: ${massUploadChild.name} (ID: ${massUploadChild.id})`);
+              product.childCategoryId = massUploadChild.id;
+              product.assignedChildCategoryId = massUploadChild.id;
+            }
+          }
+        } else if (product.parentCategory && product.parentCategory.trim() !== '' && product.parentCategory !== 'Mass Upload') {
+          warnings.push(`Parent category "${product.parentCategory}" not found`);
+        } else {
+          // If parent category is "Mass Upload", try to auto-assign it
+          const massUploadParent = categories.find((c: any) => 
+            c.name === 'Mass Upload' && c.level === 0
+          );
+          if (massUploadParent) {
+            console.log(`Auto-assigning Mass Upload parent category: ${massUploadParent.name} (ID: ${massUploadParent.id})`);
+            product.parentCategoryId = massUploadParent.id;
+            product.assignedParentCategoryId = massUploadParent.id;
+            
+            // Also look for the child Mass Upload category
+            const massUploadChild = categories.find((c: any) => 
+              c.name === 'Mass Upload' && c.level === 1 && c.parentId === massUploadParent.id
+            );
+            if (massUploadChild) {
+              console.log(`Auto-assigning Mass Upload child category: ${massUploadChild.name} (ID: ${massUploadChild.id})`);
+              product.childCategoryId = massUploadChild.id;
+              product.assignedChildCategoryId = massUploadChild.id;
+            }
+          }
+        }
       }
 
       return {
