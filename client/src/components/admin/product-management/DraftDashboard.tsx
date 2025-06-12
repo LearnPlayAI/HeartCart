@@ -362,7 +362,14 @@ export const DraftDashboard: React.FC = () => {
     try {
       const result = await refetchDuplicates();
       if (result.data?.success) {
-        setDuplicateGroups(result.data.data.groups || []);
+        const groups = result.data.data.groups || [];
+        // Sort groups so exact matches appear first
+        const sortedGroups = groups.sort((a: any, b: any) => {
+          if (a.type === 'exact' && b.type !== 'exact') return -1;
+          if (a.type !== 'exact' && b.type === 'exact') return 1;
+          return 0;
+        });
+        setDuplicateGroups(sortedGroups);
         setShowDuplicates(true);
       } else {
         toast({
@@ -975,7 +982,8 @@ export const DraftDashboard: React.FC = () => {
                         <div>
                           <h4 className="font-medium">{product.name}</h4>
                           <p className="text-sm text-gray-600">
-                            SKU: {product.slug || 'No SKU'} | Draft ID: {product.id}
+                            SKU: {product.sku || 'No SKU'} | Draft ID: {product.id}
+                            {product.publishedProductId && ` | Product ID: ${product.publishedProductId}`}
                           </p>
                           <p className="text-xs text-gray-500">
                             Status: {product.draftStatus} | Step: {getStepDisplayName(product.wizardStep)}
@@ -990,42 +998,44 @@ export const DraftDashboard: React.FC = () => {
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Product Draft</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure you want to delete "{product.name}"? This action cannot be undone and will remove all associated images and data.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => handleDeleteDraft(product.id)}
-                                className="bg-red-600 hover:bg-red-700"
-                                disabled={deleteDraftMutation.isPending}
+                        {!product.publishedProductId && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
                               >
-                                {deleteDraftMutation.isPending ? (
-                                  <>
-                                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                    Deleting...
-                                  </>
-                                ) : (
-                                  'Delete'
-                                )}
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Product Draft</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete "{product.name}"? This action cannot be undone and will remove all associated images and data.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleDeleteDraft(product.id)}
+                                  className="bg-red-600 hover:bg-red-700"
+                                  disabled={deleteDraftMutation.isPending}
+                                >
+                                  {deleteDraftMutation.isPending ? (
+                                    <>
+                                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                      Deleting...
+                                    </>
+                                  ) : (
+                                    'Delete'
+                                  )}
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
                       </div>
                     </div>
                   ))}
