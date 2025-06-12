@@ -271,16 +271,25 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
       return product;
     });
 
-    // Calculate validation summary
+    // Calculate validation summary with proper duplicate and error counts
+    const duplicateProducts = validatedProducts.filter(p => p.isDuplicate);
+    const errorProducts = validatedProducts.filter(p => p.validationErrors && p.validationErrors.length > 0);
+    const validProducts = validatedProducts.filter(p => p.isValid && !p.isDuplicate && (!p.validationErrors || p.validationErrors.length === 0));
+    
     const validationResult: ValidationResult = {
-      hasErrors: validatedProducts.some(p => p.validationErrors && p.validationErrors.length > 0),
+      hasErrors: errorProducts.length > 0,
       hasWarnings: validatedProducts.some(p => p.validationWarnings && p.validationWarnings.length > 0),
       totalProducts: validatedProducts.length,
-      validProducts: validatedProducts.filter(p => p.isValid).length,
-      invalidProducts: validatedProducts.filter(p => !p.isValid).length
+      validProducts: validProducts.length,
+      invalidProducts: errorProducts.length
     };
 
-    console.log('Validation completed:', validationResult);
+    console.log('Validation completed:', {
+      ...validationResult,
+      duplicateCount: duplicateProducts.length,
+      errorCount: errorProducts.length,
+      validCount: validProducts.length
+    });
 
     onUpdate({ 
       products: validatedProducts,
@@ -345,13 +354,13 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
       <CardContent className="space-y-6">
         {/* Validation Summary */}
         {validationComplete && data.validationResults && (
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-5 gap-3">
             <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
               <div className="text-center">
                 <p className="text-2xl font-bold text-blue-600">
                   {data.validationResults.totalProducts}
                 </p>
-                <p className="text-sm text-muted-foreground">Total Products</p>
+                <p className="text-sm text-muted-foreground">Total</p>
               </div>
             </div>
             <div className="bg-green-50 p-4 rounded-lg border border-green-200">
@@ -360,6 +369,14 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
                   {data.validationResults.validProducts}
                 </p>
                 <p className="text-sm text-muted-foreground">Valid</p>
+              </div>
+            </div>
+            <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-orange-600">
+                  {data.products.filter(p => p.isDuplicate).length}
+                </p>
+                <p className="text-sm text-muted-foreground">Duplicates</p>
               </div>
             </div>
             <div className="bg-red-50 p-4 rounded-lg border border-red-200">
@@ -373,7 +390,7 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
             <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
               <div className="text-center">
                 <p className="text-2xl font-bold text-yellow-600">
-                  {data.products.filter(p => p.validationWarnings && p.validationWarnings.length > 0).length}
+                  {data.products.filter(p => p.validationWarnings && p.validationWarnings.length > 0 && !p.isDuplicate).length}
                 </p>
                 <p className="text-sm text-muted-foreground">Warnings</p>
               </div>

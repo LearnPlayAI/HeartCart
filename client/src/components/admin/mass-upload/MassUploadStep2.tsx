@@ -147,8 +147,8 @@ export function MassUploadStep2({ data, onUpdate, onNext, onPrevious }: MassUplo
         }
 
         if (product.costPrice <= 0 || product.regularPrice <= 0) {
-          console.warn(`Row ${i + 1} has invalid pricing, skipping.`);
-          continue;
+          console.warn(`Row ${i + 1} has invalid pricing (cost: ${product.costPrice}, regular: ${product.regularPrice}), but including for validation.`);
+          // Don't skip - let validation handle this
         }
 
         products.push(product);
