@@ -434,32 +434,43 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {data.products.map((product, index) => (
-                    <TableRow key={index}>
-                      <TableCell>
-                        <Checkbox
-                          checked={product.isSelected || false}
-                          onCheckedChange={(checked) => {
-                            const updatedProducts = [...data.products];
-                            updatedProducts[index] = {
-                              ...updatedProducts[index],
-                              isSelected: checked as boolean
-                            };
-                            onUpdate({ products: updatedProducts });
-                          }}
-                          disabled={product.isValid === false}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {getValidationIcon(product)}
-                          {getValidationStatus(product)}
-                        </div>
-                      </TableCell>
-                      
-                      <TableCell className="font-mono text-sm">
-                        {product.sku}
-                      </TableCell>
+                  {data.products.map((product, index) => {
+                    // Debug duplicate products in UI
+                    if (product.isDuplicate) {
+                      console.log(`UI Rendering duplicate product ${product.sku}:`, {
+                        isDuplicate: product.isDuplicate,
+                        isValid: product.isValid,
+                        hasWarnings: !!product.validationWarnings?.length,
+                        warnings: product.validationWarnings
+                      });
+                    }
+                    
+                    return (
+                      <TableRow key={index}>
+                        <TableCell>
+                          <Checkbox
+                            checked={product.isSelected || false}
+                            onCheckedChange={(checked) => {
+                              const updatedProducts = [...data.products];
+                              updatedProducts[index] = {
+                                ...updatedProducts[index],
+                                isSelected: checked as boolean
+                              };
+                              onUpdate({ products: updatedProducts });
+                            }}
+                            disabled={product.isValid === false}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {getValidationIcon(product)}
+                            {getValidationStatus(product)}
+                          </div>
+                        </TableCell>
+                        
+                        <TableCell className="font-mono text-sm">
+                          {product.sku}
+                        </TableCell>
                       
                       <TableCell>
                         <p className="font-medium">{product.title}</p>
@@ -514,7 +525,8 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
                         )}
                       </TableCell>
                     </TableRow>
-                  ))}
+                  );
+                  })}
                 </TableBody>
               </Table>
             </ScrollArea>
