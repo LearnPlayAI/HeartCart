@@ -544,9 +544,13 @@ export default function registerProductDraftRoutes(router: Router) {
 
         if (similarProducts.length > 0) {
           const group = [draft, ...similarProducts];
+          
+          // Check for exact matches: both name AND SKU must be identical
           const hasExactMatch = group.some((p1) => 
             group.some((p2) => 
-              p1.id !== p2.id && p1.name.toLowerCase().trim() === p2.name.toLowerCase().trim()
+              p1.id !== p2.id && 
+              p1.name.toLowerCase().trim() === p2.name.toLowerCase().trim() &&
+              p1.sku && p2.sku && p1.sku.toLowerCase().trim() === p2.sku.toLowerCase().trim()
             )
           );
 
