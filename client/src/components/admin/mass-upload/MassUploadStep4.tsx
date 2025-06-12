@@ -49,8 +49,8 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
 
   const validateProducts = () => {
     console.log('Starting validation with products:', data.products.length);
-    console.log('Existing drafts:', existingDrafts?.drafts?.length || 0);
-    console.log('Published products:', publishedProducts?.products?.length || 0);
+    console.log('Existing drafts:', (existingDrafts as any)?.drafts?.length || 0);
+    console.log('Published products:', (publishedProducts as any)?.products?.length || 0);
 
     const validatedProducts = data.products.map(product => {
       const errors: string[] = [];
@@ -72,7 +72,7 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
 
       // Check for SKU duplicates in drafts
       if (product.sku && product.sku.trim()) {
-        const duplicateDraft = existingDrafts.drafts?.find((draft: any) => 
+        const duplicateDraft = (existingDrafts as any)?.drafts?.find((draft: any) => 
           draft.sku && draft.sku.toLowerCase() === product.sku.toLowerCase()
         );
         
@@ -111,7 +111,7 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
           }
         } else {
           // Check published products for duplicates
-          const duplicateProduct = publishedProducts.products?.find((prod: any) => 
+          const duplicateProduct = (publishedProducts as any)?.products?.find((prod: any) => 
             prod.sku && prod.sku.toLowerCase() === product.sku.toLowerCase()
           );
           
