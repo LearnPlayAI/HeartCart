@@ -207,6 +207,13 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
     }
   }, [isLoadingCategories, isLoadingDrafts]);
 
+  // Also revalidate when categories change (in case new ones are created)
+  useEffect(() => {
+    if (!isLoadingCategories && !isLoadingDrafts && validationComplete && categories.length > 0) {
+      runValidation();
+    }
+  }, [categories]);
+
   const runValidation = async () => {
     if (isLoadingCategories || isLoadingDrafts) return;
     
@@ -331,11 +338,34 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
           return category;
         };
 
-        // Handle categories - categories are optional for upload
-        const hasValidCategory = product.parentCategory && product.parentCategory.trim() !== '' && product.parentCategory !== 'Mass Upload';
+        // Handle categories - check if categories exist in the system
+        let foundValidCategories = false;
         
-        if (!hasValidCategory) {
-          // No categories provided - this is acceptable, mark for later assignment
+        if (product.parentCategory && product.parentCategory.trim() !== '') {
+          // Try to find the parent category in the system
+          const parentCategory = findCategoryByName(product.parentCategory);
+          
+          if (parentCategory) {
+            product.parentCategoryId = parentCategory.id;
+            foundValidCategories = true;
+            
+            // If we have a child category, try to find it under the parent
+            if (product.childCategory && product.childCategory.trim() !== '') {
+              const childCategory = findCategoryByName(product.childCategory, parentCategory.id);
+              
+              if (childCategory) {
+                product.childCategoryId = childCategory.id;
+              } else {
+                warnings.push(`Child category "${product.childCategory}" not found under "${product.parentCategory}"`);
+              }
+            }
+          } else {
+            warnings.push(`Parent category "${product.parentCategory}" not found`);
+          }
+        }
+        
+        if (!foundValidCategories) {
+          // No valid categories found - mark for later assignment
           product.needsCategoryAssignment = true;
           warnings.push(`Product "${product.title}" has no category assignments. You can assign categories in the next step.`);
         }
