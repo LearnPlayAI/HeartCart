@@ -1,35 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogFooter, 
-  DialogHeader, 
-  DialogTitle
-} from '@/components/ui/dialog';
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select';
-import { Loader2, CheckCircle, AlertTriangle, XCircle, ArrowLeft, RefreshCw, Plus } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { MassUploadData, CSVProduct } from '@/pages/admin/mass-upload';
-import { apiRequest } from '@/lib/queryClient';
-import { slugify } from '@/lib/utils';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { CheckCircle, XCircle, AlertTriangle, ArrowLeft, RefreshCw, Loader2 } from 'lucide-react';
+import { CSVProduct, MassUploadData } from '@/pages/admin/mass-upload';
 
 interface MassUploadStep4Props {
   data: MassUploadData;
@@ -47,453 +26,193 @@ interface ValidationResult {
 }
 
 export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUploadStep4Props) {
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [isValidating, setIsValidating] = useState(false);
   const [validationComplete, setValidationComplete] = useState(false);
-  
-  // Category creation state - exactly as in admin categories page
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [newSlug, setNewSlug] = useState("");
-  const [newDescription, setNewDescription] = useState("");
-  const [newParentId, setNewParentId] = useState<string | null>(null);
-  const [newLevel, setNewLevel] = useState<number>(0);
-  const [newDisplayOrder, setNewDisplayOrder] = useState<number>(0);
 
-  // Fetch categories
-  const { data: categoriesData, isLoading: isLoadingCategories } = useQuery({
-    queryKey: ['/api/categories'],
-    queryFn: async () => {
-      const response = await apiRequest('GET', '/api/categories');
-      return response.json();
-    },
-  });
-
-  // Fetch existing draft records for duplicate checking
-  const { data: draftsData, isLoading: isLoadingDrafts } = useQuery({
+  // Fetch existing drafts for duplicate detection
+  const { data: existingDrafts, isLoading: draftsLoading } = useQuery({
     queryKey: ['/api/product-drafts'],
-    queryFn: async () => {
-      const response = await apiRequest('GET', '/api/product-drafts');
-      return response.json();
-    },
+    enabled: true
   });
 
-  const categories = categoriesData?.data || [];
-  const existingDrafts = draftsData?.data || [];
+  // Fetch published products for duplicate detection
+  const { data: publishedProducts, isLoading: productsLoading } = useQuery({
+    queryKey: ['/api/products'],
+    enabled: true
+  });
 
-  // Auto-increment display order logic - same as admin categories page
+  // Validate products when drafts and products data is loaded
   useEffect(() => {
-    if (categories && categories.length > 0) {
-      // If parent is selected, find the max display order among its children
-      if (newParentId) {
-        const parentIdNum = parseInt(newParentId);
-        const siblingCategories = categories.filter(c => c.parentId === parentIdNum);
-        if (siblingCategories.length > 0) {
-          const maxOrder = Math.max(...siblingCategories.map(c => c.displayOrder || 0));
-          setNewDisplayOrder(maxOrder + 1);
-          return;
-        }
-      }
-      
-      // Otherwise, for level 0 categories
-      const levelZeroCategories = categories.filter(c => c.level === 0);
-      if (levelZeroCategories.length > 0) {
-        const maxOrder = Math.max(...levelZeroCategories.map(c => c.displayOrder || 0));
-        setNewDisplayOrder(maxOrder + 1);
-      } else {
-        setNewDisplayOrder(0);
-      }
+    if (existingDrafts && publishedProducts && !draftsLoading && !productsLoading) {
+      validateProducts();
     }
-  }, [categories, newParentId]);
+  }, [existingDrafts, publishedProducts, draftsLoading, productsLoading]);
 
-  // Auto-update level based on parent selection
-  useEffect(() => {
-    if (newParentId) {
-      const parentCategory = categories?.find(c => c.id === parseInt(newParentId));
-      if (parentCategory) {
-        setNewLevel((parentCategory.level || 0) + 1);
+  const validateProducts = () => {
+    console.log('Starting validation with products:', data.products.length);
+    console.log('Existing drafts:', existingDrafts?.drafts?.length || 0);
+    console.log('Published products:', publishedProducts?.products?.length || 0);
+
+    const validatedProducts = data.products.map(product => {
+      const errors: string[] = [];
+      const warnings: string[] = [];
+
+      // Validate required fields
+      if (!product.sku || !product.sku.trim()) {
+        errors.push('SKU is required');
       }
-    } else {
-      setNewLevel(0);
-    }
-  }, [newParentId, categories]);
+      if (!product.title || !product.title.trim()) {
+        errors.push('Product title is required');
+      }
+      if (!product.description || !product.description.trim()) {
+        errors.push('Product description is required');
+      }
+      if (!product.productUrl || !product.productUrl.trim()) {
+        errors.push('Product URL is required');
+      }
 
-  // Auto-generate slug based on parent-child relationship
-  useEffect(() => {
-    if (newName) {
-      let generatedSlug = '';
-      
-      if (newParentId) {
-        // If there's a parent, combine parent slug with child name
-        const parentCategory = categories?.find(c => c.id === parseInt(newParentId));
-        if (parentCategory && parentCategory.slug) {
-          generatedSlug = `${parentCategory.slug}-${slugify(newName)}`;
+      // Check for SKU duplicates in drafts
+      if (product.sku && product.sku.trim()) {
+        const duplicateDraft = existingDrafts.drafts?.find((draft: any) => 
+          draft.sku && draft.sku.toLowerCase() === product.sku.toLowerCase()
+        );
+        
+        if (duplicateDraft) {
+          // Store existing draft data for pricing comparison
+          product.existingDraft = {
+            id: duplicateDraft.id,
+            name: duplicateDraft.name,
+            price: duplicateDraft.price || 0,
+            salePrice: duplicateDraft.salePrice || 0,
+            costPrice: duplicateDraft.costPrice || 0,
+            draftStatus: duplicateDraft.draftStatus
+          };
+
+          // Compare pricing to detect changes
+          const pricingChanges = [];
+          if (Math.abs(product.regularPrice - (duplicateDraft.price || 0)) > 0.01) {
+            pricingChanges.push(`Regular price: R${(duplicateDraft.price || 0).toFixed(2)} → R${product.regularPrice.toFixed(2)}`);
+          }
+          if (Math.abs((product.salePrice || 0) - (duplicateDraft.salePrice || 0)) > 0.01) {
+            pricingChanges.push(`Sale price: R${(duplicateDraft.salePrice || 0).toFixed(2)} → R${(product.salePrice || 0).toFixed(2)}`);
+          }
+          if (Math.abs(product.costPrice - (duplicateDraft.costPrice || 0)) > 0.01) {
+            pricingChanges.push(`Cost price: R${(duplicateDraft.costPrice || 0).toFixed(2)} → R${product.costPrice.toFixed(2)}`);
+          }
+
+          product.isDuplicate = true;
+          product.isSelected = false; // Default to deselected for duplicates
+          product.hasPriceChanges = pricingChanges.length > 0;
+          product.priceChanges = pricingChanges;
+
+          if (pricingChanges.length > 0) {
+            warnings.push(`SKU "${product.sku}" exists with pricing differences. Select to update: ${pricingChanges.join(', ')}`);
+          } else {
+            warnings.push(`SKU "${product.sku}" already exists with identical pricing (Status: ${duplicateDraft.draftStatus})`);
+          }
         } else {
-          generatedSlug = slugify(newName);
-        }
-      } else {
-        // If no parent, just use the name
-        generatedSlug = slugify(newName);
-      }
-      
-      setNewSlug(generatedSlug);
-    } else {
-      setNewSlug('');
-    }
-  }, [newName, newParentId, categories]);
-
-  // Create category mutation - exactly as in admin categories page
-  const createMutation = useMutation({
-    mutationFn: async (data: { 
-      name: string; 
-      slug: string; 
-      description: string; 
-      parentId: number | null; 
-      level: number; 
-      displayOrder: number;
-    }) => {
-      const response = await apiRequest('POST', '/api/categories', data);
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/categories/main/with-children'] });
-      setIsCreateDialogOpen(false);
-      setNewName("");
-      setNewSlug("");
-      setNewDescription("");
-      setNewParentId(null);
-      setNewLevel(0);
-      // Don't reset display order to 0, let the useEffect recalculate it
-      toast({
-        title: "Success",
-        description: "Category created successfully",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Failed to Create Category",
-        description: error.message || "Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Handle create category - exactly as in admin categories page
-  const handleCreateCategory = () => {
-    if (!newName) {
-      toast({
-        title: "Validation Error",
-        description: "Category name is required",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    createMutation.mutate({
-      name: newName,
-      slug: newSlug || slugify(newName),
-      description: newDescription,
-      parentId: newParentId ? parseInt(newParentId) : null,
-      level: newLevel,
-      displayOrder: newDisplayOrder
-    });
-  };
-
-  useEffect(() => {
-    if (!isLoadingCategories && !isLoadingDrafts && !validationComplete) {
-      runValidation();
-    }
-  }, [isLoadingCategories, isLoadingDrafts]);
-
-  // Also revalidate when categories change (in case new ones are created)
-  useEffect(() => {
-    if (!isLoadingCategories && !isLoadingDrafts && validationComplete && categories.length > 0) {
-      runValidation();
-    }
-  }, [categories]);
-
-  const runValidation = async () => {
-    if (isLoadingCategories || isLoadingDrafts) return;
-    
-    setIsValidating(true);
-    
-    try {
-      const validatedProducts = data.products.map((product, index) => {
-        const errors: string[] = [];
-        const warnings: string[] = [];
-
-        // Validate required fields first
-        if (!product.sku || !product.sku.trim()) {
-          errors.push('SKU is required');
-        }
-        if (!product.title || !product.title.trim()) {
-          errors.push('Product title is required');
-        }
-        if (!product.description || !product.description.trim()) {
-          errors.push('Product description is required');
-        }
-        if (!product.productUrl || !product.productUrl.trim()) {
-          errors.push('Product URL is required');
-        }
-
-        // Check for SKU duplicates in both drafts and published products
-        if (product.sku && product.sku.trim()) {
-          // Check existing drafts
-          const duplicateDraft = existingDrafts.drafts?.find((draft: any) => 
-            draft.sku && draft.sku.toLowerCase() === product.sku.toLowerCase()
+          // Check published products for duplicates
+          const duplicateProduct = publishedProducts.products?.find((prod: any) => 
+            prod.sku && prod.sku.toLowerCase() === product.sku.toLowerCase()
           );
           
-          if (duplicateDraft) {
-            // Store existing draft data for pricing comparison
-            product.existingDraft = {
-              id: duplicateDraft.id,
-              name: duplicateDraft.name,
-              price: duplicateDraft.price || 0,
-              salePrice: duplicateDraft.salePrice || 0,
-              costPrice: duplicateDraft.costPrice || 0,
-              draftStatus: duplicateDraft.draftStatus
+          if (duplicateProduct) {
+            product.existingProduct = {
+              id: duplicateProduct.id,
+              name: duplicateProduct.name,
+              price: duplicateProduct.price || 0,
+              salePrice: duplicateProduct.salePrice || 0,
+              costPrice: duplicateProduct.costPrice || 0
             };
 
-            // Compare pricing to detect changes
             const pricingChanges = [];
-            if (product.regularPrice !== duplicateDraft.price) {
-              pricingChanges.push(`Regular price: ${duplicateDraft.price} → ${product.regularPrice}`);
+            if (Math.abs(product.regularPrice - (duplicateProduct.price || 0)) > 0.01) {
+              pricingChanges.push(`Regular price: R${(duplicateProduct.price || 0).toFixed(2)} → R${product.regularPrice.toFixed(2)}`);
             }
-            if (product.salePrice !== duplicateDraft.salePrice) {
-              pricingChanges.push(`Sale price: ${duplicateDraft.salePrice || 'none'} → ${product.salePrice || 'none'}`);
+            if (Math.abs((product.salePrice || 0) - (duplicateProduct.salePrice || 0)) > 0.01) {
+              pricingChanges.push(`Sale price: R${(duplicateProduct.salePrice || 0).toFixed(2)} → R${(product.salePrice || 0).toFixed(2)}`);
             }
-            if (product.costPrice !== duplicateDraft.costPrice) {
-              pricingChanges.push(`Cost price: ${duplicateDraft.costPrice || 'none'} → ${product.costPrice || 'none'}`);
+            if (Math.abs(product.costPrice - (duplicateProduct.costPrice || 0)) > 0.01) {
+              pricingChanges.push(`Cost price: R${(duplicateProduct.costPrice || 0).toFixed(2)} → R${product.costPrice.toFixed(2)}`);
             }
 
             product.isDuplicate = true;
-            product.isSelected = false; // Default to deselected for duplicates
+            product.isSelected = false;
             product.hasPriceChanges = pricingChanges.length > 0;
             product.priceChanges = pricingChanges;
 
-            if (pricingChanges.length > 0) {
-              warnings.push(`SKU "${product.sku}" exists with pricing differences. Select to update: ${pricingChanges.join(', ')}`);
-            } else {
-              warnings.push(`SKU "${product.sku}" already exists with identical pricing (Status: ${duplicateDraft.draftStatus})`);
-            }
+            warnings.push(`SKU "${product.sku}" exists in published products. Cannot update published products through mass upload.`);
           } else {
             product.isSelected = true; // Default to selected for non-duplicates
           }
-
-          // Check for duplicate name in existing drafts (informational only)
-          const duplicateName = existingDrafts.drafts?.find((draft: any) => 
-            draft.name && product.title && draft.name.toLowerCase() === product.title.toLowerCase()
-          );
-          if (duplicateName && !duplicateDraft) {
-            warnings.push(`Product name "${product.title}" matches existing draft (different SKU)`);
-          }
         }
-
-        // Helper function to normalize text for comparison (handles special characters and encoding issues)
-        const normalizeText = (text: string): string => {
-          return text
-            .toLowerCase()
-            .normalize('NFD') // Decompose accented characters
-            .replace(/[\u0300-\u036f]/g, '') // Remove diacritics (é becomes e, à becomes a, etc.)
-            .replace(/�/g, '') // Remove replacement characters from encoding issues
-            .replace(/[^\w\s-]/g, '') // Remove special characters except spaces and hyphens
-            .replace(/\s+/g, ' ') // Normalize whitespace
-            .trim();
-        };
-
-        // Helper function to find category with fuzzy matching
-        const findCategoryByName = (searchName: string, parentId?: number | null): any => {
-          const normalizedSearch = normalizeText(searchName);
-          
-          console.log(`Searching for category: "${searchName}" -> normalized: "${normalizedSearch}"`);
-          console.log(`Parent ID filter: ${parentId}`);
-          console.log(`Total categories available: ${categories.length}`);
-          
-          // Log all available categories for debugging
-          const availableCategories = categories.filter((c: any) => 
-            parentId !== undefined ? c.parentId === parentId : c.level === 0
-          );
-          console.log('Available categories for this search:', availableCategories.map((c: any) => ({
-            id: c.id,
-            name: c.name,
-            level: c.level,
-            normalized: normalizeText(c.name),
-            parentId: c.parentId
-          })));
-          
-          // Also log first few categories from the full list
-          console.log('Sample from all categories:', categories.slice(0, 5).map((c: any) => ({
-            id: c.id,
-            name: c.name,
-            level: c.level,
-            parentId: c.parentId
-          })));
-          
-          // First try exact match
-          let category = categories.find((c: any) => 
-            normalizeText(c.name) === normalizedSearch && 
-            (parentId !== undefined ? c.parentId === parentId : !c.parentId)
-          );
-          
-          if (category) {
-            console.log(`Found exact match: ${category.name} (ID: ${category.id})`);
-            return category;
-          }
-          
-          // If no exact match, try partial match
-          category = categories.find((c: any) => 
-            normalizeText(c.name).includes(normalizedSearch) && 
-            (parentId !== undefined ? c.parentId === parentId : !c.parentId)
-          );
-          
-          if (category) {
-            console.log(`Found partial match: ${category.name} (ID: ${category.id})`);
-            return category;
-          }
-          
-          // If still no match, try reverse partial match
-          category = categories.find((c: any) => 
-            normalizedSearch.includes(normalizeText(c.name)) && 
-            (parentId !== undefined ? c.parentId === parentId : !c.parentId)
-          );
-          
-          if (category) {
-            console.log(`Found reverse partial match: ${category.name} (ID: ${category.id})`);
-            return category;
-          }
-          
-          console.log(`No match found for: "${searchName}"`);
-          return category;
-        };
-
-        // Categories will be handled through the drafts system - no validation needed here
-
-        // Validate pricing (optional warnings)
-        if (product.costPrice > 0 && product.regularPrice > 0 && product.costPrice >= product.regularPrice) {
-          warnings.push('Cost price should be less than regular price');
-        }
-
-        if (product.salePrice > 0 && product.regularPrice > 0 && product.salePrice >= product.regularPrice) {
-          warnings.push('Sale price should be less than regular price');
-        }
-
-        // Check URL format
-        if (product.productUrl && !product.productUrl.startsWith('http')) {
-          warnings.push('Product URL should start with http or https');
-        }
-
-        // Return validated product with validation results
-        return {
-          ...product,
-          validationErrors: errors,
-          validationWarnings: warnings,
-          isValid: errors.length === 0,
-        };
-      });
-
-      const validationResult: ValidationResult = {
-        hasErrors: validatedProducts.some(p => p.validationErrors!.length > 0),
-        hasWarnings: validatedProducts.some(p => p.validationWarnings!.length > 0),
-        totalProducts: validatedProducts.length,
-        validProducts: validatedProducts.filter(p => p.isValid).length,
-        invalidProducts: validatedProducts.filter(p => !p.isValid).length,
-      };
-
-      onUpdate({
-        products: validatedProducts,
-        validationResults: validationResult,
-      });
-
-      setValidationComplete(true);
-      
-      if (validationResult.hasErrors) {
-        toast({
-          title: 'Validation Issues Found',
-          description: `${validationResult.invalidProducts} products have validation errors that need to be fixed.`,
-          variant: 'destructive',
-        });
-      } else if (validationResult.hasWarnings) {
-        
-      } else {
-        
       }
-    } catch (error) {
-      console.error('Validation error:', error);
-      setValidationComplete(false);
-      toast({
-        title: 'Validation Failed',
-        description: error instanceof Error ? error.message : 'Failed to validate products. Please try again.',
-        variant: 'destructive',
-      });
-    }
-    
-    setIsValidating(false);
+
+      // Validate pricing (optional warnings)
+      if (product.costPrice > 0 && product.regularPrice > 0 && product.costPrice >= product.regularPrice) {
+        warnings.push('Cost price should be less than regular price');
+      }
+
+      // Set validation results
+      product.validationErrors = errors;
+      product.validationWarnings = warnings;
+      product.isValid = errors.length === 0;
+
+      return product;
+    });
+
+    // Calculate validation summary
+    const validationResult: ValidationResult = {
+      hasErrors: validatedProducts.some(p => p.validationErrors && p.validationErrors.length > 0),
+      hasWarnings: validatedProducts.some(p => p.validationWarnings && p.validationWarnings.length > 0),
+      totalProducts: validatedProducts.length,
+      validProducts: validatedProducts.filter(p => p.isValid).length,
+      invalidProducts: validatedProducts.filter(p => !p.isValid).length
+    };
+
+    console.log('Validation completed:', validationResult);
+
+    onUpdate({ 
+      products: validatedProducts,
+      validationResults: validationResult
+    });
+    setValidationComplete(true);
   };
 
   const handleRevalidate = () => {
     setValidationComplete(false);
-    runValidation();
-  };
-
-  const handleNext = () => {
-    if (!data.validationResults) {
-      toast({
-        title: 'Validation Required',
-        description: 'Please run validation before proceeding.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    if (data.validationResults.hasErrors) {
-      toast({
-        title: 'Validation Errors',
-        description: 'Please fix all validation errors before proceeding.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    onNext();
+    setTimeout(() => validateProducts(), 100);
   };
 
   const getValidationIcon = (product: CSVProduct) => {
     if (product.validationErrors && product.validationErrors.length > 0) {
       return <XCircle className="h-4 w-4 text-red-500" />;
-    }
-    if (product.validationWarnings && product.validationWarnings.length > 0) {
+    } else if (product.validationWarnings && product.validationWarnings.length > 0) {
       return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
+    } else {
+      return <CheckCircle className="h-4 w-4 text-green-500" />;
     }
-    return <CheckCircle className="h-4 w-4 text-green-500" />;
   };
 
   const getValidationStatus = (product: CSVProduct) => {
     if (product.validationErrors && product.validationErrors.length > 0) {
-      return <Badge variant="destructive">Error</Badge>;
+      return <span className="text-red-600 text-xs font-medium">Invalid</span>;
+    } else if (product.validationWarnings && product.validationWarnings.length > 0) {
+      return <span className="text-yellow-600 text-xs font-medium">Warning</span>;
+    } else {
+      return <span className="text-green-600 text-xs font-medium">Valid</span>;
     }
-    if (product.validationWarnings && product.validationWarnings.length > 0) {
-      return <Badge variant="secondary">Warning</Badge>;
-    }
-    return <Badge variant="default">Valid</Badge>;
   };
 
-  if (isLoadingCategories || isLoadingDrafts) {
+  if (draftsLoading || productsLoading) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Loader2 className="h-5 w-5 animate-spin" />
-            Loading Validation Data...
-          </CardTitle>
+          <CardTitle>Step 4: Validate Products</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-center py-8">
-            <div className="text-center">
-              <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4" />
-              <p>Loading categories and existing products...</p>
-            </div>
+          <div className="flex items-center justify-center h-32">
+            <Loader2 className="h-8 w-8 animate-spin" />
+            <span className="ml-2">Loading validation data...</span>
           </div>
         </CardContent>
       </Card>
@@ -503,50 +222,42 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          {isValidating ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
-          ) : (
-            <CheckCircle className="h-5 w-5" />
-          )}
-          Step 4: Validation
-        </CardTitle>
-        <p className="text-muted-foreground">
-          Checking for duplicate products and validating category assignments.
+        <CardTitle>Step 4: Validate Products & Check Duplicates</CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Checking for SKU duplicates and pricing differences. Categories will be assigned in the drafts system.
         </p>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Validation Summary */}
-        {data.validationResults && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="flex items-center gap-3 p-3 border rounded-lg">
-              <CheckCircle className="h-8 w-8 text-blue-500" />
-              <div>
-                <p className="text-2xl font-bold">{data.validationResults.totalProducts}</p>
+        {validationComplete && data.validationResults && (
+          <div className="grid grid-cols-4 gap-4">
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-blue-600">
+                  {data.validationResults.totalProducts}
+                </p>
                 <p className="text-sm text-muted-foreground">Total Products</p>
               </div>
             </div>
-            
-            <div className="flex items-center gap-3 p-3 border rounded-lg">
-              <CheckCircle className="h-8 w-8 text-green-500" />
-              <div>
-                <p className="text-2xl font-bold">{data.validationResults.validProducts}</p>
-                <p className="text-sm text-muted-foreground">Valid Products</p>
+            <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-green-600">
+                  {data.validationResults.validProducts}
+                </p>
+                <p className="text-sm text-muted-foreground">Valid</p>
               </div>
             </div>
-            
-            <div className="flex items-center gap-3 p-3 border rounded-lg">
-              <XCircle className="h-8 w-8 text-red-500" />
-              <div>
-                <p className="text-2xl font-bold">{data.validationResults.invalidProducts}</p>
-                <p className="text-sm text-muted-foreground">Invalid Products</p>
+            <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-red-600">
+                  {data.validationResults.invalidProducts}
+                </p>
+                <p className="text-sm text-muted-foreground">Errors</p>
               </div>
             </div>
-            
-            <div className="flex items-center gap-3 p-3 border rounded-lg">
-              <AlertTriangle className="h-8 w-8 text-yellow-500" />
-              <div>
-                <p className="text-2xl font-bold">
+            <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-yellow-600">
                   {data.products.filter(p => p.validationWarnings && p.validationWarnings.length > 0).length}
                 </p>
                 <p className="text-sm text-muted-foreground">Warnings</p>
@@ -574,7 +285,7 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
                 </span>
               ) : data.validationResults.hasWarnings ? (
                 <span className="text-yellow-700">
-                  Validation passed with warnings. Review warnings in the next step.
+                  Validation passed with warnings. Review and select products to import.
                 </span>
               ) : (
                 <span className="text-green-700">
@@ -590,29 +301,10 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
           <div className="border rounded-lg">
             <div className="flex items-center justify-between p-4 border-b">
               <h3 className="font-medium">Validation Results</h3>
-              <div className="flex gap-2">
-                <Button 
-                  className="space-x-2"
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => {
-                    setNewName("");
-                    setNewSlug("");
-                    setNewDescription("");
-                    setNewParentId(null);
-                    setNewLevel(0);
-                    setNewDisplayOrder(0);
-                    setIsCreateDialogOpen(true);
-                  }}
-                >
-                  <Plus className="h-4 w-4" />
-                  <span>Add Category</span>
-                </Button>
-                <Button variant="outline" size="sm" onClick={handleRevalidate}>
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Revalidate
-                </Button>
-              </div>
+              <Button variant="outline" size="sm" onClick={handleRevalidate}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Revalidate
+              </Button>
             </div>
             <ScrollArea className="h-[400px]">
               <Table>
@@ -622,8 +314,7 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
                     <TableHead className="w-[60px]">Status</TableHead>
                     <TableHead className="w-[100px]">SKU</TableHead>
                     <TableHead>Product Title</TableHead>
-                    <TableHead>Categories</TableHead>
-                    <TableHead>Draft Status</TableHead>
+                    <TableHead>Duplicate Status</TableHead>
                     <TableHead>Issues</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -641,7 +332,7 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
                             };
                             onUpdate({ products: updatedProducts });
                           }}
-                          disabled={!product.isDuplicate && product.isValid !== false}
+                          disabled={product.isValid === false}
                         />
                       </TableCell>
                       <TableCell>
@@ -660,23 +351,10 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
                       </TableCell>
                       
                       <TableCell>
-                        <div className="space-y-1">
-                          <Badge variant="outline" className="text-xs">
-                            {product.parentCategory || 'Will assign via drafts'}
-                          </Badge>
-                          {product.childCategory && (
-                            <Badge variant="outline" className="text-xs">
-                              {product.childCategory}
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      
-                      <TableCell>
                         {product.isDuplicate ? (
                           <div className="space-y-2">
                             <Badge variant="destructive" className="text-xs">
-                              Duplicate: {product.existingDraft?.draftStatus}
+                              Duplicate {product.existingDraft ? `(Draft: ${product.existingDraft.draftStatus})` : '(Published)'}
                             </Badge>
                             {product.hasPriceChanges && product.priceChanges && (
                               <div className="text-xs space-y-1">
@@ -742,256 +420,6 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
             Next Step
           </Button>
         </div>
-
-        {/* Create Category Dialog - keeping existing functionality */}
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Create New Category</DialogTitle>
-              <DialogDescription>
-                Add a new category to the system. Categories will be available immediately for assignment.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="category-name">Name *</Label>
-                  <Input
-                    id="category-name"
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                    placeholder="Enter category name"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="category-slug">Slug</Label>
-                  <Input
-                    id="category-slug"
-                    value={newSlug}
-                    onChange={(e) => setNewSlug(e.target.value)}
-                    placeholder="auto-generated"
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <Label htmlFor="category-description">Description</Label>
-                <Textarea
-                  id="category-description"
-                  value={newDescription}
-                  onChange={(e) => setNewDescription(e.target.value)}
-                  placeholder="Optional description"
-                />
-              </div>
-              
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="parent-category">Parent Category</Label>
-                  <Select value={newParentId || ""} onValueChange={(value) => setNewParentId(value || null)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="None (top level)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">None (top level)</SelectItem>
-                      {categories.filter((cat: any) => cat.level === 0).map((cat: any) => (
-                        <SelectItem key={cat.id} value={cat.id.toString()}>
-                          {cat.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="category-level">Level</Label>
-                  <Input
-                    id="category-level"
-                    type="number"
-                    value={newLevel}
-                    disabled
-                    className="bg-gray-50"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="display-order">Display Order</Label>
-                  <Input
-                    id="display-order"
-                    type="number"
-                    value={newDisplayOrder}
-                    onChange={(e) => setNewDisplayOrder(parseInt(e.target.value) || 0)}
-                  />
-                </div>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleCreateCategory}
-                disabled={!newName.trim() || createCategoryMutation.isPending}
-              >
-                {createCategoryMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                Create Category
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </CardContent>
-    </Card>
-  );
-}
-                                            : p
-                                        );
-                                        onUpdate({ products: updatedProducts });
-                                      }}
-                                      className="h-3 w-3"
-                                    />
-                                  </div>
-                                )}
-                              </div>
-                            ) : (
-                              <div className="text-xs text-green-600">Identical pricing</div>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="text-sm text-gray-500">New Product</div>
-                        )}
-                      </TableCell>
-                      
-                      <TableCell>
-                        <div className="space-y-1">
-                          {product.validationErrors?.map((error, i) => (
-                            <div key={i} className="flex items-center gap-1 text-red-600 text-sm">
-                              <XCircle className="h-3 w-3" />
-                              <span>{error}</span>
-                            </div>
-                          ))}
-                          {product.validationWarnings?.map((warning, i) => (
-                            <div key={i} className="flex items-center gap-1 text-yellow-600 text-sm">
-                              <AlertTriangle className="h-3 w-3" />
-                              <span>{warning}</span>
-                            </div>
-                          ))}
-                          {(!product.validationErrors?.length && !product.validationWarnings?.length) && (
-                            <div className="flex items-center gap-1 text-green-600 text-sm">
-                              <CheckCircle className="h-3 w-3" />
-                              <span>No issues</span>
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </ScrollArea>
-          </div>
-        )}
-
-        {/* Navigation */}
-        <div className="flex justify-between">
-          <Button variant="outline" onClick={onPrevious}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Previous
-          </Button>
-          <Button 
-            onClick={handleNext}
-            disabled={!validationComplete || (data.validationResults?.hasErrors ?? true)}
-          >
-            {data.validationResults?.hasErrors ? 'Fix Errors First' : 'Continue to Adjustments'}
-          </Button>
-        </div>
-
-        {/* Create Category Dialog - exactly as in admin categories page */}
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Create New Category</DialogTitle>
-              <DialogDescription>
-                Add a new category to organize your products.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="name">Name*</Label>
-                <Input 
-                  id="name" 
-                  value={newName} 
-                  onChange={(e) => setNewName(e.target.value)} 
-                  placeholder="Category Name" 
-                />
-              </div>
-              
-              <div className="grid gap-2">
-                <Label htmlFor="parent">Parent Category</Label>
-                <Select value={newParentId || "none"} onValueChange={(value) => setNewParentId(value === "none" ? null : value)}>
-                  <SelectTrigger id="parent">
-                    <SelectValue placeholder="No Parent (Main Category)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No Parent (Main Category)</SelectItem>
-                    {categories?.filter(cat => cat.level === 0).map((cat: any) => (
-                      <SelectItem key={cat.id} value={cat.id.toString()}>
-                        {cat.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-sm text-muted-foreground">
-                  Current level: {newLevel} {newLevel === 0 ? "(Main Category)" : "(Subcategory)"}
-                </p>
-              </div>
-              
-              <div className="grid gap-2">
-                <Label htmlFor="slug">Slug</Label>
-                <Input 
-                  id="slug" 
-                  value={newSlug} 
-                  readOnly
-                  className="bg-gray-50"
-                />
-                <p className="text-sm text-muted-foreground">
-                  Auto-generated based on parent category and name (e.g., parent-slug-child-name).
-                </p>
-              </div>
-              
-              <div className="grid gap-2">
-                <Label htmlFor="displayOrder">Display Order</Label>
-                <Input 
-                  id="displayOrder" 
-                  type="number" 
-                  value={newDisplayOrder} 
-                  readOnly
-                  className="bg-gray-50"
-                />
-                <p className="text-sm text-muted-foreground">
-                  Auto-calculated based on existing categories at the same level.
-                </p>
-              </div>
-              
-              <div className="grid gap-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea 
-                  id="description"
-                  value={newDescription} 
-                  onChange={(e) => setNewDescription(e.target.value)} 
-                  placeholder="Category description" 
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button 
-                onClick={handleCreateCategory} 
-                disabled={createMutation.isPending}
-              >
-                {createMutation.isPending && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                Create Category
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </CardContent>
     </Card>
   );
