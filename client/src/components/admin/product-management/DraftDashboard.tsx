@@ -126,6 +126,21 @@ export const DraftDashboard: React.FC = () => {
   const [showDuplicates, setShowDuplicates] = useState(false);
   const [duplicateGroups, setDuplicateGroups] = useState<any[]>([]);
 
+  // Determine if delete button should be shown for a product in a group
+  const shouldShowDeleteButton = (product: ProductDraft, group: any) => {
+    if (group.type === 'exact') {
+      // For exact matches, only show delete button on the highest draft ID (most recent)
+      const unpublishedProducts = group.products.filter((p: ProductDraft) => !p.originalProductId);
+      if (unpublishedProducts.length === 0) return false;
+      
+      const highestId = Math.max(...unpublishedProducts.map((p: ProductDraft) => p.id));
+      return product.id === highestId;
+    } else {
+      // For similar matches, show delete button on all unpublished products
+      return true;
+    }
+  };
+
   const [newDraftLoading, setNewDraftLoading] = useState(false);
 
   // Debounce search query to avoid excessive API calls
@@ -402,7 +417,23 @@ export const DraftDashboard: React.FC = () => {
         });
         // Refresh both main drafts list and duplicates
         queryClient.invalidateQueries({ queryKey: ['/api/product-drafts'] });
-        refetchDuplicates();
+        queryClient.invalidateQueries({ queryKey: ['/api/product-drafts-duplicates'] });
+        
+        // Refetch and update the duplicates modal if it's open
+        if (showDuplicates) {
+          refetchDuplicates().then((result) => {
+            if (result.data?.success) {
+              const groups = result.data.data.groups || [];
+              // Sort groups so exact matches appear first
+              const sortedGroups = groups.sort((a: any, b: any) => {
+                if (a.type === 'exact' && b.type !== 'exact') return -1;
+                if (a.type !== 'exact' && b.type === 'exact') return 1;
+                return 0;
+              });
+              setDuplicateGroups(sortedGroups);
+            }
+          });
+        }
       } else {
         toast({
           title: 'Error',
@@ -999,7 +1030,7 @@ export const DraftDashboard: React.FC = () => {
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
-                        {!product.originalProductId && (
+                        {!product.originalProductId && shouldShowDeleteButton(product, group) && (
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button
