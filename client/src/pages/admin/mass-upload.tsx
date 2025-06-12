@@ -56,6 +56,7 @@ export interface CSVProduct {
     costPrice: number;
   };
   hasPriceChanges?: boolean;
+  priceChanges?: string[];
   priceUpdateOptions?: {
     updateCost: boolean;
     updateSale: boolean;

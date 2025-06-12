@@ -238,36 +238,56 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
           errors.push('Product URL is required');
         }
 
-        // Only check duplicates if we have a valid SKU
+        // Check for SKU duplicates in both drafts and published products
         if (product.sku && product.sku.trim()) {
+          // Check existing drafts
           const duplicateDraft = existingDrafts.drafts?.find((draft: any) => 
             draft.sku && draft.sku.toLowerCase() === product.sku.toLowerCase()
           );
+          
           if (duplicateDraft) {
-            // Store existing draft data for comparison
+            // Store existing draft data for pricing comparison
             product.existingDraft = {
               id: duplicateDraft.id,
               name: duplicateDraft.name,
-              price: duplicateDraft.price,
-              salePrice: duplicateDraft.salePrice,
-              costPrice: duplicateDraft.costPrice,
+              price: duplicateDraft.price || 0,
+              salePrice: duplicateDraft.salePrice || 0,
+              costPrice: duplicateDraft.costPrice || 0,
               draftStatus: duplicateDraft.draftStatus
             };
 
-            // Mark as duplicate and allow user to deselect or update
+            // Compare pricing to detect changes
+            const pricingChanges = [];
+            if (product.regularPrice !== duplicateDraft.price) {
+              pricingChanges.push(`Regular price: ${duplicateDraft.price} → ${product.regularPrice}`);
+            }
+            if (product.salePrice !== duplicateDraft.salePrice) {
+              pricingChanges.push(`Sale price: ${duplicateDraft.salePrice || 'none'} → ${product.salePrice || 'none'}`);
+            }
+            if (product.costPrice !== duplicateDraft.costPrice) {
+              pricingChanges.push(`Cost price: ${duplicateDraft.costPrice || 'none'} → ${product.costPrice || 'none'}`);
+            }
+
             product.isDuplicate = true;
             product.isSelected = false; // Default to deselected for duplicates
-            warnings.push(`Product with SKU "${product.sku}" already exists (Status: ${duplicateDraft.draftStatus}). You can choose to update the existing product or skip this duplicate.`);
+            product.hasPriceChanges = pricingChanges.length > 0;
+            product.priceChanges = pricingChanges;
+
+            if (pricingChanges.length > 0) {
+              warnings.push(`SKU "${product.sku}" exists with pricing differences. Select to update: ${pricingChanges.join(', ')}`);
+            } else {
+              warnings.push(`SKU "${product.sku}" already exists with identical pricing (Status: ${duplicateDraft.draftStatus})`);
+            }
           } else {
             product.isSelected = true; // Default to selected for non-duplicates
           }
 
-          // Check for duplicate name in existing drafts
+          // Check for duplicate name in existing drafts (informational only)
           const duplicateName = existingDrafts.drafts?.find((draft: any) => 
             draft.name && product.title && draft.name.toLowerCase() === product.title.toLowerCase()
           );
           if (duplicateName && !duplicateDraft) {
-            warnings.push(`Product with similar name "${product.title}" already has a draft record`);
+            warnings.push(`Product name "${product.title}" matches existing draft (different SKU)`);
           }
         }
 
@@ -348,37 +368,7 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
           return category;
         };
 
-        // Handle categories - check if categories exist in the system
-        let foundValidCategories = false;
-        
-        if (product.parentCategory && product.parentCategory.trim() !== '') {
-          // Try to find the parent category in the system
-          const parentCategory = findCategoryByName(product.parentCategory);
-          
-          if (parentCategory) {
-            product.parentCategoryId = parentCategory.id;
-            foundValidCategories = true;
-            
-            // If we have a child category, try to find it under the parent
-            if (product.childCategory && product.childCategory.trim() !== '') {
-              const childCategory = findCategoryByName(product.childCategory, parentCategory.id);
-              
-              if (childCategory) {
-                product.childCategoryId = childCategory.id;
-              } else {
-                warnings.push(`Child category "${product.childCategory}" not found under "${product.parentCategory}"`);
-              }
-            }
-          } else {
-            warnings.push(`Parent category "${product.parentCategory}" not found`);
-          }
-        }
-        
-        if (!foundValidCategories) {
-          // No valid categories found - mark for later assignment
-          product.needsCategoryAssignment = true;
-          warnings.push(`Product "${product.title}" has no category assignments. You can assign categories in the next step.`);
-        }
+        // Categories will be handled through the drafts system - no validation needed here
 
         // Validate pricing (optional warnings)
         if (product.costPrice > 0 && product.regularPrice > 0 && product.costPrice >= product.regularPrice) {
@@ -670,163 +660,186 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
                       </TableCell>
                       
                       <TableCell>
-                        {product.needsCategoryAssignment ? (
+                        <div className="space-y-1">
+                          <Badge variant="outline" className="text-xs">
+                            {product.parentCategory || 'Will assign via drafts'}
+                          </Badge>
+                          {product.childCategory && (
+                            <Badge variant="outline" className="text-xs">
+                              {product.childCategory}
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      
+                      <TableCell>
+                        {product.isDuplicate ? (
                           <div className="space-y-2">
-                            <div className="text-xs font-medium text-orange-700">Select Categories:</div>
-                            
-                            {/* Parent Category Selector */}
-                            <div>
-                              <Label className="text-xs">Parent Category</Label>
-                              <Select 
-                                value={product.assignedParentCategoryId?.toString() || ""} 
-                                onValueChange={(value) => {
-                                  const parentId = value ? parseInt(value) : null;
-                                  const updatedProducts = data.products.map(p => 
-                                    p.sku === product.sku 
-                                      ? { 
-                                          ...p, 
-                                          assignedParentCategoryId: parentId,
-                                          assignedChildCategoryId: null, // Reset child when parent changes
-                                          parentCategoryId: parentId,
-                                          childCategoryId: null
-                                        }
-                                      : p
-                                  );
-                                  onUpdate({ products: updatedProducts });
-                                }}
-                              >
-                                <SelectTrigger className="h-8 text-xs">
-                                  <SelectValue placeholder="Select parent..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {categories.filter((cat: any) => cat.level === 0).map((cat: any) => (
-                                    <SelectItem key={cat.id} value={cat.id.toString()}>
-                                      {cat.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-
-                            {/* Child Category Selector */}
-                            {product.assignedParentCategoryId && (
-                              <div>
-                                <Label className="text-xs">Child Category</Label>
-                                <Select 
-                                  value={product.assignedChildCategoryId?.toString() || ""} 
-                                  onValueChange={(value) => {
-                                    const childId = value ? parseInt(value) : null;
-                                    const updatedProducts = data.products.map(p => 
-                                      p.sku === product.sku 
-                                        ? { 
-                                            ...p, 
-                                            assignedChildCategoryId: childId,
-                                            childCategoryId: childId
-                                          }
-                                        : p
-                                    );
-                                    onUpdate({ products: updatedProducts });
-                                  }}
-                                >
-                                  <SelectTrigger className="h-8 text-xs">
-                                    <SelectValue placeholder="Select child..." />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {categories
-                                      .filter((cat: any) => cat.parentId === product.assignedParentCategoryId)
-                                      .map((cat: any) => (
-                                        <SelectItem key={cat.id} value={cat.id.toString()}>
-                                          {cat.name}
-                                        </SelectItem>
-                                      ))}
-                                  </SelectContent>
-                                </Select>
+                            <Badge variant="destructive" className="text-xs">
+                              Duplicate: {product.existingDraft?.draftStatus}
+                            </Badge>
+                            {product.hasPriceChanges && product.priceChanges && (
+                              <div className="text-xs space-y-1">
+                                <div className="font-medium text-orange-700">Price Changes:</div>
+                                {product.priceChanges.map((change, idx) => (
+                                  <div key={idx} className="text-xs text-gray-600">{change}</div>
+                                ))}
                               </div>
                             )}
                           </div>
                         ) : (
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <Badge variant={product.parentCategoryId ? "default" : "destructive"} className="text-xs">
-                                {product.parentCategory || 'Not assigned'}
-                              </Badge>
-                              {!product.parentCategoryId && <XCircle className="h-3 w-3 text-red-500" />}
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Badge variant={product.childCategoryId ? "secondary" : "destructive"} className="text-xs">
-                                {product.childCategory || 'Not assigned'}
-                              </Badge>
-                              {!product.childCategoryId && <XCircle className="h-3 w-3 text-red-500" />}
-                            </div>
-                          </div>
+                          <Badge variant="default" className="text-xs">
+                            New Product
+                          </Badge>
                         )}
                       </TableCell>
                       
                       <TableCell>
-                        {product.existingProduct ? (
-                          <div className="space-y-2">
-                            <div className="text-sm font-medium text-blue-600">Product Exists</div>
-                            {product.hasPriceChanges ? (
-                              <div className="space-y-2 p-2 border rounded bg-yellow-50">
-                                <div className="text-xs font-medium text-yellow-700">Price Changes Detected:</div>
-                                
-                                {/* Regular Price Comparison */}
-                                {Math.abs(product.existingProduct.price - product.regularPrice) > 0.01 && (
-                                  <div className="flex items-center justify-between text-xs">
-                                    <div>
-                                      <div>Regular: R{product.existingProduct.price.toFixed(2)} → R{product.regularPrice.toFixed(2)}</div>
-                                    </div>
-                                    <input
-                                      type="checkbox"
-                                      checked={product.priceUpdateOptions?.updateRegularPrice || false}
-                                      onChange={(e) => {
-                                        const updatedProducts = data.products.map(p => 
-                                          p.sku === product.sku 
-                                            ? { ...p, priceUpdateOptions: { ...p.priceUpdateOptions, updateRegularPrice: e.target.checked } }
-                                            : p
-                                        );
-                                        onUpdate({ products: updatedProducts });
-                                      }}
-                                      className="h-3 w-3"
-                                    />
-                                  </div>
-                                )}
-                                
-                                {/* Sale Price Comparison */}
-                                {Math.abs((product.existingProduct.salePrice || 0) - (product.salePrice || 0)) > 0.01 && (
-                                  <div className="flex items-center justify-between text-xs">
-                                    <div>
-                                      <div>Sale: R{(product.existingProduct.salePrice || 0).toFixed(2)} → R{(product.salePrice || 0).toFixed(2)}</div>
-                                    </div>
-                                    <input
-                                      type="checkbox"
-                                      checked={product.priceUpdateOptions?.updateSalePrice || false}
-                                      onChange={(e) => {
-                                        const updatedProducts = data.products.map(p => 
-                                          p.sku === product.sku 
-                                            ? { ...p, priceUpdateOptions: { ...p.priceUpdateOptions, updateSalePrice: e.target.checked } }
-                                            : p
-                                        );
-                                        onUpdate({ products: updatedProducts });
-                                      }}
-                                      className="h-3 w-3"
-                                    />
-                                  </div>
-                                )}
-                                
-                                {/* Cost Price Comparison */}
-                                {Math.abs(product.existingProduct.costPrice - product.costPrice) > 0.01 && (
-                                  <div className="flex items-center justify-between text-xs">
-                                    <div>
-                                      <div>Cost: R{product.existingProduct.costPrice.toFixed(2)} → R{product.costPrice.toFixed(2)}</div>
-                                    </div>
-                                    <input
-                                      type="checkbox"
-                                      checked={product.priceUpdateOptions?.updateCostPrice || false}
-                                      onChange={(e) => {
-                                        const updatedProducts = data.products.map(p => 
-                                          p.sku === product.sku 
-                                            ? { ...p, priceUpdateOptions: { ...p.priceUpdateOptions, updateCostPrice: e.target.checked } }
+                        {product.validationErrors && product.validationErrors.length > 0 ? (
+                          <div className="space-y-1">
+                            {product.validationErrors.map((error, idx) => (
+                              <div key={idx} className="text-xs text-red-600 flex items-center gap-1">
+                                <XCircle className="h-3 w-3" />
+                                {error}
+                              </div>
+                            ))}
+                          </div>
+                        ) : product.validationWarnings && product.validationWarnings.length > 0 ? (
+                          <div className="space-y-1">
+                            {product.validationWarnings.map((warning, idx) => (
+                              <div key={idx} className="text-xs text-yellow-600 flex items-center gap-1">
+                                <AlertTriangle className="h-3 w-3" />
+                                {warning}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-xs text-green-600 flex items-center gap-1">
+                            <CheckCircle className="h-3 w-3" />
+                            Valid
+                          </div>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </ScrollArea>
+          </div>
+        )}
+
+        {/* Navigation */}
+        <div className="flex justify-between">
+          <Button variant="outline" onClick={onPrevious}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Previous
+          </Button>
+          <Button 
+            onClick={onNext}
+            disabled={!validationComplete || (data.validationResults?.hasErrors ?? true)}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            Next Step
+          </Button>
+        </div>
+
+        {/* Create Category Dialog - keeping existing functionality */}
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Create New Category</DialogTitle>
+              <DialogDescription>
+                Add a new category to the system. Categories will be available immediately for assignment.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="category-name">Name *</Label>
+                  <Input
+                    id="category-name"
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    placeholder="Enter category name"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="category-slug">Slug</Label>
+                  <Input
+                    id="category-slug"
+                    value={newSlug}
+                    onChange={(e) => setNewSlug(e.target.value)}
+                    placeholder="auto-generated"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <Label htmlFor="category-description">Description</Label>
+                <Textarea
+                  id="category-description"
+                  value={newDescription}
+                  onChange={(e) => setNewDescription(e.target.value)}
+                  placeholder="Optional description"
+                />
+              </div>
+              
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="parent-category">Parent Category</Label>
+                  <Select value={newParentId || ""} onValueChange={(value) => setNewParentId(value || null)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="None (top level)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">None (top level)</SelectItem>
+                      {categories.filter((cat: any) => cat.level === 0).map((cat: any) => (
+                        <SelectItem key={cat.id} value={cat.id.toString()}>
+                          {cat.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="category-level">Level</Label>
+                  <Input
+                    id="category-level"
+                    type="number"
+                    value={newLevel}
+                    disabled
+                    className="bg-gray-50"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="display-order">Display Order</Label>
+                  <Input
+                    id="display-order"
+                    type="number"
+                    value={newDisplayOrder}
+                    onChange={(e) => setNewDisplayOrder(parseInt(e.target.value) || 0)}
+                  />
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleCreateCategory}
+                disabled={!newName.trim() || createCategoryMutation.isPending}
+              >
+                {createCategoryMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Create Category
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </CardContent>
+    </Card>
+  );
+}
                                             : p
                                         );
                                         onUpdate({ products: updatedProducts });
