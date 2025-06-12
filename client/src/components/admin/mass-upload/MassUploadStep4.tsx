@@ -96,41 +96,53 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
             return true;
           }
           
-          // Parse multiple SKUs from draft (patterns like "DM6666=blue,DM7777=red")
+          // Parse multiple SKUs from draft (patterns like "DM6666=red,DM7777=blue")
           const draftSkus = draftSku.split(',').map((s: string) => {
             // Extract SKU part before '=' if present
             const skuPart = s.split('=')[0].trim();
             return skuPart;
           });
           
+          console.log(`Draft SKU parsed: "${draftSku}" → [${draftSkus.join(', ')}]`);
+          
           // Check if any draft SKU matches the product SKU
           for (const sku of draftSkus) {
             if (sku === productSku) {
-              console.log(`✓ Partial match found: ${productSku} matches parsed draft SKU ${sku}`);
+              console.log(`✓ Pattern match found: product "${productSku}" === parsed draft SKU "${sku}"`);
               return true;
             }
-            if (sku.includes(productSku) || productSku.includes(sku)) {
-              console.log(`✓ Substring match found: ${productSku} ~ ${sku}`);
-              return true;
+            // Also check partial matches for complex SKUs
+            if (sku.length > 3 && productSku.length > 3) {
+              if (sku.includes(productSku) || productSku.includes(sku)) {
+                console.log(`✓ Substring match found: "${productSku}" ~ "${sku}"`);
+                return true;
+              }
             }
           }
           
-          // Also check if product SKU contains multiple SKUs
+          // Also check if product SKU contains multiple SKUs (reverse check)
           const productSkus = productSku.split(',').map((s: string) => {
             const skuPart = s.split('=')[0].trim();
             return skuPart;
           });
           
+          if (productSkus.length > 1) {
+            console.log(`Product SKU parsed: "${productSku}" → [${productSkus.join(', ')}]`);
+          }
+          
           // Check for any matches between product SKUs and draft SKUs
           for (const pSku of productSkus) {
             for (const dSku of draftSkus) {
               if (pSku === dSku) {
-                console.log(`✓ Multi-SKU match found: ${pSku} === ${dSku}`);
+                console.log(`✓ Multi-pattern match found: product "${pSku}" === draft "${dSku}"`);
                 return true;
               }
-              if (pSku.includes(dSku) || dSku.includes(pSku)) {
-                console.log(`✓ Multi-SKU substring match found: ${pSku} ~ ${dSku}`);
-                return true;
+              // Check partial matches for complex multi-SKU patterns
+              if (pSku.length > 3 && dSku.length > 3) {
+                if (pSku.includes(dSku) || dSku.includes(pSku)) {
+                  console.log(`✓ Multi-pattern substring match: "${pSku}" ~ "${dSku}"`);
+                  return true;
+                }
               }
             }
           }
@@ -192,30 +204,54 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
             // Check for exact match
             if (publishedSku === productSku) return true;
             
-            // Parse multiple SKUs from published product (patterns like "DM6666=blue,DM7777=red")
+            // Parse multiple SKUs from published product (patterns like "DM6666=red,DM7777=blue")
             const publishedSkus = publishedSku.split(',').map((s: string) => {
               // Extract SKU part before '=' if present
               const skuPart = s.split('=')[0].trim();
               return skuPart;
             });
             
+            console.log(`Published SKU parsed: "${publishedSku}" → [${publishedSkus.join(', ')}]`);
+            
             // Check if any published SKU matches the product SKU
             for (const sku of publishedSkus) {
-              if (sku === productSku) return true;
-              if (sku.includes(productSku) || productSku.includes(sku)) return true;
+              if (sku === productSku) {
+                console.log(`✓ Pattern match found: product "${productSku}" === parsed published SKU "${sku}"`);
+                return true;
+              }
+              // Also check partial matches for complex SKUs
+              if (sku.length > 3 && productSku.length > 3) {
+                if (sku.includes(productSku) || productSku.includes(sku)) {
+                  console.log(`✓ Substring match found: "${productSku}" ~ "${sku}"`);
+                  return true;
+                }
+              }
             }
             
-            // Also check if product SKU contains multiple SKUs
+            // Also check if product SKU contains multiple SKUs (reverse check)
             const productSkus = productSku.split(',').map((s: string) => {
               const skuPart = s.split('=')[0].trim();
               return skuPart;
             });
             
+            if (productSkus.length > 1) {
+              console.log(`Product SKU parsed: "${productSku}" → [${productSkus.join(', ')}]`);
+            }
+            
             // Check for any matches between product SKUs and published SKUs
             for (const pSku of productSkus) {
               for (const pubSku of publishedSkus) {
-                if (pSku === pubSku) return true;
-                if (pSku.includes(pubSku) || pubSku.includes(pSku)) return true;
+                if (pSku === pubSku) {
+                  console.log(`✓ Multi-pattern match found: product "${pSku}" === published "${pubSku}"`);
+                  return true;
+                }
+                // Check partial matches for complex multi-SKU patterns
+                if (pSku.length > 3 && pubSku.length > 3) {
+                  if (pSku.includes(pubSku) || pubSku.includes(pSku)) {
+                    console.log(`✓ Multi-pattern substring match: "${pSku}" ~ "${pubSku}"`);
+                    return true;
+                  }
+                }
               }
             }
             
