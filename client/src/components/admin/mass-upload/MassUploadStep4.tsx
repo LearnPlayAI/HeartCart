@@ -213,7 +213,7 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
     setIsValidating(true);
     
     try {
-      const validatedProducts = data.products.map(product => {
+      const validatedProducts = data.products.map((product, index) => {
         const errors: string[] = [];
         const warnings: string[] = [];
 
@@ -233,7 +233,7 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
 
         // Only check duplicates if we have a valid SKU
         if (product.sku && product.sku.trim()) {
-          const duplicateDraft = existingDrafts.find((draft: any) => 
+          const duplicateDraft = existingDrafts.drafts?.find((draft: any) => 
             draft.sku && draft.sku.toLowerCase() === product.sku.toLowerCase()
           );
           if (duplicateDraft) {
@@ -256,7 +256,7 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
           }
 
           // Check for duplicate name in existing drafts
-          const duplicateName = existingDrafts.find((draft: any) => 
+          const duplicateName = existingDrafts.drafts?.find((draft: any) => 
             draft.name && product.title && draft.name.toLowerCase() === product.title.toLowerCase()
           );
           if (duplicateName && !duplicateDraft) {
@@ -331,67 +331,30 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
           return category;
         };
 
-        // Handle categories - categories are optional, but if provided should be valid
-        const hasParentCategory = product.parentCategory && product.parentCategory.trim() !== '' && product.parentCategory !== 'Mass Upload';
-        const hasChildCategory = product.childCategory && product.childCategory.trim() !== '' && product.childCategory !== 'Mass Upload';
-
-        if (!hasParentCategory && !hasChildCategory) {
+        // Handle categories - categories are optional for upload
+        const hasValidCategory = product.parentCategory && product.parentCategory.trim() !== '' && product.parentCategory !== 'Mass Upload';
+        
+        if (!hasValidCategory) {
           // No categories provided - this is acceptable, mark for later assignment
           product.needsCategoryAssignment = true;
           warnings.push(`Product "${product.title}" has no category assignments. You can assign categories in the next step.`);
-          product.assignedParentCategoryId = undefined;
-          product.assignedChildCategoryId = undefined;
-        } else if (hasParentCategory || hasChildCategory) {
-          // Some category info provided - validate what we have
-          let parentCategory = null;
-          let childCategory = null;
-
-          if (hasParentCategory) {
-            parentCategory = findCategoryByName(product.parentCategory);
-            if (!parentCategory) {
-              product.needsCategoryAssignment = true;
-              warnings.push(`Parent category "${product.parentCategory}" not found. You can select a valid category in the next step.`);
-              product.assignedParentCategoryId = null;
-            } else {
-              product.parentCategoryId = parentCategory.id;
-              product.assignedParentCategoryId = parentCategory.id;
-            }
-          }
-
-          if (hasChildCategory) {
-            if (parentCategory) {
-              childCategory = findCategoryByName(product.childCategory, parentCategory.id);
-              if (!childCategory) {
-                product.needsCategoryAssignment = true;
-                warnings.push(`Child category "${product.childCategory}" not found under "${product.parentCategory}". You can select a valid category in the next step.`);
-                product.assignedChildCategoryId = null;
-              } else {
-                product.childCategoryId = childCategory.id;
-                product.assignedChildCategoryId = childCategory.id;
-              }
-            } else {
-              // Child category without parent - need to assign both
-              product.needsCategoryAssignment = true;
-              warnings.push(`Child category "${product.childCategory}" provided without a valid parent category. You can assign categories in the next step.`);
-              product.assignedChildCategoryId = null;
-            }
-          }
         }
 
-        // Validate pricing
-        if (product.costPrice >= product.regularPrice) {
+        // Validate pricing (optional warnings)
+        if (product.costPrice > 0 && product.regularPrice > 0 && product.costPrice >= product.regularPrice) {
           warnings.push('Cost price should be less than regular price');
         }
 
-        if (product.salePrice > 0 && product.salePrice >= product.regularPrice) {
+        if (product.salePrice > 0 && product.regularPrice > 0 && product.salePrice >= product.regularPrice) {
           warnings.push('Sale price should be less than regular price');
         }
 
         // Check URL format
-        if (!product.productUrl.startsWith('http')) {
+        if (product.productUrl && !product.productUrl.startsWith('http')) {
           warnings.push('Product URL should start with http or https');
         }
 
+        // Return validated product with validation results
         return {
           ...product,
           validationErrors: errors,
