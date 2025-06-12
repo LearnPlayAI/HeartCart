@@ -297,6 +297,8 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
   const getValidationIcon = (product: CSVProduct) => {
     if (product.validationErrors && product.validationErrors.length > 0) {
       return <XCircle className="h-4 w-4 text-red-500" />;
+    } else if (product.isDuplicate) {
+      return <AlertTriangle className="h-4 w-4 text-orange-500" />;
     } else if (product.validationWarnings && product.validationWarnings.length > 0) {
       return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
     } else {
@@ -307,6 +309,8 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
   const getValidationStatus = (product: CSVProduct) => {
     if (product.validationErrors && product.validationErrors.length > 0) {
       return <span className="text-red-600 text-xs font-medium">Invalid</span>;
+    } else if (product.isDuplicate) {
+      return <span className="text-orange-600 text-xs font-medium">Duplicate</span>;
     } else if (product.validationWarnings && product.validationWarnings.length > 0) {
       return <span className="text-yellow-600 text-xs font-medium">Warning</span>;
     } else {
