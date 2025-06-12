@@ -495,6 +495,108 @@ export default function registerProductDraftRoutes(router: Router) {
   );
   
   /**
+   * Find all duplicate drafts across the entire database
+   * GET /api/product-drafts-duplicates
+   */
+  router.get(
+    "/api/product-drafts-duplicates",
+    isAuthenticated,
+    asyncHandler(async (req, res) => {
+      logger.info("Finding all duplicate drafts across database");
+      
+      // Get ALL drafts from database (not paginated)
+      const allDrafts = await db
+        .select()
+        .from(productDrafts)
+        .orderBy(productDrafts.name);
+      
+      // Helper function to calculate name similarity
+      const calculateSimilarity = (name1: string, name2: string): number => {
+        const str1 = name1.toLowerCase().trim();
+        const str2 = name2.toLowerCase().trim();
+        
+        if (str1 === str2) return 1; // Exact match
+        
+        // Simple similarity based on word overlap
+        const words1 = str1.split(/\s+/);
+        const words2 = str2.split(/\s+/);
+        
+        const commonWords = words1.filter(word => words2.includes(word));
+        const totalWords = Math.max(words1.length, words2.length);
+        
+        return commonWords.length / totalWords;
+      };
+      
+      // Detect duplicates and similar products
+      const groups: any[] = [];
+      const processed = new Set<number>();
+
+      allDrafts.forEach((draft) => {
+        if (processed.has(draft.id)) return;
+
+        const similarProducts = allDrafts.filter((other) => {
+          if (other.id === draft.id || processed.has(other.id)) return false;
+          
+          const similarity = calculateSimilarity(draft.name, other.name);
+          // Different SKU but similar/same name
+          return similarity >= 0.6; // 60% similarity threshold
+        });
+
+        if (similarProducts.length > 0) {
+          const group = [draft, ...similarProducts];
+          const hasExactMatch = group.some((p1) => 
+            group.some((p2) => 
+              p1.id !== p2.id && p1.name.toLowerCase().trim() === p2.name.toLowerCase().trim()
+            )
+          );
+
+          groups.push({
+            type: hasExactMatch ? 'exact' : 'similar',
+            products: group
+          });
+
+          group.forEach((p) => processed.add(p.id));
+        }
+      });
+      
+      logger.info(`Found ${groups.length} duplicate groups across ${allDrafts.length} total drafts`);
+      sendSuccess(res, { groups, totalDrafts: allDrafts.length });
+    })
+  );
+
+  /**
+   * Delete a product draft and its associated images
+   * DELETE /api/product-drafts/:id
+   */
+  router.delete(
+    "/api/product-drafts/:id",
+    isAuthenticated,
+    validateRequest({ params: productDraftIdParamSchema }),
+    asyncHandler(async (req, res) => {
+      const draftId = req.params.id;
+      
+      logger.info(`Deleting product draft ${draftId}`, { userId: req.user?.id });
+      
+      const draft = await storage.getProductDraft(draftId);
+      
+      if (!draft) {
+        throw new NotFoundError("Product draft not found");
+      }
+      
+      // Check if user has permission to delete this draft
+      if (draft.createdBy !== req.user?.id && req.user?.role !== 'admin') {
+        throw new BadRequestError("You don't have permission to delete this draft");
+      }
+      
+      // Delete the draft and its images
+      await storage.deleteProductDraft(draftId);
+      
+      logger.info(`Successfully deleted product draft ${draftId}`);
+      sendSuccess(res, { message: "Product draft deleted successfully" });
+    })
+  );
+
+  /**
    * Reorder images for a product draft
    * POST /api/product-drafts/:id/images/reorder
    */

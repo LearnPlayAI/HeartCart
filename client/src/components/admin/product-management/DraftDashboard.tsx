@@ -351,41 +351,70 @@ export const DraftDashboard: React.FC = () => {
     return commonWords.length / totalWords;
   };
 
-  // Detect duplicates and similar products
-  const detectDuplicates = () => {
-    const groups: any[] = [];
-    const processed = new Set<number>();
+  // Fetch all duplicates from server
+  const { data: duplicatesData, refetch: refetchDuplicates } = useQuery({
+    queryKey: ['/api/product-drafts-duplicates'],
+    enabled: false, // Don't auto-fetch, only when requested
+  });
 
-    filteredDrafts.forEach((draft: ProductDraft) => {
-      if (processed.has(draft.id)) return;
-
-      const similarProducts = filteredDrafts.filter((other: ProductDraft) => {
-        if (other.id === draft.id || processed.has(other.id)) return false;
-        
-        const similarity = calculateSimilarity(draft.name, other.name);
-        // Different SKU but similar/same name
-        return similarity >= 0.6; // 60% similarity threshold
-      });
-
-      if (similarProducts.length > 0) {
-        const group = [draft, ...similarProducts];
-        const hasExactMatch = group.some((p1: ProductDraft) => 
-          group.some((p2: ProductDraft) => 
-            p1.id !== p2.id && p1.name.toLowerCase().trim() === p2.name.toLowerCase().trim()
-          )
-        );
-
-        groups.push({
-          type: hasExactMatch ? 'exact' : 'similar',
-          products: group
+  // Detect duplicates using server-side search
+  const detectDuplicates = async () => {
+    try {
+      const result = await refetchDuplicates();
+      if (result.data?.success) {
+        setDuplicateGroups(result.data.data.groups || []);
+        setShowDuplicates(true);
+      } else {
+        toast({
+          title: 'Error',
+          description: 'Failed to fetch duplicate products',
+          variant: 'destructive',
         });
-
-        group.forEach((p: ProductDraft) => processed.add(p.id));
       }
-    });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch duplicate products',
+        variant: 'destructive',
+      });
+    }
+  };
 
-    setDuplicateGroups(groups);
-    setShowDuplicates(true);
+  // Delete product draft mutation
+  const deleteDraftMutation = useMutation({
+    mutationFn: async (draftId: number) => {
+      const response = await apiRequest('DELETE', `/api/product-drafts/${draftId}`);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        toast({
+          title: 'Success',
+          description: 'Product draft deleted successfully',
+        });
+        // Refresh both main drafts list and duplicates
+        queryClient.invalidateQueries({ queryKey: ['/api/product-drafts'] });
+        refetchDuplicates();
+      } else {
+        toast({
+          title: 'Error',
+          description: data.error?.message || 'Failed to delete product draft',
+          variant: 'destructive',
+        });
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: 'Failed to delete product draft',
+        variant: 'destructive',
+      });
+    }
+  });
+
+  // Handle delete draft
+  const handleDeleteDraft = (draftId: number) => {
+    deleteDraftMutation.mutate(draftId);
   };
   
   // Get wizard step display name
