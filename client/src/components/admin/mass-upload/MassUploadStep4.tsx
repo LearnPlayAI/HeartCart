@@ -54,10 +54,22 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
     
     // Extract drafts from API response
     const draftsArray = (existingDrafts as any)?.data?.drafts || (existingDrafts as any)?.drafts || [];
-    const productsArray = (publishedProducts as any)?.data?.products || (publishedProducts as any)?.products || [];
+    const productsArray = (publishedProducts as any)?.data || (publishedProducts as any) || [];
     
     console.log('Drafts array length:', draftsArray.length);
     console.log('Products array length:', productsArray.length);
+    
+    // Debug: Check if DM9317 exists in either collection
+    const dm9317InDrafts = draftsArray.find((d: any) => d.sku?.toLowerCase().includes('9317'));
+    const dm9317InProducts = productsArray.find((p: any) => p.sku?.toLowerCase().includes('9317'));
+    
+    console.log('🔍 DM9317 search results:');
+    console.log('- In drafts:', dm9317InDrafts ? `Found: ${dm9317InDrafts.sku}` : 'NOT FOUND');
+    console.log('- In products:', dm9317InProducts ? `Found: ${dm9317InProducts.sku}` : 'NOT FOUND');
+    
+    // Log first few SKUs from each collection
+    console.log('Sample draft SKUs:', draftsArray.slice(0, 5).map((d: any) => d.sku));
+    console.log('Sample product SKUs:', productsArray.slice(0, 5).map((p: any) => p.sku));
 
     const validatedProducts = data.products.map(product => {
       const errors: string[] = [];
