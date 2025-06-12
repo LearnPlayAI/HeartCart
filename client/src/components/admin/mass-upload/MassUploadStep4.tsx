@@ -87,8 +87,12 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
           
           const draftSku = draft.sku.toLowerCase().trim();
           
-          // Log the comparison for debugging
-          console.log(`Comparing product SKU "${productSku}" with draft SKU "${draftSku}"`);
+          // Log the comparison for debugging - especially for DM9317
+          if (productSku === 'dm9317' || draftSku.includes('9317')) {
+            console.log(`🔍 DEBUGGING DM9317: Comparing product SKU "${productSku}" with draft SKU "${draftSku}"`);
+          } else {
+            console.log(`Comparing product SKU "${productSku}" with draft SKU "${draftSku}"`);
+          }
           
           // Check for exact match
           if (draftSku === productSku) {
@@ -201,8 +205,16 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
             
             const publishedSku = prod.sku.toLowerCase().trim();
             
+            // Debug DM9317 specifically
+            if (productSku === 'dm9317' || publishedSku.includes('9317')) {
+              console.log(`🔍 DEBUGGING DM9317: Comparing product SKU "${productSku}" with published SKU "${publishedSku}"`);
+            }
+            
             // Check for exact match
-            if (publishedSku === productSku) return true;
+            if (publishedSku === productSku) {
+              console.log(`✓ Exact match found with published product: ${productSku} === ${publishedSku}`);
+              return true;
+            }
             
             // Parse multiple SKUs from published product (patterns like "DM6666=red,DM7777=blue")
             const publishedSkus = publishedSku.split(',').map((s: string) => {
