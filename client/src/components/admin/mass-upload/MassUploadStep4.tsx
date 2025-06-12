@@ -171,6 +171,12 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
           } else {
             warnings.push(`SKU "${product.sku}" matches existing draft "${duplicateDraft.sku}" with identical pricing (Status: ${duplicateDraft.draftStatus})`);
           }
+          
+          console.log(`✓ Marked product ${product.sku} as duplicate:`, {
+            isDuplicate: product.isDuplicate,
+            hasWarnings: warnings.length > 0,
+            warnings: warnings
+          });
         } else {
           // Check published products for duplicates (with partial matching)
           const duplicateProduct = productsArray.find((prod: any) => {
@@ -252,6 +258,15 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
       product.validationErrors = errors;
       product.validationWarnings = warnings;
       product.isValid = errors.length === 0;
+
+      console.log(`Final product state for ${product.sku}:`, {
+        isDuplicate: product.isDuplicate,
+        isValid: product.isValid,
+        hasErrors: errors.length,
+        hasWarnings: warnings.length,
+        warnings: warnings,
+        existingDraft: !!product.existingDraft
+      });
 
       return product;
     });
