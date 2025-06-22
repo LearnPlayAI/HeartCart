@@ -243,11 +243,11 @@ const ProductCard: React.FC<ProductCardProps> = ({
           searchQuery,
           sortBy,
           viewMode,
-          priceRange: existingState.priceRange || [0, 5000],
-          ratingFilter: existingState.ratingFilter || null,
-          filters: existingState.filters || {},
-          attributeFilters: existingState.attributeFilters || [],
-          selectedCategory: existingState.selectedCategory || null
+          priceRange: existingState?.priceRange || [0, 5000],
+          ratingFilter: existingState?.ratingFilter || null,
+          filters: existingState?.filters || {},
+          attributeFilters: existingState?.attributeFilters || [],
+          selectedCategory: existingState?.selectedCategory || null
         };
         
         // Save complete state to sessionStorage
