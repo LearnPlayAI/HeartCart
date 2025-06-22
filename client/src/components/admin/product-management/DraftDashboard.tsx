@@ -74,6 +74,11 @@ export const DraftDashboard: React.FC = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newDraftName, setNewDraftName] = useState('');
   
+  // Delete draft modal state
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [publishedDraftModalOpen, setPublishedDraftModalOpen] = useState(false);
+  const [draftToDelete, setDraftToDelete] = useState<{id: number, name: string} | null>(null);
+  
   // Category filters
   const [selectedParentCategory, setSelectedParentCategory] = useState<string>('');
   const [selectedChildCategory, setSelectedChildCategory] = useState<string>('');
@@ -240,7 +245,56 @@ export const DraftDashboard: React.FC = () => {
     }
   });
   
+  // Delete draft mutation
+  const deleteDraftMutation = useMutation({
+    mutationFn: async (draftId: number) => {
+      const response = await apiRequest('DELETE', `/api/product-drafts/${draftId}`);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        toast({
+          title: 'Draft Deleted',
+          description: 'Product draft has been successfully deleted.',
+        });
+        queryClient.invalidateQueries({ queryKey: ['/api/product-drafts'] });
+      } else {
+        toast({
+          title: 'Delete Failed',
+          description: data.error?.message || 'Failed to delete the product draft.',
+          variant: 'destructive',
+        });
+      }
+    },
+    onError: (error: any) => {
+      console.error('Delete draft error:', error);
+      toast({
+        title: 'Delete Failed',
+        description: 'An error occurred while deleting the product draft.',
+        variant: 'destructive',
+      });
+    }
+  });
 
+  // Handle delete draft
+  const handleDeleteDraft = (draftId: number, draftName: string, originalProductId: number | null) => {
+    if (originalProductId !== null) {
+      // This is a published draft - show warning modal
+      setPublishedDraftModalOpen(true);
+    } else {
+      // This is an unpublished draft - show confirmation modal
+      setDraftToDelete({ id: draftId, name: draftName });
+      setDeleteModalOpen(true);
+    }
+  };
+
+  const confirmDeleteDraft = () => {
+    if (draftToDelete) {
+      deleteDraftMutation.mutate(draftToDelete.id);
+      setDeleteModalOpen(false);
+      setDraftToDelete(null);
+    }
+  };
   
   // Handle create draft
   const handleCreateDraft = () => {
@@ -865,6 +919,14 @@ export const DraftDashboard: React.FC = () => {
                                 </Link>
                               </DropdownMenuItem>
                             )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              onClick={() => handleDeleteDraft(draft.id, draft.name, draft.originalProductId)}
+                              className="text-red-600 focus:text-red-600"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete Draft
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>

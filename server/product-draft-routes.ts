@@ -592,6 +592,11 @@ export default function registerProductDraftRoutes(router: Router) {
         throw new BadRequestError("You don't have permission to delete this draft");
       }
       
+      // Check if the draft has been published (has original_product_id)
+      if (draft.originalProductId !== null) {
+        throw new BadRequestError("Cannot delete published drafts. Please delete the product from the Published Products section instead.");
+      }
+      
       // Delete the draft and its images
       await storage.deleteProductDraft(draftId);
       
