@@ -235,7 +235,12 @@ const ProductListing = () => {
     isLoading: isLoadingProducts,
     error: productsError
   } = useQuery<StandardApiResponse<Product[], { total?: number, totalPages?: number }>>({
-    queryKey: searchQuery ? ['/api/search', searchQuery, page] : ['/api/products', page, selectedCategoryId, searchParams.get('includeChildren')],
+    queryKey: searchQuery ? 
+      ['/api/search', { query: searchQuery, page, limit }] : 
+      ['/api/products', { page, categoryId: selectedCategoryId, includeChildren: searchParams.get('includeChildren'), limit }],
+    staleTime: 0, // Always fetch fresh data when category/page changes
+    gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
+    refetchOnWindowFocus: false,
     queryFn: async () => {
       if (searchQuery) {
         const searchParams = new URLSearchParams({
