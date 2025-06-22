@@ -1004,9 +1004,11 @@ const ProductListing = () => {
                   disabled={page === 1}
                   onClick={() => {
                     const newPage = Math.max(page - 1, 1);
+                    
+                    // Immediate scroll to top
+                    window.scrollTo(0, 0);
+                    
                     setPage(newPage);
-                    // Scroll to top of page for better UX
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
                     // Invalidate query to fetch fresh data for new page
                     queryClient.invalidateQueries({ queryKey: ['/api/products'] });
                     // Update URL with all current parameters preserved
@@ -1017,6 +1019,11 @@ const ProductListing = () => {
                       newSearchParams.set('page', newPage.toString());
                     }
                     setLocation(`/products?${newSearchParams.toString()}`);
+                    
+                    // Additional scroll after a short delay to ensure it works
+                    setTimeout(() => {
+                      window.scrollTo(0, 0);
+                    }, 100);
                   }}
                 >
                   Previous
@@ -1030,15 +1037,22 @@ const ProductListing = () => {
                   disabled={page >= totalPages}
                   onClick={() => {
                     const newPage = Math.min(page + 1, totalPages);
+                    
+                    // Immediate scroll to top
+                    window.scrollTo(0, 0);
+                    
                     setPage(newPage);
-                    // Scroll to top of page for better UX
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
                     // Invalidate query to fetch fresh data for new page
                     queryClient.invalidateQueries({ queryKey: ['/api/products'] });
                     // Update URL with all current parameters preserved
                     const newSearchParams = new URLSearchParams(searchParams);
                     newSearchParams.set('page', newPage.toString());
                     setLocation(`/products?${newSearchParams.toString()}`);
+                    
+                    // Additional scroll after a short delay to ensure it works
+                    setTimeout(() => {
+                      window.scrollTo(0, 0);
+                    }, 100);
                   }}
                 >
                   Next
