@@ -228,6 +228,10 @@ const ProductCard: React.FC<ProductCardProps> = ({
         const currentPage = parseInt(urlParams.get('page') || '1');
         sessionStorage.setItem('productListingPage', currentPage.toString());
         
+        // Save category context
+        const categoryId = urlParams.get('categoryId') || 'null';
+        sessionStorage.setItem('productListingCategoryId', categoryId);
+        
         // Save more precise scroll position relative to this product
         const productElement = (event.currentTarget as HTMLElement).closest('[data-product-id]') as HTMLElement;
         if (productElement) {
@@ -237,12 +241,13 @@ const ProductCard: React.FC<ProductCardProps> = ({
           sessionStorage.setItem('productListingTargetProduct', product.id.toString());
           console.log('Saved pagination state on product click (grid):', { 
             page: currentPage, 
+            categoryId,
             scroll: relativePosition, 
             productId: product.id 
           });
         } else {
           sessionStorage.setItem('productListingScrollPosition', window.scrollY.toString());
-          console.log('Saved pagination state on product click (grid fallback):', { page: currentPage, scroll: window.scrollY });
+          console.log('Saved pagination state on product click (grid fallback):', { page: currentPage, categoryId, scroll: window.scrollY });
         }
       }}>
         {imageError ? (

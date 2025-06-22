@@ -130,12 +130,23 @@ const ProductListing = () => {
     const urlParams = new URLSearchParams(window.location.search);
     const categoryIdParam = urlParams.get('categoryId');
     console.log('URL changed, new categoryId:', categoryIdParam);
-    if (categoryIdParam) {
-      setSelectedCategoryId(parseInt(categoryIdParam));
-    } else {
-      setSelectedCategoryId(null);
+    
+    // Get previous category to detect changes
+    const previousCategoryId = selectedCategoryId;
+    const newCategoryId = categoryIdParam ? parseInt(categoryIdParam) : null;
+    
+    // If category changed, reset pagination and clear session storage
+    if (previousCategoryId !== newCategoryId) {
+      console.log('Category changed, resetting pagination');
+      setPage(1);
+      // Clear session storage when category changes
+      sessionStorage.removeItem('productListingPage');
+      sessionStorage.removeItem('productListingScrollPosition');
+      sessionStorage.removeItem('productListingTargetProduct');
     }
-  }, [location]);
+    
+    setSelectedCategoryId(newCategoryId);
+  }, [location, selectedCategoryId]);
   const [availabilityFilter, setAvailabilityFilter] = useState('all');
   const [ratingFilter, setRatingFilter] = useState(searchParams.get('rating') || '');
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
@@ -163,12 +174,21 @@ const ProductListing = () => {
   // Restore pagination state when returning from product detail pages
   useEffect(() => {
     const savedPage = sessionStorage.getItem('productListingPage');
+    const savedCategoryId = sessionStorage.getItem('productListingCategoryId');
     const savedScroll = sessionStorage.getItem('productListingScrollPosition');
     const targetProductId = sessionStorage.getItem('productListingTargetProduct');
+    const currentCategoryId = selectedCategoryId?.toString() || 'null';
     
-    console.log('Checking for saved pagination state:', { savedPage, savedScroll, targetProductId });
+    console.log('Checking for saved pagination state:', { 
+      savedPage, 
+      savedCategoryId, 
+      currentCategoryId, 
+      savedScroll, 
+      targetProductId 
+    });
     
-    if (savedPage && parseInt(savedPage) > 1) {
+    // Only restore if we're in the same category context
+    if (savedPage && parseInt(savedPage) > 1 && savedCategoryId === currentCategoryId) {
       const targetPage = parseInt(savedPage);
       console.log('Restoring pagination to page:', targetPage);
       
@@ -187,8 +207,15 @@ const ProductListing = () => {
           targetProductId
         };
       }
+    } else if (savedPage && savedCategoryId !== currentCategoryId) {
+      console.log('Category context changed, clearing saved pagination state');
+      // Clear session storage if category context doesn't match
+      sessionStorage.removeItem('productListingPage');
+      sessionStorage.removeItem('productListingCategoryId');
+      sessionStorage.removeItem('productListingScrollPosition');
+      sessionStorage.removeItem('productListingTargetProduct');
     }
-  }, []); // Run only on mount
+  }, [selectedCategoryId]); // Run when selectedCategoryId changes
   
   // Initialize scroll management
   useProductListingScroll();
@@ -413,6 +440,7 @@ const ProductListing = () => {
   // Handle category filtering with hierarchical support
   const handleCategoryFilter = (categoryId: number | null, includeChildren: boolean = false) => {
     setSelectedCategoryId(categoryId);
+    setPage(1); // Reset pagination when category changes
     
     // Update URL parameters
     const newSearchParams = new URLSearchParams(searchParams);
@@ -427,6 +455,8 @@ const ProductListing = () => {
       newSearchParams.delete('categoryId');
       newSearchParams.delete('includeChildren');
     }
+    // Remove page parameter when resetting to page 1
+    newSearchParams.delete('page');
     setLocation(`/products?${newSearchParams.toString()}`);
   };
 
@@ -1158,6 +1188,10 @@ const ProductListing = () => {
                                 const currentPage = parseInt(searchParams.get('page') || '1');
                                 sessionStorage.setItem('productListingPage', currentPage.toString());
                                 
+                                // Save category context
+                                const categoryId = selectedCategoryId?.toString() || 'null';
+                                sessionStorage.setItem('productListingCategoryId', categoryId);
+                                
                                 // Save more precise scroll position relative to this product
                                 const productElement = (event.currentTarget as HTMLElement).closest('[data-product-id]') as HTMLElement;
                                 if (productElement) {
@@ -1167,12 +1201,13 @@ const ProductListing = () => {
                                   sessionStorage.setItem('productListingTargetProduct', product.id.toString());
                                   console.log('Saved pagination state on product click:', { 
                                     page: currentPage, 
+                                    categoryId,
                                     scroll: relativePosition, 
                                     productId: product.id 
                                   });
                                 } else {
                                   sessionStorage.setItem('productListingScrollPosition', window.scrollY.toString());
-                                  console.log('Saved pagination state on product click (fallback):', { page: currentPage, scroll: window.scrollY });
+                                  console.log('Saved pagination state on product click (fallback):', { page: currentPage, categoryId, scroll: window.scrollY });
                                 }
                               }}
                             >

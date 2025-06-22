@@ -339,7 +339,11 @@ export const usePaginationStateRestoration = (
   useEffect(() => {
     if (location === '/products' && currentPage > 1) {
       sessionStorage.setItem('productListingPage', currentPage.toString());
-      console.log('Saved page to sessionStorage:', currentPage);
+      // Also save the current category context
+      const urlParams = new URLSearchParams(window.location.search);
+      const categoryId = urlParams.get('categoryId') || 'null';
+      sessionStorage.setItem('productListingCategoryId', categoryId);
+      console.log('Saved page to sessionStorage:', currentPage, 'with categoryId:', categoryId);
     }
   }, [location, currentPage]);
 
