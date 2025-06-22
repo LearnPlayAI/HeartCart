@@ -677,20 +677,11 @@ const ProductListing = () => {
         return true;
       }
       
-      // Apply category filter with hierarchical support
+      // Skip client-side category filtering when using server-side pagination with category filters
+      // The server already returned the correct products for the selected category and page
       if (selectedCategoryId) {
-        const urlParams = new URLSearchParams(window.location.search);
-        const includeChildren = urlParams.get('includeChildren') === 'true';
-        
-        if (includeChildren) {
-          // Get all child category IDs using the fetched categories data
-          const allowedCategoryIds = getAllChildCategoryIds(selectedCategoryId, categoriesWithChildren);
-          
-          if (!product.categoryId || !allowedCategoryIds.includes(product.categoryId)) return false;
-        } else {
-          // Exact category match
-          if (product.categoryId !== selectedCategoryId) return false;
-        }
+        // Server-side filtering is handling this, so don't re-filter client-side
+        return true;
       }
       
       // Legacy category filter support (string-based)
