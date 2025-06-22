@@ -493,18 +493,27 @@ export function setupAuth(app: Express): void {
           }
           
           try {
-            // Manually delete session from the database if it still exists
-            // This ensures complete cleanup even if session store doesn't auto-delete
-            await pool.query('DELETE FROM session WHERE sid = $1', [sessionId]);
+            // Delete ALL sessions for this user ID from the database
+            // This prevents orphaned sessions and ensures complete logout
+            const deleteResult = await pool.query(`
+              DELETE FROM session 
+              WHERE sess::jsonb->'passport'->>'user' = $1
+            `, [userId?.toString()]);
             
-            logger.info('User logged out successfully', { 
+            const deletedSessionCount = deleteResult.rowCount || 0;
+            
+            logger.info('User logged out successfully - all sessions cleared', { 
               userId,
               sessionId,
+              deletedSessionCount,
               ip: req.ip,
               timestamp: new Date().toISOString()
             });
             
-            resolve({ message: "Logged out successfully" });
+            resolve({ 
+              message: "Logged out successfully",
+              sessionsCleaned: deletedSessionCount
+            });
           } catch (dbError) {
             logger.error('Database session cleanup error', { 
               error: dbError, 
@@ -512,7 +521,20 @@ export function setupAuth(app: Express): void {
               userId,
               ip: req.ip 
             });
-            // Don't fail the logout if database cleanup fails
+            
+            // Fallback: try to delete at least the current session
+            try {
+              await pool.query('DELETE FROM session WHERE sid = $1', [sessionId]);
+              logger.warn('Fallback: deleted current session only', { sessionId, userId });
+            } catch (fallbackError) {
+              logger.error('Fallback session deletion failed', { 
+                error: fallbackError, 
+                sessionId, 
+                userId 
+              });
+            }
+            
+            // Don't fail the logout even if database cleanup fails
             resolve({ message: "Logged out successfully" });
           }
         });
@@ -642,21 +664,42 @@ export function setupAuth(app: Express): void {
         // Destroy session and check database cleanup
         req.session.destroy(async (destroyErr) => {
           try {
-            // Manually delete session from database (as in real logout)
-            await pool.query('DELETE FROM session WHERE sid = $1', [sessionId]);
+            // Count user sessions before cleanup
+            const sessionsBefore = await pool.query(`
+              SELECT COUNT(*) as count 
+              FROM session 
+              WHERE sess::jsonb->'passport'->>'user' = $1
+            `, [userId.toString()]);
             
-            // Verify session is deleted
-            const sessionAfter = await pool.query('SELECT sid FROM session WHERE sid = $1', [sessionId]);
-            const sessionExistsAfter = sessionAfter.rows.length > 0;
+            const userSessionCountBefore = parseInt(sessionsBefore.rows[0].count) || 0;
+            
+            // Delete ALL sessions for this user (as in real logout)
+            const deleteResult = await pool.query(`
+              DELETE FROM session 
+              WHERE sess::jsonb->'passport'->>'user' = $1
+            `, [userId.toString()]);
+            
+            const deletedSessionCount = deleteResult.rowCount || 0;
+            
+            // Verify all user sessions are deleted
+            const sessionsAfter = await pool.query(`
+              SELECT COUNT(*) as count 
+              FROM session 
+              WHERE sess::jsonb->'passport'->>'user' = $1
+            `, [userId.toString()]);
+            
+            const userSessionCountAfter = parseInt(sessionsAfter.rows[0].count) || 0;
             
             resolve({
               success: true,
-              message: "Session cleanup test completed",
+              message: "Session cleanup test completed - ALL user sessions cleared",
               sessionId,
               userId,
               sessionExistsBefore,
-              sessionExistsAfter,
-              cleanupSuccessful: !sessionExistsAfter
+              userSessionCountBefore,
+              userSessionCountAfter,
+              deletedSessionCount,
+              cleanupSuccessful: userSessionCountAfter === 0
             });
           } catch (dbError) {
             resolve({
