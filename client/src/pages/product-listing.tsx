@@ -202,61 +202,65 @@ const ProductListing = () => {
           targetProductId 
         });
         
-        // Only restore if we're in the same category context
-        if (savedState.categoryId === currentCategoryId) {
-          console.log('Restoring complete state:', savedState);
-          
-          // Restore pagination
-          if (savedState.page > 1) {
-            setPage(savedState.page);
-            const newUrl = new URL(window.location.href);
-            newUrl.searchParams.set('page', savedState.page.toString());
-            window.history.replaceState({}, '', newUrl.toString());
+        console.log('Restoring complete state:', savedState);
+        
+        // Restore category first (critical for filtering)
+        if (savedState.categoryId && savedState.categoryId !== 'null' && savedState.categoryId !== currentCategoryId) {
+          const categoryIdNum = parseInt(savedState.categoryId);
+          if (!isNaN(categoryIdNum)) {
+            setSelectedCategoryId(categoryIdNum);
+            setSelectedCategory(savedState.selectedCategory || null);
           }
-          
-          // Restore filters
-          if (savedState.searchQuery && savedState.searchQuery !== searchQuery) {
-            setSearchQuery(savedState.searchQuery);
+        }
+        
+        // Restore pagination
+        if (savedState.page > 1) {
+          setPage(savedState.page);
+          const newUrl = new URL(window.location.href);
+          newUrl.searchParams.set('page', savedState.page.toString());
+          if (savedState.categoryId && savedState.categoryId !== 'null') {
+            newUrl.searchParams.set('categoryId', savedState.categoryId);
           }
-          
-          if (savedState.sortBy && savedState.sortBy !== sortBy) {
-            setSortBy(savedState.sortBy);
+          window.history.replaceState({}, '', newUrl.toString());
+        }
+        
+        // Restore filters
+        if (savedState.searchQuery && savedState.searchQuery !== searchQuery) {
+          setSearchQuery(savedState.searchQuery);
+        }
+        
+        if (savedState.sortBy && savedState.sortBy !== sortBy) {
+          setSortBy(savedState.sortBy);
+        }
+        
+        if (savedState.viewMode && savedState.viewMode !== viewMode) {
+          setViewMode(savedState.viewMode);
+        }
+        
+        if (savedState.priceRange && Array.isArray(savedState.priceRange) && savedState.priceRange.length === 2) {
+          if (JSON.stringify(savedState.priceRange) !== JSON.stringify(priceRange)) {
+            setPriceRange(savedState.priceRange);
           }
-          
-          if (savedState.viewMode && savedState.viewMode !== viewMode) {
-            setViewMode(savedState.viewMode);
-          }
-          
-          if (savedState.priceRange && Array.isArray(savedState.priceRange) && savedState.priceRange.length === 2) {
-            if (JSON.stringify(savedState.priceRange) !== JSON.stringify(priceRange)) {
-              setPriceRange(savedState.priceRange);
-            }
-          }
-          
-          if (savedState.ratingFilter !== undefined && savedState.ratingFilter !== ratingFilter) {
-            setRatingFilter(savedState.ratingFilter);
-          }
-          
-          if (savedState.filters && JSON.stringify(savedState.filters) !== JSON.stringify(filters)) {
-            setFilters(savedState.filters);
-          }
-          
-          if (savedState.attributeFilters && JSON.stringify(savedState.attributeFilters) !== JSON.stringify(attributeFilters)) {
-            setAttributeFilters(savedState.attributeFilters);
-          }
-          
-          // Store scroll restoration data
-          if (savedScroll && targetProductId) {
-            window.scrollRestorationData = {
-              savedScroll,
-              targetProductId
-            };
-          }
-        } else {
-          console.log('Category context changed, clearing saved state');
-          sessionStorage.removeItem('productListingState');
-          sessionStorage.removeItem('productListingScrollPosition');
-          sessionStorage.removeItem('productListingTargetProduct');
+        }
+        
+        if (savedState.ratingFilter !== undefined && savedState.ratingFilter !== ratingFilter) {
+          setRatingFilter(savedState.ratingFilter);
+        }
+        
+        if (savedState.filters && JSON.stringify(savedState.filters) !== JSON.stringify(filters)) {
+          setFilters(savedState.filters);
+        }
+        
+        if (savedState.attributeFilters && JSON.stringify(savedState.attributeFilters) !== JSON.stringify(attributeFilters)) {
+          setAttributeFilters(savedState.attributeFilters);
+        }
+        
+        // Store scroll restoration data
+        if (savedScroll && targetProductId) {
+          window.scrollRestorationData = {
+            savedScroll,
+            targetProductId
+          };
         }
       } catch (error) {
         console.error('Failed to parse saved state:', error);
@@ -1399,6 +1403,10 @@ const ProductListing = () => {
                     disabled={page === 1}
                     onClick={() => {
                       const newPage = Math.max(page - 1, 1);
+                      
+                      // Immediate scroll to top
+                      window.scrollTo(0, 0);
+                      
                       setPage(newPage);
                       // Invalidate query to fetch fresh data for new page
                       queryClient.invalidateQueries({ queryKey: ['/api/products'] });
@@ -1410,6 +1418,11 @@ const ProductListing = () => {
                         newSearchParams.set('page', newPage.toString());
                       }
                       setLocation(`/products?${newSearchParams.toString()}`);
+                      
+                      // Delayed scroll to ensure DOM updates
+                      setTimeout(() => {
+                        window.scrollTo(0, 0);
+                      }, 100);
                     }}
                   >
                     Previous
