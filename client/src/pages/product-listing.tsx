@@ -106,7 +106,31 @@ const getAttributeDisplayName = (attribute: Attribute | CategoryAttribute): stri
 
 const ProductListing = () => {
   const [location, setLocation] = useLocation();
-  const searchParams = new URLSearchParams(location.split('?')[1] || '');
+  
+  // Initialize searchParams with saved state restoration
+  const initializeSearchParams = () => {
+    const savedStateStr = sessionStorage.getItem('productListingState');
+    if (savedStateStr) {
+      try {
+        const savedState = JSON.parse(savedStateStr);
+        if (savedState.categoryId && savedState.categoryId !== 'null') {
+          // Update URL with saved category ID before creating searchParams
+          const currentUrl = new URL(window.location.href);
+          currentUrl.searchParams.set('categoryId', savedState.categoryId);
+          if (savedState.page && savedState.page > 1) {
+            currentUrl.searchParams.set('page', savedState.page.toString());
+          }
+          window.history.replaceState({}, '', currentUrl.toString());
+          setLocation(currentUrl.pathname + currentUrl.search);
+        }
+      } catch (error) {
+        console.error('Failed to restore saved state in searchParams:', error);
+      }
+    }
+    return new URLSearchParams(location.split('?')[1] || '');
+  };
+  
+  const searchParams = initializeSearchParams();
   const { addItem } = useCart();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -131,8 +155,52 @@ const ProductListing = () => {
     productName: string;
   } | null>(null);
   const [priceRange, setPriceRange] = useState([0, 5000]);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(searchParams.get('category'));
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(() => {
+    // First check for saved state from navigation
+    const savedStateStr = sessionStorage.getItem('productListingState');
+    if (savedStateStr) {
+      try {
+        const savedState = JSON.parse(savedStateStr);
+        if (savedState.selectedCategory) {
+          console.log('Initializing with saved selectedCategory:', savedState.selectedCategory);
+          return savedState.selectedCategory;
+        }
+      } catch (error) {
+        console.error('Failed to parse saved selectedCategory during initialization:', error);
+      }
+    }
+    
+    // Fallback to URL parameter
+    return searchParams.get('category');
+  });
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(() => {
+    // First check for saved state from navigation
+    const savedStateStr = sessionStorage.getItem('productListingState');
+    if (savedStateStr) {
+      try {
+        const savedState = JSON.parse(savedStateStr);
+        if (savedState.categoryId && savedState.categoryId !== 'null') {
+          const categoryIdNum = parseInt(savedState.categoryId);
+          if (!isNaN(categoryIdNum)) {
+            console.log('Initializing with saved categoryId:', categoryIdNum);
+            
+            // Update URL immediately to ensure API calls use correct category
+            const currentUrl = new URL(window.location.href);
+            currentUrl.searchParams.set('categoryId', savedState.categoryId);
+            if (savedState.page && savedState.page > 1) {
+              currentUrl.searchParams.set('page', savedState.page.toString());
+            }
+            window.history.replaceState({}, '', currentUrl.toString());
+            
+            return categoryIdNum;
+          }
+        }
+      } catch (error) {
+        console.error('Failed to parse saved state during initialization:', error);
+      }
+    }
+    
+    // Fallback to URL parameter
     const categoryIdParam = new URLSearchParams(window.location.search).get('categoryId');
     console.log('Initial categoryId from URL:', categoryIdParam);
     return categoryIdParam ? parseInt(categoryIdParam) : null;
