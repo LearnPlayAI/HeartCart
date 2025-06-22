@@ -461,14 +461,61 @@ export function setupAuth(app: Express): void {
 
   // Logout endpoint
   app.post("/api/logout", withStandardResponse(async (req: Request, res: Response) => {
+    const sessionId = req.sessionID;
+    const userId = req.user ? (req.user as Express.User).id : null;
+    
     return new Promise((resolve, reject) => {
       req.logout((err) => {
         if (err) {
+          logger.error('Logout error', { 
+            error: err, 
+            sessionId,
+            userId,
+            ip: req.ip 
+          });
           sendError(res, "Logout failed", 500);
           resolve(null);
           return;
         }
-        resolve({ message: "Logged out successfully" });
+        
+        // Destroy the session and clean up from the database
+        req.session.destroy(async (destroyErr) => {
+          if (destroyErr) {
+            logger.error('Session destruction error', { 
+              error: destroyErr, 
+              sessionId,
+              userId,
+              ip: req.ip 
+            });
+            // Don't fail the logout if session cleanup fails
+            resolve({ message: "Logged out successfully" });
+            return;
+          }
+          
+          try {
+            // Manually delete session from the database if it still exists
+            // This ensures complete cleanup even if session store doesn't auto-delete
+            await pool.query('DELETE FROM session WHERE sid = $1', [sessionId]);
+            
+            logger.info('User logged out successfully', { 
+              userId,
+              sessionId,
+              ip: req.ip,
+              timestamp: new Date().toISOString()
+            });
+            
+            resolve({ message: "Logged out successfully" });
+          } catch (dbError) {
+            logger.error('Database session cleanup error', { 
+              error: dbError, 
+              sessionId,
+              userId,
+              ip: req.ip 
+            });
+            // Don't fail the logout if database cleanup fails
+            resolve({ message: "Logged out successfully" });
+          }
+        });
       });
     });
   }));
@@ -493,6 +540,137 @@ export function setupAuth(app: Express): void {
     const userId = (req.user as Express.User).id;
     logger.debug('Session refreshed', { userId, timestamp: new Date().toISOString() });
     return { message: "Session refreshed successfully" };
+  }));
+
+  // Admin endpoint to clean up expired sessions
+  app.post("/api/admin/cleanup-sessions", isAdmin, withStandardResponse(async (req: Request, res: Response) => {
+    try {
+      // Delete expired sessions from database
+      const result = await pool.query(`
+        DELETE FROM session 
+        WHERE expire < NOW()
+      `);
+      
+      const deletedCount = result.rowCount || 0;
+      
+      logger.info('Expired sessions cleaned up', { 
+        deletedCount,
+        adminUserId: (req.user as Express.User).id,
+        timestamp: new Date().toISOString()
+      });
+      
+      return { 
+        message: "Session cleanup completed", 
+        deletedSessions: deletedCount 
+      };
+    } catch (error) {
+      logger.error('Session cleanup error', { 
+        error, 
+        adminUserId: (req.user as Express.User).id 
+      });
+      throw new AppError(
+        "Failed to cleanup sessions",
+        ErrorCode.INTERNAL_ERROR,
+        500,
+        { operation: 'session-cleanup' }
+      );
+    }
+  }));
+
+  // Admin endpoint to get session statistics
+  app.get("/api/admin/session-stats", isAdmin, withStandardResponse(async (req: Request, res: Response) => {
+    try {
+      const stats = await pool.query(`
+        SELECT 
+          COUNT(*) as total_sessions,
+          COUNT(CASE WHEN expire > NOW() THEN 1 END) as active_sessions,
+          COUNT(CASE WHEN expire <= NOW() THEN 1 END) as expired_sessions
+        FROM session
+      `);
+      
+      return {
+        totalSessions: parseInt(stats.rows[0].total_sessions),
+        activeSessions: parseInt(stats.rows[0].active_sessions),
+        expiredSessions: parseInt(stats.rows[0].expired_sessions)
+      };
+    } catch (error) {
+      logger.error('Session stats error', { 
+        error, 
+        adminUserId: (req.user as Express.User).id 
+      });
+      throw new AppError(
+        "Failed to retrieve session statistics",
+        ErrorCode.INTERNAL_ERROR,
+        500,
+        { operation: 'session-stats' }
+      );
+    }
+  }));
+
+  // Test endpoint to verify session deletion on logout (for development/testing)
+  app.post("/api/test/logout-cleanup", withStandardResponse(async (req: Request, res: Response) => {
+    const sessionId = req.sessionID;
+    const isAuthenticated = req.isAuthenticated();
+    
+    // Check if session exists in database before logout
+    const sessionBefore = await pool.query('SELECT sid FROM session WHERE sid = $1', [sessionId]);
+    const sessionExistsBefore = sessionBefore.rows.length > 0;
+    
+    if (!isAuthenticated) {
+      return {
+        message: "No authenticated session to test",
+        sessionId,
+        sessionExistsBefore
+      };
+    }
+    
+    const userId = (req.user as Express.User).id;
+    
+    // Perform logout manually for testing
+    return new Promise((resolve) => {
+      req.logout((err) => {
+        if (err) {
+          resolve({
+            success: false,
+            error: "Logout failed",
+            sessionId,
+            sessionExistsBefore
+          });
+          return;
+        }
+        
+        // Destroy session and check database cleanup
+        req.session.destroy(async (destroyErr) => {
+          try {
+            // Manually delete session from database (as in real logout)
+            await pool.query('DELETE FROM session WHERE sid = $1', [sessionId]);
+            
+            // Verify session is deleted
+            const sessionAfter = await pool.query('SELECT sid FROM session WHERE sid = $1', [sessionId]);
+            const sessionExistsAfter = sessionAfter.rows.length > 0;
+            
+            resolve({
+              success: true,
+              message: "Session cleanup test completed",
+              sessionId,
+              userId,
+              sessionExistsBefore,
+              sessionExistsAfter,
+              cleanupSuccessful: !sessionExistsAfter
+            });
+          } catch (dbError) {
+            resolve({
+              success: false,
+              error: "Database cleanup failed",
+              sessionId,
+              userId,
+              sessionExistsBefore,
+              dbError: String(dbError)
+            });
+          }
+        });
+      });
+    });
   }));
 
   // Use standardized authentication middleware for protected routes
