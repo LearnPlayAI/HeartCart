@@ -1005,6 +1005,8 @@ const ProductListing = () => {
                   onClick={() => {
                     const newPage = Math.max(page - 1, 1);
                     setPage(newPage);
+                    // Scroll to top of page for better UX
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
                     // Invalidate query to fetch fresh data for new page
                     queryClient.invalidateQueries({ queryKey: ['/api/products'] });
                     // Update URL with all current parameters preserved
@@ -1029,6 +1031,8 @@ const ProductListing = () => {
                   onClick={() => {
                     const newPage = Math.min(page + 1, totalPages);
                     setPage(newPage);
+                    // Scroll to top of page for better UX
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
                     // Invalidate query to fetch fresh data for new page
                     queryClient.invalidateQueries({ queryKey: ['/api/products'] });
                     // Update URL with all current parameters preserved
