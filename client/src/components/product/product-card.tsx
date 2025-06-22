@@ -223,31 +223,47 @@ const ProductCard: React.FC<ProductCardProps> = ({
   return (
     <div data-product-id={product.id} className="product-card bg-white rounded-lg shadow-sm overflow-hidden w-full max-w-sm mx-auto">
       <Link href={`/product/id/${product.id}`} className="block relative" onClick={(event) => {
-        // Save pagination and scroll state when clicking product from grid view
+        // Save complete application state before navigating from grid view
         const urlParams = new URLSearchParams(window.location.search);
         const currentPage = parseInt(urlParams.get('page') || '1');
-        sessionStorage.setItem('productListingPage', currentPage.toString());
         
-        // Save category context
+        // Get current filter state from URL and other sources
         const categoryId = urlParams.get('categoryId') || 'null';
-        sessionStorage.setItem('productListingCategoryId', categoryId);
+        const searchQuery = urlParams.get('search') || '';
+        const sortBy = urlParams.get('sort') || 'newest';
+        const viewMode = localStorage.getItem('productListingViewMode') || 'grid';
         
-        // Save more precise scroll position relative to this product
+        // Create comprehensive state object
+        const state = {
+          page: currentPage,
+          categoryId,
+          searchQuery,
+          sortBy,
+          viewMode,
+          priceRange: { min: 0, max: 10000 }, // Default range
+          ratingFilter: null,
+          filters: {},
+          attributeFilters: []
+        };
+        
+        // Save complete state to sessionStorage
+        sessionStorage.setItem('productListingState', JSON.stringify(state));
+        
+        // Save scroll position relative to this product
         const productElement = (event.currentTarget as HTMLElement).closest('[data-product-id]') as HTMLElement;
         if (productElement) {
           const rect = productElement.getBoundingClientRect();
           const relativePosition = rect.top + window.scrollY;
           sessionStorage.setItem('productListingScrollPosition', relativePosition.toString());
           sessionStorage.setItem('productListingTargetProduct', product.id.toString());
-          console.log('Saved pagination state on product click (grid):', { 
-            page: currentPage, 
-            categoryId,
+          console.log('Saved complete state on product click (grid):', { 
+            ...state,
             scroll: relativePosition, 
             productId: product.id 
           });
         } else {
           sessionStorage.setItem('productListingScrollPosition', window.scrollY.toString());
-          console.log('Saved pagination state on product click (grid fallback):', { page: currentPage, categoryId, scroll: window.scrollY });
+          console.log('Saved complete state on product click (grid fallback):', { ...state, scroll: window.scrollY });
         }
       }}>
         {imageError ? (
