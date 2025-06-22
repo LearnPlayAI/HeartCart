@@ -457,58 +457,7 @@ export const DraftDashboard: React.FC = () => {
     }
   };
 
-  // Delete product draft mutation
-  const deleteDraftMutation = useMutation({
-    mutationFn: async (draftId: number) => {
-      const response = await apiRequest('DELETE', `/api/product-drafts/${draftId}`);
-      return response.json();
-    },
-    onSuccess: (data) => {
-      if (data.success) {
-        toast({
-          title: 'Success',
-          description: 'Product draft deleted successfully',
-        });
-        // Refresh both main drafts list and duplicates
-        queryClient.invalidateQueries({ queryKey: ['/api/product-drafts'] });
-        queryClient.invalidateQueries({ queryKey: ['/api/product-drafts-duplicates'] });
-        
-        // Refetch and update the duplicates modal if it's open
-        if (showDuplicates) {
-          refetchDuplicates().then((result) => {
-            if (result.data?.success) {
-              const groups = result.data.data.groups || [];
-              // Sort groups so exact matches appear first
-              const sortedGroups = groups.sort((a: any, b: any) => {
-                if (a.type === 'exact' && b.type !== 'exact') return -1;
-                if (a.type !== 'exact' && b.type === 'exact') return 1;
-                return 0;
-              });
-              setDuplicateGroups(sortedGroups);
-            }
-          });
-        }
-      } else {
-        toast({
-          title: 'Error',
-          description: data.error?.message || 'Failed to delete product draft',
-          variant: 'destructive',
-        });
-      }
-    },
-    onError: (error: any) => {
-      toast({
-        title: 'Error',
-        description: 'Failed to delete product draft',
-        variant: 'destructive',
-      });
-    }
-  });
 
-  // Handle delete draft
-  const handleDeleteDraft = (draftId: number) => {
-    deleteDraftMutation.mutate(draftId);
-  };
   
   // Get wizard step display name
   const getStepDisplayName = (stepKey: string) => {
@@ -1131,7 +1080,7 @@ export const DraftDashboard: React.FC = () => {
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                                 <AlertDialogAction
-                                  onClick={() => handleDeleteDraft(product.id)}
+                                  onClick={() => handleDeleteDraft(product.id, product.name, product.originalProductId)}
                                   className="bg-red-600 hover:bg-red-700"
                                   disabled={deleteDraftMutation.isPending}
                                 >
@@ -1171,6 +1120,52 @@ export const DraftDashboard: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Draft Confirmation Modal */}
+      <AlertDialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Product Draft</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{draftToDelete?.name}"? This action cannot be undone and will remove all associated images and data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDraftToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteDraft}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={deleteDraftMutation.isPending}
+            >
+              {deleteDraftMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Deleting...
+                </>
+              ) : (
+                'Delete'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Published Draft Warning Modal */}
+      <AlertDialog open={publishedDraftModalOpen} onOpenChange={setPublishedDraftModalOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cannot Delete Published Draft</AlertDialogTitle>
+            <AlertDialogDescription>
+              This draft has already been published and cannot be deleted from here. To remove this product, please go to the Published Products section and delete it from there.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setPublishedDraftModalOpen(false)}>
+              Understood
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
     </div>
   );
