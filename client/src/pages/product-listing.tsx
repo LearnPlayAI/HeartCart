@@ -205,11 +205,17 @@ const ProductListing = () => {
         console.log('Restoring complete state:', savedState);
         
         // Restore category first (critical for filtering)
-        if (savedState.categoryId && savedState.categoryId !== 'null' && savedState.categoryId !== currentCategoryId) {
+        if (savedState.categoryId && savedState.categoryId !== 'null') {
           const categoryIdNum = parseInt(savedState.categoryId);
           if (!isNaN(categoryIdNum)) {
+            console.log('Restoring category:', categoryIdNum, 'from saved state');
             setSelectedCategoryId(categoryIdNum);
             setSelectedCategory(savedState.selectedCategory || null);
+            
+            // Update URL to include category filter
+            const newUrl = new URL(window.location.href);
+            newUrl.searchParams.set('categoryId', savedState.categoryId);
+            window.history.replaceState({}, '', newUrl.toString());
           }
         }
         
@@ -1436,6 +1442,10 @@ const ProductListing = () => {
                     disabled={page >= totalPages}
                     onClick={() => {
                       const newPage = Math.min(page + 1, totalPages);
+                      
+                      // Immediate scroll to top
+                      window.scrollTo(0, 0);
+                      
                       setPage(newPage);
                       // Invalidate query to fetch fresh data for new page
                       queryClient.invalidateQueries({ queryKey: ['/api/products'] });
@@ -1443,6 +1453,11 @@ const ProductListing = () => {
                       const newSearchParams = new URLSearchParams(searchParams);
                       newSearchParams.set('page', newPage.toString());
                       setLocation(`/products?${newSearchParams.toString()}`);
+                      
+                      // Delayed scroll to ensure DOM updates
+                      setTimeout(() => {
+                        window.scrollTo(0, 0);
+                      }, 100);
                     }}
                   >
                     Next
