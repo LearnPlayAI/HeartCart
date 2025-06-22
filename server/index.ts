@@ -11,6 +11,41 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// Content Security Policy middleware
+app.use((req, res, next) => {
+  const nonce = crypto.randomBytes(16).toString('base64');
+  res.locals.nonce = nonce;
+  
+  // More permissive CSP for development environment with Vite HMR
+  const isDevelopment = process.env.NODE_ENV !== 'production';
+  
+  const cspDirectives = [
+    `default-src 'self'`,
+    isDevelopment 
+      ? `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://checkout.stripe.com blob:` 
+      : `script-src 'self' 'nonce-${nonce}' https://js.stripe.com https://checkout.stripe.com`,
+    `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com`,
+    `font-src 'self' https://fonts.gstatic.com data:`,
+    `img-src 'self' data: blob: https: http:`,
+    isDevelopment 
+      ? `connect-src 'self' https://api.stripe.com https://checkout.stripe.com wss: ws: http: https:` 
+      : `connect-src 'self' https://api.stripe.com https://checkout.stripe.com wss: ws:`,
+    `frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://checkout.stripe.com`,
+    `form-action 'self'`,
+    `base-uri 'self'`,
+    `object-src 'none'`,
+    isDevelopment ? '' : `upgrade-insecure-requests`
+  ].filter(Boolean).join('; ');
+
+  res.setHeader('Content-Security-Policy', cspDirectives);
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN'); // Allow embedding for development
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  
+  next();
+});
+
 // Set database timezone to SAST at server startup
 setSessionTimezone()
   .then(() => {
