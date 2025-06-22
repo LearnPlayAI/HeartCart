@@ -1445,10 +1445,12 @@ const ProductListing = () => {
                     onClick={() => {
                       const newPage = Math.min(page + 1, totalPages);
                       setPage(newPage);
-                      // Update URL parameter
-                      const newUrl = new URL(window.location.href);
-                      newUrl.searchParams.set('page', newPage.toString());
-                      window.history.pushState({}, '', newUrl.toString());
+                      // Invalidate query to fetch fresh data for new page
+                      queryClient.invalidateQueries({ queryKey: ['/api/products'] });
+                      // Update URL with all current parameters preserved
+                      const newSearchParams = new URLSearchParams(searchParams);
+                      newSearchParams.set('page', newPage.toString());
+                      setLocation(`/products?${newSearchParams.toString()}`);
                     }}
                   >
                     Next
