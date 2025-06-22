@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, Link } from 'wouter';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet';
 
 // Extend Window interface for scroll restoration
@@ -97,6 +97,7 @@ const ProductListing = () => {
   const searchParams = new URLSearchParams(location.split('?')[1] || '');
   const { addItem } = useCart();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   useProductListingScroll();
   
   // State for filters
@@ -415,6 +416,8 @@ const ProductListing = () => {
   const handleSortChange = (value: string) => {
     setSortBy(value);
     setPage(1); // Reset to first page when sort changes
+    // Invalidate products query to fetch fresh data
+    queryClient.invalidateQueries({ queryKey: ['/api/products'] });
   };
   
   const handleCategoryChange = (value: string) => {
@@ -446,6 +449,9 @@ const ProductListing = () => {
   const handleCategoryFilter = (categoryId: number | null, includeChildren: boolean = false) => {
     setSelectedCategoryId(categoryId);
     setPage(1); // Reset pagination when category changes
+    
+    // Invalidate products query to fetch fresh data for new category
+    queryClient.invalidateQueries({ queryKey: ['/api/products'] });
     
     // Update URL parameters
     const newSearchParams = new URLSearchParams(searchParams);
@@ -1116,14 +1122,16 @@ const ProductListing = () => {
                   onClick={() => {
                     const newPage = Math.max(page - 1, 1);
                     setPage(newPage);
-                    // Update URL parameter
-                    const newUrl = new URL(window.location.href);
+                    // Invalidate query to fetch fresh data for new page
+                    queryClient.invalidateQueries({ queryKey: ['/api/products'] });
+                    // Update URL with all current parameters preserved
+                    const newSearchParams = new URLSearchParams(searchParams);
                     if (newPage === 1) {
-                      newUrl.searchParams.delete('page');
+                      newSearchParams.delete('page');
                     } else {
-                      newUrl.searchParams.set('page', newPage.toString());
+                      newSearchParams.set('page', newPage.toString());
                     }
-                    window.history.pushState({}, '', newUrl.toString());
+                    setLocation(`/products?${newSearchParams.toString()}`);
                   }}
                 >
                   Previous
@@ -1138,10 +1146,12 @@ const ProductListing = () => {
                   onClick={() => {
                     const newPage = Math.min(page + 1, totalPages);
                     setPage(newPage);
-                    // Update URL parameter
-                    const newUrl = new URL(window.location.href);
-                    newUrl.searchParams.set('page', newPage.toString());
-                    window.history.pushState({}, '', newUrl.toString());
+                    // Invalidate query to fetch fresh data for new page
+                    queryClient.invalidateQueries({ queryKey: ['/api/products'] });
+                    // Update URL with all current parameters preserved
+                    const newSearchParams = new URLSearchParams(searchParams);
+                    newSearchParams.set('page', newPage.toString());
+                    setLocation(`/products?${newSearchParams.toString()}`);
                   }}
                 >
                   Next
@@ -1411,14 +1421,16 @@ const ProductListing = () => {
                     onClick={() => {
                       const newPage = Math.max(page - 1, 1);
                       setPage(newPage);
-                      // Update URL parameter
-                      const newUrl = new URL(window.location.href);
+                      // Invalidate query to fetch fresh data for new page
+                      queryClient.invalidateQueries({ queryKey: ['/api/products'] });
+                      // Update URL with all current parameters preserved
+                      const newSearchParams = new URLSearchParams(searchParams);
                       if (newPage === 1) {
-                        newUrl.searchParams.delete('page');
+                        newSearchParams.delete('page');
                       } else {
-                        newUrl.searchParams.set('page', newPage.toString());
+                        newSearchParams.set('page', newPage.toString());
                       }
-                      window.history.pushState({}, '', newUrl.toString());
+                      setLocation(`/products?${newSearchParams.toString()}`);
                     }}
                   >
                     Previous
