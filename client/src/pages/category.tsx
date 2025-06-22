@@ -178,60 +178,8 @@ const CategoryPage = () => {
     enabled: !!category?.id && Object.keys(attributeFilters).length > 0,
   });
   
-  // Apply filters and sorting to products
-  const filteredProducts = products ? products
-    .filter(product => {
-      // Apply price filter
-      const price = product.salePrice || product.price;
-      if (price < priceRange[0] || price > priceRange[1]) return false;
-      
-      // Apply sale filter
-      if (filters.onSale && !product.salePrice) return false;
-      
-      // Apply attribute filters
-      if (Object.keys(attributeFilters).length > 0 && productAttributes) {
-        // Find attributes for this product
-        const productAttrData = productAttributes.find(pa => pa.productId === product.id);
-        
-        // If product has no attribute data but we have filters, exclude it
-        if (!productAttrData) return false;
-        
-        // Check each attribute filter
-        for (const [attrName, selectedValues] of Object.entries(attributeFilters)) {
-          // Skip if no values selected for this attribute
-          if (selectedValues.length === 0) continue;
-          
-          // Get values for this attribute on this product
-          const productValues = productAttrData.attributes[attrName] || [];
-          
-          // Product should have at least one of the selected values
-          const hasMatchingValue = selectedValues.some(val => productValues.includes(val));
-          if (!hasMatchingValue) return false;
-        }
-      }
-      
-      return true;
-    })
-    .sort((a, b) => {
-      // Apply sorting
-      const priceA = a.salePrice || a.price;
-      const priceB = b.salePrice || b.price;
-      
-      switch (sortBy) {
-        case 'price-asc':
-          return priceA - priceB;
-        case 'price-desc':
-          return priceB - priceA;
-        case 'name-asc':
-          return a.name.localeCompare(b.name);
-        case 'name-desc':
-          return b.name.localeCompare(a.name);
-        case 'rating-desc':
-          return (b.rating || 0) - (a.rating || 0);
-        default:
-          return 0;
-      }
-    }) : [];
+  // Server handles ALL filtering and sorting - no client-side filtering
+  const filteredProducts = products || [];
   
   return (
     <>
