@@ -227,23 +227,27 @@ const ProductCard: React.FC<ProductCardProps> = ({
         const urlParams = new URLSearchParams(window.location.search);
         const currentPage = parseInt(urlParams.get('page') || '1');
         
-        // Get current filter state from URL and other sources
+        // Get current filter state from URL and localStorage
         const categoryId = urlParams.get('categoryId') || 'null';
         const searchQuery = urlParams.get('search') || '';
         const sortBy = urlParams.get('sort') || 'newest';
         const viewMode = localStorage.getItem('productListingViewMode') || 'grid';
         
-        // Create comprehensive state object
+        // Try to get existing filter state from the parent page
+        const existingState = (window as any).productListingCurrentState || {};
+        
+        // Create comprehensive state object preserving current filters
         const state = {
           page: currentPage,
           categoryId,
           searchQuery,
           sortBy,
           viewMode,
-          priceRange: { min: 0, max: 10000 }, // Default range
-          ratingFilter: null,
-          filters: {},
-          attributeFilters: []
+          priceRange: existingState.priceRange || [0, 5000],
+          ratingFilter: existingState.ratingFilter || null,
+          filters: existingState.filters || {},
+          attributeFilters: existingState.attributeFilters || [],
+          selectedCategory: existingState.selectedCategory || null
         };
         
         // Save complete state to sessionStorage

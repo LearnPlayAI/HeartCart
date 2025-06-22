@@ -10,6 +10,18 @@ declare global {
       savedScroll: string;
       targetProductId: string;
     };
+    productListingCurrentState?: {
+      page: number;
+      categoryId: string;
+      selectedCategory: string | null;
+      searchQuery: string;
+      sortBy: string;
+      viewMode: string;
+      priceRange: number[];
+      ratingFilter: number | null;
+      filters: Record<string, any>;
+      attributeFilters: any[];
+    };
   }
 }
 import { StandardApiResponse } from '@/types/api';
@@ -215,8 +227,10 @@ const ProductListing = () => {
             setViewMode(savedState.viewMode);
           }
           
-          if (savedState.priceRange && JSON.stringify(savedState.priceRange) !== JSON.stringify(priceRange)) {
-            setPriceRange(savedState.priceRange);
+          if (savedState.priceRange && Array.isArray(savedState.priceRange) && savedState.priceRange.length === 2) {
+            if (JSON.stringify(savedState.priceRange) !== JSON.stringify(priceRange)) {
+              setPriceRange(savedState.priceRange);
+            }
           }
           
           if (savedState.ratingFilter !== undefined && savedState.ratingFilter !== ratingFilter) {
@@ -252,6 +266,22 @@ const ProductListing = () => {
       }
     }
   }, [selectedCategoryId]); // Run when selectedCategoryId changes
+
+  // Update global state tracker for ProductCard components to access
+  useEffect(() => {
+    (window as any).productListingCurrentState = {
+      page,
+      categoryId: selectedCategoryId?.toString() || 'null',
+      selectedCategory,
+      searchQuery,
+      sortBy,
+      viewMode,
+      priceRange,
+      ratingFilter,
+      filters,
+      attributeFilters
+    };
+  }, [page, selectedCategoryId, selectedCategory, searchQuery, sortBy, viewMode, priceRange, ratingFilter, filters, attributeFilters]);
   
   // Initialize scroll management
   useProductListingScroll();
