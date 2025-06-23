@@ -11810,16 +11810,20 @@ export class DatabaseStorage implements IStorage {
         }
       }
 
-      if (province && province.trim()) {
-        whereConditions.push(
-          sql`${pudoLockers.detailedAddress}->>'province' = ${province}`
-        );
-      }
+      // Only apply location filters if there's no search query
+      // When user searches, they want results from anywhere, not just their current location
+      if (!query || !query.trim()) {
+        if (province && province.trim()) {
+          whereConditions.push(
+            sql`${pudoLockers.detailedAddress}->>'province' = ${province}`
+          );
+        }
 
-      if (city && city.trim()) {
-        whereConditions.push(
-          sql`${pudoLockers.detailedAddress}->>'locality' ILIKE ${`%${city}%`}`
-        );
+        if (city && city.trim()) {
+          whereConditions.push(
+            sql`${pudoLockers.detailedAddress}->>'locality' ILIKE ${`%${city}%`}`
+          );
+        }
       }
 
       const lockers = await db
