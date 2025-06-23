@@ -243,19 +243,19 @@ const Header = () => {
               </>
             )}
             
-            {/* Admin Dashboard direct link in main navigation */}
+            {/* Admin Dashboard direct link in main navigation - hidden on mobile */}
             {user?.role === 'admin' && (
               <>
                 <Link 
                   href="/admin" 
-                  className="px-4 py-1 font-medium text-sm bg-white text-[#FF69B4] rounded-full mx-1 transition-colors duration-200 flex items-center"
+                  className="hidden md:flex px-4 py-1 font-medium text-sm bg-white text-[#FF69B4] rounded-full mx-1 transition-colors duration-200 items-center"
                 >
                   <LayoutDashboard className="h-3 w-3 mr-1" />
                   Admin
                 </Link>
                 <Link 
                   href="/developer" 
-                  className="px-4 py-1 font-medium text-sm bg-green-100 text-green-700 rounded-full mx-1 transition-colors duration-200 flex items-center"
+                  className="hidden md:flex px-4 py-1 font-medium text-sm bg-green-100 text-green-700 rounded-full mx-1 transition-colors duration-200 items-center"
                 >
                   <Terminal className="h-3 w-3 mr-1" />
                   Developer
