@@ -232,37 +232,36 @@ const ProductListing = () => {
 
   // Additional effect to handle page restoration after back navigation
   useEffect(() => {
-    const handlePageRestoration = () => {
-      const savedStateStr = sessionStorage.getItem('productListingState');
-      if (savedStateStr) {
-        try {
-          const savedState = JSON.parse(savedStateStr);
-          console.log('Page restoration effect - checking saved state:', savedState);
+    const savedStateStr = sessionStorage.getItem('productListingState');
+    if (savedStateStr) {
+      try {
+        const savedState = JSON.parse(savedStateStr);
+        console.log('Page restoration effect - checking saved state:', savedState);
+        
+        // Only restore if we have a saved page and current URL doesn't match
+        const urlParams = new URLSearchParams(window.location.search);
+        const currentPageParam = urlParams.get('page');
+        const currentPageFromUrl = currentPageParam ? parseInt(currentPageParam) : 1;
+        
+        if (savedState.page && savedState.page !== currentPageFromUrl) {
+          console.log('Forcing page restoration to page:', savedState.page, 'from URL page:', currentPageFromUrl);
           
-          // Force page restoration if the saved page differs from current
-          if (savedState.page && savedState.page !== page) {
-            console.log('Forcing page restoration to page:', savedState.page);
-            setTimeout(() => {
-              setPage(savedState.page);
-              
-              // Update URL immediately
-              const newUrl = new URL(window.location.href);
-              newUrl.searchParams.set('page', savedState.page.toString());
-              if (savedState.categoryId && savedState.categoryId !== 'null') {
-                newUrl.searchParams.set('categoryId', savedState.categoryId);
-              }
-              window.history.replaceState({}, '', newUrl.toString());
-            }, 50);
+          // Update URL first
+          const newUrl = new URL(window.location.href);
+          newUrl.searchParams.set('page', savedState.page.toString());
+          if (savedState.categoryId && savedState.categoryId !== 'null') {
+            newUrl.searchParams.set('categoryId', savedState.categoryId);
           }
-        } catch (error) {
-          console.error('Failed to restore page state:', error);
+          window.history.replaceState({}, '', newUrl.toString());
+          
+          // Then update state
+          setPage(savedState.page);
         }
+      } catch (error) {
+        console.error('Failed to restore page state:', error);
       }
-    };
-
-    // Run restoration check when location changes (back navigation)
-    handlePageRestoration();
-  }, [location, page]); // Include page in dependencies to ensure proper restoration
+    }
+  }, [location]); // Only depend on location changes
   const [availabilityFilter, setAvailabilityFilter] = useState('all');
   const [ratingFilter, setRatingFilter] = useState(searchParams.get('rating') || '');
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
@@ -274,8 +273,22 @@ const ProductListing = () => {
     newArrivals: searchParams.get('new_arrivals') === 'true'
   });
   
-  // Pagination
-  const [page, setPage] = useState(parseInt(searchParams.get('page') || '1'));
+  // Pagination - Initialize with saved state priority
+  const [page, setPage] = useState(() => {
+    const savedStateStr = sessionStorage.getItem('productListingState');
+    if (savedStateStr) {
+      try {
+        const savedState = JSON.parse(savedStateStr);
+        if (savedState.page) {
+          console.log('Initializing page from saved state:', savedState.page);
+          return savedState.page;
+        }
+      } catch (error) {
+        console.error('Failed to parse saved page state:', error);
+      }
+    }
+    return parseInt(searchParams.get('page') || '1');
+  });
   const limit = 20;
   
   // Debug pagination state
@@ -333,17 +346,8 @@ const ProductListing = () => {
           }
         }
         
-        // Restore pagination - always restore page state, even for page 1
-        if (savedState.page && savedState.page !== page) {
-          console.log('Restoring page state:', savedState.page, 'current page:', page);
-          setPage(savedState.page);
-          const newUrl = new URL(window.location.href);
-          newUrl.searchParams.set('page', savedState.page.toString());
-          if (savedState.categoryId && savedState.categoryId !== 'null') {
-            newUrl.searchParams.set('categoryId', savedState.categoryId);
-          }
-          window.history.replaceState({}, '', newUrl.toString());
-        }
+        // Skip pagination restoration here - let the dedicated effect handle it
+        // This prevents double restoration and timing conflicts
         
         // Restore filters
         if (savedState.searchQuery && savedState.searchQuery !== searchQuery) {
