@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { Link } from 'wouter';
+import { apiRequest, queryClient } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
 import { AdminLayout } from '@/components/admin/layout';
 import {
   Card,
@@ -191,7 +193,7 @@ function OrderStats({ orders, onFilterChange }: { orders: Order[]; onFilterChang
 }
 
 // Order Card Component
-function OrderCard({ order }: { order: Order }) {
+function OrderCard({ order, onStatusUpdate }: { order: Order; onStatusUpdate: (orderId: number, status: string) => void }) {
   const statusConfig = getStatusConfig(order.status);
   const paymentConfig = getPaymentStatusConfig(order.paymentStatus);
 
@@ -284,6 +286,30 @@ function OrderCard({ order }: { order: Order }) {
           )}
         </div>
 
+        {/* Status Update Section */}
+        <div className="border-t pt-4 space-y-3">
+          <div>
+            <label className="text-sm font-medium mb-2 block">Update Status:</label>
+            <Select
+              value={order.status}
+              onValueChange={(status) => onStatusUpdate(order.id, status)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="confirmed">Confirmed</SelectItem>
+                <SelectItem value="payment_received">Payment Received</SelectItem>
+                <SelectItem value="processing">Processing</SelectItem>
+                <SelectItem value="shipped">Shipped</SelectItem>
+                <SelectItem value="delivered">Delivered</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
         {/* Actions */}
         <div className="flex justify-end pt-2">
           <Link href={`/admin/orders/${order.id}`}>
@@ -299,7 +325,7 @@ function OrderCard({ order }: { order: Order }) {
 }
 
 // Order Table Component
-function OrderTable({ orders }: { orders: Order[] }) {
+function OrderTable({ orders, onStatusUpdate }: { orders: Order[]; onStatusUpdate: (orderId: number, status: string) => void }) {
   return (
     <Card>
       <Table>
@@ -338,10 +364,29 @@ function OrderTable({ orders }: { orders: Order[] }) {
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Badge className={`${statusConfig.color} border`}>
-                    <statusConfig.icon className="h-3 w-3 mr-1" />
-                    {statusConfig.label}
-                  </Badge>
+                  <div className="space-y-2">
+                    <Badge className={`${statusConfig.color} border`}>
+                      <statusConfig.icon className="h-3 w-3 mr-1" />
+                      {statusConfig.label}
+                    </Badge>
+                    <Select
+                      value={order.status}
+                      onValueChange={(status) => onStatusUpdate(order.id, status)}
+                    >
+                      <SelectTrigger className="w-full h-7 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="confirmed">Confirmed</SelectItem>
+                        <SelectItem value="payment_received">Payment Received</SelectItem>
+                        <SelectItem value="processing">Processing</SelectItem>
+                        <SelectItem value="shipped">Shipped</SelectItem>
+                        <SelectItem value="delivered">Delivered</SelectItem>
+                        <SelectItem value="cancelled">Cancelled</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </TableCell>
                 <TableCell>
                   <div className="space-y-1">
@@ -384,6 +429,7 @@ function OrderTable({ orders }: { orders: Order[] }) {
 export default function AdminOrdersPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
+  const { toast } = useToast();
 
   const { data: response, isLoading, refetch } = useQuery({
     queryKey: ['/api/admin/orders'],
@@ -395,7 +441,36 @@ export default function AdminOrdersPage() {
     refetchOnReconnect: true, // Refetch when reconnecting to network
   });
 
+  // Status update mutation
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ orderId, status }: { orderId: number; status: string }) => {
+      const response = await apiRequest('PATCH', `/api/admin/orders/${orderId}/status`, { status });
+      return await response.json();
+    },
+    onSuccess: () => {
+      // Invalidate and refetch orders list to update statistics and order display
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
+      toast({
+        title: "Order Updated",
+        description: "Order status has been successfully updated.",
+      });
+    },
+    onError: (error: any) => {
+      console.error('Status update error:', error);
+      toast({
+        variant: "destructive",
+        title: "Update Failed",
+        description: error.message || "Failed to update order status. Please try again.",
+      });
+    }
+  });
+
   const orders = response?.data || [];
+  
+  // Handle status update
+  const handleStatusUpdate = (orderId: number, status: string) => {
+    updateStatusMutation.mutate({ orderId, status });
+  };
   
   const filteredOrders = orders.filter((order: Order) => {
     if (statusFilter === "all") return true;
