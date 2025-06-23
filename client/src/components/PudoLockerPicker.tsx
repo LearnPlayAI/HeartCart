@@ -121,9 +121,22 @@ export default function PudoLockerPicker({
   });
 
   // Determine which lockers to display
-  const displayLockers = searchQuery 
-    ? (searchResults?.data || [])
-    : (locationBasedLockers?.data || []);
+  // If a locker is selected, show only that locker
+  let displayLockers;
+  if (selectedLockerId) {
+    // Find the selected locker from any source
+    const selectedLocker = 
+      searchResults?.data?.find(l => l.id === selectedLockerId) ||
+      locationBasedLockers?.data?.find(l => l.id === selectedLockerId) ||
+      (preferredLocker && preferredLocker.id === selectedLockerId ? preferredLocker : null);
+    
+    displayLockers = selectedLocker ? [selectedLocker] : [];
+  } else {
+    // Show search results or location-based results
+    displayLockers = searchQuery 
+      ? (searchResults?.data || [])
+      : (locationBasedLockers?.data || []);
+  }
 
   const isLoading = searchQuery ? searchLoading : locationLoading;
 
@@ -197,20 +210,43 @@ export default function PudoLockerPicker({
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Search Bar */}
-        <div className="space-y-2">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              placeholder="Search by locker name, location, or code..."
-              value={searchQuery}
-              onChange={(e) => handleSearch(e.target.value)}
-              className="pl-10"
-            />
+        {!selectedLockerId && (
+          <div className="space-y-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Search by locker name, location, or code..."
+                value={searchQuery}
+                onChange={(e) => handleSearch(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <div className="text-xs text-gray-500">
+              <span>Tip: Search for cities, areas, or locker names (e.g., "port elizabeth", "centurion golf", "randburg")</span>
+            </div>
           </div>
-          <div className="text-xs text-gray-500">
-            <span>Tip: Search for cities, areas, or locker names (e.g., "port elizabeth", "centurion golf", "randburg")</span>
+        )}
+
+        {/* Selected Locker Actions */}
+        {selectedLockerId && (
+          <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg p-3">
+            <div className="flex items-center gap-2 text-green-800">
+              <Check className="h-4 w-4" />
+              <span className="text-sm font-medium">Locker Selected</span>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                onLockerSelect(null as any); // Clear selection
+                setSearchQuery(""); // Clear search
+              }}
+              className="text-xs"
+            >
+              Change Selection
+            </Button>
           </div>
-        </div>
+        )}
 
         {/* Location Info Banner */}
         {!searchQuery && customerCity && customerProvince && (
