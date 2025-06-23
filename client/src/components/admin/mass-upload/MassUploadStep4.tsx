@@ -169,26 +169,30 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
         if (duplicateDraft) {
           console.log(`✓ Step 1: SKU match found for ${product.sku} with draft ${duplicateDraft.sku}`);
           
-          // Store existing draft data for pricing comparison
+          // Store existing draft data for pricing comparison with proper type conversion
+          const draftPrice = parseFloat(duplicateDraft.price) || 0;
+          const draftSalePrice = parseFloat(duplicateDraft.salePrice) || 0;
+          const draftCostPrice = parseFloat(duplicateDraft.costPrice) || 0;
+          
           product.existingDraft = {
             id: duplicateDraft.id,
             name: duplicateDraft.name,
-            price: duplicateDraft.price || 0,
-            salePrice: duplicateDraft.salePrice || 0,
-            costPrice: duplicateDraft.costPrice || 0,
+            price: draftPrice,
+            salePrice: draftSalePrice,
+            costPrice: draftCostPrice,
             draftStatus: duplicateDraft.draftStatus
           };
 
           // Step 2: Compare pricing to detect differences
           const pricingChanges = [];
-          if (Math.abs(product.regularPrice - (duplicateDraft.price || 0)) > 0.01) {
-            pricingChanges.push(`Regular price: R${(duplicateDraft.price || 0).toFixed(2)} → R${product.regularPrice.toFixed(2)}`);
+          if (Math.abs(product.regularPrice - draftPrice) > 0.01) {
+            pricingChanges.push(`Regular price: R${draftPrice.toFixed(2)} → R${product.regularPrice.toFixed(2)}`);
           }
-          if (Math.abs((product.salePrice || 0) - (duplicateDraft.salePrice || 0)) > 0.01) {
-            pricingChanges.push(`Sale price: R${(duplicateDraft.salePrice || 0).toFixed(2)} → R${(product.salePrice || 0).toFixed(2)}`);
+          if (Math.abs((product.salePrice || 0) - draftSalePrice) > 0.01) {
+            pricingChanges.push(`Sale price: R${draftSalePrice.toFixed(2)} → R${(product.salePrice || 0).toFixed(2)}`);
           }
-          if (Math.abs(product.costPrice - (duplicateDraft.costPrice || 0)) > 0.01) {
-            pricingChanges.push(`Cost price: R${(duplicateDraft.costPrice || 0).toFixed(2)} → R${product.costPrice.toFixed(2)}`);
+          if (Math.abs(product.costPrice - draftCostPrice) > 0.01) {
+            pricingChanges.push(`Cost price: R${draftCostPrice.toFixed(2)} → R${product.costPrice.toFixed(2)}`);
           }
 
           console.log(`✓ Step 2: Price comparison for ${product.sku} - ${pricingChanges.length} differences found`);
@@ -285,24 +289,29 @@ export function MassUploadStep4({ data, onUpdate, onNext, onPrevious }: MassUplo
           if (duplicateProduct) {
             console.log(`✓ Step 1: SKU match found for ${product.sku} with published product ${duplicateProduct.sku}`);
             
+            // Store existing product data for pricing comparison with proper type conversion
+            const productPrice = parseFloat(duplicateProduct.price) || 0;
+            const productSalePrice = parseFloat(duplicateProduct.salePrice) || 0;
+            const productCostPrice = parseFloat(duplicateProduct.costPrice) || 0;
+            
             product.existingProduct = {
               id: duplicateProduct.id,
               name: duplicateProduct.name,
-              price: duplicateProduct.price || 0,
-              salePrice: duplicateProduct.salePrice || 0,
-              costPrice: duplicateProduct.costPrice || 0
+              price: productPrice,
+              salePrice: productSalePrice,
+              costPrice: productCostPrice
             };
 
             // Step 2: Compare pricing to detect differences  
             const pricingChanges = [];
-            if (Math.abs(product.regularPrice - (duplicateProduct.price || 0)) > 0.01) {
-              pricingChanges.push(`Regular price: R${(duplicateProduct.price || 0).toFixed(2)} → R${product.regularPrice.toFixed(2)}`);
+            if (Math.abs(product.regularPrice - productPrice) > 0.01) {
+              pricingChanges.push(`Regular price: R${productPrice.toFixed(2)} → R${product.regularPrice.toFixed(2)}`);
             }
-            if (Math.abs((product.salePrice || 0) - (duplicateProduct.salePrice || 0)) > 0.01) {
-              pricingChanges.push(`Sale price: R${(duplicateProduct.salePrice || 0).toFixed(2)} → R${(product.salePrice || 0).toFixed(2)}`);
+            if (Math.abs((product.salePrice || 0) - productSalePrice) > 0.01) {
+              pricingChanges.push(`Sale price: R${productSalePrice.toFixed(2)} → R${(product.salePrice || 0).toFixed(2)}`);
             }
-            if (Math.abs(product.costPrice - (duplicateProduct.costPrice || 0)) > 0.01) {
-              pricingChanges.push(`Cost price: R${(duplicateProduct.costPrice || 0).toFixed(2)} → R${product.costPrice.toFixed(2)}`);
+            if (Math.abs(product.costPrice - productCostPrice) > 0.01) {
+              pricingChanges.push(`Cost price: R${productCostPrice.toFixed(2)} → R${product.costPrice.toFixed(2)}`);
             }
 
             console.log(`✓ Step 2: Price comparison for ${product.sku} with published product - ${pricingChanges.length} differences found`);
