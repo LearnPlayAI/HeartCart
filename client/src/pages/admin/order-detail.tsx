@@ -155,9 +155,10 @@ const formatDate = (dateString: string) => {
 const getStatusConfig = (status: string) => {
   const configs = {
     pending: { label: 'Pending', color: 'bg-yellow-100 text-yellow-800 border-yellow-200', icon: Clock },
-    confirmed: { label: 'Payment Received', color: 'bg-blue-100 text-blue-800 border-blue-200', icon: CheckCircle },
+    confirmed: { label: 'Confirmed', color: 'bg-blue-100 text-blue-800 border-blue-200', icon: CheckCircle },
+    payment_received: { label: 'Payment Received', color: 'bg-green-100 text-green-800 border-green-200', icon: CreditCard },
     processing: { label: 'Processing', color: 'bg-purple-100 text-purple-800 border-purple-200', icon: Package },
-    shipped: { label: 'Shipped', color: 'bg-green-100 text-green-800 border-green-200', icon: Truck },
+    shipped: { label: 'Shipped', color: 'bg-orange-100 text-orange-800 border-orange-200', icon: Truck },
     delivered: { label: 'Delivered', color: 'bg-emerald-100 text-emerald-800 border-emerald-200', icon: CheckCircle },
     cancelled: { label: 'Cancelled', color: 'bg-red-100 text-red-800 border-red-200', icon: XCircle },
   };
@@ -518,7 +519,8 @@ export default function AdminOrderDetail() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="confirmed">Payment Received</SelectItem>
+                      <SelectItem value="confirmed">Confirmed</SelectItem>
+                      <SelectItem value="payment_received">Payment Received</SelectItem>
                       <SelectItem value="processing">Processing</SelectItem>
                       <SelectItem value="shipped">Shipped</SelectItem>
                       <SelectItem value="delivered">Delivered</SelectItem>

@@ -4658,8 +4658,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const orderId = Number(req.params.id);
       const { status } = req.body;
       
-      // Validate status
-      const validStatuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
+      // Validate status - added "payment_received" as valid status
+      const validStatuses = ['pending', 'confirmed', 'processing', 'payment_received', 'shipped', 'delivered', 'cancelled'];
       if (!status || !validStatuses.includes(status)) {
         return res.status(400).json({
           success: false,
@@ -4668,26 +4668,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       try {
-        // Use storage method to update order status (includes automatic status history tracking)
-        const updatedOrder = await storage.updateOrderStatus(orderId, status);
+        let updatedOrder;
         
-        if (!updatedOrder) {
-          return res.status(404).json({
-            success: false,
-            error: { message: "Order not found" }
+        // If status is "payment_received", automatically update payment status and then order status to "processing"
+        if (status === 'payment_received') {
+          // First update payment status to "payment_received"
+          updatedOrder = await storage.updateOrderPaymentStatus(orderId, "payment_received");
+          
+          if (!updatedOrder) {
+            return res.status(404).json({
+              success: false,
+              error: { message: "Order not found" }
+            });
+          }
+          
+          // Then automatically update order status to "processing"
+          updatedOrder = await storage.updateOrderStatus(orderId, "processing");
+          
+          logger.info('Order marked as payment received and moved to processing by admin', { 
+            orderId, 
+            paymentStatus: "payment_received",
+            orderStatus: "processing",
+            adminUserId: req.user?.id
+          });
+        } else {
+          // Use storage method to update order status (includes automatic status history tracking)
+          updatedOrder = await storage.updateOrderStatus(orderId, status);
+          
+          if (!updatedOrder) {
+            return res.status(404).json({
+              success: false,
+              error: { message: "Order not found" }
+            });
+          }
+          
+          logger.info('Order status updated by admin', { 
+            orderId, 
+            newStatus: status,
+            adminUserId: req.user?.id
           });
         }
         
-        logger.info('Order status updated by admin', { 
-          orderId, 
-          newStatus: status,
-          adminUserId: req.user?.id
-        });
+        const message = status === 'payment_received' 
+          ? "Payment received and order moved to processing" 
+          : `Order status updated to ${status}`;
         
         return res.json({
           success: true,
           data: updatedOrder,
-          message: `Order status updated to ${status}`
+          message
         });
       } catch (error) {
         logger.error('Error updating order status', { 
