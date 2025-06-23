@@ -595,19 +595,19 @@ const OrderDetail: React.FC = () => {
                       <div className="flex items-center">
                         <FileText className="h-4 w-4 text-yellow-600 mr-2" />
                         <div>
-                          <p className="text-sm font-medium text-yellow-800">Reference Number</p>
+                          <p className="text-sm font-medium text-yellow-800">Payment Reference Number</p>
                           <div className="flex items-center justify-between">
-                            <p className="text-lg font-bold text-yellow-900">{order.orderNumber}</p>
+                            <p className="text-lg font-bold text-yellow-900">{order.paymentReferenceNumber || order.orderNumber}</p>
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => copyToClipboard(order.orderNumber, 'Reference number')}
+                              onClick={() => copyToClipboard(order.paymentReferenceNumber || order.orderNumber, 'Payment reference number')}
                             >
                               <Copy className="h-3 w-3" />
                             </Button>
                           </div>
                           <p className="text-xs text-yellow-700 mt-1">
-                            IMPORTANT: Use this order number as your reference
+                            IMPORTANT: Use this reference number for your payment
                           </p>
                         </div>
                       </div>
@@ -636,6 +636,47 @@ const OrderDetail: React.FC = () => {
                       </div>
                     </div>
                   </div>
+
+                  {/* PUDO Locker Information */}
+                  {order.shippingMethod === 'pudo' && order.lockerDetails && (
+                    <div className="border-t pt-4">
+                      <div className="bg-white border-2 border-gray-200 rounded-lg p-4">
+                        <div className="flex items-start">
+                          <Building2 className="h-5 w-5 text-blue-600 mr-3 mt-1" />
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-gray-900 mb-3">
+                              PUDO Delivery Locker
+                            </h4>
+                            <div className="space-y-2">
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <p className="font-medium text-gray-900">
+                                    {order.lockerDetails.name}
+                                  </p>
+                                  <p className="text-sm text-gray-600">
+                                    {order.lockerDetails.address}
+                                  </p>
+                                  <p className="text-sm text-gray-600">
+                                    {order.lockerDetails.city}, {order.lockerDetails.postalCode}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center text-sm text-gray-600">
+                                <span className="font-medium mr-2">Hours:</span>
+                                <span>{order.lockerDetails.operatingHours}</span>
+                              </div>
+                              {order.lockerDetails.phone && (
+                                <div className="flex items-center text-sm text-gray-600">
+                                  <span className="font-medium mr-2">Phone:</span>
+                                  <span>{order.lockerDetails.phone}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}
