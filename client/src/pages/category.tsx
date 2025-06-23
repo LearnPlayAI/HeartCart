@@ -57,8 +57,24 @@ const CategoryPage = () => {
     }
   }, [categoryResponse]);
   
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const limit = 20;
+  const offset = (page - 1) * limit;
+
   const { data: productsResponse, isLoading: isLoadingProducts } = useQuery({
-    queryKey: [`/api/products?categoryId=${category?.id}&limit=20&offset=0`],
+    queryKey: [`/api/products`, { categoryId: category?.id, limit, offset, page }],
+    queryFn: async () => {
+      if (!category?.id) return null;
+      const params = new URLSearchParams({
+        categoryId: category.id.toString(),
+        limit: limit.toString(),
+        offset: offset.toString()
+      });
+      const response = await fetch(`/api/products?${params}`);
+      if (!response.ok) throw new Error('Failed to fetch products');
+      return response.json();
+    },
     enabled: !!category?.id,
     staleTime: 0, // Always fetch fresh data to prevent inactive products from showing
     gcTime: 0, // Don't keep in cache when component unmounts
@@ -66,8 +82,10 @@ const CategoryPage = () => {
     refetchOnMount: true, // Always refetch on mount
   });
   
-  // Extract the products from the standardized response
-  const products = productsResponse?.success ? productsResponse.data || [] : [];
+  // Extract the products and pagination data from the standardized response
+  const products = productsResponse?.success ? productsResponse.data?.data || [] : [];
+  const totalProducts = productsResponse?.success ? productsResponse.data?.meta?.total || 0 : 0;
+  const totalPages = Math.ceil(totalProducts / limit);
   
   // Log for debugging
   useEffect(() => {
