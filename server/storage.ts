@@ -11757,20 +11757,22 @@ export class DatabaseStorage implements IStorage {
           or(
             ilike(pudoLockers.name, `%${query}%`),
             ilike(pudoLockers.address, `%${query}%`),
-            ilike(pudoLockers.code, `%${query}%`)
+            ilike(pudoLockers.code, `%${query}%`),
+            sql`${pudoLockers.place}->>'town' ILIKE ${`%${query}%`}`,
+            sql`${pudoLockers.detailedAddress}->>'locality' ILIKE ${`%${query}%`}`
           )
         );
       }
 
       if (province) {
         whereConditions.push(
-          sql`LOWER(${pudoLockers.detailedAddress}->>'province') = LOWER(${province})`
+          sql`${pudoLockers.detailedAddress}->>'province' ILIKE ${province}`
         );
       }
 
       if (city) {
         whereConditions.push(
-          sql`LOWER(${pudoLockers.detailedAddress}->>'locality') = LOWER(${city})`
+          sql`${pudoLockers.detailedAddress}->>'locality' ILIKE ${`%${city}%`}`
         );
       }
 
@@ -11792,12 +11794,12 @@ export class DatabaseStorage implements IStorage {
     try {
       let whereConditions = [
         eq(pudoLockers.isActive, true),
-        sql`LOWER(${pudoLockers.detailedAddress}->>'province') = LOWER(${province})`
+        sql`${pudoLockers.detailedAddress}->>'province' ILIKE ${province}`
       ];
 
       if (city) {
         whereConditions.push(
-          sql`LOWER(${pudoLockers.detailedAddress}->>'locality') = LOWER(${city})`
+          sql`${pudoLockers.detailedAddress}->>'locality' ILIKE ${`%${city}%`}`
         );
       }
 
