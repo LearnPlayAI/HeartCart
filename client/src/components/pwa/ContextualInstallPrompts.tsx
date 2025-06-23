@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Download, ShoppingCart, Package, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { usePWAInstall } from '@/hooks/usePWAInstall';
+import { IOSInstallPrompt } from './IOSInstallPrompt';
 
 interface ContextualInstallPromptsProps {
   context: 'cart' | 'checkout' | 'order-success' | 'general';
@@ -13,11 +14,17 @@ const ContextualInstallPrompts: React.FC<ContextualInstallPromptsProps> = ({
   context,
   className = ''
 }) => {
-  const { isInstallable, installApp } = usePWAInstall();
+  const { isInstallable, isIOSDevice, installApp } = usePWAInstall();
+  const [showIOSPrompt, setShowIOSPrompt] = useState(false);
 
   if (!isInstallable) return null;
 
   const handleInstall = async () => {
+    if (isIOSDevice) {
+      setShowIOSPrompt(true);
+      return;
+    }
+    
     const success = await installApp();
     if (!success) {
       alert('To install this app, look for "Add to Home Screen" or "Install" in your browser menu.');
