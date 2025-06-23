@@ -142,31 +142,27 @@ const getStatusIcon = (eventType: string, status: string) => {
 };
 
 const getTimelineEntryColor = (entry: OrderStatusHistoryEntry) => {
-  // For payment-related events, use payment status colors
-  if (entry.eventType === 'payment_received' || entry.paymentStatus) {
-    const paymentStatus = entry.paymentStatus || 'paid';
-    switch (paymentStatus.toLowerCase()) {
-      case 'payment_received':
-      case 'paid':
-        return 'bg-gradient-to-r from-emerald-500 to-emerald-600 shadow-lg shadow-emerald-500/25';
-      case 'pending':
-        return 'bg-gradient-to-r from-orange-500 to-orange-600 shadow-lg shadow-orange-500/25';
-      case 'failed':
-        return 'bg-gradient-to-r from-red-500 to-red-600 shadow-lg shadow-red-500/25';
-      default:
-        return 'bg-gradient-to-r from-slate-500 to-slate-600 shadow-lg shadow-slate-500/25';
-    }
+  // Determine the status to use for coloring - prioritize the new status from the entry
+  let statusForColor = entry.status;
+  
+  // For order_placed events, use pending color
+  if (entry.eventType === 'order_placed') {
+    statusForColor = 'pending';
   }
   
-  // For status changes, use order status colors
-  const orderStatus = entry.status || 'pending';
-  switch (orderStatus.toLowerCase()) {
+  // For payment events, use emerald color regardless of status
+  if (entry.eventType === 'payment_received' || entry.paymentStatus) {
+    return 'bg-gradient-to-r from-emerald-500 to-emerald-600 shadow-lg shadow-emerald-500/25';
+  }
+  
+  // Use the status from the entry to determine color
+  switch (statusForColor?.toLowerCase()) {
     case 'pending':
       return 'bg-gradient-to-r from-yellow-500 to-yellow-600 shadow-lg shadow-yellow-500/25';
     case 'confirmed':
       return 'bg-gradient-to-r from-blue-500 to-blue-600 shadow-lg shadow-blue-500/25';
     case 'processing':
-      return 'bg-gradient-to-r from-amber-500 to-amber-600 shadow-lg shadow-amber-500/25';
+      return 'bg-gradient-to-r from-orange-500 to-orange-600 shadow-lg shadow-orange-500/25';
     case 'shipped':
       return 'bg-gradient-to-r from-purple-500 to-purple-600 shadow-lg shadow-purple-500/25';
     case 'delivered':
