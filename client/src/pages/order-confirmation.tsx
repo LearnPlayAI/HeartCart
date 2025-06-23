@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { formatDate } from "@/lib/utils";
+import ContextualInstallPrompts from "@/components/pwa/ContextualInstallPrompts";
 
 interface OrderItem {
   id: number;
@@ -493,6 +494,12 @@ export default function OrderConfirmationPage() {
             Continue Shopping
           </Button>
         </div>
+
+        {/* PWA Install Prompt for Order Success Context */}
+        <ContextualInstallPrompts 
+          context="order-success" 
+          className="mt-8"
+        />
 
       </div>
     </div>

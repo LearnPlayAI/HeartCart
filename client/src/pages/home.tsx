@@ -9,6 +9,7 @@ import { Helmet } from 'react-helmet';
 import { useLocation } from 'wouter';
 import { AlertCircle } from 'lucide-react';
 import { useProductListingScroll } from '@/hooks/use-scroll-management';
+import ContextualInstallPrompts from '@/components/pwa/ContextualInstallPrompts';
 
 const Home = () => {
   const [, setLocation] = useLocation();
@@ -75,6 +76,14 @@ const Home = () => {
             <FlashDealsSection />
             <FeaturedProductsSection />
             <AIRecommendedProducts />
+            
+            {/* PWA Install Prompt for General Context */}
+            <div className="mt-8">
+              <ContextualInstallPrompts 
+                context="general" 
+                className="max-w-4xl mx-auto"
+              />
+            </div>
           </div>
         </div>
       </div>

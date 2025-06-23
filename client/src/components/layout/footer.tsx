@@ -1,94 +1,218 @@
 import React from 'react';
 import { Link } from 'wouter';
-import { Input } from '@/components/ui/input';
+import { 
+  Download, 
+  Smartphone, 
+  Mail, 
+  Phone, 
+  MapPin, 
+  Facebook, 
+  Twitter, 
+  Instagram,
+  Zap,
+  Shield,
+  Truck
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Layers, Facebook, Instagram, Twitter, Linkedin } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 import Logo from '@/components/ui/logo';
+import InstallButton from '@/components/pwa/InstallButton';
+import ContextualInstallPrompts from '@/components/pwa/ContextualInstallPrompts';
 
 const Footer = () => {
-  const handleNewsletterSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Newsletter subscription logic would go here
-  };
-  
+  const currentYear = new Date().getFullYear();
+
   return (
-    <footer className="bg-gray-100 pt-8 pb-4">
-      <div className="container mx-auto px-4">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
-          <div>
-            <h3 className="font-bold text-gray-800 mb-3">Shop</h3>
+    <footer className="bg-gray-50 border-t">
+      <div className="container mx-auto px-4 py-12">
+        {/* PWA Install Section */}
+        <div className="mb-12">
+          <ContextualInstallPrompts 
+            context="general" 
+            className="max-w-4xl mx-auto"
+          />
+        </div>
+
+        {/* Main Footer Content */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
+          
+          {/* Company Info */}
+          <div className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <Logo />
+            </div>
+            <p className="text-gray-600 text-sm">
+              Your trusted South African e-commerce platform. Shop with confidence and get your products delivered fast with our innovative PUDO locker system.
+            </p>
+            
+            {/* Mobile App Download */}
+            <div className="space-y-3">
+              <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                <Smartphone className="h-4 w-4" />
+                Get Our Mobile App
+              </h4>
+              <div className="space-y-2">
+                <InstallButton 
+                  variant="outline"
+                  size="sm"
+                  className="w-full justify-start"
+                  showIcon={true}
+                  text="Install Mobile App"
+                />
+                <p className="text-xs text-gray-500">
+                  Fast, offline-capable shopping experience right on your phone
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Links */}
+          <div className="space-y-4">
+            <h4 className="font-semibold text-gray-900">Quick Links</h4>
             <ul className="space-y-2 text-sm">
-              <li><Link href="/" className="text-gray-600 hover:text-[#FF69B4]">All Categories</Link></li>
-              <li><Link href="/" className="text-gray-600 hover:text-[#FF69B4]">Flash Deals</Link></li>
-              <li><Link href="/" className="text-gray-600 hover:text-[#FF69B4]">Best Sellers</Link></li>
-              <li><Link href="/" className="text-gray-600 hover:text-[#FF69B4]">New Arrivals</Link></li>
+              <li>
+                <Link href="/" className="text-gray-600 hover:text-[#FF69B4] transition-colors">
+                  Home
+                </Link>
+              </li>
+              <li>
+                <Link href="/products" className="text-gray-600 hover:text-[#FF69B4] transition-colors">
+                  All Products
+                </Link>
+              </li>
+              <li>
+                <Link href="/my-orders" className="text-gray-600 hover:text-[#FF69B4] transition-colors">
+                  My Orders
+                </Link>
+              </li>
+              <li>
+                <Link href="/my-favourites" className="text-gray-600 hover:text-[#FF69B4] transition-colors">
+                  My Favourites
+                </Link>
+              </li>
+              <li>
+                <Link href="/credit-history" className="text-gray-600 hover:text-[#FF69B4] transition-colors">
+                  Credit History
+                </Link>
+              </li>
             </ul>
           </div>
-          
-          <div>
-            <h3 className="font-bold text-gray-800 mb-3">Customer Service</h3>
+
+          {/* Customer Service */}
+          <div className="space-y-4">
+            <h4 className="font-semibold text-gray-900">Customer Service</h4>
             <ul className="space-y-2 text-sm">
-              <li><Link href="/" className="text-gray-600 hover:text-[#FF69B4]">Contact Us</Link></li>
-              <li><Link href="/" className="text-gray-600 hover:text-[#FF69B4]">FAQs</Link></li>
-              <li><Link href="/" className="text-gray-600 hover:text-[#FF69B4]">Shipping Policy</Link></li>
-              <li><Link href="/" className="text-gray-600 hover:text-[#FF69B4]">Returns & Refunds</Link></li>
+              <li className="flex items-center gap-2 text-gray-600">
+                <Phone className="h-4 w-4" />
+                <span>+27 (0) 11 123 4567</span>
+              </li>
+              <li className="flex items-center gap-2 text-gray-600">
+                <Mail className="h-4 w-4" />
+                <span>support@teemeyou.co.za</span>
+              </li>
+              <li className="flex items-center gap-2 text-gray-600">
+                <MapPin className="h-4 w-4" />
+                <span>Johannesburg, South Africa</span>
+              </li>
             </ul>
+            
+            {/* App Benefits */}
+            <div className="space-y-2 pt-2">
+              <h5 className="text-xs font-medium text-gray-700 uppercase tracking-wide">
+                App Benefits
+              </h5>
+              <ul className="space-y-1 text-xs text-gray-600">
+                <li className="flex items-center gap-1">
+                  <Zap className="h-3 w-3 text-yellow-500" />
+                  Faster checkout
+                </li>
+                <li className="flex items-center gap-1">
+                  <Shield className="h-3 w-3 text-green-500" />
+                  Offline browsing
+                </li>
+                <li className="flex items-center gap-1">
+                  <Truck className="h-3 w-3 text-blue-500" />
+                  Push notifications for orders
+                </li>
+              </ul>
+            </div>
           </div>
-          
-          <div>
-            <h3 className="font-bold text-gray-800 mb-3">About Us</h3>
-            <ul className="space-y-2 text-sm">
-              <li><Link href="/" className="text-gray-600 hover:text-[#FF69B4]">Our Story</Link></li>
-              <li><Link href="/" className="text-gray-600 hover:text-[#FF69B4]">Local Suppliers</Link></li>
-              <li><Link href="/" className="text-gray-600 hover:text-[#FF69B4]">Careers</Link></li>
-              <li><Link href="/" className="text-gray-600 hover:text-[#FF69B4]">Press</Link></li>
-            </ul>
-          </div>
-          
-          <div>
-            <h3 className="font-bold text-gray-800 mb-3">Follow Us</h3>
-            <div className="flex space-x-3 mb-4">
-              <a href="#" className="text-gray-600 hover:text-[#FF69B4] text-lg">
-                <Facebook />
+
+          {/* Social & Features */}
+          <div className="space-y-4">
+            <h4 className="font-semibold text-gray-900">Connect & Features</h4>
+            
+            {/* Social Links */}
+            <div className="flex space-x-3">
+              <a 
+                href="#" 
+                className="text-gray-400 hover:text-[#FF69B4] transition-colors"
+                aria-label="Facebook"
+              >
+                <Facebook className="h-5 w-5" />
               </a>
-              <a href="#" className="text-gray-600 hover:text-[#FF69B4] text-lg">
-                <Instagram />
+              <a 
+                href="#" 
+                className="text-gray-400 hover:text-[#FF69B4] transition-colors"
+                aria-label="Twitter"
+              >
+                <Twitter className="h-5 w-5" />
               </a>
-              <a href="#" className="text-gray-600 hover:text-[#FF69B4] text-lg">
-                <Twitter />
-              </a>
-              <a href="#" className="text-gray-600 hover:text-[#FF69B4] text-lg">
-                <Linkedin />
+              <a 
+                href="#" 
+                className="text-gray-400 hover:text-[#FF69B4] transition-colors"
+                aria-label="Instagram"
+              >
+                <Instagram className="h-5 w-5" />
               </a>
             </div>
-            
-            <h3 className="font-bold text-gray-800 mb-2">Newsletter</h3>
-            <form onSubmit={handleNewsletterSubmit} className="flex">
-              <Input
-                type="email"
-                placeholder="Your email"
-                className="text-sm rounded-l-lg px-3 py-2 flex-1 border border-gray-300 focus:outline-none focus:ring-1 focus:ring-[#FF69B4]"
-              />
-              <Button type="submit" className="bg-[#FF69B4] text-white px-3 py-2 rounded-r-lg text-sm">
-                <Layers size={16} />
-              </Button>
-            </form>
+
+            {/* PWA Features Card */}
+            <Card className="bg-gradient-to-br from-[#FF69B4]/5 to-purple-500/5 border-[#FF69B4]/20">
+              <CardContent className="p-4 space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium text-gray-900">
+                  <Download className="h-4 w-4 text-[#FF69B4]" />
+                  Why Install Our App?
+                </div>
+                <ul className="text-xs text-gray-600 space-y-1">
+                  <li>• Works offline</li>
+                  <li>• Faster loading</li>
+                  <li>• Desktop shortcuts</li>
+                  <li>• Push notifications</li>
+                  <li>• No app store needed</li>
+                </ul>
+                <InstallButton 
+                  variant="default"
+                  size="sm"
+                  className="w-full text-xs h-8"
+                  text="Install Now"
+                />
+              </CardContent>
+            </Card>
           </div>
         </div>
-        
-        <div className="border-t border-gray-200 pt-6 flex flex-col md:flex-row justify-between items-center">
-          <div className="mb-4 md:mb-0">
-            <Logo className="h-10 w-auto" />
+
+        <Separator className="my-8" />
+
+        {/* Bottom Footer */}
+        <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
+          <div className="text-sm text-gray-600">
+            © {currentYear} TeeMeYou. All rights reserved.
           </div>
-          <div className="text-center md:text-right">
-            <div className="mb-2 text-sm text-gray-600">
-              &copy; {new Date().getFullYear()} TeeMeYou. All rights reserved.
-            </div>
-            <div className="flex justify-center md:justify-end space-x-4 text-xs text-gray-500">
-              <Link href="/" className="hover:text-[#FF69B4]">Privacy Policy</Link>
-              <Link href="/" className="hover:text-[#FF69B4]">Terms of Service</Link>
-              <Link href="/" className="hover:text-[#FF69B4]">Cookies Settings</Link>
-            </div>
+          <div className="flex flex-wrap gap-4 text-sm">
+            <a href="#" className="text-gray-600 hover:text-[#FF69B4] transition-colors">
+              Privacy Policy
+            </a>
+            <a href="#" className="text-gray-600 hover:text-[#FF69B4] transition-colors">
+              Terms of Service
+            </a>
+            <a href="#" className="text-gray-600 hover:text-[#FF69B4] transition-colors">
+              Shipping Info
+            </a>
+            <a href="#" className="text-gray-600 hover:text-[#FF69B4] transition-colors">
+              Returns
+            </a>
           </div>
         </div>
       </div>
