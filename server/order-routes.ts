@@ -139,8 +139,17 @@ router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Respons
 
     // Validate request body using the checkout form schema
     logger.info("Validating order data", { orderData: req.body });
-    const orderData = createOrderSchema.parse(req.body);
-    logger.info("Order data validation successful", { orderData });
+    let orderData;
+    try {
+      orderData = createOrderSchema.parse(req.body);
+      logger.info("Order data validation successful", { orderData });
+    } catch (validationError) {
+      logger.error("Order validation failed", { 
+        error: validationError.message, 
+        issues: validationError.issues || validationError
+      });
+      return sendError(res, `Validation failed: ${validationError.message}`, 400);
+    }
 
     // Use the order items from the request (checkout form already validates these)
     if (!orderData.orderItems || orderData.orderItems.length === 0) {
