@@ -10,7 +10,18 @@ import {
   XCircle, 
   AlertCircle,
   User,
-  Shield
+  Shield,
+  ShoppingCart,
+  DollarSign,
+  PackageCheck,
+  Send,
+  MapPin,
+  Star,
+  Ban,
+  FileText,
+  Zap,
+  Calendar,
+  Target
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -91,42 +102,56 @@ interface OrderStatusTimelineProps {
 const getStatusIcon = (eventType: string, status: string) => {
   switch (eventType) {
     case 'order_placed':
-      return <Package className="w-4 h-4" />;
+      return <ShoppingCart className="w-5 h-5" />;
     case 'payment_received':
-      return <CreditCard className="w-4 h-4" />;
+      return <DollarSign className="w-5 h-5" />;
     case 'status_change':
-      if (status === 'processing') return <Clock className="w-4 h-4" />;
-      if (status === 'shipped') return <Truck className="w-4 h-4" />;
-      if (status === 'delivered') return <CheckCircle className="w-4 h-4" />;
-      if (status === 'cancelled') return <XCircle className="w-4 h-4" />;
-      return <AlertCircle className="w-4 h-4" />;
+      if (status === 'confirmed') return <CheckCircle className="w-5 h-5" />;
+      if (status === 'processing') return <PackageCheck className="w-5 h-5" />;
+      if (status === 'shipped') return <Send className="w-5 h-5" />;
+      if (status === 'delivered') return <MapPin className="w-5 h-5" />;
+      if (status === 'cancelled') return <Ban className="w-5 h-5" />;
+      return <Zap className="w-5 h-5" />;
     case 'shipped':
-      return <Truck className="w-4 h-4" />;
+      return <Send className="w-5 h-5" />;
     case 'delivered':
-      return <CheckCircle className="w-4 h-4" />;
+      return <Target className="w-5 h-5" />;
+    case 'cancelled':
+      return <Ban className="w-5 h-5" />;
+    case 'notes_added':
+      return <FileText className="w-5 h-5" />;
+    case 'tracking_updated':
+      return <Truck className="w-5 h-5" />;
     default:
-      return <Clock className="w-4 h-4" />;
+      return <Calendar className="w-5 h-5" />;
   }
 };
 
 const getStatusColor = (eventType: string, status: string) => {
   switch (eventType) {
     case 'order_placed':
-      return 'bg-blue-500';
+      return 'bg-gradient-to-r from-blue-500 to-blue-600 shadow-lg shadow-blue-500/25';
     case 'payment_received':
-      return 'bg-green-500';
+      return 'bg-gradient-to-r from-emerald-500 to-emerald-600 shadow-lg shadow-emerald-500/25';
     case 'status_change':
-      if (status === 'processing') return 'bg-yellow-500';
-      if (status === 'shipped') return 'bg-purple-500';
-      if (status === 'delivered') return 'bg-green-600';
-      if (status === 'cancelled') return 'bg-red-500';
-      return 'bg-gray-500';
+      if (status === 'confirmed') return 'bg-gradient-to-r from-blue-500 to-blue-600 shadow-lg shadow-blue-500/25';
+      if (status === 'processing') return 'bg-gradient-to-r from-amber-500 to-amber-600 shadow-lg shadow-amber-500/25';
+      if (status === 'shipped') return 'bg-gradient-to-r from-purple-500 to-purple-600 shadow-lg shadow-purple-500/25';
+      if (status === 'delivered') return 'bg-gradient-to-r from-green-500 to-green-600 shadow-lg shadow-green-500/25';
+      if (status === 'cancelled') return 'bg-gradient-to-r from-red-500 to-red-600 shadow-lg shadow-red-500/25';
+      return 'bg-gradient-to-r from-indigo-500 to-indigo-600 shadow-lg shadow-indigo-500/25';
     case 'shipped':
-      return 'bg-purple-500';
+      return 'bg-gradient-to-r from-purple-500 to-purple-600 shadow-lg shadow-purple-500/25';
     case 'delivered':
-      return 'bg-green-600';
+      return 'bg-gradient-to-r from-green-500 to-green-600 shadow-lg shadow-green-500/25';
+    case 'cancelled':
+      return 'bg-gradient-to-r from-red-500 to-red-600 shadow-lg shadow-red-500/25';
+    case 'notes_added':
+      return 'bg-gradient-to-r from-slate-500 to-slate-600 shadow-lg shadow-slate-500/25';
+    case 'tracking_updated':
+      return 'bg-gradient-to-r from-orange-500 to-orange-600 shadow-lg shadow-orange-500/25';
     default:
-      return 'bg-gray-500';
+      return 'bg-gradient-to-r from-gray-500 to-gray-600 shadow-lg shadow-gray-500/25';
   }
 };
 
@@ -181,7 +206,12 @@ export default function OrderStatusTimeline({ orderId, currentStatus, currentPay
         throw new Error('Failed to fetch order status history');
       }
       return response.json();
-    }
+    },
+    staleTime: 0, // Always consider data stale
+    gcTime: 0, // Don't cache data for long
+    refetchOnMount: 'always', // Always refetch when component mounts
+    refetchOnWindowFocus: true, // Refetch when window regains focus
+    refetchOnReconnect: true, // Refetch when reconnecting to network
   });
 
   if (isLoading) {
@@ -233,15 +263,19 @@ export default function OrderStatusTimeline({ orderId, currentStatus, currentPay
               const sastTime = formatSASTTime(entry.createdAt);
               
               return (
-                <div key={entry.id} className="relative">
+                <div 
+                  key={entry.id} 
+                  className="relative animate-in fade-in-50 slide-in-from-left-2 duration-500"
+                  style={{ animationDelay: `${index * 100}ms` }}
+                >
                   <div className="flex items-start gap-4">
                     {/* Timeline connector */}
                     <div className="relative flex-shrink-0">
-                      <div className={`w-10 h-10 rounded-full ${getStatusColor(entry.eventType, entry.status)} flex items-center justify-center text-white`}>
+                      <div className={`w-12 h-12 rounded-full ${getStatusColor(entry.eventType, entry.status)} flex items-center justify-center text-white transition-all duration-300 hover:scale-110 hover:rotate-3`}>
                         {getStatusIcon(entry.eventType, entry.status)}
                       </div>
                       {!isLast && (
-                        <div className="absolute top-10 left-1/2 w-0.5 h-6 bg-border transform -translate-x-1/2" />
+                        <div className="absolute top-12 left-1/2 w-0.5 h-8 bg-gradient-to-b from-border to-transparent transform -translate-x-1/2" />
                       )}
                     </div>
 
