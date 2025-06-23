@@ -416,13 +416,22 @@ export default function CheckoutPage() {
         } : null
       };
 
-      console.log("Creating payment session with order data:", orderData);
+      console.log("Creating order directly for bank transfer:", orderData);
       
-      // Step 1: Create payment session
+      // For bank transfer payments, create order directly and redirect to payment page
+      if (data.paymentMethod === "eft") {
+        // Store order data in sessionStorage for payment page
+        sessionStorage.setItem('pendingOrder', JSON.stringify(orderData));
+        
+        // Navigate to payment instructions page
+        navigate('/payment-confirmation');
+        return;
+      }
+      
+      // For other payment methods (future), use payment session approach
       const sessionResult = await createPaymentSessionMutation.mutateAsync(orderData);
       
       if (sessionResult.success && sessionResult.data?.sessionId) {
-        // Step 2: Confirm payment and create order
         await confirmPaymentMutation.mutateAsync({
           sessionId: sessionResult.data.sessionId,
           paymentMethod: data.paymentMethod

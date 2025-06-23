@@ -16,6 +16,7 @@ import ProductsExample from "@/pages/products-example";
 import Checkout from "@/pages/checkout";
 import OrderDetail from "@/pages/order-detail";
 import OrderConfirmation from "@/pages/order-confirmation";
+import PaymentConfirmation from "@/pages/payment-confirmation";
 import SearchResults from "@/pages/search-results";
 import Profile from "@/pages/profile-fix";
 import ProfileSettings from "@/pages/profile-settings";
@@ -253,6 +254,7 @@ function App() {
                           <Route path="/products"><ProductListing /></Route>
                           <Route path="/products-example"><ProductsExample /></Route>
                           <ProtectedRoute path="/checkout" component={Checkout} />
+                          <ProtectedRoute path="/payment-confirmation" component={PaymentConfirmation} />
                           <ProtectedRoute path="/order-confirmation/:id" component={OrderConfirmation} />
                           <Route path="/search"><SearchResults /></Route>
                           <ProtectedRoute path="/profile" component={Profile} />

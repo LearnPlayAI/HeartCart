@@ -116,8 +116,15 @@ router.post("/session", isAuthenticated, asyncHandler(async (req: Request, res: 
   } catch (error) {
     logger.error("Error creating payment session", {
       error: error instanceof Error ? error.message : String(error),
-      userId: req.user?.id
+      stack: error instanceof Error ? error.stack : undefined,
+      userId: req.user?.id,
+      requestBody: req.body
     });
+    
+    if (error instanceof z.ZodError) {
+      return sendError(res, `Validation error: ${error.errors.map(e => e.message).join(', ')}`, 400);
+    }
+    
     return sendError(res, "Failed to create payment session", 500);
   }
 }));
