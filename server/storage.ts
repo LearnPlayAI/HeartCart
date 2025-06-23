@@ -3162,6 +3162,31 @@ export class DatabaseStorage implements IStorage {
         });
       }
 
+      // Create initial status history entry for order creation
+      try {
+        await this.addOrderStatusHistory(
+          orderToUse.id,
+          orderToUse.status,
+          orderToUse.paymentStatus,
+          'System',
+          null,
+          'order_created',
+          `Order ${orderToUse.orderNumber} created`
+        );
+        
+        logger.debug(`Created initial status history entry`, {
+          orderId: orderToUse.id,
+          status: orderToUse.status,
+          paymentStatus: orderToUse.paymentStatus
+        });
+      } catch (historyError) {
+        logger.error(`Error creating initial status history`, {
+          error: historyError,
+          orderId: orderToUse.id,
+        });
+        // Don't throw here as the order is already created
+      }
+
       // Clear the cart after successful order creation
       try {
         if (order.userId) {
@@ -3585,6 +3610,33 @@ export class DatabaseStorage implements IStorage {
             userId: updatedOrder.userId,
           });
 
+          // Create status history entry for the status change
+          try {
+            await this.addOrderStatusHistory(
+              id,
+              status,
+              updatedOrder.paymentStatus,
+              'Admin',
+              null,
+              'status_changed',
+              `Order status changed from ${oldStatus} to ${status}`
+            );
+            
+            logger.debug(`Created status history entry for status change`, {
+              orderId: id,
+              oldStatus,
+              newStatus: status
+            });
+          } catch (historyError) {
+            logger.error(`Error creating status history for status change`, {
+              error: historyError,
+              orderId: id,
+              oldStatus,
+              newStatus: status
+            });
+            // Don't throw here as the order update was successful
+          }
+
           return updatedOrder;
         } catch (updateError) {
           logger.error(`Error updating order status`, {
@@ -3664,6 +3716,33 @@ export class DatabaseStorage implements IStorage {
             paymentReceivedDate,
             userId: updatedOrder.userId,
           });
+
+          // Create status history entry for the payment status change
+          try {
+            await this.addOrderStatusHistory(
+              id,
+              updatedOrder.status,
+              paymentStatus,
+              'Admin',
+              null,
+              'payment_status_changed',
+              `Payment status changed from ${oldPaymentStatus} to ${paymentStatus}`
+            );
+            
+            logger.debug(`Created status history entry for payment status change`, {
+              orderId: id,
+              oldPaymentStatus,
+              newPaymentStatus: paymentStatus
+            });
+          } catch (historyError) {
+            logger.error(`Error creating status history for payment status change`, {
+              error: historyError,
+              orderId: id,
+              oldPaymentStatus,
+              newPaymentStatus: paymentStatus
+            });
+            // Don't throw here as the order update was successful
+          }
 
           return updatedOrder;
         } catch (updateError) {
