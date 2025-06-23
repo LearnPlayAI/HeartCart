@@ -7014,6 +7014,107 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register supplier order management routes
   app.use('/api/admin/supplier-orders', supplierOrderRoutes);
 
+  // ============================================================================
+  // PUDO LOCKER ROUTES
+  // ============================================================================
+
+  // Get all PUDO lockers
+  app.get("/api/pudo-lockers", withStandardResponse(async (req: Request, res: Response) => {
+    const lockers = await storage.getAllPudoLockers();
+    return lockers;
+  }));
+
+  // Search PUDO lockers with filters
+  app.get("/api/pudo-lockers/search", withStandardResponse(async (req: Request, res: Response) => {
+    const { q: query, province, city } = req.query as { q?: string; province?: string; city?: string };
+    
+    if (!query && !province && !city) {
+      throw new BadRequestError("At least one search parameter (q, province, or city) is required");
+    }
+    
+    const lockers = await storage.searchPudoLockers(query || "", province, city);
+    return lockers;
+  }));
+
+  // Get PUDO lockers by location (province/city)
+  app.get("/api/pudo-lockers/location", withStandardResponse(async (req: Request, res: Response) => {
+    const { province, city } = req.query as { province?: string; city?: string };
+    
+    if (!province) {
+      throw new BadRequestError("Province parameter is required");
+    }
+    
+    const lockers = await storage.getPudoLockersByLocation(province, city);
+    return lockers;
+  }));
+
+  // Get specific PUDO locker by code
+  app.get("/api/pudo-lockers/code/:code", withStandardResponse(async (req: Request, res: Response) => {
+    const { code } = req.params;
+    const locker = await storage.getPudoLockerByCode(code);
+    
+    if (!locker) {
+      throw new NotFoundError("PUDO locker not found");
+    }
+    
+    return locker;
+  }));
+
+  // Get specific PUDO locker by ID
+  app.get("/api/pudo-lockers/:id", withStandardResponse(async (req: Request, res: Response) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      throw new BadRequestError("Invalid locker ID");
+    }
+    
+    const locker = await storage.getPudoLockerById(id);
+    
+    if (!locker) {
+      throw new NotFoundError("PUDO locker not found");
+    }
+    
+    return locker;
+  }));
+
+  // Update user's preferred locker (authenticated users only)
+  app.post("/api/user/preferred-locker", 
+    isAuthenticated,
+    validateRequest({
+      body: z.object({
+        lockerId: z.number().int().positive(),
+        lockerCode: z.string().min(1)
+      })
+    }),
+    withStandardResponse(async (req: Request, res: Response) => {
+      const userId = req.user!.id;
+      const { lockerId, lockerCode } = req.body;
+      
+      // Verify the locker exists
+      const locker = await storage.getPudoLockerById(lockerId);
+      if (!locker) {
+        throw new NotFoundError("PUDO locker not found");
+      }
+      
+      const success = await storage.updateUserPreferredLocker(userId, lockerId, lockerCode);
+      
+      if (!success) {
+        throw new Error("Failed to update preferred locker");
+      }
+      
+      return { message: "Preferred locker updated successfully", locker };
+    })
+  );
+
+  // Get user's preferred locker (authenticated users only)
+  app.get("/api/user/preferred-locker", 
+    isAuthenticated,
+    withStandardResponse(async (req: Request, res: Response) => {
+      const userId = req.user!.id;
+      const locker = await storage.getUserPreferredLocker(userId);
+      return locker || null;
+    })
+  );
+
   const httpServer = createServer(app);
   return httpServer;
 }

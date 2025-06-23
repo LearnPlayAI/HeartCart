@@ -11728,6 +11728,166 @@ export class DatabaseStorage implements IStorage {
       return false;
     }
   }
+
+  // ============================================================================
+  // PUDO LOCKER OPERATIONS
+  // ============================================================================
+
+  async getAllPudoLockers(): Promise<PudoLocker[]> {
+    try {
+      const lockers = await db
+        .select()
+        .from(pudoLockers)
+        .where(eq(pudoLockers.isActive, true))
+        .orderBy(pudoLockers.name);
+
+      return lockers;
+    } catch (error) {
+      logger.error('Error fetching all PUDO lockers', { error });
+      throw error;
+    }
+  }
+
+  async searchPudoLockers(query: string, province?: string, city?: string): Promise<PudoLocker[]> {
+    try {
+      let whereConditions = [eq(pudoLockers.isActive, true)];
+
+      if (query) {
+        whereConditions.push(
+          or(
+            ilike(pudoLockers.name, `%${query}%`),
+            ilike(pudoLockers.address, `%${query}%`),
+            ilike(pudoLockers.code, `%${query}%`)
+          )
+        );
+      }
+
+      if (province) {
+        whereConditions.push(
+          sql`LOWER(${pudoLockers.detailedAddress}->>'province') = LOWER(${province})`
+        );
+      }
+
+      if (city) {
+        whereConditions.push(
+          sql`LOWER(${pudoLockers.detailedAddress}->>'locality') = LOWER(${city})`
+        );
+      }
+
+      const lockers = await db
+        .select()
+        .from(pudoLockers)
+        .where(and(...whereConditions))
+        .orderBy(pudoLockers.name)
+        .limit(50);
+
+      return lockers;
+    } catch (error) {
+      logger.error('Error searching PUDO lockers', { error, query, province, city });
+      throw error;
+    }
+  }
+
+  async getPudoLockersByLocation(province: string, city?: string): Promise<PudoLocker[]> {
+    try {
+      let whereConditions = [
+        eq(pudoLockers.isActive, true),
+        sql`LOWER(${pudoLockers.detailedAddress}->>'province') = LOWER(${province})`
+      ];
+
+      if (city) {
+        whereConditions.push(
+          sql`LOWER(${pudoLockers.detailedAddress}->>'locality') = LOWER(${city})`
+        );
+      }
+
+      const lockers = await db
+        .select()
+        .from(pudoLockers)
+        .where(and(...whereConditions))
+        .orderBy(pudoLockers.name)
+        .limit(10);
+
+      return lockers;
+    } catch (error) {
+      logger.error('Error fetching PUDO lockers by location', { error, province, city });
+      throw error;
+    }
+  }
+
+  async getPudoLockerByCode(code: string): Promise<PudoLocker | undefined> {
+    try {
+      const [locker] = await db
+        .select()
+        .from(pudoLockers)
+        .where(and(
+          eq(pudoLockers.code, code),
+          eq(pudoLockers.isActive, true)
+        ));
+
+      return locker;
+    } catch (error) {
+      logger.error('Error fetching PUDO locker by code', { error, code });
+      throw error;
+    }
+  }
+
+  async getPudoLockerById(id: number): Promise<PudoLocker | undefined> {
+    try {
+      const [locker] = await db
+        .select()
+        .from(pudoLockers)
+        .where(and(
+          eq(pudoLockers.id, id),
+          eq(pudoLockers.isActive, true)
+        ));
+
+      return locker;
+    } catch (error) {
+      logger.error('Error fetching PUDO locker by ID', { error, id });
+      throw error;
+    }
+  }
+
+  async updateUserPreferredLocker(userId: number, lockerId: number, lockerCode: string): Promise<boolean> {
+    try {
+      await db
+        .update(users)
+        .set({
+          preferredLockerId: lockerId,
+          preferredLockerCode: lockerCode,
+          updatedAt: new Date().toISOString()
+        })
+        .where(eq(users.id, userId));
+
+      logger.info('Updated user preferred locker', { userId, lockerId, lockerCode });
+      return true;
+    } catch (error) {
+      logger.error('Error updating user preferred locker', { error, userId, lockerId });
+      throw error;
+    }
+  }
+
+  async getUserPreferredLocker(userId: number): Promise<PudoLocker | undefined> {
+    try {
+      const [user] = await db
+        .select({
+          preferredLockerId: users.preferredLockerId,
+          preferredLockerCode: users.preferredLockerCode
+        })
+        .from(users)
+        .where(eq(users.id, userId));
+
+      if (!user?.preferredLockerId) {
+        return undefined;
+      }
+
+      return await this.getPudoLockerById(user.preferredLockerId);
+    } catch (error) {
+      logger.error('Error fetching user preferred locker', { error, userId });
+      throw error;
+    }
+  }
 }
 
 export const storage = new DatabaseStorage();
