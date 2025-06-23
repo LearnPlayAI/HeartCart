@@ -28,6 +28,7 @@ import FlashDeals from "@/pages/flash-deals";
 import NotFound from "@/pages/not-found";
 import CartDrawer from "@/components/cart/cart-drawer";
 import { SessionExpiryWarning } from "@/components/session/session-expiry-warning";
+import InstallPrompt from "@/components/pwa/InstallPrompt";
 import React, { Suspense } from "react";
 
 // Admin Pages
@@ -141,6 +142,7 @@ function App() {
             <ScrollManager>
               <Toaster />
               <SessionExpiryWarning />
+              <InstallPrompt />
               <div className="flex flex-col min-h-screen">
                 <Switch>
                   {/* Admin Routes - No header/footer */}

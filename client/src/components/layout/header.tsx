@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useCredits } from '@/hooks/use-credits';
 import { CategorySidebarDrawer } from '@/components/ui/category-sidebar-drawer';
 import ProductSearch from '@/components/ui/product-search';
+import InstallButton from '@/components/pwa/InstallButton';
 import { StandardApiResponse } from "@/types/api";
 
 type Category = {
