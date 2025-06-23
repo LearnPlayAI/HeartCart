@@ -28,6 +28,7 @@ import {
   Banknote,
   Package
 } from "lucide-react";
+import ContextualInstallPrompts from "@/components/pwa/ContextualInstallPrompts";
 
 // Enhanced checkout form schema with comprehensive validation
 const checkoutSchema = z.object({
@@ -1022,6 +1023,12 @@ export default function CheckoutPage() {
               </div>
             </CardContent>
           </Card>
+          
+          {/* PWA Install Prompt for Checkout Context */}
+          <ContextualInstallPrompts 
+            context="checkout" 
+            className="mt-6"
+          />
         </div>
       </div>
     </div>

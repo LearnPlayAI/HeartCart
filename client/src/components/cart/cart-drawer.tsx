@@ -11,6 +11,7 @@ import { formatCurrency } from '@/lib/utils';
 import { Link } from 'wouter';
 import { calculateShippingCost } from '@/utils/pricing';
 import { useQuery } from '@tanstack/react-query';
+import ContextualInstallPrompts from '@/components/pwa/ContextualInstallPrompts';
 
 const CartDrawer = () => {
   const { 
@@ -343,6 +344,12 @@ const CartDrawer = () => {
               >
                 Continue Shopping
               </Button>
+              
+              {/* PWA Install Prompt for Cart Context */}
+              <ContextualInstallPrompts 
+                context="cart" 
+                className="mt-3"
+              />
             </div>
           </>
         )}

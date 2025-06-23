@@ -152,6 +152,14 @@ const Header = () => {
                   </div>
                 </Link>
                 
+                {/* Install App Button */}
+                <InstallButton 
+                  variant="outline"
+                  size="sm"
+                  className="hidden sm:flex"
+                  text="Get App"
+                />
+                
                 <Button 
                   variant="ghost" 
                   size="icon" 
