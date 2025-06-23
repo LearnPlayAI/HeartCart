@@ -167,9 +167,9 @@ const getTimelineEntryColor = (entry: OrderStatusHistoryEntry) => {
     case 'confirmed':
       return 'bg-gradient-to-r from-blue-500 to-blue-600 shadow-lg shadow-blue-500/25';
     case 'processing':
-      return 'bg-gradient-to-r from-orange-500 to-orange-600 shadow-lg shadow-orange-500/25';
-    case 'shipped':
       return 'bg-gradient-to-r from-purple-500 to-purple-600 shadow-lg shadow-purple-500/25';
+    case 'shipped':
+      return 'bg-gradient-to-r from-orange-500 to-orange-600 shadow-lg shadow-orange-500/25';
     case 'delivered':
       return 'bg-gradient-to-r from-green-500 to-green-600 shadow-lg shadow-green-500/25';
     case 'cancelled':
