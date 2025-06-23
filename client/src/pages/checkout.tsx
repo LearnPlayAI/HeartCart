@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { calculateProductPricing, getPromotionalBadgeText, calculateShippingCost } from "@/utils/pricing";
 import { useCredits } from "@/hooks/use-credits";
+import PudoLockerPicker from "@/components/PudoLockerPicker";
 import { 
   CreditCard, 
   Truck, 
@@ -95,6 +96,7 @@ export default function CheckoutPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [selectedLocker, setSelectedLocker] = useState(null);
   const { creditBalance, formattedBalance, balanceLoading, transactions } = useCredits();
 
   // Fetch current user details
@@ -326,6 +328,16 @@ export default function CheckoutPage() {
       return;
     }
 
+    // Validate PUDO locker selection for PUDO shipping
+    if (data.shippingMethod === "pudo" && !selectedLocker) {
+      toast({
+        title: "Locker Required",
+        description: "Please select a PUDO locker for pickup.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsProcessing(true);
 
     try {
@@ -373,7 +385,14 @@ export default function CheckoutPage() {
         orderItems,
         subtotal,
         total: finalTotal,
-        creditUsed: autoCreditAmount
+        creditUsed: autoCreditAmount,
+        selectedLockerId: selectedLocker?.id,
+        lockerDetails: selectedLocker ? {
+          code: selectedLocker.code,
+          name: selectedLocker.name,
+          address: selectedLocker.address,
+          provider: selectedLocker.provider
+        } : null
       };
 
       console.log("Submitting order data:", orderData);
@@ -628,6 +647,16 @@ export default function CheckoutPage() {
                 </RadioGroup>
               </CardContent>
             </Card>
+
+            {/* PUDO Locker Selection */}
+            {selectedShippingMethod === "pudo" && (
+              <PudoLockerPicker
+                selectedLockerId={selectedLocker?.id}
+                onLockerSelect={setSelectedLocker}
+                customerProvince={form.watch("province")}
+                customerCity={form.watch("city")}
+              />
+            )}
 
             {/* Credit Application */}
             {creditBalance > 0 && (
