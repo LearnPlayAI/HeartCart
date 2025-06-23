@@ -14,20 +14,20 @@ if (!connectionString) {
 const client = postgres(connectionString);
 const db = drizzle(client);
 
-// Define the table schema inline
+// Define the table schema inline matching actual database columns
 const pudoLockers = pgTable('pudo_lockers', {
   id: serial('id').primaryKey(),
   code: text('code').notNull().unique(),
   provider: text('provider').notNull(),
   name: text('name').notNull(),
-  address: text('address').notNull(),
-  latitude: real('latitude').notNull(),
-  longitude: real('longitude').notNull(),
+  latitude: text('latitude').notNull(),
+  longitude: text('longitude').notNull(),
   openingHours: jsonb('opening_hours').notNull(),
+  address: text('address').notNull(),
   detailedAddress: jsonb('detailed_address').notNull(),
+  lockerType: jsonb('locker_type').notNull(),
   place: jsonb('place').notNull(),
-  typeInfo: jsonb('type_info').notNull(),
-  boxTypes: jsonb('box_types').notNull(),
+  availableBoxTypes: jsonb('available_box_types').notNull(),
   isActive: boolean('is_active').notNull().default(true)
 });
 
@@ -66,14 +66,14 @@ async function importAllLockers() {
         code: locker.code,
         provider: locker.provider,
         name: locker.name,
-        address: locker.address,
-        latitude: parseFloat(locker.latitude),
-        longitude: parseFloat(locker.longitude),
+        latitude: locker.latitude,
+        longitude: locker.longitude,
         openingHours: locker.openinghours,
+        address: locker.address,
         detailedAddress: locker.detailed_address,
+        lockerType: locker.type,
         place: locker.place,
-        typeInfo: locker.type,
-        boxTypes: locker.lstTypesBoxes,
+        availableBoxTypes: locker.lstTypesBoxes,
         isActive: true
       }));
       
