@@ -108,24 +108,29 @@ interface OrderStatusTimelineProps {
 }
 
 const getStatusIcon = (eventType: string, status: string) => {
-  switch (eventType) {
-    case 'order_placed':
-      return <ShoppingCart className="w-5 h-5" />;
-    case 'payment_received':
-      return <DollarSign className="w-5 h-5" />;
-    case 'status_change':
-      if (status === 'confirmed') return <UserCheck className="w-5 h-5" />;
-      if (status === 'processing') return <Factory className="w-5 h-5" />;
-      if (status === 'shipped') return <Route className="w-5 h-5" />;
-      if (status === 'delivered') return <Home className="w-5 h-5" />;
-      if (status === 'cancelled') return <XCircle className="w-5 h-5" />;
-      return <Settings className="w-5 h-5" />;
+  // First check by status regardless of event type for consistency
+  switch (status?.toLowerCase()) {
+    case 'pending':
+      return <Clock className="w-5 h-5" />;
+    case 'confirmed':
+      return <UserCheck className="w-5 h-5" />;
+    case 'processing':
+      return <Factory className="w-5 h-5" />;
     case 'shipped':
       return <Route className="w-5 h-5" />;
     case 'delivered':
       return <Home className="w-5 h-5" />;
     case 'cancelled':
+    case 'canceled':
       return <XCircle className="w-5 h-5" />;
+  }
+  
+  // Fallback to event type if status doesn't match
+  switch (eventType) {
+    case 'order_placed':
+      return <ShoppingCart className="w-5 h-5" />;
+    case 'payment_received':
+      return <DollarSign className="w-5 h-5" />;
     case 'notes_added':
       return <Edit3 className="w-5 h-5" />;
     case 'tracking_updated':
@@ -150,8 +155,8 @@ const getTimelineEntryColor = (entry: OrderStatusHistoryEntry) => {
     statusForColor = 'pending';
   }
   
-  // For payment events, use emerald color regardless of status
-  if (entry.eventType === 'payment_received' || entry.paymentStatus) {
+  // For payment events only (not just any entry with payment status), use emerald color
+  if (entry.eventType === 'payment_received') {
     return 'bg-gradient-to-r from-emerald-500 to-emerald-600 shadow-lg shadow-emerald-500/25';
   }
   
