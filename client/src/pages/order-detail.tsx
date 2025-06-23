@@ -197,6 +197,22 @@ const OrderDetail: React.FC = () => {
 
   const order = orderResponse?.success ? orderResponse.data : null;
 
+  // Debug logging for order data structure
+  React.useEffect(() => {
+    if (order) {
+      console.log('Order data structure:', {
+        orderId: order.id,
+        shippingMethod: order.shippingMethod,
+        lockerId: order.lockerId,
+        lockerDetails: order.lockerDetails,
+        pudoLocker: order.pudoLocker,
+        hasLockerDetails: !!(order.lockerDetails || order.pudoLocker),
+        lockerDetailsKeys: order.lockerDetails ? Object.keys(order.lockerDetails) : [],
+        pudoLockerKeys: order.pudoLocker ? Object.keys(order.pudoLocker) : []
+      });
+    }
+  }, [order]);
+
   // Fetch supplier order data
   const { data: supplierOrdersResponse } = useQuery({
     queryKey: ['/api/admin/supplier-orders/order', orderId],
