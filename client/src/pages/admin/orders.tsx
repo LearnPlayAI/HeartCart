@@ -308,11 +308,26 @@ function OrderCard({
               <SelectContent>
                 <SelectItem value="pending">Pending</SelectItem>
                 <SelectItem value="confirmed">Confirmed</SelectItem>
-                <SelectItem value="payment_received">Payment Received</SelectItem>
                 <SelectItem value="processing">Processing</SelectItem>
                 <SelectItem value="shipped">Shipped</SelectItem>
                 <SelectItem value="delivered">Delivered</SelectItem>
                 <SelectItem value="cancelled">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div>
+            <label className="text-sm font-medium mb-2 block">Payment Status:</label>
+            <Select
+              value={order.paymentStatus}
+              onValueChange={(paymentStatus) => onPaymentStatusUpdate(order.id, paymentStatus)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="awaiting_payment">Awaiting Payment</SelectItem>
+                <SelectItem value="payment_received">Payment Received</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -333,7 +348,15 @@ function OrderCard({
 }
 
 // Order Table Component
-function OrderTable({ orders, onStatusUpdate }: { orders: Order[]; onStatusUpdate: (orderId: number, status: string) => void }) {
+function OrderTable({ 
+  orders, 
+  onStatusUpdate, 
+  onPaymentStatusUpdate 
+}: { 
+  orders: Order[]; 
+  onStatusUpdate: (orderId: number, status: string) => void;
+  onPaymentStatusUpdate: (orderId: number, paymentStatus: string) => void;
+}) {
   return (
     <Card>
       <Table>
@@ -387,7 +410,6 @@ function OrderTable({ orders, onStatusUpdate }: { orders: Order[]; onStatusUpdat
                       <SelectContent>
                         <SelectItem value="pending">Pending</SelectItem>
                         <SelectItem value="confirmed">Confirmed</SelectItem>
-                        <SelectItem value="payment_received">Payment Received</SelectItem>
                         <SelectItem value="processing">Processing</SelectItem>
                         <SelectItem value="shipped">Shipped</SelectItem>
                         <SelectItem value="delivered">Delivered</SelectItem>
@@ -397,11 +419,23 @@ function OrderTable({ orders, onStatusUpdate }: { orders: Order[]; onStatusUpdat
                   </div>
                 </TableCell>
                 <TableCell>
-                  <div className="space-y-1">
+                  <div className="space-y-2">
                     <Badge className={`${paymentConfig.color} border`}>
                       <paymentConfig.icon className="h-3 w-3 mr-1" />
                       {paymentConfig.label}
                     </Badge>
+                    <Select
+                      value={order.paymentStatus}
+                      onValueChange={(paymentStatus) => onPaymentStatusUpdate(order.id, paymentStatus)}
+                    >
+                      <SelectTrigger className="w-full h-7 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="awaiting_payment">Awaiting Payment</SelectItem>
+                        <SelectItem value="payment_received">Payment Received</SelectItem>
+                      </SelectContent>
+                    </Select>
                     {order.paymentMethod?.toLowerCase() === 'eft' && order.eftPop && (
                       <div className="flex items-center text-xs text-green-600">
                         <FileText className="h-3 w-3 mr-1" />
@@ -473,11 +507,40 @@ export default function AdminOrdersPage() {
     }
   });
 
+  // Payment status update mutation
+  const updatePaymentStatusMutation = useMutation({
+    mutationFn: async ({ orderId, paymentStatus }: { orderId: number; paymentStatus: string }) => {
+      const response = await apiRequest('PATCH', `/api/admin/orders/${orderId}/payment-status`, { paymentStatus });
+      return await response.json();
+    },
+    onSuccess: () => {
+      // Invalidate and refetch orders list to update statistics and order display
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
+      toast({
+        title: "Payment Status Updated",
+        description: "Payment status has been successfully updated.",
+      });
+    },
+    onError: (error: any) => {
+      console.error('Payment status update error:', error);
+      toast({
+        variant: "destructive",
+        title: "Update Failed",
+        description: error.message || "Failed to update payment status. Please try again.",
+      });
+    }
+  });
+
   const orders = response?.data || [];
   
   // Handle status update
   const handleStatusUpdate = (orderId: number, status: string) => {
     updateStatusMutation.mutate({ orderId, status });
+  };
+  
+  // Handle payment status update
+  const handlePaymentStatusUpdate = (orderId: number, paymentStatus: string) => {
+    updatePaymentStatusMutation.mutate({ orderId, paymentStatus });
   };
   
   const filteredOrders = orders.filter((order: Order) => {
@@ -546,11 +609,20 @@ export default function AdminOrdersPage() {
           {viewMode === "cards" ? (
             <div className="grid gap-6">
               {filteredOrders.map((order: Order) => (
-                <OrderCard key={order.id} order={order} onStatusUpdate={handleStatusUpdate} />
+                <OrderCard 
+                  key={order.id} 
+                  order={order} 
+                  onStatusUpdate={handleStatusUpdate}
+                  onPaymentStatusUpdate={handlePaymentStatusUpdate}
+                />
               ))}
             </div>
           ) : (
-            <OrderTable orders={filteredOrders} onStatusUpdate={handleStatusUpdate} />
+            <OrderTable 
+              orders={filteredOrders} 
+              onStatusUpdate={handleStatusUpdate}
+              onPaymentStatusUpdate={handlePaymentStatusUpdate}
+            />
           )}
         </div>
       )}
