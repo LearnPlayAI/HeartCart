@@ -805,7 +805,7 @@ export default function CheckoutPage() {
               type="submit"
               size="lg"
               className="w-full"
-              disabled={isProcessing || createOrderMutation.isPending}
+              disabled={isProcessing || createPaymentSessionMutation.isPending || confirmPaymentMutation.isPending}
             >
               {isProcessing ? "Processing Order..." : `Place Order - R${finalTotal.toFixed(2)}`}
             </Button>
