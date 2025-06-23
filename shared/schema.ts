@@ -204,6 +204,29 @@ export const orders = pgTable("orders", {
   lockerDetails: jsonb("lockerDetails"), // CamelCase column for locker details
 });
 
+// Order Status History table - tracks all status changes with timestamps
+export const orderStatusHistory = pgTable("orderStatusHistory", {
+  id: serial("id").primaryKey(),
+  orderId: integer("orderId").notNull().references(() => orders.id, { onDelete: "cascade" }),
+  status: text("status").notNull(), // Order status: pending, processing, shipped, delivered, cancelled
+  paymentStatus: text("paymentStatus"), // Payment status: pending, paid, failed (only for payment-related changes)
+  previousStatus: text("previousStatus"), // Previous order status for audit trail
+  previousPaymentStatus: text("previousPaymentStatus"), // Previous payment status for audit trail
+  changedBy: text("changedBy").notNull(), // 'customer', 'admin', 'system'
+  changedByUserId: integer("changedByUserId").references(() => users.id), // User who made the change (if applicable)
+  eventType: text("eventType").notNull(), // 'order_placed', 'payment_received', 'status_change', 'shipped', 'delivered'
+  notes: text("notes"), // Optional notes about the status change
+  trackingNumber: text("trackingNumber"), // Set when order is shipped
+  createdAt: text("createdAt").default(String(new Date().toISOString())).notNull(),
+}, (table) => {
+  return {
+    orderIdIdx: index("order_status_history_order_id_idx").on(table.orderId),
+    statusIdx: index("order_status_history_status_idx").on(table.status),
+    eventTypeIdx: index("order_status_history_event_type_idx").on(table.eventType),
+    createdAtIdx: index("order_status_history_created_at_idx").on(table.createdAt),
+  };
+});
+
 // Order items table - camelCase version with full attribute support
 export const orderItems = pgTable("orderItems", {
   id: serial("id").primaryKey(),
@@ -814,6 +837,15 @@ export const insertPudoLockerSchema = createInsertSchema(pudoLockers).omit({
 
 export type PudoLocker = typeof pudoLockers.$inferSelect;
 export type InsertPudoLocker = z.infer<typeof insertPudoLockerSchema>;
+
+// Order Status History insert schema and types
+export const insertOrderStatusHistorySchema = createInsertSchema(orderStatusHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type OrderStatusHistory = typeof orderStatusHistory.$inferSelect;
+export type InsertOrderStatusHistory = z.infer<typeof insertOrderStatusHistorySchema>;
 
 // Define all table relations after all tables and types are defined
 export const categoriesRelations = relations(categories, ({ one, many }) => ({
