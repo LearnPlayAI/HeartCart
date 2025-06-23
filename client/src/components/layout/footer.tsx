@@ -56,7 +56,7 @@ const Footer = () => {
                 <InstallButton 
                   variant="outline"
                   size="sm"
-                  className="w-full justify-start"
+                  className="w-full justify-start border-[#FF69B4] text-[#FF69B4] hover:bg-[#FF69B4] hover:text-white"
                   showIcon={true}
                   text="Install Mobile App"
                 />

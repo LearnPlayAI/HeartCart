@@ -22,7 +22,11 @@ const InstallButton: React.FC<InstallButtonProps> = ({
   const { isInstallable, isIOSDevice, installApp, isInstalled } = usePWAInstall();
   const [showIOSPrompt, setShowIOSPrompt] = useState(false);
 
-  if (!isInstallable || isInstalled) return null;
+  // Always show the button for mobile devices (let the hook handle detection)
+  // This ensures visibility while the hook determines installability
+  const shouldShow = isInstallable && !isInstalled;
+
+  if (!shouldShow) return null;
 
   const handleInstall = async () => {
     if (isIOSDevice) {
@@ -32,7 +36,21 @@ const InstallButton: React.FC<InstallButtonProps> = ({
     
     const success = await installApp();
     if (!success) {
-      alert('To install this app, look for "Add to Home Screen" or "Install" in your browser menu.');
+      // More helpful instructions for different browsers
+      const userAgent = navigator.userAgent;
+      let instructions = 'To install this app:';
+      
+      if (/Chrome/.test(userAgent)) {
+        instructions += '\n• Tap the menu (⋮) → "Add to Home screen"';
+      } else if (/Firefox/.test(userAgent)) {
+        instructions += '\n• Tap the menu (⋮) → "Install"';
+      } else if (/Safari/.test(userAgent)) {
+        instructions += '\n• Tap the share button (□↗) → "Add to Home Screen"';
+      } else {
+        instructions += '\n• Look for "Add to Home Screen" or "Install" in your browser menu';
+      }
+      
+      alert(instructions);
     }
   };
 
@@ -42,7 +60,7 @@ const InstallButton: React.FC<InstallButtonProps> = ({
         variant={variant}
         size={size}
         onClick={handleInstall}
-        className={`${className} border-pink-200 text-pink-600 hover:bg-pink-50`}
+        className={`${className} border-[#FF69B4] text-[#FF69B4] hover:bg-[#FF69B4] hover:text-white transition-colors duration-200`}
       >
         {showIcon && <Download className="h-4 w-4 mr-2" />}
         {text}
