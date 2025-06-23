@@ -905,7 +905,16 @@ export const ordersRelations = relations(orders, ({ one, many }) => ({
     fields: [orders.userId],
     references: [users.id]
   }),
+  selectedLocker: one(pudoLockers, {
+    fields: [orders.selectedLockerId],
+    references: [pudoLockers.id]
+  }),
   orderItems: many(orderItems)
+}));
+
+// PUDO Lockers relations
+export const pudoLockersRelations = relations(pudoLockers, ({ many }) => ({
+  orders: many(orders)
 }));
 
 // Order items relations
