@@ -34,16 +34,17 @@ export const pudoLockers = pgTable("pudoLockers", {
   code: text("code").notNull().unique(),
   provider: text("provider").notNull(),
   name: text("name").notNull(),
-  latitude: text("latitude").notNull(),
-  longitude: text("longitude").notNull(),
+  latitude: decimal("latitude", { precision: 10, scale: 8 }).notNull(),
+  longitude: decimal("longitude", { precision: 11, scale: 8 }).notNull(),
   openingHours: jsonb("openingHours").notNull(),
   address: text("address").notNull(),
   detailedAddress: jsonb("detailedAddress").notNull(),
   lockerType: jsonb("lockerType").notNull(),
   place: jsonb("place").notNull(),
-  availableBoxTypes: jsonb("availableBoxTypes").notNull(),
+  lstTypesBoxes: jsonb("lstTypesBoxes").notNull(),
   isActive: boolean("isActive").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow(),
+  updatedAt: timestamp("updatedAt").defaultNow(),
 }, (table) => {
   return {
     codeIdx: index("pudoLockers_code_idx").on(table.code),
@@ -806,7 +807,7 @@ export const insertPudoLockerSchema = createInsertSchema(pudoLockers).omit({
   detailedAddress: z.record(z.any()),
   lockerType: z.record(z.any()),
   place: z.record(z.any()),
-  availableBoxTypes: z.array(z.record(z.any())),
+  lstTypesBoxes: z.array(z.record(z.any())),
 });
 
 export type PudoLocker = typeof pudoLockers.$inferSelect;
