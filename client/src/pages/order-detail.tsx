@@ -677,113 +677,92 @@ ${order.customerName}`;
 
                   {/* PUDO Locker Information */}
                   {(order.lockerDetails || order.pudoLocker) && (
-                    <div className="border-t pt-4">
-                      <div className="bg-white border-2 border-gray-200 rounded-lg p-4">
-                        <div className="flex items-start">
-                          <Building2 className="h-5 w-5 text-blue-600 mr-3 mt-1" />
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-gray-900 mb-3">
-                              PUDO Delivery Locker
-                            </h4>
-                            <div className="space-y-3">
-                              {/* Locker Name and Code */}
-                              <div>
-                                <p className="font-medium text-gray-900 text-lg">
-                                  {(order.lockerDetails?.name || order.pudoLocker?.name)}
-                                </p>
-                                <p className="text-sm text-gray-500">
-                                  Code: {(order.lockerDetails?.code || order.pudoLocker?.code)} • Provider: {(order.lockerDetails?.provider || order.pudoLocker?.provider || 'PUDO')}
-                                </p>
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center space-x-2">
+                          <Building2 className="h-5 w-5" />
+                          <span>PUDO Delivery Locker</span>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                          <div className="flex items-center space-x-2 mb-2">
+                            <Package className="h-4 w-4 text-blue-600" />
+                            <span className="font-medium text-blue-900">Collection Location</span>
+                          </div>
+                          <p className="text-sm text-blue-700">
+                            Your order will be delivered to this PUDO locker for pickup
+                          </p>
+                        </div>
+                        
+                        <div className="space-y-4">
+                          {/* Locker Name and Code */}
+                          <div>
+                            <p className="text-sm font-medium text-gray-600 mb-1">Locker Name & Code</p>
+                            <div className="flex items-center space-x-2">
+                              <div className="bg-blue-100 px-2 py-1 rounded text-sm font-medium text-blue-800">
+                                {(order.lockerDetails?.code || order.pudoLocker?.code)}
                               </div>
-
-                              {/* Address Information */}
-                              <div className="space-y-1">
-                                <p className="text-sm font-medium text-gray-700">Address:</p>
-                                <p className="text-sm text-gray-600">
-                                  {(order.lockerDetails?.address || order.pudoLocker?.address)}
-                                </p>
-                                {(order.lockerDetails?.detailedAddress || order.pudoLocker?.detailedAddress) && (
-                                  <p className="text-sm text-gray-600">
-                                    {(order.lockerDetails?.detailedAddress?.locality || order.pudoLocker?.detailedAddress?.locality) && `${(order.lockerDetails?.detailedAddress?.locality || order.pudoLocker?.detailedAddress?.locality)}, `}
-                                    {(order.lockerDetails?.detailedAddress?.province || order.pudoLocker?.detailedAddress?.province) && `${(order.lockerDetails?.detailedAddress?.province || order.pudoLocker?.detailedAddress?.province)} `}
-                                    {(order.lockerDetails?.detailedAddress?.postal_code || order.pudoLocker?.detailedAddress?.postal_code)}
-                                  </p>
-                                )}
-                              </div>
-
-                              {/* Opening Hours */}
-                              {((order.lockerDetails?.openingHours && order.lockerDetails.openingHours.length > 0) || (order.pudoLocker?.openingHours && order.pudoLocker.openingHours.length > 0)) && (
-                                <div className="space-y-1">
-                                  <p className="text-sm font-medium text-gray-700">Opening Hours:</p>
-                                  <div className="text-xs text-gray-600 space-y-1">
-                                    {(order.lockerDetails?.openingHours || order.pudoLocker?.openingHours || []).map((hours, index) => (
-                                      <div key={index} className="flex justify-between">
-                                        <span className="font-medium">{hours.day}:</span>
-                                        <span>
-                                          {hours.isStoreOpen === 'Open' 
-                                            ? `${hours.open_time} - ${hours.close_time}`
-                                            : 'Closed'
-                                          }
-                                        </span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-
-                              {/* Locker Type */}
-                              {(order.lockerDetails?.lockerType || order.pudoLocker?.lockerType) && (
-                                <div className="flex items-center text-sm text-gray-600">
-                                  <span className="font-medium mr-2">Locker Type:</span>
-                                  <span>{(order.lockerDetails?.lockerType?.name || order.pudoLocker?.lockerType?.name)}</span>
-                                </div>
-                              )}
-
-                              {/* Available Box Types */}
-                              {((order.lockerDetails?.lstTypesBoxes && order.lockerDetails.lstTypesBoxes.length > 0) || (order.pudoLocker?.lstTypesBoxes && order.pudoLocker.lstTypesBoxes.length > 0)) && (
-                                <div className="space-y-1">
-                                  <p className="text-sm font-medium text-gray-700">Available Box Sizes:</p>
-                                  <div className="flex flex-wrap gap-1">
-                                    {(order.lockerDetails?.lstTypesBoxes || order.pudoLocker?.lstTypesBoxes || []).slice(0, 3).map((box, index) => (
-                                      <span 
-                                        key={index}
-                                        className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded"
-                                      >
-                                        {box.name} ({box.width}×{box.height}×{box.length}cm)
-                                      </span>
-                                    ))}
-                                    {(order.lockerDetails?.lstTypesBoxes || order.pudoLocker?.lstTypesBoxes || []).length > 3 && (
-                                      <span className="inline-block bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded">
-                                        +{(order.lockerDetails?.lstTypesBoxes || order.pudoLocker?.lstTypesBoxes || []).length - 3} more
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                              )}
-
-                              {/* Google Maps Link */}
-                              {((order.lockerDetails?.latitude && order.lockerDetails?.longitude) || (order.pudoLocker?.latitude && order.pudoLocker?.longitude)) && (
-                                <div className="pt-3 border-t border-gray-100">
-                                  <button
-                                    onClick={() => {
-                                      const lat = order.lockerDetails?.latitude || order.pudoLocker?.latitude;
-                                      const lng = order.lockerDetails?.longitude || order.pudoLocker?.longitude;
-                                      const mapsUrl = `https://www.google.com/maps?q=${lat},${lng}`;
-                                      window.open(mapsUrl, '_blank');
-                                    }}
-                                    className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition-colors bg-[#ff69b4]"
-                                  >
-                                    <MapPin className="h-4 w-4" />
-                                    <span>View Location on Google Maps</span>
-                                    <ExternalLink className="h-3 w-3" />
-                                  </button>
-                                </div>
-                              )}
+                              <span className="text-gray-400">•</span>
+                              <span className="font-medium">{(order.lockerDetails?.name || order.pudoLocker?.name)}</span>
                             </div>
                           </div>
+
+                          {/* Address */}
+                          <div>
+                            <p className="text-sm font-medium text-gray-600 mb-1">Address</p>
+                            <p className="text-gray-900">{(order.lockerDetails?.address || order.pudoLocker?.address)}</p>
+                          </div>
+
+                          {/* Provider */}
+                          {(order.lockerDetails?.provider || order.pudoLocker?.provider) && (
+                            <div>
+                              <p className="text-sm font-medium text-gray-600 mb-1">Provider</p>
+                              <p className="text-gray-900 capitalize">{(order.lockerDetails?.provider || order.pudoLocker?.provider)}</p>
+                            </div>
+                          )}
+
+                          {/* Opening Hours */}
+                          {(order.lockerDetails?.openingHours || order.pudoLocker?.openingHours) && (
+                            <div>
+                              <p className="text-sm font-medium text-gray-600 mb-2">Opening Hours</p>
+                              <div className="bg-gray-50 rounded-lg p-3">
+                                <div className="grid grid-cols-1 gap-1">
+                                  {(order.lockerDetails?.openingHours || order.pudoLocker?.openingHours || []).map((hours: any, index: number) => (
+                                    <div key={index} className="flex justify-between text-sm">
+                                      <span className="font-medium capitalize">{hours.day}:</span>
+                                      <span className="text-gray-600">
+                                        {hours.isStoreOpen === 'Open' || hours.isStoreOpen === '1'
+                                          ? `${hours.open_time?.substring(0, 5)} - ${hours.close_time?.substring(0, 5)}`
+                                          : 'Closed'
+                                        }
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Google Maps Link */}
+                          {(order.lockerDetails?.latitude && order.lockerDetails?.longitude) && (
+                            <div>
+                              <p className="text-sm font-medium text-gray-600 mb-2">Location</p>
+                              <a
+                                href={`https://www.google.com/maps?q=${order.lockerDetails.latitude},${order.lockerDetails.longitude}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition-colors"
+                              >
+                                <MapPin className="h-4 w-4" />
+                                <span>View Location on Google Maps</span>
+                                <ExternalLink className="h-3 w-3" />
+                              </a>
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    </div>
+                      </CardContent>
+                    </Card>
                   )}
                 </CardContent>
               </Card>
