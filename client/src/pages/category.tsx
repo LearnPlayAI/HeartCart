@@ -91,6 +91,11 @@ const CategoryPage = () => {
   useEffect(() => {
     setPage(1);
   }, [category?.id]);
+
+  // Scroll to top when page changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [page]);
   
   // Log for debugging
   useEffect(() => {

@@ -252,6 +252,14 @@ const ProductListing = () => {
     });
   }, [page, searchParams]);
 
+  // Scroll to top when page changes (but not on initial load or when restoring state)
+  useEffect(() => {
+    const isRestoringState = sessionStorage.getItem('productListingState');
+    if (!isRestoringState && page > 1) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [page]);
+
   // Restore complete state when returning from product detail pages
   useEffect(() => {
     const savedStateStr = sessionStorage.getItem('productListingState');

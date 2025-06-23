@@ -108,6 +108,13 @@ export default function PromotionProductsPage() {
     setCurrentPage(1);
   }, [productSearchQuery, selectedCategoryId, selectedParentCategoryId]);
 
+  // Scroll to top when page changes
+  useEffect(() => {
+    if (currentPage > 1) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [currentPage]);
+
   // Fetch products with comprehensive pagination and filtering
   const { data: productsData, isLoading: isSearching } = useQuery({
     queryKey: ['/api/products', { 
