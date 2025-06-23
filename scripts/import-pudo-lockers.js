@@ -1,8 +1,8 @@
-const fs = require('fs');
-const path = require('path');
-const { drizzle } = require('drizzle-orm/postgres-js');
-const postgres = require('postgres');
-const { pudoLockers } = require('../shared/schema.ts');
+import fs from 'fs';
+import path from 'path';
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
+import { pudoLockers } from '../shared/schema.ts';
 
 // Database connection
 const connectionString = process.env.DATABASE_URL;

@@ -48,6 +48,10 @@ import {
   productAttributes,
   type ProductAttribute,
   type InsertProductAttribute,
+  // PUDO Lockers
+  pudoLockers,
+  type PudoLocker,
+  type InsertPudoLocker,
   systemSettings,
   type SystemSetting,
   type InsertSystemSetting,
@@ -512,6 +516,15 @@ export interface IStorage {
   getSupplierOrderStatuses(status?: string, limit?: number, offset?: number): Promise<OrderItemSupplierStatus[]>;
   getOrderItemSupplierStatus(orderItemId: number): Promise<OrderItemSupplierStatus | undefined>;
   getOrderItemsForSupplierManagement(filters?: { status?: string; orderId?: number; }): Promise<any[]>;
+
+  // PUDO Locker operations
+  getAllPudoLockers(): Promise<PudoLocker[]>;
+  searchPudoLockers(query: string, province?: string, city?: string): Promise<PudoLocker[]>;
+  getPudoLockersByLocation(province: string, city?: string): Promise<PudoLocker[]>;
+  getPudoLockerByCode(code: string): Promise<PudoLocker | undefined>;
+  getPudoLockerById(id: number): Promise<PudoLocker | undefined>;
+  updateUserPreferredLocker(userId: number, lockerId: number, lockerCode: string): Promise<boolean>;
+  getUserPreferredLocker(userId: number): Promise<PudoLocker | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
