@@ -11830,8 +11830,7 @@ export class DatabaseStorage implements IStorage {
         .select()
         .from(pudoLockers)
         .where(and(...whereConditions))
-        .orderBy(pudoLockers.name)
-        .limit(50);
+        .orderBy(pudoLockers.name);
 
       return lockers;
     } catch (error) {
@@ -11912,8 +11911,7 @@ export class DatabaseStorage implements IStorage {
         .select()
         .from(pudoLockers)
         .where(and(...whereConditions))
-        .orderBy(pudoLockers.name)
-        .limit(10);
+        .orderBy(pudoLockers.name);
 
       logger.debug('PUDO lockers query executed', { 
         province, 
