@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Link } from 'wouter';
 import { apiRequest, queryClient } from '@/lib/queryClient';
@@ -669,6 +669,101 @@ export default function AdminOrdersPage() {
           </Select>
         </div>
       </div>
+
+      {/* Enhanced Search and Filter Controls */}
+      <Card>
+        <CardContent className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Search Input */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder="Search orders, customers, products..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+
+            {/* Status Filter */}
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger>
+                <Filter className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="confirmed">Confirmed</SelectItem>
+                <SelectItem value="processing">Processing</SelectItem>
+                <SelectItem value="shipped">Shipped</SelectItem>
+                <SelectItem value="delivered">Delivered</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Sort Options */}
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger>
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="newest">Newest First</SelectItem>
+                <SelectItem value="oldest">Oldest First</SelectItem>
+                <SelectItem value="amount-high">Highest Amount</SelectItem>
+                <SelectItem value="amount-low">Lowest Amount</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Clear Filters Button */}
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSearchTerm("");
+                setStatusFilter("all");
+                setSortBy("newest");
+                setDateFrom("");
+                setDateTo("");
+              }}
+              className="w-full"
+            >
+              Clear Filters
+            </Button>
+          </div>
+
+          {/* Date Range Filters */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">From Date</label>
+              <Input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">To Date</label>
+              <Input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Search Results Summary */}
+          {(searchTerm || statusFilter !== 'all' || dateFrom || dateTo) && (
+            <div className="mt-4 p-3 bg-muted rounded-lg">
+              <p className="text-sm text-muted-foreground">
+                Showing {filteredOrders.length} of {orders.length} orders
+                {searchTerm && <span> matching "{searchTerm}"</span>}
+                {statusFilter !== 'all' && <span> with status "{statusFilter}"</span>}
+                {(dateFrom || dateTo) && <span> within date range</span>}
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <OrderStats orders={filteredOrders} onFilterChange={setStatusFilter} />
 
