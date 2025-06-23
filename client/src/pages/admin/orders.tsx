@@ -478,8 +478,8 @@ export default function AdminOrdersPage() {
   const { data: response, isLoading, refetch } = useQuery({
     queryKey: ['/api/admin/orders'],
     enabled: true,
-    staleTime: 0, // Always consider data stale
-    gcTime: 0, // Don't cache data for long
+    staleTime: 1000, // Keep data fresh for 1 second
+    gcTime: 30000, // Keep in cache for 30 seconds
     refetchOnMount: 'always', // Always refetch when component mounts
     refetchOnWindowFocus: true, // Refetch when window regains focus
     refetchOnReconnect: true, // Refetch when reconnecting to network
@@ -494,6 +494,7 @@ export default function AdminOrdersPage() {
     onSuccess: () => {
       // Invalidate and refetch orders list to update statistics and order display
       queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
+      refetch(); // Force immediate refetch
       toast({
         title: "Order Updated",
         description: "Order status has been successfully updated.",
@@ -518,6 +519,7 @@ export default function AdminOrdersPage() {
     onSuccess: () => {
       // Invalidate and refetch orders list to update statistics and order display
       queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
+      refetch(); // Force immediate refetch
       toast({
         title: "Payment Status Updated",
         description: "Payment status has been successfully updated.",
