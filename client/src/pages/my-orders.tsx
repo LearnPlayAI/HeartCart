@@ -126,6 +126,7 @@ const getStatusIcon = (status: string) => {
 const getPaymentStatusColor = (status: string) => {
   switch (status.toLowerCase()) {
     case 'paid':
+    case 'payment_received':
       return 'bg-green-100 text-green-800';
     case 'pending':
       return 'bg-yellow-100 text-yellow-800';
@@ -133,6 +134,21 @@ const getPaymentStatusColor = (status: string) => {
       return 'bg-red-100 text-red-800';
     default:
       return 'bg-gray-100 text-gray-800';
+  }
+};
+
+const getCustomerPaymentStatusText = (status: string) => {
+  switch (status.toLowerCase()) {
+    case 'payment_received':
+      return 'Paid';
+    case 'paid':
+      return 'Paid';
+    case 'pending':
+      return 'Pending';
+    case 'failed':
+      return 'Failed';
+    default:
+      return status.charAt(0).toUpperCase() + status.slice(1);
   }
 };
 
@@ -612,7 +628,7 @@ const MyOrdersPage: React.FC = () => {
                             className={`${getPaymentStatusColor(order.paymentStatus)} flex items-center gap-1`}
                           >
                             <CreditCard className="h-3 w-3" />
-                            {order.paymentStatus.charAt(0).toUpperCase() + order.paymentStatus.slice(1)}
+                            {getCustomerPaymentStatusText(order.paymentStatus)}
                           </Badge>
                         </div>
                         

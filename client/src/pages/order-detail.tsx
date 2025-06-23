@@ -141,6 +141,22 @@ const getStatusColor = (status: string) => {
   }
 };
 
+// Customer payment status display mapping
+const getCustomerPaymentStatusText = (status: string) => {
+  switch (status.toLowerCase()) {
+    case 'payment_received':
+      return 'Paid';
+    case 'paid':
+      return 'Paid';
+    case 'pending':
+      return 'Pending';
+    case 'failed':
+      return 'Failed';
+    default:
+      return status.charAt(0).toUpperCase() + status.slice(1);
+  }
+};
+
 // Status icon mapping
 const getStatusIcon = (status: string) => {
   switch (status.toLowerCase()) {
