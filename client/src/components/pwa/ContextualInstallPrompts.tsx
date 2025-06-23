@@ -67,29 +67,35 @@ const ContextualInstallPrompts: React.FC<ContextualInstallPromptsProps> = ({
   const content = getContextualContent();
 
   return (
-    <Card className={`border-pink-200 bg-gradient-to-r from-pink-50 to-white ${className}`}>
-      <CardContent className="p-4">
-        <div className="flex items-center space-x-3">
-          <img 
-            src="/site_files/CompanyLogo.jpg" 
-            alt="TEE ME YOU"
-            className="w-8 h-8 rounded"
-          />
-          {content.icon}
-          <div className="flex-1">
-            <h4 className="font-semibold text-gray-900 text-sm">{content.title}</h4>
-            <p className="text-xs text-gray-600">{content.description}</p>
+    <>
+      <Card className={`border-pink-200 bg-gradient-to-r from-pink-50 to-white ${className}`}>
+        <CardContent className="p-4">
+          <div className="flex items-center space-x-3">
+            <img 
+              src="/icon-192.png" 
+              alt="TEE ME YOU"
+              className="w-8 h-8 rounded"
+            />
+            {content.icon}
+            <div className="flex-1">
+              <h4 className="font-semibold text-gray-900 text-sm">{content.title}</h4>
+              <p className="text-xs text-gray-600">{content.description}</p>
+            </div>
+            <Button
+              onClick={handleInstall}
+              size="sm"
+              className="bg-pink-500 hover:bg-pink-600 text-white"
+            >
+              {content.buttonText}
+            </Button>
           </div>
-          <Button
-            onClick={handleInstall}
-            size="sm"
-            className="bg-pink-500 hover:bg-pink-600 text-white"
-          >
-            {content.buttonText}
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+      
+      {showIOSPrompt && (
+        <IOSInstallPrompt onDismiss={() => setShowIOSPrompt(false)} />
+      )}
+    </>
   );
 };
 
