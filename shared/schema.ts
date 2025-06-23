@@ -22,6 +22,36 @@ export const users = pgTable("users", {
   createdAt: text("createdAt").default(String(new Date().toISOString())).notNull(),
   updatedAt: text("updatedAt").default(String(new Date().toISOString())).notNull(),
   lastLogin: text("last_login"),
+  
+  // Preferred PUDO Locker
+  preferredLockerId: integer("preferredLockerId"),
+  preferredLockerCode: text("preferredLockerCode"),
+});
+
+// PUDO Lockers table - stores all available pickup lockers
+export const pudoLockers = pgTable("pudoLockers", {
+  id: serial("id").primaryKey(),
+  code: text("code").notNull().unique(),
+  provider: text("provider").notNull(),
+  name: text("name").notNull(),
+  latitude: text("latitude").notNull(),
+  longitude: text("longitude").notNull(),
+  openingHours: jsonb("openingHours").notNull(),
+  address: text("address").notNull(),
+  detailedAddress: jsonb("detailedAddress").notNull(),
+  lockerType: jsonb("lockerType").notNull(),
+  place: jsonb("place").notNull(),
+  availableBoxTypes: jsonb("availableBoxTypes").notNull(),
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: text("createdAt").default(String(new Date().toISOString())).notNull(),
+  updatedAt: text("updatedAt").default(String(new Date().toISOString())).notNull(),
+}, (table) => {
+  return {
+    codeIdx: index("pudo_lockers_code_idx").on(table.code),
+    providerIdx: index("pudo_lockers_provider_idx").on(table.provider),
+    nameIdx: index("pudo_lockers_name_idx").on(table.name),
+    isActiveIdx: index("pudo_lockers_is_active_idx").on(table.isActive),
+  };
 });
 
 // Categories table
@@ -164,6 +194,12 @@ export const orders = pgTable("orders", {
   
   // EFT Proof of Payment
   eftPop: text("eftPop"), // File path to the EFT proof of payment PDF document
+  
+  // PUDO Locker Information
+  selectedLockerId: integer("selectedLockerId").references(() => pudoLockers.id),
+  selectedLockerCode: text("selectedLockerCode"),
+  selectedLockerName: text("selectedLockerName"),
+  selectedLockerAddress: text("selectedLockerAddress"),
 });
 
 // Order items table - camelCase version with full attribute support
@@ -760,6 +796,22 @@ export const insertProductPromotionSchema = createInsertSchema(productPromotions
 
 export type ProductPromotion = typeof productPromotions.$inferSelect;
 export type InsertProductPromotion = z.infer<typeof insertProductPromotionSchema>;
+
+// PUDO Lockers insert schema and types
+export const insertPudoLockerSchema = createInsertSchema(pudoLockers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  openingHours: z.array(z.record(z.any())),
+  detailedAddress: z.record(z.any()),
+  lockerType: z.record(z.any()),
+  place: z.record(z.any()),
+  availableBoxTypes: z.array(z.record(z.any())),
+});
+
+export type PudoLocker = typeof pudoLockers.$inferSelect;
+export type InsertPudoLocker = z.infer<typeof insertPudoLockerSchema>;
 
 // Define all table relations after all tables and types are defined
 export const categoriesRelations = relations(categories, ({ one, many }) => ({
