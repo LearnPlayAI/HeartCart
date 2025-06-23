@@ -53,7 +53,7 @@ interface PudoLocker {
     town?: string;
     postalCode?: string;
   };
-  availableBoxTypes: Array<{
+  lstTypesBoxes: Array<{
     id: number;
     name: string;
     type: string;
@@ -97,7 +97,9 @@ export default function PudoLockerPicker({
       const params = new URLSearchParams();
       if (customerProvince) params.append("province", customerProvince);
       if (customerCity) params.append("city", customerCity);
-      return apiRequest(`/api/pudo-lockers/location?${params.toString()}`);
+      const url = `/api/pudo-lockers/location?${params.toString()}`;
+      console.log("Fetching PUDO lockers from:", url);
+      return apiRequest(url);
     }
   });
 
@@ -139,6 +141,18 @@ export default function PudoLockerPicker({
     : locationBasedLockers || [];
 
   const isLoading = searchQuery ? searchLoading : locationLoading;
+
+  // Debug logging
+  console.log("PudoLockerPicker Debug:", {
+    customerProvince,
+    customerCity,
+    searchQuery,
+    locationBasedLockers: locationBasedLockers?.length || 0,
+    searchResults: searchResults?.length || 0,
+    displayLockers: displayLockers.length,
+    isLoading,
+    queryEnabled: !!customerProvince && !searchQuery
+  });
 
   // Auto-select preferred locker if available and no locker is selected
   useEffect(() => {
@@ -320,18 +334,18 @@ export default function PudoLockerPicker({
                       </div>
 
                       {/* Box Types Available */}
-                      {locker.availableBoxTypes && locker.availableBoxTypes.length > 0 && (
+                      {locker.lstTypesBoxes && locker.lstTypesBoxes.length > 0 && (
                         <div className="mt-2 pt-2 border-t">
                           <div className="text-xs text-gray-500 mb-1">Available box sizes:</div>
                           <div className="flex gap-1 flex-wrap">
-                            {locker.availableBoxTypes.slice(0, 3).map((boxType) => (
+                            {locker.lstTypesBoxes.slice(0, 3).map((boxType) => (
                               <Badge key={boxType.id} variant="secondary" className="text-xs">
                                 {boxType.name}
                               </Badge>
                             ))}
-                            {locker.availableBoxTypes.length > 3 && (
+                            {locker.lstTypesBoxes.length > 3 && (
                               <Badge variant="secondary" className="text-xs">
-                                +{locker.availableBoxTypes.length - 3} more
+                                +{locker.lstTypesBoxes.length - 3} more
                               </Badge>
                             )}
                           </div>
