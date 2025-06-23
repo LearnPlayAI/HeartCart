@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { formatDate } from "@/lib/utils";
+import PudoLockerPicker from "@/components/PudoLockerPicker";
 
 interface OrderItem {
   id: number;
@@ -42,6 +43,13 @@ interface Order {
   customerNotes: string | null;
   adminNotes: string | null;
   trackingNumber: string | null;
+  selectedLockerId: number | null;
+  lockerDetails: {
+    code: string;
+    name: string;
+    address: string;
+    provider: string;
+  } | null;
   createdAt: string;
   updatedAt: string;
   shippedAt: string | null;
@@ -310,6 +318,18 @@ export default function OrderConfirmationPage() {
                   </p>
                 </CardContent>
               </Card>
+            )}
+
+            {/* PUDO Locker Information */}
+            {order.shippingMethod === 'pudo' && order.selectedLockerId && (
+              <div className="w-full">
+                <PudoLockerPicker
+                  selectedLockerId={order.selectedLockerId}
+                  onLockerSelect={() => navigate('/checkout')}
+                  customerProvince={order.shippingAddress?.split(', ').pop() || 'Gauteng'}
+                  customerCity={order.shippingCity || 'Randburg'}
+                />
+              </div>
             )}
           </div>
 

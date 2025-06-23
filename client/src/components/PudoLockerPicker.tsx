@@ -67,16 +67,18 @@ interface PudoLocker {
 
 interface PudoLockerPickerProps {
   selectedLockerId?: number;
-  onLockerSelect: (locker: PudoLocker) => void;
+  onLockerSelect: (locker?: PudoLocker) => void;
   customerProvince?: string;
   customerCity?: string;
+  mode?: 'selection' | 'confirmation';
 }
 
 export default function PudoLockerPicker({ 
   selectedLockerId, 
   onLockerSelect, 
   customerProvince, 
-  customerCity 
+  customerCity,
+  mode = 'selection'
 }: PudoLockerPickerProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
@@ -202,10 +204,13 @@ export default function PudoLockerPicker({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Package className="h-5 w-5" />
-          Select PUDO Locker
+          {mode === 'confirmation' ? 'Selected PUDO Locker' : 'Select PUDO Locker'}
         </CardTitle>
         <CardDescription>
-          Choose a convenient pickup location for your order
+          {mode === 'confirmation' 
+            ? 'Your selected pickup location for this order'
+            : 'Choose a convenient pickup location for your order'
+          }
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
