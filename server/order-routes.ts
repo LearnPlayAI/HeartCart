@@ -89,7 +89,14 @@ const createOrderSchema = z.object({
   total: z.number(),
   creditUsed: z.number().default(0),
   paymentReferenceNumber: z.string().optional(),
-  paymentStatus: z.string().optional()
+  paymentStatus: z.string().optional(),
+  selectedLockerId: z.number().optional(),
+  lockerDetails: z.object({
+    code: z.string(),
+    name: z.string(),
+    address: z.string(),
+    provider: z.string()
+  }).optional()
 });
 
 // Helper function to generate attribute display text
@@ -238,6 +245,10 @@ router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Respons
       creditUsed: orderData.creditUsed || 0,
       remainingBalance: remainingBalance,
       paymentReferenceNumber: orderData.paymentReferenceNumber || null,
+      selectedLockerId: orderData.selectedLockerId || null,
+      selectedLockerCode: orderData.lockerDetails?.code || null,
+      selectedLockerName: orderData.lockerDetails?.name || null,
+      selectedLockerAddress: orderData.lockerDetails?.address || null,
     };
 
     // Create the order
