@@ -304,7 +304,6 @@ export default function PaymentConfirmation() {
                     <div className="text-sm text-blue-800 space-y-1">
                       <p>• PUDO tracking information will be sent to your email</p>
                       <p>• Track your order status in "My Orders" (accessible from the user menu)</p>
-                      <p>• You'll receive an SMS notification when your package arrives at the locker</p>
                       <p>• Bring your ID and collection code when picking up</p>
                     </div>
                   </div>
