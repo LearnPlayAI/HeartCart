@@ -43,14 +43,13 @@ export const pudoLockers = pgTable("pudoLockers", {
   place: jsonb("place").notNull(),
   availableBoxTypes: jsonb("availableBoxTypes").notNull(),
   isActive: boolean("isActive").default(true).notNull(),
-  createdAt: text("createdAt").default(String(new Date().toISOString())).notNull(),
-  updatedAt: text("updatedAt").default(String(new Date().toISOString())).notNull(),
+  createdAt: timestamp("createdAt").defaultNow(),
 }, (table) => {
   return {
-    codeIdx: index("pudo_lockers_code_idx").on(table.code),
-    providerIdx: index("pudo_lockers_provider_idx").on(table.provider),
-    nameIdx: index("pudo_lockers_name_idx").on(table.name),
-    isActiveIdx: index("pudo_lockers_is_active_idx").on(table.isActive),
+    codeIdx: index("pudoLockers_code_idx").on(table.code),
+    providerIdx: index("pudoLockers_provider_idx").on(table.provider),
+    nameIdx: index("pudoLockers_name_idx").on(table.name),
+    isActiveIdx: index("pudoLockers_is_active_idx").on(table.isActive),
   };
 });
 
