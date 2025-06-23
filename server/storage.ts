@@ -11822,7 +11822,7 @@ export class DatabaseStorage implements IStorage {
         );
       }
 
-      const lockers = await this.db
+      const lockers = await db
         .select()
         .from(pudoLockers)
         .where(and(...whereConditions))
