@@ -538,11 +538,11 @@ export default function AdminOrdersPage() {
           {viewMode === "cards" ? (
             <div className="grid gap-6">
               {filteredOrders.map((order: Order) => (
-                <OrderCard key={order.id} order={order} />
+                <OrderCard key={order.id} order={order} onStatusUpdate={handleStatusUpdate} />
               ))}
             </div>
           ) : (
-            <OrderTable orders={filteredOrders} />
+            <OrderTable orders={filteredOrders} onStatusUpdate={handleStatusUpdate} />
           )}
         </div>
       )}
