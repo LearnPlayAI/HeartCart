@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import {
   Table,
   TableBody,
@@ -44,6 +45,8 @@ import {
   XCircle,
   FileText,
   Upload,
+  Search,
+  Filter,
 } from 'lucide-react';
 
 // Types
@@ -473,6 +476,10 @@ function OrderTable({
 export default function AdminOrdersPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortBy, setSortBy] = useState("newest");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const { toast } = useToast();
 
   const { data: response, isLoading, refetch } = useQuery({
@@ -547,10 +554,79 @@ export default function AdminOrdersPage() {
     updatePaymentStatusMutation.mutate({ orderId, paymentStatus });
   };
   
-  const filteredOrders = orders.filter((order: Order) => {
-    if (statusFilter === "all") return true;
-    return order.status === statusFilter;
-  });
+  // Enhanced filtering and sorting logic
+  const filteredOrders = React.useMemo(() => {
+    let filtered = orders.filter((order: Order) => {
+      // Enhanced search functionality - searches across multiple fields
+      const matchesSearch = 
+        order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.customerEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.status.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.paymentStatus.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.paymentMethod.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.shippingAddress.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.shippingCity.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (order.trackingNumber && order.trackingNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (order.customerNotes && order.customerNotes.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (order.adminNotes && order.adminNotes.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        // Search in order items
+        order.orderItems.some((item: any) => 
+          item.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (item.productSku && item.productSku.toLowerCase().includes(searchTerm.toLowerCase()))
+        );
+      
+      const matchesStatus = statusFilter === 'all' || order.status.toLowerCase() === statusFilter;
+      
+      // Date range filtering
+      const orderDate = new Date(order.createdAt);
+      const matchesDateRange = (() => {
+        if (!dateFrom && !dateTo) return true;
+        
+        if (dateFrom && !dateTo) {
+          const fromDate = new Date(dateFrom);
+          fromDate.setHours(0, 0, 0, 0); // Start of the day
+          return orderDate >= fromDate;
+        }
+        
+        if (!dateFrom && dateTo) {
+          const toDate = new Date(dateTo);
+          toDate.setHours(23, 59, 59, 999); // End of the day
+          return orderDate <= toDate;
+        }
+        
+        if (dateFrom && dateTo) {
+          const fromDate = new Date(dateFrom);
+          fromDate.setHours(0, 0, 0, 0); // Start of the day
+          const toDate = new Date(dateTo);
+          toDate.setHours(23, 59, 59, 999); // End of the day
+          return orderDate >= fromDate && orderDate <= toDate;
+        }
+        
+        return true;
+      })();
+      
+      return matchesSearch && matchesStatus && matchesDateRange;
+    });
+
+    // Sort orders
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'newest':
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        case 'oldest':
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        case 'amount-high':
+          return b.totalAmount - a.totalAmount;
+        case 'amount-low':
+          return a.totalAmount - b.totalAmount;
+        default:
+          return 0;
+      }
+    });
+
+    return filtered;
+  }, [orders, searchTerm, statusFilter, sortBy, dateFrom, dateTo]);
 
   if (isLoading) {
     return (
