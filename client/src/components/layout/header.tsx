@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
-import { User, ShoppingCart, LogIn, UserPlus, LogOut, ChevronDown, LayoutDashboard, Terminal, Package, Heart, CreditCard } from 'lucide-react';
+import { User, ShoppingCart, LogIn, UserPlus, LogOut, ChevronDown, LayoutDashboard, Terminal, Package, Heart, CreditCard, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { 
   DropdownMenu, 
@@ -72,9 +72,13 @@ const Header = () => {
               <>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="relative">
-                      <User className="h-5 w-5 text-gray-700 hover:text-[#FF69B4]" />
-                      <ChevronDown className="h-3 w-3 ml-1 text-gray-500" />
+                    <Button 
+                      variant="outline" 
+                      className="relative border-pink-200 bg-white hover:bg-pink-50 text-gray-700 hover:text-[#FF69B4] px-3 py-2 h-auto"
+                    >
+                      <User className="h-4 w-4 mr-2" />
+                      <span className="text-sm font-medium">{user.username}</span>
+                      <ChevronDown className="h-3 w-3 ml-2 text-gray-500" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-52">
@@ -90,7 +94,8 @@ const Header = () => {
                       </div>
                     </div>
                     <DropdownMenuItem asChild>
-                      <Link href="/profile-settings" className="cursor-pointer">
+                      <Link href="/profile-settings" className="cursor-pointer flex items-center">
+                        <Settings className="h-4 w-4 mr-2" />
                         My Profile
                       </Link>
                     </DropdownMenuItem>
