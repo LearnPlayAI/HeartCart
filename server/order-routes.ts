@@ -230,11 +230,14 @@ router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Respons
       });
     }
 
-    // Determine order status based on payment
+    // Determine order status based on payment type
     let orderStatus = "pending";
-    if (finalPaymentStatus === "paid") {
-      orderStatus = "confirmed"; // If fully paid with credits, mark as confirmed and ready for processing
+    // Only automatically confirm orders that are fully paid with credits
+    // EFT payments marked as "paid" by customer still need admin verification
+    if (finalPaymentStatus === "paid" && remainingBalance === 0 && orderData.creditUsed > 0) {
+      orderStatus = "confirmed"; // Only auto-confirm when fully paid with credits
     }
+    // All other orders remain "pending" until admin manually verifies payment
 
     // Create order object with new structure including locker details
     const order = {
