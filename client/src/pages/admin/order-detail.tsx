@@ -610,7 +610,7 @@ export default function AdminOrderDetail() {
                     <p className="text-sm font-medium">Payment Status:</p>
                     <Badge variant={order.paymentStatus === 'payment_received' ? 'default' : 'secondary'}>
                       {order.paymentStatus === 'payment_received' ? 'Payment Received' : 
-                       order.paymentStatus === 'paid' ? 'Payment Uploaded' :
+                       order.paymentStatus === 'paid' ? 'Payment Made' :
                        order.paymentStatus === 'pending' ? 'Awaiting Payment' : 
                        order.paymentStatus || 'Unknown'}
                     </Badge>
