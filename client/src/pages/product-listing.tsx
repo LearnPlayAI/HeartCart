@@ -255,7 +255,10 @@ const ProductListing = () => {
   // Scroll to top when page changes (but not on initial load or when restoring state)
   useEffect(() => {
     const isRestoringState = sessionStorage.getItem('productListingState');
-    if (!isRestoringState && page > 1) {
+    const isRestoringPageState = sessionStorage.getItem('productListingPage');
+    
+    // Only scroll to top if we're not restoring state and this is a user-initiated page change
+    if (!isRestoringState && !isRestoringPageState && page > 1) {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }, [page]);
@@ -295,8 +298,9 @@ const ProductListing = () => {
           }
         }
         
-        // Restore pagination
-        if (savedState.page > 1) {
+        // Restore pagination - always restore page state, even for page 1
+        if (savedState.page && savedState.page !== page) {
+          console.log('Restoring page state:', savedState.page, 'current page:', page);
           setPage(savedState.page);
           const newUrl = new URL(window.location.href);
           newUrl.searchParams.set('page', savedState.page.toString());
