@@ -141,7 +141,13 @@ export default function PaymentConfirmation() {
 
   const handleConfirmPayment = () => {
     if (orderData) {
-      createOrderMutation.mutate(orderData);
+      // Add payment reference number to order data
+      const orderWithPaymentRef = {
+        ...orderData,
+        paymentReferenceNumber: referenceNumber,
+        paymentStatus: 'payment_submitted' // Set status to indicate payment was made
+      };
+      createOrderMutation.mutate(orderWithPaymentRef);
     }
   };
 

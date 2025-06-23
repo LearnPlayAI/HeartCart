@@ -171,6 +171,7 @@ export const orders = pgTable("orders", {
   // Payment information
   paymentMethod: text("paymentMethod").notNull().default("eft"), // eft only for now
   paymentStatus: text("paymentStatus").notNull().default("pending"), // pending, paid, payment_received, failed
+  paymentReferenceNumber: text("paymentReferenceNumber"), // TMY-X-DDMMYYYY format for bank transfer reference
   paymentReceivedDate: text("paymentReceivedDate"), // Date when admin confirmed payment was received
   
   // Order totals
