@@ -793,6 +793,13 @@ ${order.customerName}`;
                 </CardContent>
               </Card>
             )}
+
+            {/* Order Status Timeline */}
+            <OrderStatusTimeline 
+              orderId={order.id} 
+              currentStatus={order.status} 
+              currentPaymentStatus={order.paymentStatus} 
+            />
           </div>
 
           {/* Sidebar */}
