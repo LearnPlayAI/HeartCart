@@ -11752,31 +11752,38 @@ export class DatabaseStorage implements IStorage {
     try {
       let whereConditions = [eq(pudoLockers.isActive, true)];
 
-      if (query) {
+      if (query && query.trim()) {
         whereConditions.push(
           or(
             ilike(pudoLockers.name, `%${query}%`),
             ilike(pudoLockers.address, `%${query}%`),
             ilike(pudoLockers.code, `%${query}%`),
+            ilike(pudoLockers.provider, `%${query}%`),
             sql`${pudoLockers.place}->>'town' ILIKE ${`%${query}%`}`,
-            sql`${pudoLockers.detailedAddress}->>'locality' ILIKE ${`%${query}%`}`
+            sql`${pudoLockers.place}->>'postalCode' ILIKE ${`%${query}%`}`,
+            sql`${pudoLockers.detailedAddress}->>'locality' ILIKE ${`%${query}%`}`,
+            sql`${pudoLockers.detailedAddress}->>'province' ILIKE ${`%${query}%`}`,
+            sql`${pudoLockers.detailedAddress}->>'postal_code' ILIKE ${`%${query}%`}`,
+            sql`${pudoLockers.detailedAddress}->>'street_name' ILIKE ${`%${query}%`}`,
+            sql`${pudoLockers.detailedAddress}->>'sublocality' ILIKE ${`%${query}%`}`,
+            sql`${pudoLockers.detailedAddress}->>'formatted_address' ILIKE ${`%${query}%`}`
           )
         );
       }
 
-      if (province) {
+      if (province && province.trim()) {
         whereConditions.push(
-          sql`${pudoLockers.detailedAddress}->>'province' ILIKE ${province}`
+          sql`${pudoLockers.detailedAddress}->>'province' = ${province}`
         );
       }
 
-      if (city) {
+      if (city && city.trim()) {
         whereConditions.push(
           sql`${pudoLockers.detailedAddress}->>'locality' ILIKE ${`%${city}%`}`
         );
       }
 
-      const lockers = await db
+      const lockers = await this.db
         .select()
         .from(pudoLockers)
         .where(and(...whereConditions))
@@ -11794,16 +11801,16 @@ export class DatabaseStorage implements IStorage {
     try {
       let whereConditions = [
         eq(pudoLockers.isActive, true),
-        sql`${pudoLockers.detailedAddress}->>'province' ILIKE ${province}`
+        sql`${pudoLockers.detailedAddress}->>'province' = ${province}`
       ];
 
-      if (city) {
+      if (city && city.trim()) {
         whereConditions.push(
           sql`${pudoLockers.detailedAddress}->>'locality' ILIKE ${`%${city}%`}`
         );
       }
 
-      const lockers = await db
+      const lockers = await this.db
         .select()
         .from(pudoLockers)
         .where(and(...whereConditions))

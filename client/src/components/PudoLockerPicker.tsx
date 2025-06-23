@@ -89,7 +89,7 @@ export default function PudoLockerPicker({
     enabled: !selectedLockerId
   });
 
-  // Smart locker fetching based on customer location
+  // Smart locker fetching based on customer location - automatically loads user's area
   const { data: locationBasedLockers, isLoading: locationLoading } = useQuery({
     queryKey: ["/api/pudo-lockers/location", customerProvince, customerCity],
     enabled: !!customerProvince && !searchQuery,
@@ -206,6 +206,21 @@ export default function PudoLockerPicker({
           />
         </div>
 
+        {/* Location Info Banner */}
+        {!searchQuery && customerCity && customerProvince && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+            <div className="flex items-center gap-2 text-blue-800">
+              <MapPin className="h-4 w-4" />
+              <span className="text-sm font-medium">
+                Showing lockers in {customerCity}, {customerProvince}
+              </span>
+            </div>
+            <p className="text-xs text-blue-600 mt-1">
+              Use the search bar above to find lockers in other areas
+            </p>
+          </div>
+        )}
+
         {/* Loading State */}
         {isLoading && (
           <div className="flex items-center justify-center py-8">
@@ -221,6 +236,8 @@ export default function PudoLockerPicker({
             <p>No PUDO lockers found</p>
             {searchQuery ? (
               <p className="text-sm">Try a different search term</p>
+            ) : customerCity && customerProvince ? (
+              <p className="text-sm">No lockers available in {customerCity}, {customerProvince}</p>
             ) : (
               <p className="text-sm">Try searching for a specific location</p>
             )}
