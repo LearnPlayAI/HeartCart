@@ -208,7 +208,8 @@ const OrderDetail: React.FC = () => {
         pudoLocker: order.pudoLocker,
         hasLockerDetails: !!(order.lockerDetails || order.pudoLocker),
         lockerDetailsKeys: order.lockerDetails ? Object.keys(order.lockerDetails) : [],
-        pudoLockerKeys: order.pudoLocker ? Object.keys(order.pudoLocker) : []
+        pudoLockerKeys: order.pudoLocker ? Object.keys(order.pudoLocker) : [],
+        shouldShowLockerCard: (order.shippingMethod === 'pudo' || order.shippingMethod === 'Pudo' || order.shippingMethod?.toLowerCase() === 'pudo') && (order.lockerDetails || order.pudoLocker)
       });
     }
   }, [order]);
@@ -675,7 +676,7 @@ ${order.customerName}`;
                   </div>
 
                   {/* PUDO Locker Information */}
-                  {(order.shippingMethod === 'pudo' || order.shippingMethod === 'Pudo') && (order.lockerDetails || order.pudoLocker) && (
+                  {(order.lockerDetails || order.pudoLocker) && (
                     <div className="border-t pt-4">
                       <div className="bg-white border-2 border-gray-200 rounded-lg p-4">
                         <div className="flex items-start">
