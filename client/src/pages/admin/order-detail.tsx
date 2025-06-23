@@ -105,6 +105,26 @@ interface Order {
   trackingNumber?: string;
   paymentReceivedDate?: string;
   items: OrderItem[];
+  // PUDO Locker Information
+  selectedLockerId?: number;
+  selectedLockerCode?: string;
+  selectedLockerName?: string;
+  selectedLockerAddress?: string;
+  pudoLocker?: {
+    id: number;
+    code: string;
+    name: string;
+    address: string;
+    provider: string;
+    latitude: string;
+    longitude: string;
+    openingHours: Array<{
+      day: string;
+      open_time: string;
+      close_time: string;
+      isStoreOpen: string;
+    }>;
+  };
 }
 
 // Utility functions
@@ -854,6 +874,85 @@ export default function AdminOrderDetail() {
               </div>
             </CardContent>
           </Card>
+
+          {/* PUDO Locker Information */}
+          {order.shippingMethod === 'pudo' && order.pudoLocker && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <MapPin className="h-5 w-5" />
+                  <span>PUDO Locker Details</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Package className="h-4 w-4 text-blue-600" />
+                    <span className="font-medium text-blue-900">Delivery Location</span>
+                  </div>
+                  <p className="text-sm text-blue-700">
+                    Send this order to the PUDO locker below for customer pickup
+                  </p>
+                </div>
+                
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                    <div>
+                      <p className="font-medium">{order.pudoLocker.code}</p>
+                      <p className="text-sm text-muted-foreground">Locker Code</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start space-x-2">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
+                    <div>
+                      <p className="font-medium">{order.pudoLocker.name}</p>
+                      <p className="text-sm text-muted-foreground">Locker Name</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start space-x-2">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
+                    <div>
+                      <p className="font-medium">{order.pudoLocker.address}</p>
+                      <p className="text-sm text-muted-foreground">Locker Address</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                    <div>
+                      <p className="font-medium capitalize">{order.pudoLocker.provider}</p>
+                      <p className="text-sm text-muted-foreground">Provider</p>
+                    </div>
+                  </div>
+                </div>
+
+                {order.pudoLocker.openingHours && order.pudoLocker.openingHours.length > 0 && (
+                  <div className="mt-4">
+                    <Separator />
+                    <div className="mt-4">
+                      <p className="text-sm font-medium mb-2">Opening Hours:</p>
+                      <div className="grid grid-cols-1 gap-1">
+                        {order.pudoLocker.openingHours.map((hours, index) => (
+                          <div key={index} className="flex justify-between text-xs">
+                            <span className="capitalize">{hours.day}:</span>
+                            <span>
+                              {hours.isStoreOpen === '1' 
+                                ? `${hours.open_time} - ${hours.close_time}`
+                                : 'Closed'
+                              }
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Order Summary */}
           <Card>
