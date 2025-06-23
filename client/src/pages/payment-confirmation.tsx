@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { CheckCircle, Copy, Building2, MapPin, Clock, Phone } from 'lucide-react';
+import { CheckCircle, Copy, Building2, MapPin, Clock, Phone, Package, Mail, User } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
@@ -274,20 +274,39 @@ export default function PaymentConfirmation() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
-                  <MapPin className="w-5 h-5 mr-2" />
-                  Collection Point
+                  <Package className="w-5 h-5 mr-2" />
+                  PUDO Locker Collection Point
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold">{orderData.lockerDetails.name}</span>
-                    <Badge variant="secondary">{orderData.lockerDetails.code}</Badge>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold">{orderData.lockerDetails.name}</span>
+                      <Badge variant="secondary">{orderData.lockerDetails.code}</Badge>
+                    </div>
+                    <p className="text-gray-600 flex items-start">
+                      <MapPin className="w-4 h-4 mr-1 mt-0.5 flex-shrink-0" />
+                      {orderData.lockerDetails.address}
+                    </p>
+                    <div className="flex items-center text-sm text-gray-500">
+                      <Building2 className="w-4 h-4 mr-1" />
+                      {orderData.lockerDetails.provider}
+                    </div>
                   </div>
-                  <p className="text-gray-600">{orderData.lockerDetails.address}</p>
-                  <div className="flex items-center text-sm text-gray-500">
-                    <Building2 className="w-4 h-4 mr-1" />
-                    {orderData.lockerDetails.provider}
+                  
+                  {/* Collection Tips */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <h4 className="font-semibold text-blue-900 mb-2 flex items-center">
+                      <Mail className="w-4 h-4 mr-1" />
+                      Collection Information
+                    </h4>
+                    <div className="text-sm text-blue-800 space-y-1">
+                      <p>• PUDO tracking information will be sent to your email</p>
+                      <p>• Track your order status in "My Orders" (accessible from the user menu)</p>
+                      <p>• You'll receive an SMS notification when your package arrives at the locker</p>
+                      <p>• Bring your ID and collection code when picking up</p>
+                    </div>
                   </div>
                 </div>
               </CardContent>
