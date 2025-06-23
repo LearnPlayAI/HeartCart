@@ -224,10 +224,45 @@ const ProductListing = () => {
       sessionStorage.removeItem('productListingPage');
       sessionStorage.removeItem('productListingScrollPosition');
       sessionStorage.removeItem('productListingTargetProduct');
+      sessionStorage.removeItem('productListingState');
     }
     
     setSelectedCategoryId(newCategoryId);
   }, [location, selectedCategoryId]);
+
+  // Additional effect to handle page restoration after back navigation
+  useEffect(() => {
+    const handlePageRestoration = () => {
+      const savedStateStr = sessionStorage.getItem('productListingState');
+      if (savedStateStr) {
+        try {
+          const savedState = JSON.parse(savedStateStr);
+          console.log('Page restoration effect - checking saved state:', savedState);
+          
+          // Force page restoration if the saved page differs from current
+          if (savedState.page && savedState.page !== page) {
+            console.log('Forcing page restoration to page:', savedState.page);
+            setTimeout(() => {
+              setPage(savedState.page);
+              
+              // Update URL immediately
+              const newUrl = new URL(window.location.href);
+              newUrl.searchParams.set('page', savedState.page.toString());
+              if (savedState.categoryId && savedState.categoryId !== 'null') {
+                newUrl.searchParams.set('categoryId', savedState.categoryId);
+              }
+              window.history.replaceState({}, '', newUrl.toString());
+            }, 50);
+          }
+        } catch (error) {
+          console.error('Failed to restore page state:', error);
+        }
+      }
+    };
+
+    // Run restoration check when location changes (back navigation)
+    handlePageRestoration();
+  }, [location, page]); // Include page in dependencies to ensure proper restoration
   const [availabilityFilter, setAvailabilityFilter] = useState('all');
   const [ratingFilter, setRatingFilter] = useState(searchParams.get('rating') || '');
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
