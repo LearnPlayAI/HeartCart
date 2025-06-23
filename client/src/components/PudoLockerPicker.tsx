@@ -388,7 +388,7 @@ export default function PudoLockerPicker({
                           target="_blank"
                           rel="noopener noreferrer"
                           onClick={(e) => e.stopPropagation()}
-                          className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition-colors"
+                          className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition-colors bg-[#ff69b4]"
                         >
                           <MapPin className="h-4 w-4" />
                           <span>View Location on Google Maps</span>
