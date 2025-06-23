@@ -225,7 +225,7 @@ router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Respons
       orderStatus = "confirmed"; // If fully paid with credits, mark as confirmed and ready for processing
     }
 
-    // Create order object with new structure
+    // Create order object with new structure including locker details
     const order = {
       userId: userId,
       status: orderStatus,
@@ -245,10 +245,19 @@ router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Respons
       creditUsed: orderData.creditUsed || 0,
       remainingBalance: remainingBalance,
       paymentReferenceNumber: orderData.paymentReferenceNumber || null,
+      // PUDO Locker Details - mapping to camelCase columns
       selectedLockerId: orderData.selectedLockerId || null,
       selectedLockerCode: orderData.lockerDetails?.code || null,
       selectedLockerName: orderData.lockerDetails?.name || null,
       selectedLockerAddress: orderData.lockerDetails?.address || null,
+      // Also save to the snake_case locker_details JSONB column
+      locker_details: orderData.lockerDetails ? {
+        id: orderData.selectedLockerId,
+        code: orderData.lockerDetails.code,
+        name: orderData.lockerDetails.name,
+        address: orderData.lockerDetails.address,
+        provider: orderData.lockerDetails.provider
+      } : null,
     };
 
     // Create the order
