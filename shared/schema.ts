@@ -201,7 +201,7 @@ export const orders = pgTable("orders", {
   selectedLockerCode: text("selectedLockerCode"),
   selectedLockerName: text("selectedLockerName"),
   selectedLockerAddress: text("selectedLockerAddress"),
-  locker_details: jsonb("locker_details"), // Snake_case column for locker details
+  lockerDetails: jsonb("lockerDetails"), // CamelCase column for locker details
 });
 
 // Order items table - camelCase version with full attribute support
