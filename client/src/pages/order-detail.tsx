@@ -706,7 +706,7 @@ ${order.customerName}`;
                                       <div key={index} className="flex justify-between">
                                         <span className="font-medium">{hours.day}:</span>
                                         <span>
-                                          {hours.isStoreOpen === 'true' 
+                                          {hours.isStoreOpen === 'Open' 
                                             ? `${hours.open_time} - ${hours.close_time}`
                                             : 'Closed'
                                           }
