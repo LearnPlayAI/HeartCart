@@ -166,7 +166,7 @@ router.post("/confirm", isAuthenticated, asyncHandler(async (req: Request, res: 
 
     // Process payment based on method
     let paymentVerified = false;
-    let finalPaymentStatus = "pending";
+    let finalPaymentStatus = "verifying_payment";
     let remainingBalance = sessionData.total;
 
     if (paymentData.paymentProof.method === "credit") {
@@ -221,11 +221,8 @@ router.post("/confirm", isAuthenticated, asyncHandler(async (req: Request, res: 
         });
       }
 
-      // Determine order status
+      // Determine order status - always start with pending
       let orderStatus = "pending";
-      if (finalPaymentStatus === "paid") {
-        orderStatus = "confirmed";
-      }
 
       // Create order object
       const order = {

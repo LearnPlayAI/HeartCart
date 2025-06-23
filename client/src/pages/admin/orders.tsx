@@ -140,7 +140,9 @@ const getStatusConfig = (status: string) => {
 
 const getPaymentStatusConfig = (paymentStatus: string) => {
   const configs = {
-    pending: { label: 'Awaiting Payment', color: 'bg-yellow-100 text-yellow-800 border-yellow-200', icon: Clock },
+    pending: { label: 'Verifying Payment', color: 'bg-yellow-100 text-yellow-800 border-yellow-200', icon: Clock },
+    verifying_payment: { label: 'Verifying Payment', color: 'bg-yellow-100 text-yellow-800 border-yellow-200', icon: Clock },
+    awaiting_payment: { label: 'Verifying Payment', color: 'bg-yellow-100 text-yellow-800 border-yellow-200', icon: Clock }, // Legacy support
     paid: { label: 'Payment Made', color: 'bg-blue-100 text-blue-800 border-blue-200', icon: Upload },
     payment_received: { label: 'Payment Received', color: 'bg-green-100 text-green-800 border-green-200', icon: CheckCircle },
     failed: { label: 'Payment Failed', color: 'bg-red-100 text-red-800 border-red-200', icon: XCircle },
@@ -326,7 +328,7 @@ function OrderCard({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="awaiting_payment">Awaiting Payment</SelectItem>
+                <SelectItem value="verifying_payment">Verifying Payment</SelectItem>
                 <SelectItem value="payment_received">Payment Received</SelectItem>
               </SelectContent>
             </Select>
@@ -432,7 +434,7 @@ function OrderTable({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="awaiting_payment">Awaiting Payment</SelectItem>
+                        <SelectItem value="verifying_payment">Verifying Payment</SelectItem>
                         <SelectItem value="payment_received">Payment Received</SelectItem>
                       </SelectContent>
                     </Select>
