@@ -749,13 +749,15 @@ ${order.customerName}`;
                                 <div className="pt-2 border-t border-gray-100">
                                   <button
                                     onClick={() => {
-                                      const mapsUrl = `https://www.google.com/maps?q=${order.lockerDetails.latitude},${order.lockerDetails.longitude}`;
+                                      const lat = order.lockerDetails?.latitude || order.pudoLocker?.latitude;
+                                      const lng = order.lockerDetails?.longitude || order.pudoLocker?.longitude;
+                                      const mapsUrl = `https://www.google.com/maps?q=${lat},${lng}`;
                                       window.open(mapsUrl, '_blank');
                                     }}
                                     className="text-sm text-blue-600 hover:text-blue-800 hover:underline flex items-center"
                                   >
                                     <MapPin className="h-3 w-3 mr-1" />
-                                    Open in Maps ({order.lockerDetails.latitude}, {order.lockerDetails.longitude})
+                                    Open in Maps ({(order.lockerDetails?.latitude || order.pudoLocker?.latitude)}, {(order.lockerDetails?.longitude || order.pudoLocker?.longitude)})
                                   </button>
                                 </div>
                               )}
