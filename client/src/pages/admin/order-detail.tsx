@@ -998,6 +998,13 @@ export default function AdminOrderDetail() {
             </CardContent>
           </Card>
 
+          {/* Order Status Timeline */}
+          <OrderStatusTimeline 
+            orderId={order.id}
+            currentStatus={order.status}
+            currentPaymentStatus={order.paymentStatus}
+          />
+
           {/* Notes */}
           {order.customerNotes && (
             <Card>
