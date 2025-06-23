@@ -244,12 +244,12 @@ export default function CheckoutPage() {
   const autoCreditAmount = Math.min(availableCredit, orderTotal);
   const finalTotal = Math.max(0, orderTotal - autoCreditAmount);
 
-  // Create order mutation with proper response handling
-  const createOrderMutation = useMutation({
+  // Create payment session mutation (step 1)
+  const createPaymentSessionMutation = useMutation({
     mutationFn: async (orderData: any) => {
-      console.log("Starting order creation with data:", orderData);
+      console.log("Creating payment session with data:", orderData);
       
-      const response = await fetch("/api/orders", {
+      const response = await fetch("/api/payment/session", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -260,32 +260,57 @@ export default function CheckoutPage() {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Order creation failed: ${response.status} - ${errorText}`);
+        throw new Error(`Payment session creation failed: ${response.status} - ${errorText}`);
       }
 
       const result = await response.json();
-      console.log("Order creation successful:", result);
+      console.log("Payment session created:", result);
+      return result;
+    },
+    onError: (error: any) => {
+      console.error("Payment session error:", error);
+      toast({
+        title: "Payment Session Failed",
+        description: error.message || "Failed to create payment session",
+        variant: "destructive",
+      });
+      setIsProcessing(false);
+    }
+  });
+
+  // Confirm payment and create order mutation (step 2)
+  const confirmPaymentMutation = useMutation({
+    mutationFn: async ({ sessionId, paymentMethod }: { sessionId: string, paymentMethod: string }) => {
+      console.log("Confirming payment with sessionId:", sessionId);
       
-      // Check for successful response
-      if (result.success && result.data) {
-        return result;
+      const response = await fetch("/api/payment/confirm", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          sessionId,
+          paymentProof: {
+            method: paymentMethod,
+            transactionReference: "",
+            amount: finalTotal
+          }
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Payment confirmation failed: ${response.status} - ${errorText}`);
       }
-      
-      // If we have an error in the response, throw it
-      if (result.error) {
-        throw new Error(result.error.message || "Order creation failed");
-      }
-      
-      // If no success flag but we have data, assume success
-      if (result.data) {
-        return { success: true, data: result.data };
-      }
-      
-      throw new Error("Invalid response from server");
+
+      const result = await response.json();
+      console.log("Payment confirmed and order created:", result);
+      return result;
     },
     onSuccess: (data) => {
-      console.log("Order mutation success:", data);
-      // Clear cart and invalidate orders to refresh My Orders page
+      console.log("Order creation successful:", data);
+      // Clear cart and invalidate orders
       queryClient.invalidateQueries({ queryKey: ["/api/cart"] });
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
       
@@ -293,17 +318,13 @@ export default function CheckoutPage() {
       navigate(`/order-confirmation/${data.data?.id || data.id}`);
     },
     onError: (error: any) => {
-      console.error("Order mutation error:", error);
-      // Only show error toast if we have a meaningful error message
-      if (error && error.message && !error.message.includes("Failed to create order")) {
-        toast({
-          title: "Order Failed",
-          description: error.message,
-          variant: "destructive"
-        });
-      } else {
-        console.log("Suppressing false error - order was likely created successfully");
-      }
+      console.error("Payment confirmation error:", error);
+      toast({
+        title: "Order Failed",
+        description: error.message || "Failed to create order",
+        variant: "destructive"
+      });
+      setIsProcessing(false);
     }
   });
 
@@ -395,10 +416,20 @@ export default function CheckoutPage() {
         } : null
       };
 
-      console.log("Submitting order data:", orderData);
+      console.log("Creating payment session with order data:", orderData);
       
-      // Use the mutation which handles success/error automatically
-      await createOrderMutation.mutateAsync(orderData);
+      // Step 1: Create payment session
+      const sessionResult = await createPaymentSessionMutation.mutateAsync(orderData);
+      
+      if (sessionResult.success && sessionResult.data?.sessionId) {
+        // Step 2: Confirm payment and create order
+        await confirmPaymentMutation.mutateAsync({
+          sessionId: sessionResult.data.sessionId,
+          paymentMethod: data.paymentMethod
+        });
+      } else {
+        throw new Error("Failed to create payment session");
+      }
     } catch (error) {
       console.error("Checkout error:", error);
       toast({

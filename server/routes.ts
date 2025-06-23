@@ -45,6 +45,7 @@ import batchUploadRoutes from "./batch-upload-routes";
 import aiApiRoutes from "./routes/ai-api";
 import { orderRoutes } from "./order-routes";
 import { adminRoutes } from "./admin-routes";
+import paymentRoutes from "./payment-routes";
 import { registerAuthTestRoutes } from "./auth-test-routes";
 import { registerDatabaseTestRoutes } from "./database-test-routes";
 import { registerApiTestRoutes } from "./api-test-routes";
@@ -163,6 +164,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Apply response wrapper middleware to standardize API responses
   app.use(responseWrapperMiddleware);
+  
+  // Register payment routes for payment-first order creation
+  app.use("/api/payment", paymentRoutes);
   
   // Register order routes (after middleware for proper error handling)
   app.use("/api/orders", orderRoutes);
