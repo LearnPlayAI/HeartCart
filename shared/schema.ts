@@ -179,8 +179,8 @@ export const orders = pgTable("orders", {
   totalAmount: doublePrecision("totalAmount").notNull(),
   
   // Credit system fields
-  creditUsed: numeric("creditUsed").notNull().default('0'),
-  remainingBalance: numeric("remainingBalance"),
+  creditUsed: decimal("creditUsed", { precision: 10, scale: 2 }).notNull().default('0'),
+  remainingBalance: decimal("remainingBalance", { precision: 10, scale: 2 }),
   
   // Order notes and tracking
   customerNotes: text("customerNotes"), // Customer special instructions
