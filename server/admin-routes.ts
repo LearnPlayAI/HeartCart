@@ -119,18 +119,29 @@ router.post("/orders/:id/payment-received", isAuthenticated, asyncHandler(async 
       return sendError(res, "Order not found", 404);
     }
 
-    // Update payment status to received and order status to processing
-    const updatedOrder = await storage.updateOrderPaymentStatus(orderId, "received");
-    let finalOrder = updatedOrder;
-    
-    if (updatedOrder && updatedOrder.status === "pending") {
-      finalOrder = await storage.updateOrderStatus(orderId, "processing");
+    // Validate that payment status is "paid" before allowing "payment_received"
+    if (order.paymentStatus !== "paid") {
+      return sendError(res, "Order payment status must be 'paid' before marking as received", 400);
     }
+
+    // Update payment status to "payment_received"
+    const updatedOrder = await storage.updateOrderPaymentStatus(orderId, "payment_received");
+    
+    if (!updatedOrder) {
+      return sendError(res, "Failed to update order payment status", 500);
+    }
+
+    // Automatically update the order status to "processing" when payment is received
+    const finalOrder = await storage.updateOrderStatus(orderId, "processing");
 
     logger.info("Order payment marked as received by admin and status updated to processing", {
       orderId,
-      previousStatus: order.status,
+      orderNumber: order.orderNumber,
       adminUserId: req.user?.id,
+      previousPaymentStatus: order.paymentStatus,
+      newPaymentStatus: "payment_received",
+      previousOrderStatus: order.status,
+      newOrderStatus: "processing",
     });
 
     return sendSuccess(res, {
