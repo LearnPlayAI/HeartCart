@@ -44,9 +44,9 @@ const FloatingInstallButton: React.FC = () => {
 
   return (
     <div className="fixed bottom-4 left-4 right-4 z-50 md:hidden">
-      <div className="bg-white rounded-lg shadow-2xl border-2 border-[#FF69B4]/20 p-4 max-w-sm mx-auto">
+      <div className="bg-white rounded-lg shadow-2xl border-2 border-[#FF1493]/30 p-4 max-w-sm mx-auto">
         <div className="flex items-center justify-between mb-3">
-          <h4 className="font-semibold text-gray-900 text-sm">Install TEE ME YOU</h4>
+          <h4 className="font-semibold text-[#FF1493] text-sm">Install TEE ME YOU</h4>
           <Button
             variant="ghost"
             size="sm"
@@ -57,7 +57,7 @@ const FloatingInstallButton: React.FC = () => {
           </Button>
         </div>
         
-        <p className="text-xs text-gray-600 mb-3">
+        <p className="text-xs text-gray-700 mb-3">
           Get faster loading and offline access by installing our mobile app
         </p>
         

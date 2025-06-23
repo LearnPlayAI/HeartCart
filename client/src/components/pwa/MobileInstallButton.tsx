@@ -126,7 +126,7 @@ const MobileInstallButton: React.FC<MobileInstallButtonProps> = ({
         variant={variant}
         size={size}
         onClick={handleInstallClick}
-        className={`${className} bg-[#FF69B4] hover:bg-[#FF1493] text-white border-0 shadow-lg`}
+        className={`${className} bg-[#FF1493] hover:bg-[#E91E63] text-white border-0 shadow-lg font-medium`}
       >
         <Smartphone className="h-4 w-4 mr-2" />
         Install App
@@ -145,9 +145,9 @@ const MobileInstallButton: React.FC<MobileInstallButtonProps> = ({
           </DialogHeader>
           
           <div className="space-y-4">
-            <div className="bg-gradient-to-r from-[#FF69B4]/10 to-purple-500/10 p-4 rounded-lg border border-[#FF69B4]/20">
-              <h4 className="font-semibold text-sm mb-2 text-gray-900">Why install our app?</h4>
-              <ul className="text-xs text-gray-600 space-y-1">
+            <div className="bg-gradient-to-r from-[#FF1493]/10 to-[#E91E63]/10 p-4 rounded-lg border border-[#FF1493]/30">
+              <h4 className="font-semibold text-sm mb-2 text-[#FF1493]">Why install our app?</h4>
+              <ul className="text-xs text-gray-700 space-y-1">
                 <li>• Faster loading and smoother experience</li>
                 <li>• Works offline for browsing products</li>
                 <li>• Push notifications for order updates</li>
