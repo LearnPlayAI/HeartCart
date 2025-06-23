@@ -196,14 +196,19 @@ export default function PudoLockerPicker({
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Search Bar */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-          <Input
-            placeholder="Search by locker name, location, or code..."
-            value={searchQuery}
-            onChange={(e) => handleSearch(e.target.value)}
-            className="pl-10"
-          />
+        <div className="space-y-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              placeholder="Search by locker name, location, or code..."
+              value={searchQuery}
+              onChange={(e) => handleSearch(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <div className="text-xs text-gray-500">
+            <span>Tip: Use "AND" and "OR" for complex searches (e.g., "centurion AND golf" or "randburg OR sharonlea")</span>
+          </div>
         </div>
 
         {/* Location Info Banner */}
