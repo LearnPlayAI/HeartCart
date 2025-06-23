@@ -103,14 +103,13 @@ const formatStatusText = (entry: OrderStatusHistoryEntry) => {
 const formatSASTTime = (dateString: string) => {
   try {
     const date = new Date(dateString);
-    // Convert to SAST (UTC+2)
-    const sastOffset = 2 * 60; // 2 hours in minutes
-    const sastTime = new Date(date.getTime() + (sastOffset * 60 * 1000));
+    // The timestamps from the database are already in SAST timezone (UTC+2)
+    // No need to add additional offset as the server stores them in SAST
     
     return {
-      date: format(sastTime, 'dd MMM yyyy'),
-      time: format(sastTime, 'HH:mm'),
-      full: format(sastTime, 'dd MMM yyyy HH:mm')
+      date: format(date, 'dd MMM yyyy'),
+      time: format(date, 'HH:mm'),
+      full: format(date, 'dd MMM yyyy HH:mm')
     };
   } catch (error) {
     console.error('Error formatting date:', error);
