@@ -74,47 +74,47 @@ const Header = () => {
                   <DropdownMenuTrigger asChild>
                     <Button 
                       variant="outline" 
-                      className="relative border-pink-200 bg-white hover:bg-pink-50 text-gray-700 hover:text-[#FF69B4] px-3 py-2 h-auto"
+                      className="relative border-[#FF69B4] bg-gradient-to-r from-[#FF69B4] to-[#FF1493] text-white hover:from-[#FF1493] hover:to-[#DC143C] px-3 py-2 h-auto shadow-md hover:shadow-lg transition-all duration-200"
                     >
                       <User className="h-4 w-4 mr-2" />
                       <span className="text-sm font-medium">{user.username}</span>
-                      <ChevronDown className="h-3 w-3 ml-2 text-gray-500" />
+                      <ChevronDown className="h-3 w-3 ml-2" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-52">
-                    <div className="p-2 text-sm font-medium border-b">
+                  <DropdownMenuContent align="end" className="w-52 bg-white border-[#FF69B4] shadow-xl">
+                    <div className="p-3 text-sm font-bold bg-gradient-to-r from-[#FF69B4] to-[#FF1493] text-white border-b">
                       {user.username}
                     </div>
-                    <div className="p-2 text-xs bg-green-50 border-b">
+                    <div className="p-2 text-xs bg-gradient-to-r from-green-50 to-green-100 border-b border-green-200">
                       <div className="flex items-center justify-between">
-                        <span className="text-green-700">Credit Balance:</span>
+                        <span className="text-green-700 font-medium">Credit Balance:</span>
                         <span className="font-bold text-green-800">
                           {balanceLoading ? 'Loading...' : formattedBalance}
                         </span>
                       </div>
                     </div>
                     <DropdownMenuItem asChild>
-                      <Link href="/profile-settings" className="cursor-pointer flex items-center">
-                        <Settings className="h-4 w-4 mr-2" />
-                        My Profile
+                      <Link href="/profile-settings" className="cursor-pointer flex items-center hover:bg-pink-50 hover:text-[#FF69B4] transition-colors p-2 rounded">
+                        <Settings className="h-4 w-4 mr-2 text-[#FF69B4]" />
+                        <span className="font-medium">My Profile</span>
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/my-orders" className="cursor-pointer flex items-center">
-                        <Package className="h-4 w-4 mr-2" />
-                        My Orders
+                      <Link href="/my-orders" className="cursor-pointer flex items-center hover:bg-pink-50 hover:text-[#FF69B4] transition-colors p-2 rounded">
+                        <Package className="h-4 w-4 mr-2 text-[#FF69B4]" />
+                        <span className="font-medium">My Orders</span>
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/my-favourites" className="cursor-pointer flex items-center">
-                        <Heart className="h-4 w-4 mr-2" />
-                        My Favourites
+                      <Link href="/my-favourites" className="cursor-pointer flex items-center hover:bg-pink-50 hover:text-[#FF69B4] transition-colors p-2 rounded">
+                        <Heart className="h-4 w-4 mr-2 text-[#FF69B4]" />
+                        <span className="font-medium">My Favourites</span>
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/credit-history" className="cursor-pointer flex items-center">
-                        <CreditCard className="h-4 w-4 mr-2" />
-                        Credit History
+                      <Link href="/credit-history" className="cursor-pointer flex items-center hover:bg-pink-50 hover:text-[#FF69B4] transition-colors p-2 rounded">
+                        <CreditCard className="h-4 w-4 mr-2 text-[#FF69B4]" />
+                        <span className="font-medium">Credit History</span>
                       </Link>
                     </DropdownMenuItem>
                     
@@ -182,13 +182,13 @@ const Header = () => {
             ) : (
               // Non-authenticated user - show login and register buttons
               <>
-                <Button variant="ghost" className="flex items-center space-x-1 text-gray-700 hover:text-[#FF69B4]" asChild>
+                <Button variant="outline" className="flex items-center space-x-1 border-[#FF69B4] text-[#FF69B4] hover:bg-pink-50 hover:border-[#FF1493] hover:text-[#FF1493] font-medium transition-all duration-200 shadow-sm hover:shadow-md" asChild>
                   <Link href="/auth">
                     <LogIn className="h-4 w-4 mr-1" />
                     <span>Login</span>
                   </Link>
                 </Button>
-                <Button variant="outline" className="flex items-center space-x-1 border-[#FF69B4] text-[#FF69B4] hover:bg-[#FF69B4] hover:text-white" asChild>
+                <Button className="flex items-center space-x-1 bg-gradient-to-r from-[#FF69B4] to-[#FF1493] text-white hover:from-[#FF1493] hover:to-[#DC143C] font-medium shadow-md hover:shadow-lg transition-all duration-200" asChild>
                   <Link href="/auth?tab=register">
                     <UserPlus className="h-4 w-4 mr-1" />
                     <span>Register</span>
