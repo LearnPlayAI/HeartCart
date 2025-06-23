@@ -21,7 +21,15 @@ import {
   FileText,
   Zap,
   Calendar,
-  Target
+  Target,
+  Settings,
+  UserCheck,
+  Factory,
+  Route,
+  Home,
+  RefreshCw,
+  Edit3,
+  Clipboard
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -106,52 +114,67 @@ const getStatusIcon = (eventType: string, status: string) => {
     case 'payment_received':
       return <DollarSign className="w-5 h-5" />;
     case 'status_change':
-      if (status === 'confirmed') return <CheckCircle className="w-5 h-5" />;
-      if (status === 'processing') return <PackageCheck className="w-5 h-5" />;
-      if (status === 'shipped') return <Send className="w-5 h-5" />;
-      if (status === 'delivered') return <MapPin className="w-5 h-5" />;
-      if (status === 'cancelled') return <Ban className="w-5 h-5" />;
-      return <Zap className="w-5 h-5" />;
+      if (status === 'confirmed') return <UserCheck className="w-5 h-5" />;
+      if (status === 'processing') return <Factory className="w-5 h-5" />;
+      if (status === 'shipped') return <Route className="w-5 h-5" />;
+      if (status === 'delivered') return <Home className="w-5 h-5" />;
+      if (status === 'cancelled') return <XCircle className="w-5 h-5" />;
+      return <Settings className="w-5 h-5" />;
     case 'shipped':
-      return <Send className="w-5 h-5" />;
+      return <Route className="w-5 h-5" />;
     case 'delivered':
-      return <Target className="w-5 h-5" />;
+      return <Home className="w-5 h-5" />;
     case 'cancelled':
-      return <Ban className="w-5 h-5" />;
+      return <XCircle className="w-5 h-5" />;
     case 'notes_added':
-      return <FileText className="w-5 h-5" />;
+      return <Edit3 className="w-5 h-5" />;
     case 'tracking_updated':
-      return <Truck className="w-5 h-5" />;
+      return <RefreshCw className="w-5 h-5" />;
+    case 'payment_status_change':
+      return <CreditCard className="w-5 h-5" />;
+    case 'admin_update':
+      return <Shield className="w-5 h-5" />;
+    case 'system_update':
+      return <Settings className="w-5 h-5" />;
     default:
-      return <Calendar className="w-5 h-5" />;
+      return <Clipboard className="w-5 h-5" />;
   }
 };
 
-const getStatusColor = (eventType: string, status: string) => {
-  switch (eventType) {
-    case 'order_placed':
+const getTimelineEntryColor = (entry: OrderStatusHistoryEntry) => {
+  // For payment-related events, use payment status colors
+  if (entry.eventType === 'payment_received' || entry.paymentStatus) {
+    const paymentStatus = entry.paymentStatus || 'paid';
+    switch (paymentStatus.toLowerCase()) {
+      case 'payment_received':
+      case 'paid':
+        return 'bg-gradient-to-r from-emerald-500 to-emerald-600 shadow-lg shadow-emerald-500/25';
+      case 'pending':
+        return 'bg-gradient-to-r from-orange-500 to-orange-600 shadow-lg shadow-orange-500/25';
+      case 'failed':
+        return 'bg-gradient-to-r from-red-500 to-red-600 shadow-lg shadow-red-500/25';
+      default:
+        return 'bg-gradient-to-r from-slate-500 to-slate-600 shadow-lg shadow-slate-500/25';
+    }
+  }
+  
+  // For status changes, use order status colors
+  const orderStatus = entry.status || 'pending';
+  switch (orderStatus.toLowerCase()) {
+    case 'pending':
+      return 'bg-gradient-to-r from-yellow-500 to-yellow-600 shadow-lg shadow-yellow-500/25';
+    case 'confirmed':
       return 'bg-gradient-to-r from-blue-500 to-blue-600 shadow-lg shadow-blue-500/25';
-    case 'payment_received':
-      return 'bg-gradient-to-r from-emerald-500 to-emerald-600 shadow-lg shadow-emerald-500/25';
-    case 'status_change':
-      if (status === 'confirmed') return 'bg-gradient-to-r from-blue-500 to-blue-600 shadow-lg shadow-blue-500/25';
-      if (status === 'processing') return 'bg-gradient-to-r from-amber-500 to-amber-600 shadow-lg shadow-amber-500/25';
-      if (status === 'shipped') return 'bg-gradient-to-r from-purple-500 to-purple-600 shadow-lg shadow-purple-500/25';
-      if (status === 'delivered') return 'bg-gradient-to-r from-green-500 to-green-600 shadow-lg shadow-green-500/25';
-      if (status === 'cancelled') return 'bg-gradient-to-r from-red-500 to-red-600 shadow-lg shadow-red-500/25';
-      return 'bg-gradient-to-r from-indigo-500 to-indigo-600 shadow-lg shadow-indigo-500/25';
+    case 'processing':
+      return 'bg-gradient-to-r from-amber-500 to-amber-600 shadow-lg shadow-amber-500/25';
     case 'shipped':
       return 'bg-gradient-to-r from-purple-500 to-purple-600 shadow-lg shadow-purple-500/25';
     case 'delivered':
       return 'bg-gradient-to-r from-green-500 to-green-600 shadow-lg shadow-green-500/25';
     case 'cancelled':
       return 'bg-gradient-to-r from-red-500 to-red-600 shadow-lg shadow-red-500/25';
-    case 'notes_added':
-      return 'bg-gradient-to-r from-slate-500 to-slate-600 shadow-lg shadow-slate-500/25';
-    case 'tracking_updated':
-      return 'bg-gradient-to-r from-orange-500 to-orange-600 shadow-lg shadow-orange-500/25';
     default:
-      return 'bg-gradient-to-r from-gray-500 to-gray-600 shadow-lg shadow-gray-500/25';
+      return 'bg-gradient-to-r from-slate-500 to-slate-600 shadow-lg shadow-slate-500/25';
   }
 };
 
@@ -271,7 +294,7 @@ export default function OrderStatusTimeline({ orderId, currentStatus, currentPay
                   <div className="flex items-start gap-4">
                     {/* Timeline connector */}
                     <div className="relative flex-shrink-0">
-                      <div className={`w-12 h-12 rounded-full ${getStatusColor(entry.eventType, entry.status)} flex items-center justify-center text-white transition-all duration-300 hover:scale-110 hover:rotate-3`}>
+                      <div className={`w-12 h-12 rounded-full ${getTimelineEntryColor(entry)} flex items-center justify-center text-white transition-all duration-300 hover:scale-110 hover:rotate-3`}>
                         {getStatusIcon(entry.eventType, entry.status)}
                       </div>
                       {!isLast && (
