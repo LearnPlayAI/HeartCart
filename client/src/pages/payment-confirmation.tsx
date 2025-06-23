@@ -145,7 +145,7 @@ export default function PaymentConfirmation() {
       const orderWithPaymentRef = {
         ...orderData,
         paymentReferenceNumber: referenceNumber,
-        paymentStatus: 'payment_submitted' // Set status to indicate payment was made
+        paymentStatus: 'paid' // Set status to indicate payment proof was uploaded
       };
       createOrderMutation.mutate(orderWithPaymentRef);
     }
