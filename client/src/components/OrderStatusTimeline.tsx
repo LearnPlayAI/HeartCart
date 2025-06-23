@@ -16,6 +16,57 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 
+// Customer payment status text mapping
+const getCustomerPaymentStatusText = (status: string) => {
+  switch (status.toLowerCase()) {
+    case 'payment_received':
+      return 'Paid';
+    case 'paid':
+      return 'Paid';
+    case 'pending':
+      return 'Pending';
+    case 'failed':
+      return 'Failed';
+    default:
+      return status.charAt(0).toUpperCase() + status.slice(1);
+  }
+};
+
+// Badge color mapping for order status - matches order detail page styling
+const getOrderStatusBadgeColor = (status: string) => {
+  switch (status.toLowerCase()) {
+    case 'pending':
+      return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+    case 'confirmed':
+      return 'bg-blue-100 text-blue-800 border-blue-200';
+    case 'processing':
+      return 'bg-purple-100 text-purple-800 border-purple-200';
+    case 'shipped':
+      return 'bg-orange-100 text-orange-800 border-orange-200';
+    case 'delivered':
+      return 'bg-green-100 text-green-800 border-green-200';
+    case 'cancelled':
+      return 'bg-red-100 text-red-800 border-red-200';
+    default:
+      return 'bg-gray-100 text-gray-800 border-gray-200';
+  }
+};
+
+// Badge color mapping for payment status - matches order detail page styling
+const getPaymentStatusBadgeColor = (status: string) => {
+  switch (status.toLowerCase()) {
+    case 'paid':
+    case 'payment_received':
+      return 'bg-green-100 text-green-800 border-green-200';
+    case 'pending':
+      return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+    case 'failed':
+      return 'bg-red-100 text-red-800 border-red-200';
+    default:
+      return 'bg-gray-100 text-gray-800 border-gray-200';
+  }
+};
+
 interface OrderStatusHistoryEntry {
   id: number;
   orderId: number;
@@ -204,15 +255,18 @@ export default function OrderStatusTimeline({ orderId, currentStatus, currentPay
                           
                           {/* Status badges */}
                           <div className="flex items-center gap-2 mt-1">
-                            <Badge variant="secondary" className="text-xs">
+                            <Badge 
+                              variant="outline" 
+                              className={`text-xs ${getOrderStatusBadgeColor(entry.status)}`}
+                            >
                               {entry.status.charAt(0).toUpperCase() + entry.status.slice(1)}
                             </Badge>
                             {entry.paymentStatus && (
                               <Badge 
-                                variant={entry.paymentStatus === 'paid' ? 'default' : 'outline'} 
-                                className="text-xs"
+                                variant="outline" 
+                                className={`text-xs ${getPaymentStatusBadgeColor(entry.paymentStatus)}`}
                               >
-                                Payment: {entry.paymentStatus}
+                                Payment: {getCustomerPaymentStatusText(entry.paymentStatus)}
                               </Badge>
                             )}
                           </div>
