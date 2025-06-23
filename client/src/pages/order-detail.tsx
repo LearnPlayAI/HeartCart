@@ -357,7 +357,6 @@ const OrderDetail: React.FC = () => {
         <title>Order #{order.orderNumber} - TEE ME YOU</title>
         <meta name="description" content={`View details for order #${order.orderNumber} at TEE ME YOU.`} />
       </Helmet>
-      
       <div className="container mx-auto px-4 py-6 max-w-5xl">
         {/* Header */}
         <div className="mb-6">
@@ -435,7 +434,7 @@ const OrderDetail: React.FC = () => {
                                     <div className="flex gap-2 flex-wrap">
                                       {typeof value === 'object' && value !== null ? (
                                         // Handle quantity-based attributes like {"Boy": 2, "Girl": 1}
-                                        Object.entries(value as Record<string, number>)
+                                        (Object.entries(value as Record<string, number>)
                                           .filter(([, qty]) => qty > 0)
                                           .map(([optionValue, count]) => (
                                             <Badge 
@@ -444,12 +443,12 @@ const OrderDetail: React.FC = () => {
                                             >
                                               {optionValue} x{count}
                                             </Badge>
-                                          ))
+                                          )))
                                       ) : (
                                         // Handle simple string values
-                                        <Badge className="bg-[#ff69b4] text-[#ffffff] text-xs">
+                                        (<Badge className="bg-[#ff69b4] text-[#ffffff] text-xs">
                                           {String(value)}
-                                        </Badge>
+                                        </Badge>)
                                       )}
                                     </div>
                                   </div>
@@ -623,9 +622,7 @@ const OrderDetail: React.FC = () => {
                           <h4 className="font-semibold text-blue-900 mb-2">
                             Payment Instructions
                           </h4>
-                          <p className="text-sm text-blue-800 mb-2">
-                            Please email your proof of payment to:
-                          </p>
+                          <p className="text-sm text-blue-800 mb-2">Please click on the email address below and email your proof of payment to:</p>
                           <button
                             onClick={() => {
                               const subject = `Payment Proof - Order ${order.orderNumber}`;
