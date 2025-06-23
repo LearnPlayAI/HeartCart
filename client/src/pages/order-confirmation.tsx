@@ -319,50 +319,43 @@ export default function OrderConfirmationPage() {
               </Card>
             )}
 
-            {/* Selected PUDO Locker Information */}
+            {/* PUDO Locker Details */}
             {order.shippingMethod === 'pudo' && order.lockerDetails && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <MapPin className="h-5 w-5" />
-                    Selected PUDO Locker
+                  <CardTitle className="flex items-center">
+                    <Package className="w-5 h-5 mr-2" />
+                    PUDO Locker Collection Point
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <Check className="h-4 w-4 text-green-600" />
-                        <span className="text-sm font-medium text-green-800">Locker Selected</span>
-                      </div>
-                      <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">
-                        {order.lockerDetails.code}
-                      </Badge>
-                    </div>
-                    
+                  <div className="space-y-4">
                     <div className="space-y-2">
-                      <div>
-                        <p className="font-medium text-gray-900">{order.lockerDetails.name}</p>
-                        <p className="text-sm text-gray-600">{order.lockerDetails.address}</p>
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold">{order.lockerDetails.name}</span>
+                        <Badge variant="secondary">{order.lockerDetails.code}</Badge>
                       </div>
-                      
-                      <div className="flex items-center gap-4 text-sm text-gray-600">
-                        <div className="flex items-center gap-1">
-                          <span className="font-medium">Provider:</span>
-                          <span>{order.lockerDetails.provider}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <span className="font-medium">Code:</span>
-                          <span className="font-mono">{order.lockerDetails.code}</span>
-                        </div>
+                      <p className="text-gray-600 flex items-start">
+                        <MapPin className="w-4 h-4 mr-1 mt-0.5 flex-shrink-0" />
+                        {order.lockerDetails.address}
+                      </p>
+                      <div className="flex items-center text-sm text-gray-500">
+                        <Building2 className="w-4 h-4 mr-1" />
+                        {order.lockerDetails.provider}
                       </div>
                     </div>
                     
-                    <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                      <p className="text-sm text-blue-800">
-                        <strong>Collection Instructions:</strong> Present your order number ({order.orderNumber}) 
-                        and a valid ID when collecting your parcel from this PUDO locker.
-                      </p>
+                    {/* Collection Tips */}
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <h4 className="font-semibold text-blue-900 mb-2 flex items-center">
+                        <Mail className="w-4 h-4 mr-1" />
+                        Collection Information
+                      </h4>
+                      <div className="text-sm text-blue-800 space-y-1">
+                        <p>• PUDO tracking information will be sent to your email</p>
+                        <p>• Track your order status in "My Orders" (accessible from the user menu)</p>
+                        <p>• Bring your ID and collection code when picking up</p>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
