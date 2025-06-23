@@ -333,22 +333,9 @@ export default function PudoLockerPicker({
                             )}
                           </div>
                           
-                          <div className="flex items-center justify-between gap-1 text-gray-600 text-xs mb-1">
-                            <div className="flex items-center gap-1">
-                              <MapPin className="h-3 w-3" />
-                              <span>{locker.address}</span>
-                            </div>
-                            <a
-                              href={`https://www.google.com/maps?q=${locker.latitude},${locker.longitude}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={(e) => e.stopPropagation()}
-                              className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 hover:bg-green-200 text-green-800 rounded text-xs font-medium transition-colors"
-                            >
-                              <MapPin className="h-3 w-3" />
-                              <span>Maps</span>
-                              <ExternalLink className="h-2 w-2" />
-                            </a>
+                          <div className="flex items-center gap-1 text-gray-600 text-xs mb-1">
+                            <MapPin className="h-3 w-3" />
+                            <span>{locker.address}</span>
                           </div>
                           
                           <div className="flex items-center gap-4 text-xs text-gray-500">
@@ -393,6 +380,21 @@ export default function PudoLockerPicker({
                           </div>
                         </div>
                       )}
+
+                      {/* Google Maps Link */}
+                      <div className="mt-3 pt-2 border-t">
+                        <a
+                          href={`https://www.google.com/maps?q=${locker.latitude},${locker.longitude}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition-colors"
+                        >
+                          <MapPin className="h-4 w-4" />
+                          <span>View Location on Google Maps</span>
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </div>
                     </CardContent>
                   </Card>
                 </Label>
