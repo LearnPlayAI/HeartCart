@@ -11753,22 +11753,50 @@ export class DatabaseStorage implements IStorage {
       let whereConditions = [eq(pudoLockers.isActive, true)];
 
       if (query && query.trim()) {
-        whereConditions.push(
-          or(
-            ilike(pudoLockers.name, `%${query}%`),
-            ilike(pudoLockers.address, `%${query}%`),
-            ilike(pudoLockers.code, `%${query}%`),
-            ilike(pudoLockers.provider, `%${query}%`),
-            sql`${pudoLockers.place}->>'town' ILIKE ${`%${query}%`}`,
-            sql`${pudoLockers.place}->>'postalCode' ILIKE ${`%${query}%`}`,
-            sql`${pudoLockers.detailedAddress}->>'locality' ILIKE ${`%${query}%`}`,
-            sql`${pudoLockers.detailedAddress}->>'province' ILIKE ${`%${query}%`}`,
-            sql`${pudoLockers.detailedAddress}->>'postal_code' ILIKE ${`%${query}%`}`,
-            sql`${pudoLockers.detailedAddress}->>'street_name' ILIKE ${`%${query}%`}`,
-            sql`${pudoLockers.detailedAddress}->>'sublocality' ILIKE ${`%${query}%`}`,
-            sql`${pudoLockers.detailedAddress}->>'formatted_address' ILIKE ${`%${query}%`}`
-          )
-        );
+        // Split query into keywords for multi-keyword search
+        const keywords = query.trim().split(/\s+/).filter(k => k.length > 0);
+        
+        if (keywords.length === 1) {
+          // Single keyword search - search across all columns
+          const keyword = keywords[0];
+          whereConditions.push(
+            or(
+              ilike(pudoLockers.name, `%${keyword}%`),
+              ilike(pudoLockers.address, `%${keyword}%`),
+              ilike(pudoLockers.code, `%${keyword}%`),
+              ilike(pudoLockers.provider, `%${keyword}%`),
+              sql`${pudoLockers.place}->>'town' ILIKE ${`%${keyword}%`}`,
+              sql`${pudoLockers.place}->>'postalCode' ILIKE ${`%${keyword}%`}`,
+              sql`${pudoLockers.detailedAddress}->>'locality' ILIKE ${`%${keyword}%`}`,
+              sql`${pudoLockers.detailedAddress}->>'province' ILIKE ${`%${keyword}%`}`,
+              sql`${pudoLockers.detailedAddress}->>'postal_code' ILIKE ${`%${keyword}%`}`,
+              sql`${pudoLockers.detailedAddress}->>'street_name' ILIKE ${`%${keyword}%`}`,
+              sql`${pudoLockers.detailedAddress}->>'sublocality' ILIKE ${`%${keyword}%`}`,
+              sql`${pudoLockers.detailedAddress}->>'formatted_address' ILIKE ${`%${keyword}%`}`
+            )
+          );
+        } else {
+          // Multi-keyword search - any keyword can match anywhere in any record (OR logic)
+          const keywordConditions = keywords.map(keyword => 
+            or(
+              ilike(pudoLockers.name, `%${keyword}%`),
+              ilike(pudoLockers.address, `%${keyword}%`),
+              ilike(pudoLockers.code, `%${keyword}%`),
+              ilike(pudoLockers.provider, `%${keyword}%`),
+              sql`${pudoLockers.place}->>'town' ILIKE ${`%${keyword}%`}`,
+              sql`${pudoLockers.place}->>'postalCode' ILIKE ${`%${keyword}%`}`,
+              sql`${pudoLockers.detailedAddress}->>'locality' ILIKE ${`%${keyword}%`}`,
+              sql`${pudoLockers.detailedAddress}->>'province' ILIKE ${`%${keyword}%`}`,
+              sql`${pudoLockers.detailedAddress}->>'postal_code' ILIKE ${`%${keyword}%`}`,
+              sql`${pudoLockers.detailedAddress}->>'street_name' ILIKE ${`%${keyword}%`}`,
+              sql`${pudoLockers.detailedAddress}->>'sublocality' ILIKE ${`%${keyword}%`}`,
+              sql`${pudoLockers.detailedAddress}->>'formatted_address' ILIKE ${`%${keyword}%`}`
+            )
+          );
+          
+          // Any keyword can match (OR logic between keywords)
+          whereConditions.push(or(...keywordConditions));
+        }
       }
 
       if (province && province.trim()) {
