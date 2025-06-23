@@ -4654,6 +4654,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Clean admin order status update API
   app.patch(
     "/api/admin/orders/:id/status", 
+    isAuthenticated,
     asyncHandler(async (req: Request, res: Response) => {
       const orderId = Number(req.params.id);
       const { status } = req.body;
@@ -4672,29 +4673,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // If status is "payment_received", automatically update payment status and then order status to "processing"
         if (status === 'payment_received') {
-          // First update payment status to "payment_received"
-          updatedOrder = await storage.updateOrderPaymentStatus(orderId, "payment_received");
+          logger.info('Processing payment_received status update', { orderId, adminUserId: req.user?.id });
           
-          if (!updatedOrder) {
+          // First update payment status to "payment_received"
+          const paymentUpdated = await storage.updateOrderPaymentStatus(orderId, "payment_received");
+          
+          if (!paymentUpdated) {
+            logger.error('Failed to update payment status to payment_received', { orderId });
             return res.status(404).json({
               success: false,
-              error: { message: "Order not found" }
+              error: { message: "Order not found or payment status update failed" }
             });
           }
+          
+          logger.info('Payment status updated to payment_received', { orderId });
           
           // Then automatically update order status to "processing" 
           updatedOrder = await storage.updateOrderStatus(orderId, "processing");
           
+          if (!updatedOrder) {
+            logger.error('Failed to update order status to processing', { orderId });
+            return res.status(500).json({
+              success: false,
+              error: { message: "Failed to update order status to processing" }
+            });
+          }
+          
+          logger.info('Order status updated to processing', { orderId });
+          
           // Add status history entry for payment received
-          await storage.addOrderStatusHistory(
-            orderId,
-            "processing", 
-            "payment_received",
-            'Admin',
-            null,
-            'payment_received',
-            'Payment received by admin, order moved to processing'
-          );
+          try {
+            await storage.addOrderStatusHistory(
+              orderId,
+              "processing", 
+              "payment_received",
+              'Admin',
+              null,
+              'payment_received',
+              'Payment received by admin, order moved to processing'
+            );
+            logger.info('Status history entry added for payment_received', { orderId });
+          } catch (historyError) {
+            logger.error('Failed to add status history entry', { orderId, error: historyError });
+            // Don't fail the request for history entry failure
+          }
           
           logger.info('Order marked as payment received and moved to processing by admin', { 
             orderId, 
