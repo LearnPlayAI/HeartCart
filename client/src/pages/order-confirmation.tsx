@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { formatDate } from "@/lib/utils";
-import PudoLockerPicker from "@/components/PudoLockerPicker";
 
 interface OrderItem {
   id: number;
@@ -320,16 +319,54 @@ export default function OrderConfirmationPage() {
               </Card>
             )}
 
-            {/* PUDO Locker Information */}
-            {order.shippingMethod === 'pudo' && order.selectedLockerId && (
-              <div className="w-full">
-                <PudoLockerPicker
-                  selectedLockerId={order.selectedLockerId}
-                  onLockerSelect={() => navigate('/checkout')}
-                  customerProvince={order.shippingAddress?.split(', ').pop() || 'Gauteng'}
-                  customerCity={order.shippingCity || 'Randburg'}
-                />
-              </div>
+            {/* Selected PUDO Locker Information */}
+            {order.shippingMethod === 'pudo' && order.lockerDetails && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <MapPin className="h-5 w-5" />
+                    Selected PUDO Locker
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <Check className="h-4 w-4 text-green-600" />
+                        <span className="text-sm font-medium text-green-800">Locker Selected</span>
+                      </div>
+                      <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">
+                        {order.lockerDetails.code}
+                      </Badge>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <div>
+                        <p className="font-medium text-gray-900">{order.lockerDetails.name}</p>
+                        <p className="text-sm text-gray-600">{order.lockerDetails.address}</p>
+                      </div>
+                      
+                      <div className="flex items-center gap-4 text-sm text-gray-600">
+                        <div className="flex items-center gap-1">
+                          <span className="font-medium">Provider:</span>
+                          <span>{order.lockerDetails.provider}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="font-medium">Code:</span>
+                          <span className="font-mono">{order.lockerDetails.code}</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-sm text-blue-800">
+                        <strong>Collection Instructions:</strong> Present your order number ({order.orderNumber}) 
+                        and a valid ID when collecting your parcel from this PUDO locker.
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             )}
           </div>
 
