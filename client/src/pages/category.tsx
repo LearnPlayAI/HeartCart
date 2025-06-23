@@ -86,6 +86,11 @@ const CategoryPage = () => {
   const products = productsResponse?.success ? productsResponse.data?.data || [] : [];
   const totalProducts = productsResponse?.success ? productsResponse.data?.meta?.total || 0 : 0;
   const totalPages = Math.ceil(totalProducts / limit);
+
+  // Reset page when category changes
+  useEffect(() => {
+    setPage(1);
+  }, [category?.id]);
   
   // Log for debugging
   useEffect(() => {
