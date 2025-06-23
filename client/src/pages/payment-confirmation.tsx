@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { CheckCircle, Copy, Building2, MapPin, Clock, Phone } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 
 interface OrderData {
@@ -45,12 +45,37 @@ interface OrderData {
   };
 }
 
+interface Product {
+  id: number;
+  name: string;
+  description?: string;
+  imageUrl?: string;
+  price: number;
+  salePrice?: number;
+}
+
 export default function PaymentConfirmation() {
   const [, navigate] = useLocation();
   const [orderData, setOrderData] = useState<OrderData | null>(null);
   const [referenceNumber, setReferenceNumber] = useState('');
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // Fetch products data for the order items
+  const productIds = orderData?.orderItems.map(item => item.productId) || [];
+  const { data: products = [] } = useQuery({
+    queryKey: ['/api/products', 'batch', productIds],
+    queryFn: async () => {
+      if (productIds.length === 0) return [];
+      const promises = productIds.map(async (id) => {
+        const response = await apiRequest('GET', `/api/products/${id}`);
+        return response.json();
+      });
+      const results = await Promise.all(promises);
+      return results.map(result => result.data);
+    },
+    enabled: productIds.length > 0
+  });
 
   useEffect(() => {
     // Get order data from sessionStorage
@@ -59,8 +84,13 @@ export default function PaymentConfirmation() {
       const parsed = JSON.parse(savedOrderData);
       setOrderData(parsed);
       
-      // Generate reference number
-      const ref = `TMY${Date.now()}${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
+      // Generate reference number in format TMY-(incrementing number)-(dd)(MM)(YYYY)
+      const now = new Date();
+      const day = String(now.getDate()).padStart(2, '0');
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const year = now.getFullYear();
+      const incrementingNumber = Math.floor(Math.random() * 9000) + 1000; // 4-digit random number
+      const ref = `TMY-${incrementingNumber}-${day}${month}${year}`;
       setReferenceNumber(ref);
     } else {
       // Redirect to checkout if no order data
@@ -272,16 +302,53 @@ export default function PaymentConfirmation() {
               <CardTitle>Order Summary</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-3">
-                {orderData.orderItems.map((item, index) => (
-                  <div key={index} className="flex justify-between items-center">
-                    <div>
-                      <span className="font-medium">Product {item.productId}</span>
-                      <span className="text-gray-500 ml-2">x{item.quantity}</span>
+              <div className="space-y-4">
+                {orderData.orderItems.map((item, index) => {
+                  const product = products.find(p => p.id === item.productId);
+                  return (
+                    <div key={index} className="flex items-start space-x-3 p-3 border rounded-lg">
+                      {/* Product Image */}
+                      <div className="flex-shrink-0">
+                        {product?.imageUrl ? (
+                          <img 
+                            src={product.imageUrl} 
+                            alt={product.name}
+                            className="w-16 h-16 object-cover rounded-lg"
+                          />
+                        ) : (
+                          <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
+                            <span className="text-gray-400 text-xs">No Image</span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Product Details */}
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium text-sm line-clamp-2">
+                          {product?.name || `Product ${item.productId}`}
+                        </h4>
+                        {product?.description && (
+                          <p className="text-xs text-gray-600 mt-1 line-clamp-2">
+                            {product.description}
+                          </p>
+                        )}
+                        <div className="flex items-center justify-between mt-2">
+                          <span className="text-sm text-gray-500">Qty: {item.quantity}</span>
+                          <div className="text-right">
+                            <div className="text-sm font-medium">
+                              R{(item.unitPrice * item.quantity).toFixed(2)}
+                            </div>
+                            {item.quantity > 1 && (
+                              <div className="text-xs text-gray-500">
+                                R{item.unitPrice.toFixed(2)} each
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <span>R{(item.unitPrice * item.quantity).toFixed(2)}</span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               <Separator />
