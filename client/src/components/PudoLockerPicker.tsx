@@ -91,29 +91,14 @@ export default function PudoLockerPicker({
 
   // Smart locker fetching based on customer location - automatically loads user's area
   const { data: locationBasedLockers, isLoading: locationLoading } = useQuery({
-    queryKey: ["/api/pudo-lockers/location", customerProvince, customerCity],
-    enabled: !!customerProvince && !searchQuery,
-    queryFn: () => {
-      const params = new URLSearchParams();
-      if (customerProvince) params.append("province", customerProvince);
-      if (customerCity) params.append("city", customerCity);
-      const url = `/api/pudo-lockers/location?${params.toString()}`;
-      console.log("Fetching PUDO lockers from:", url);
-      return apiRequest(url);
-    }
+    queryKey: [`/api/pudo-lockers/location?province=${customerProvince}&city=${customerCity}`],
+    enabled: !!customerProvince && !searchQuery
   });
 
-  // Search functionality
+  // Search functionality  
   const { data: searchResults, isLoading: searchLoading } = useQuery({
-    queryKey: ["/api/pudo-lockers/search", searchQuery, customerProvince, customerCity],
-    enabled: !!searchQuery && searchQuery.length >= 2,
-    queryFn: () => {
-      const params = new URLSearchParams();
-      params.append("q", searchQuery);
-      if (customerProvince) params.append("province", customerProvince);
-      if (customerCity) params.append("city", customerCity);
-      return apiRequest(`/api/pudo-lockers/search?${params.toString()}`);
-    }
+    queryKey: [`/api/pudo-lockers/search?q=${searchQuery}&province=${customerProvince}&city=${customerCity}`],
+    enabled: !!searchQuery && searchQuery.length >= 2
   });
 
   // Save preferred locker mutation
@@ -178,7 +163,7 @@ export default function PudoLockerPicker({
   const formatOpeningHours = (hours: PudoLocker['openingHours']) => {
     if (!hours || hours.length === 0) return "Hours not available";
     
-    const today = new Date().toLocaleLowerCase();
+    const today = new Date().toLocaleDateString();
     const todayHours = hours.find(h => h.day.toLowerCase().includes(today.slice(0, 3)));
     
     if (todayHours) {
