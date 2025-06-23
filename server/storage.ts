@@ -11891,12 +11891,16 @@ export class DatabaseStorage implements IStorage {
     try {
       let whereConditions = [
         eq(pudoLockers.isActive, true),
-        sql`${pudoLockers.detailedAddress}->>'province' = ${province}`
+        sql`${pudoLockers.detailedAddress}->>'province' ILIKE ${`%${province}%`}`
       ];
 
       if (city && city.trim()) {
+        // Search both the locality field AND the main address column with case-insensitive wildcard search
         whereConditions.push(
-          sql`${pudoLockers.detailedAddress}->>'locality' ILIKE ${`%${city}%`}`
+          or(
+            sql`${pudoLockers.detailedAddress}->>'locality' ILIKE ${`%${city}%`}`,
+            sql`${pudoLockers.address} ILIKE ${`%${city}%`}`
+          )
         );
       }
 
@@ -11906,6 +11910,13 @@ export class DatabaseStorage implements IStorage {
         .where(and(...whereConditions))
         .orderBy(pudoLockers.name)
         .limit(10);
+
+      logger.debug('PUDO lockers query executed', { 
+        province, 
+        city, 
+        resultCount: lockers.length,
+        conditions: whereConditions.length 
+      });
 
       return lockers;
     } catch (error) {
