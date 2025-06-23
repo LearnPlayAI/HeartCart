@@ -6703,10 +6703,33 @@ export class DatabaseStorage implements IStorage {
    */
   async getAllOrders(): Promise<Order[]> {
     try {
-      const result = await db.query.orders.findMany({
-        orderBy: [desc(orders.createdAt)],
-      });
-      return result || [];
+      const allOrders = await db.select().from(orders).orderBy(desc(orders.createdAt));
+      
+      // Fetch order items for each order
+      const ordersWithItems = await Promise.all(
+        allOrders.map(async (order) => {
+          try {
+            const orderItemsData = await db
+              .select()
+              .from(orderItems)
+              .where(eq(orderItems.orderId, order.id));
+
+            return {
+              ...order,
+              orderItems: orderItemsData || [],
+            };
+          } catch (itemError) {
+            logger.error(`Error fetching items for order ${order.id}`, { error: itemError });
+            return {
+              ...order,
+              orderItems: [],
+            };
+          }
+        })
+      );
+
+      logger.info(`Retrieved ${ordersWithItems.length} orders with items`);
+      return ordersWithItems as Order[];
     } catch (error) {
       logger.error("Error fetching all orders", { error });
       return [];
