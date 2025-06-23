@@ -165,7 +165,7 @@ const getStatusConfig = (status: string) => {
 const getPaymentStatusConfig = (paymentStatus: string) => {
   const configs = {
     pending: { label: 'Awaiting Payment', color: 'bg-yellow-100 text-yellow-800 border-yellow-200', icon: Clock },
-    paid: { label: 'Payment Uploaded', color: 'bg-blue-100 text-blue-800 border-blue-200', icon: Upload },
+    paid: { label: 'Payment Made', color: 'bg-blue-100 text-blue-800 border-blue-200', icon: Upload },
     payment_received: { label: 'Payment Received', color: 'bg-green-100 text-green-800 border-green-200', icon: CheckCircle },
     failed: { label: 'Payment Failed', color: 'bg-red-100 text-red-800 border-red-200', icon: XCircle },
   };
@@ -876,7 +876,7 @@ export default function AdminOrderDetail() {
           </Card>
 
           {/* PUDO Locker Information */}
-          {order.shippingMethod === 'pudo' && order.pudoLocker && (
+          {order.shippingMethod === 'pudo' && (order.pudoLocker || order.selectedLockerId) && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
@@ -896,40 +896,48 @@ export default function AdminOrderDetail() {
                 </div>
                 
                 <div className="space-y-3">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    <div>
-                      <p className="font-medium">{order.pudoLocker.code}</p>
-                      <p className="text-sm text-muted-foreground">Locker Code</p>
+                  {(order.pudoLocker?.code || order.selectedLockerCode) && (
+                    <div className="flex items-center space-x-2">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      <div>
+                        <p className="font-medium">{order.pudoLocker?.code || order.selectedLockerCode}</p>
+                        <p className="text-sm text-muted-foreground">Locker Code</p>
+                      </div>
                     </div>
-                  </div>
+                  )}
                   
-                  <div className="flex items-start space-x-2">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
-                    <div>
-                      <p className="font-medium">{order.pudoLocker.name}</p>
-                      <p className="text-sm text-muted-foreground">Locker Name</p>
+                  {(order.pudoLocker?.name || order.selectedLockerName) && (
+                    <div className="flex items-start space-x-2">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
+                      <div>
+                        <p className="font-medium">{order.pudoLocker?.name || order.selectedLockerName}</p>
+                        <p className="text-sm text-muted-foreground">Locker Name</p>
+                      </div>
                     </div>
-                  </div>
+                  )}
                   
-                  <div className="flex items-start space-x-2">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
-                    <div>
-                      <p className="font-medium">{order.pudoLocker.address}</p>
-                      <p className="text-sm text-muted-foreground">Locker Address</p>
+                  {(order.pudoLocker?.address || order.selectedLockerAddress) && (
+                    <div className="flex items-start space-x-2">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
+                      <div>
+                        <p className="font-medium">{order.pudoLocker?.address || order.selectedLockerAddress}</p>
+                        <p className="text-sm text-muted-foreground">Locker Address</p>
+                      </div>
                     </div>
-                  </div>
+                  )}
                   
-                  <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    <div>
-                      <p className="font-medium capitalize">{order.pudoLocker.provider}</p>
-                      <p className="text-sm text-muted-foreground">Provider</p>
+                  {order.pudoLocker?.provider && (
+                    <div className="flex items-center space-x-2">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      <div>
+                        <p className="font-medium capitalize">{order.pudoLocker.provider}</p>
+                        <p className="text-sm text-muted-foreground">Provider</p>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
 
-                {order.pudoLocker.openingHours && order.pudoLocker.openingHours.length > 0 && (
+                {order.pudoLocker?.openingHours && order.pudoLocker.openingHours.length > 0 && (
                   <div className="mt-4">
                     <Separator />
                     <div className="mt-4">
