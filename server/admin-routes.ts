@@ -74,6 +74,35 @@ router.patch("/orders/:id/status", isAuthenticated, asyncHandler(async (req: Req
   }
 }));
 
+// Update payment status
+router.patch("/orders/:id/payment-status", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    // TODO: Add admin role check here
+    const orderId = parseInt(req.params.id);
+    const { paymentStatus } = req.body;
+    
+    if (isNaN(orderId)) {
+      return sendError(res, "Invalid order ID", 400);
+    }
+
+    if (!paymentStatus) {
+      return sendError(res, "Payment status is required", 400);
+    }
+
+    const updatedOrder = await storage.updateOrderPaymentStatus(orderId, paymentStatus);
+    
+    if (!updatedOrder) {
+      return sendError(res, "Order not found", 404);
+    }
+
+    logger.info("Order payment status updated by admin", { orderId, paymentStatus, adminUserId: req.user?.id });
+    return sendSuccess(res, updatedOrder);
+  } catch (error) {
+    logger.error("Error updating payment status", { error, orderId: req.params.id });
+    return sendError(res, "Failed to update payment status", 500);
+  }
+}));
+
 // Update tracking number
 router.patch("/orders/:id/tracking", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
   try {

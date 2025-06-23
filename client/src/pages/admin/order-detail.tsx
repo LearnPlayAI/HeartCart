@@ -386,13 +386,35 @@ export default function AdminOrderDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/orders', orderId] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
-      
+      queryClient.invalidateQueries({ queryKey: ['/api/orders', orderId, 'status-history'] });
     },
     onError: (error) => {
       console.error('Status update error:', error);
       toast({ 
         variant: "destructive",
         description: "Failed to update order status" 
+      });
+    }
+  });
+
+  const updatePaymentStatusMutation = useMutation({
+    mutationFn: async ({ orderId, paymentStatus }: { orderId: number; paymentStatus: string }) => {
+      const response = await apiRequest('PATCH', `/api/admin/orders/${orderId}/payment-status`, { paymentStatus });
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/orders', orderId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/orders', orderId, 'status-history'] });
+      toast({
+        description: "Payment status updated successfully"
+      });
+    },
+    onError: (error) => {
+      console.error('Payment status update error:', error);
+      toast({ 
+        variant: "destructive",
+        description: "Failed to update payment status" 
       });
     }
   });
@@ -503,7 +525,7 @@ export default function AdminOrderDetail() {
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Status and Actions */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Order Status</CardTitle>
@@ -521,11 +543,38 @@ export default function AdminOrderDetail() {
                     <SelectContent>
                       <SelectItem value="pending">Pending</SelectItem>
                       <SelectItem value="confirmed">Confirmed</SelectItem>
-                      <SelectItem value="payment_received">Payment Received</SelectItem>
-                      <SelectItem value="processing">Processing</SelectItem>
+                      <SelectItem 
+                        value="processing" 
+                        disabled={order.paymentStatus !== 'payment_received'}
+                      >
+                        Processing
+                      </SelectItem>
                       <SelectItem value="shipped">Shipped</SelectItem>
                       <SelectItem value="delivered">Delivered</SelectItem>
                       <SelectItem value="cancelled">Cancelled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Payment Status</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium">Update Payment Status:</label>
+                  <Select
+                    value={order.paymentStatus}
+                    onValueChange={(paymentStatus) => updatePaymentStatusMutation.mutate({ orderId: order.id, paymentStatus })}
+                  >
+                    <SelectTrigger className="w-full mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="awaiting_payment">Awaiting Payment</SelectItem>
+                      <SelectItem value="payment_received">Payment Received</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

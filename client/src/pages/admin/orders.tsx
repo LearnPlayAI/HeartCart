@@ -193,7 +193,15 @@ function OrderStats({ orders, onFilterChange }: { orders: Order[]; onFilterChang
 }
 
 // Order Card Component
-function OrderCard({ order, onStatusUpdate }: { order: Order; onStatusUpdate: (orderId: number, status: string) => void }) {
+function OrderCard({ 
+  order, 
+  onStatusUpdate, 
+  onPaymentStatusUpdate 
+}: { 
+  order: Order; 
+  onStatusUpdate: (orderId: number, status: string) => void;
+  onPaymentStatusUpdate: (orderId: number, paymentStatus: string) => void;
+}) {
   const statusConfig = getStatusConfig(order.status);
   const paymentConfig = getPaymentStatusConfig(order.paymentStatus);
 
