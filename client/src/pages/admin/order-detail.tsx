@@ -48,6 +48,7 @@ import {
   ShoppingCart,
   Building2
 } from 'lucide-react';
+import OrderStatusTimeline from '@/components/OrderStatusTimeline';
 
 // Types
 interface SupplierOrder {

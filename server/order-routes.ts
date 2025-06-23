@@ -640,6 +640,50 @@ router.get("/admin/orders/:id", isAuthenticated, asyncHandler(async (req: Reques
   }
 }));
 
+// Order Status History routes
+router.get("/:id/status-history", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const orderId = parseInt(req.params.id);
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return sendError(res, "User not authenticated", 401);
+    }
+
+    if (isNaN(orderId)) {
+      return sendError(res, "Invalid order ID", 400);
+    }
+
+    // First check if the order belongs to the user
+    const order = await storage.getOrderById(orderId);
+    if (!order) {
+      return sendError(res, "Order not found", 404);
+    }
+
+    if (order.userId !== userId) {
+      return sendError(res, "Unauthorized", 403);
+    }
+
+    // Get order status history
+    const history = await storage.getOrderStatusHistory(orderId);
+
+    logger.debug("Retrieved order status history", {
+      orderId,
+      userId,
+      entryCount: history.length
+    });
+
+    return sendSuccess(res, history);
+  } catch (error) {
+    logger.error("Error fetching order status history", { 
+      error: error instanceof Error ? error.message : String(error),
+      orderId: req.params.id,
+      userId: req.user?.id 
+    });
+    return sendError(res, "Failed to fetch order status history", 500);
+  }
+}));
+
 // Note: PDF route has been moved to routes.ts to bypass response wrapper middleware
 
 export { router as orderRoutes };
