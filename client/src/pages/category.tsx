@@ -21,7 +21,7 @@ import { Separator } from '@/components/ui/separator';
 import { Slider } from '@/components/ui/slider';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Filter, SlidersHorizontal, X } from 'lucide-react';
+import { Filter, SlidersHorizontal, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import ProductCard from '@/components/product/product-card';
 import { CategorySidebar } from '@/components/ui/category-sidebar';
 import { CategorySidebarDrawer } from '@/components/ui/category-sidebar-drawer';
@@ -31,16 +31,12 @@ const CategoryPage = () => {
   const [match, params] = useRoute('/category/:slug');
   useProductListingScroll();
   const slug = params?.slug;
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [sortBy, setSortBy] = useState('default');
-  const [priceRange, setPriceRange] = useState([0, 2000]);
-  const [filters, setFilters] = useState({
-    onSale: false,
-    freeShipping: false,
-  });
   
-  // State for attribute filters
-  const [attributeFilters, setAttributeFilters] = useState<Record<string, string[]>>({});
+  // State for server-side pagination and sorting only
+  const [page, setPage] = useState(1);
+  const [sortBy, setSortBy] = useState('default');
+  const limit = 20;
+  const offset = (page - 1) * limit;
   
   const { data: categoryResponse, isLoading: isLoadingCategory } = useQuery({
     queryKey: [`/api/categories/${slug}`],
@@ -49,18 +45,6 @@ const CategoryPage = () => {
   
   // Extract the category from the standardized response
   const category = categoryResponse?.success ? categoryResponse.data : null;
-  
-  // Log for debugging
-  useEffect(() => {
-    if (categoryResponse) {
-      console.log("Category response:", categoryResponse);
-    }
-  }, [categoryResponse]);
-  
-  // Pagination state
-  const [page, setPage] = useState(1);
-  const limit = 20;
-  const offset = (page - 1) * limit;
 
   const { data: productsResponse, isLoading: isLoadingProducts } = useQuery({
     queryKey: [`/api/products`, { categoryId: category?.id, limit, offset, page }],
