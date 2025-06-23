@@ -4668,15 +4668,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       try {
-        // Update the order status directly using Drizzle
-        const [updatedOrder] = await db
-          .update(orders)
-          .set({ 
-            status, 
-            updatedAt: new Date().toISOString() 
-          })
-          .where(eq(orders.id, orderId))
-          .returning();
+        // Use storage method to update order status (includes automatic status history tracking)
+        const updatedOrder = await storage.updateOrderStatus(orderId, status);
         
         if (!updatedOrder) {
           return res.status(404).json({
@@ -4685,9 +4678,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
         
-        logger.info('Order status updated', { 
+        logger.info('Order status updated by admin', { 
           orderId, 
-          newStatus: status 
+          newStatus: status,
+          adminUserId: req.user?.id
         });
         
         return res.json({
