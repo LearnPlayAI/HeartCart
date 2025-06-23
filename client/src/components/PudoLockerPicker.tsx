@@ -17,7 +17,8 @@ import {
   Star,
   Check,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  ExternalLink
 } from "lucide-react";
 
 interface PudoLocker {
@@ -332,9 +333,22 @@ export default function PudoLockerPicker({
                             )}
                           </div>
                           
-                          <div className="flex items-center gap-1 text-gray-600 text-xs mb-1">
-                            <MapPin className="h-3 w-3" />
-                            <span>{locker.address}</span>
+                          <div className="flex items-center justify-between gap-1 text-gray-600 text-xs mb-1">
+                            <div className="flex items-center gap-1">
+                              <MapPin className="h-3 w-3" />
+                              <span>{locker.address}</span>
+                            </div>
+                            <a
+                              href={`https://www.google.com/maps?q=${locker.latitude},${locker.longitude}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 hover:bg-green-200 text-green-800 rounded text-xs font-medium transition-colors"
+                            >
+                              <MapPin className="h-3 w-3" />
+                              <span>Maps</span>
+                              <ExternalLink className="h-2 w-2" />
+                            </a>
                           </div>
                           
                           <div className="flex items-center gap-4 text-xs text-gray-500">
