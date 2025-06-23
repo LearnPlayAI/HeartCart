@@ -250,7 +250,7 @@ router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Respons
       selectedLockerCode: orderData.lockerDetails?.code || null,
       selectedLockerName: orderData.lockerDetails?.name || null,
       selectedLockerAddress: orderData.lockerDetails?.address || null,
-      // Also save to the snake_case locker_details JSONB column
+      // Also save to the locker_details JSONB column
       locker_details: orderData.lockerDetails ? {
         id: orderData.selectedLockerId,
         code: orderData.lockerDetails.code,
