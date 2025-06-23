@@ -3384,8 +3384,23 @@ export class DatabaseStorage implements IStorage {
           itemCount: items.length,
         });
 
+        // Parse lockerDetails JSON if it exists
+        let parsedOrder = { ...order };
+        if (order.lockerDetails && typeof order.lockerDetails === 'string') {
+          try {
+            parsedOrder.lockerDetails = JSON.parse(order.lockerDetails);
+          } catch (parseError) {
+            logger.error(`Error parsing lockerDetails JSON`, {
+              error: parseError,
+              orderId: id,
+              lockerDetails: order.lockerDetails,
+            });
+            // Keep the original string value if parsing fails
+          }
+        }
+
         return {
-          ...order,
+          ...parsedOrder,
           items,
         };
       } catch (itemsError) {
@@ -3399,8 +3414,21 @@ export class DatabaseStorage implements IStorage {
           orderId: id,
         });
 
+        // Parse lockerDetails JSON even in error case
+        let parsedOrder = { ...order };
+        if (order.lockerDetails && typeof order.lockerDetails === 'string') {
+          try {
+            parsedOrder.lockerDetails = JSON.parse(order.lockerDetails);
+          } catch (parseError) {
+            logger.error(`Error parsing lockerDetails JSON in error case`, {
+              error: parseError,
+              orderId: id,
+            });
+          }
+        }
+
         return {
-          ...order,
+          ...parsedOrder,
           items: [],
         };
       }

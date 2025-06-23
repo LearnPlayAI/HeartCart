@@ -481,7 +481,7 @@ export default function OrderConfirmationPage() {
         <div className="flex flex-col sm:flex-row gap-3 pt-4">
           <Button 
             variant="outline" 
-            onClick={() => navigate('/orders')}
+            onClick={() => navigate('/my-orders')}
             className="flex-1 sm:flex-none"
           >
             View All Orders
