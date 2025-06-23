@@ -614,93 +614,27 @@ const OrderDetail: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Upload Proof of Payment */}
+                  {/* Payment Instructions */}
                   <div className="border-t pt-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-semibold flex items-center">
-                        <Upload className="h-4 w-4 mr-2" />
-                        Upload Proof of Payment
-                      </h4>
-                      <div className="flex items-center space-x-2">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          order.paymentStatus === 'paid' 
-                            ? 'bg-green-100 text-green-800' 
-                            : order.paymentStatus === 'payment_received'
-                            ? 'bg-blue-100 text-blue-800'
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {order.paymentStatus === 'paid' ? 'Paid' : 
-                           order.paymentStatus === 'payment_received' ? 'Payment Received' : 
-                           'Pending Payment'}
-                        </span>
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <div className="flex items-start">
+                        <Mail className="h-5 w-5 text-blue-600 mr-3 mt-0.5" />
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-blue-900 mb-2">
+                            Payment Instructions
+                          </h4>
+                          <p className="text-sm text-blue-800 mb-2">
+                            Please email your proof of payment to:
+                          </p>
+                          <p className="font-mono text-sm font-medium text-blue-900 bg-blue-100 px-2 py-1 rounded">
+                            orders@teemeyou.shop
+                          </p>
+                          <p className="text-xs text-blue-700 mt-2">
+                            Include your order number ({order.orderNumber}) in the email subject
+                          </p>
+                        </div>
                       </div>
                     </div>
-                    
-                    {!proofOfPayment && !order.eftPop ? (
-                      <div className="space-y-3">
-                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                          <input
-                            type="file"
-                            accept=".pdf"
-                            onChange={handleFileUpload}
-                            disabled={isUploading}
-                            className="hidden"
-                            id="proof-upload"
-                          />
-                          <label htmlFor="proof-upload" className="cursor-pointer">
-                            <div className="space-y-2">
-                              <Upload className="h-8 w-8 text-gray-400 mx-auto" />
-                              <p className="text-sm text-gray-600">
-                                Click to upload proof of payment (PDF only)
-                              </p>
-                              <p className="text-xs text-gray-500">
-                                Maximum file size: 10MB
-                              </p>
-                            </div>
-                          </label>
-                        </div>
-                        
-                        {isUploading && (
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between text-sm">
-                              <span>Uploading...</span>
-                              <span>{uploadProgress}%</span>
-                            </div>
-                            <Progress value={uploadProgress} className="h-2" />
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                          <div className="flex items-center">
-                            <FileCheck className="h-5 w-5 text-green-600 mr-2" />
-                            <div className="flex-1">
-                              <p className="font-medium text-green-800">
-                                Proof of payment uploaded successfully
-                              </p>
-                              <p className="text-sm text-green-600">
-                                {order.paymentStatus === 'payment_received' 
-                                  ? 'Payment has been received and verified by our team'
-                                  : order.paymentStatus === 'paid'
-                                  ? 'Your payment will be verified within 24 hours'
-                                  : 'Your payment will be verified within 24 hours'
-                                }
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <Button
-                          onClick={() => markAsPaidMutation.mutate()}
-                          disabled={markAsPaidMutation.isPending}
-                          className="w-full bg-[#FF69B4] hover:bg-[#FF1493]"
-                        >
-                          <DollarSign className="h-4 w-4 mr-2" />
-                          {markAsPaidMutation.isPending ? 'Updating...' : 'Mark Order as Paid'}
-                        </Button>
-                      </div>
-                    )}
                   </div>
                 </CardContent>
               </Card>
