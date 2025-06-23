@@ -208,7 +208,7 @@ export default function PudoLockerPicker({
             />
           </div>
           <div className="text-xs text-gray-500">
-            <span>Tip: Use "AND" and "OR" for complex searches (e.g., "centurion AND golf" or "randburg OR sharonlea")</span>
+            <span>Tip: Search for cities, areas, or locker names (e.g., "port elizabeth", "centurion golf", "randburg")</span>
           </div>
         </div>
 

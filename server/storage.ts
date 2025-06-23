@@ -11757,13 +11757,13 @@ export class DatabaseStorage implements IStorage {
         const normalizedQuery = query.trim().toLowerCase();
         
         if (normalizedQuery.includes(' and ') || normalizedQuery.includes(' or ')) {
-          // Complex query with AND/OR operators
+          // Complex query with explicit AND/OR operators
           let searchCondition = this.parseComplexQuery(query);
           if (searchCondition) {
             whereConditions.push(searchCondition);
           }
         } else {
-          // Simple keyword search
+          // Intelligent keyword search
           const keywords = query.trim().split(/\s+/).filter(k => k.length > 0);
           
           if (keywords.length === 1) {
@@ -11786,7 +11786,8 @@ export class DatabaseStorage implements IStorage {
               )
             );
           } else {
-            // Multi-keyword search without explicit operators - use OR logic
+            // Multi-keyword intelligent search - try AND logic first for precise results
+            // This handles cases like "port elizabeth" as if user typed "port AND elizabeth"
             const keywordConditions = keywords.map(keyword => 
               or(
                 ilike(pudoLockers.name, `%${keyword}%`),
@@ -11804,8 +11805,9 @@ export class DatabaseStorage implements IStorage {
               )
             );
             
-            // Default to OR logic for multiple keywords
-            whereConditions.push(or(...keywordConditions));
+            // Use AND logic by default for multi-word searches (more precise)
+            // This means "port elizabeth" will find lockers that contain BOTH words
+            whereConditions.push(and(...keywordConditions));
           }
         }
       }
