@@ -671,28 +671,95 @@ ${order.customerName}`;
                             <h4 className="font-semibold text-gray-900 mb-3">
                               PUDO Delivery Locker
                             </h4>
-                            <div className="space-y-2">
-                              <div className="flex justify-between items-start">
-                                <div>
-                                  <p className="font-medium text-gray-900">
-                                    {order.lockerDetails.name}
-                                  </p>
+                            <div className="space-y-3">
+                              {/* Locker Name and Code */}
+                              <div>
+                                <p className="font-medium text-gray-900 text-lg">
+                                  {order.lockerDetails.name}
+                                </p>
+                                <p className="text-sm text-gray-500">
+                                  Code: {order.lockerDetails.code} • Provider: {order.lockerDetails.provider}
+                                </p>
+                              </div>
+
+                              {/* Address Information */}
+                              <div className="space-y-1">
+                                <p className="text-sm font-medium text-gray-700">Address:</p>
+                                <p className="text-sm text-gray-600">
+                                  {order.lockerDetails.address}
+                                </p>
+                                {order.lockerDetails.detailedAddress && (
                                   <p className="text-sm text-gray-600">
-                                    {order.lockerDetails.address}
+                                    {order.lockerDetails.detailedAddress.locality && `${order.lockerDetails.detailedAddress.locality}, `}
+                                    {order.lockerDetails.detailedAddress.province && `${order.lockerDetails.detailedAddress.province} `}
+                                    {order.lockerDetails.detailedAddress.postal_code}
                                   </p>
-                                  <p className="text-sm text-gray-600">
-                                    {order.lockerDetails.city}, {order.lockerDetails.postalCode}
-                                  </p>
+                                )}
+                              </div>
+
+                              {/* Opening Hours */}
+                              {order.lockerDetails.openingHours && order.lockerDetails.openingHours.length > 0 && (
+                                <div className="space-y-1">
+                                  <p className="text-sm font-medium text-gray-700">Opening Hours:</p>
+                                  <div className="text-xs text-gray-600 space-y-1">
+                                    {order.lockerDetails.openingHours.map((hours, index) => (
+                                      <div key={index} className="flex justify-between">
+                                        <span className="font-medium">{hours.day}:</span>
+                                        <span>
+                                          {hours.isStoreOpen === 'true' 
+                                            ? `${hours.open_time} - ${hours.close_time}`
+                                            : 'Closed'
+                                          }
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
                                 </div>
-                              </div>
-                              <div className="flex items-center text-sm text-gray-600">
-                                <span className="font-medium mr-2">Hours:</span>
-                                <span>{order.lockerDetails.operatingHours}</span>
-                              </div>
-                              {order.lockerDetails.phone && (
+                              )}
+
+                              {/* Locker Type */}
+                              {order.lockerDetails.lockerType && (
                                 <div className="flex items-center text-sm text-gray-600">
-                                  <span className="font-medium mr-2">Phone:</span>
-                                  <span>{order.lockerDetails.phone}</span>
+                                  <span className="font-medium mr-2">Locker Type:</span>
+                                  <span>{order.lockerDetails.lockerType.name}</span>
+                                </div>
+                              )}
+
+                              {/* Available Box Types */}
+                              {order.lockerDetails.lstTypesBoxes && order.lockerDetails.lstTypesBoxes.length > 0 && (
+                                <div className="space-y-1">
+                                  <p className="text-sm font-medium text-gray-700">Available Box Sizes:</p>
+                                  <div className="flex flex-wrap gap-1">
+                                    {order.lockerDetails.lstTypesBoxes.slice(0, 3).map((box, index) => (
+                                      <span 
+                                        key={index}
+                                        className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded"
+                                      >
+                                        {box.name} ({box.width}×{box.height}×{box.length}cm)
+                                      </span>
+                                    ))}
+                                    {order.lockerDetails.lstTypesBoxes.length > 3 && (
+                                      <span className="inline-block bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded">
+                                        +{order.lockerDetails.lstTypesBoxes.length - 3} more
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Coordinates for GPS */}
+                              {order.lockerDetails.latitude && order.lockerDetails.longitude && (
+                                <div className="pt-2 border-t border-gray-100">
+                                  <button
+                                    onClick={() => {
+                                      const mapsUrl = `https://www.google.com/maps?q=${order.lockerDetails.latitude},${order.lockerDetails.longitude}`;
+                                      window.open(mapsUrl, '_blank');
+                                    }}
+                                    className="text-sm text-blue-600 hover:text-blue-800 hover:underline flex items-center"
+                                  >
+                                    <MapPin className="h-3 w-3 mr-1" />
+                                    Open in Maps ({order.lockerDetails.latitude}, {order.lockerDetails.longitude})
+                                  </button>
                                 </div>
                               )}
                             </div>

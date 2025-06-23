@@ -3384,7 +3384,7 @@ export class DatabaseStorage implements IStorage {
           itemCount: items.length,
         });
 
-        // Parse lockerDetails JSON if it exists
+        // Parse lockerDetails JSON and enrich with full PUDO locker data if available
         let parsedOrder = { ...order };
         if (order.lockerDetails && typeof order.lockerDetails === 'string') {
           try {
@@ -3396,6 +3396,40 @@ export class DatabaseStorage implements IStorage {
               lockerDetails: order.lockerDetails,
             });
             // Keep the original string value if parsing fails
+          }
+        }
+
+        // If this is a PUDO order with a selected locker, fetch complete locker details
+        if (order.shippingMethod === 'pudo' && order.selectedLockerId) {
+          try {
+            const [fullLockerDetails] = await db
+              .select()
+              .from(pudoLockers)
+              .where(eq(pudoLockers.id, order.selectedLockerId));
+
+            if (fullLockerDetails) {
+              // Merge the complete locker details with the basic order locker info
+              parsedOrder.lockerDetails = {
+                ...parsedOrder.lockerDetails,
+                ...fullLockerDetails,
+                // Ensure we preserve any order-specific locker info
+                selectedAt: parsedOrder.lockerDetails?.selectedAt,
+              };
+
+              logger.debug(`Enriched order with complete PUDO locker details`, {
+                orderId: id,
+                lockerId: order.selectedLockerId,
+                lockerCode: fullLockerDetails.code,
+                lockerName: fullLockerDetails.name,
+              });
+            }
+          } catch (lockerError) {
+            logger.error(`Error fetching complete PUDO locker details`, {
+              error: lockerError,
+              orderId: id,
+              selectedLockerId: order.selectedLockerId,
+            });
+            // Continue with basic locker details if full details can't be fetched
           }
         }
 
