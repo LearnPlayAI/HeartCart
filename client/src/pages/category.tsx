@@ -21,7 +21,7 @@ import { Separator } from '@/components/ui/separator';
 import { Slider } from '@/components/ui/slider';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Filter, SlidersHorizontal, X } from 'lucide-react';
+import { Filter, SlidersHorizontal, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import ProductCard from '@/components/product/product-card';
 import { CategorySidebar } from '@/components/ui/category-sidebar';
 import { CategorySidebarDrawer } from '@/components/ui/category-sidebar-drawer';
@@ -441,6 +441,65 @@ const CategoryPage = () => {
                     Continue Shopping
                   </Link>
                 </Button>
+              </div>
+            )}
+            
+            {/* Pagination Controls */}
+            {!isLoadingProducts && filteredProducts.length > 0 && totalPages > 1 && (
+              <div className="flex items-center justify-center space-x-2 mt-8">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(Math.max(1, page - 1))}
+                  disabled={page <= 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous
+                </Button>
+                
+                <div className="flex items-center space-x-1">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (page <= 3) {
+                      pageNum = i + 1;
+                    } else if (page >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = page - 2 + i;
+                    }
+                    
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={page === pageNum ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setPage(pageNum)}
+                        className="w-8 h-8 p-0"
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
+                </div>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(Math.min(totalPages, page + 1))}
+                  disabled={page >= totalPages}
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+            
+            {/* Products Count */}
+            {!isLoadingProducts && (
+              <div className="text-center text-gray-600 mt-4">
+                Showing {Math.min((page - 1) * limit + 1, totalProducts)} - {Math.min(page * limit, totalProducts)} of {totalProducts} products
               </div>
             )}
           </div>
