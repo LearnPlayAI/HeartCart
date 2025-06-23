@@ -945,7 +945,7 @@ export default function AdminOrderDetail() {
                     </div>
                   )}
 
-                  {/* GPS Location */}
+                  {/* Google Maps Link */}
                   {(order.lockerDetails?.latitude && order.lockerDetails?.longitude) && (
                     <div>
                       <p className="text-sm font-medium text-gray-600 mb-2">Location</p>
@@ -953,10 +953,10 @@ export default function AdminOrderDetail() {
                         href={`https://www.google.com/maps?q=${order.lockerDetails.latitude},${order.lockerDetails.longitude}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center space-x-2 px-3 py-2 bg-green-100 hover:bg-green-200 text-green-800 rounded-lg text-sm font-medium transition-colors"
+                        className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition-colors"
                       >
                         <MapPin className="h-4 w-4" />
-                        <span>View on Google Maps</span>
+                        <span>View Location on Google Maps</span>
                         <ExternalLink className="h-3 w-3" />
                       </a>
                     </div>

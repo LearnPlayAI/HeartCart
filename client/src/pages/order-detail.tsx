@@ -761,9 +761,9 @@ ${order.customerName}`;
                                 </div>
                               )}
 
-                              {/* Coordinates for GPS */}
+                              {/* Google Maps Link */}
                               {((order.lockerDetails?.latitude && order.lockerDetails?.longitude) || (order.pudoLocker?.latitude && order.pudoLocker?.longitude)) && (
-                                <div className="pt-2 border-t border-gray-100">
+                                <div className="pt-3 border-t border-gray-100">
                                   <button
                                     onClick={() => {
                                       const lat = order.lockerDetails?.latitude || order.pudoLocker?.latitude;
@@ -771,10 +771,11 @@ ${order.customerName}`;
                                       const mapsUrl = `https://www.google.com/maps?q=${lat},${lng}`;
                                       window.open(mapsUrl, '_blank');
                                     }}
-                                    className="text-sm text-blue-600 hover:text-blue-800 hover:underline flex items-center"
+                                    className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition-colors"
                                   >
-                                    <MapPin className="h-3 w-3 mr-1" />
-                                    Open in Maps ({(order.lockerDetails?.latitude || order.pudoLocker?.latitude)}, {(order.lockerDetails?.longitude || order.pudoLocker?.longitude)})
+                                    <MapPin className="h-4 w-4" />
+                                    <span>View Location on Google Maps</span>
+                                    <ExternalLink className="h-3 w-3" />
                                   </button>
                                 </div>
                               )}
