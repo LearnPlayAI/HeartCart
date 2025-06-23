@@ -4682,8 +4682,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
           }
           
-          // Then automatically update order status to "processing"
+          // Then automatically update order status to "processing" 
           updatedOrder = await storage.updateOrderStatus(orderId, "processing");
+          
+          // Add status history entry for payment received
+          await storage.addOrderStatusHistory(
+            orderId,
+            "processing", 
+            "payment_received",
+            'Admin',
+            null,
+            'payment_received',
+            'Payment received by admin, order moved to processing'
+          );
           
           logger.info('Order marked as payment received and moved to processing by admin', { 
             orderId, 
