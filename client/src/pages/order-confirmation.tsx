@@ -126,7 +126,7 @@ export default function OrderConfirmationPage() {
             <p className="text-gray-600 mb-6">
               We couldn't find the order you're looking for. It may have been moved or doesn't exist.
             </p>
-            <Button onClick={() => navigate('/orders')} className="w-full">
+            <Button onClick={() => navigate('/my-orders')} className="w-full">
               <ArrowLeft className="h-4 w-4 mr-2" />
               View All Orders
             </Button>
@@ -144,7 +144,7 @@ export default function OrderConfirmationPage() {
           <div className="flex items-center justify-between">
             <Button 
               variant="ghost" 
-              onClick={() => navigate('/orders')}
+              onClick={() => navigate('/my-orders')}
               className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
             >
               <ArrowLeft className="h-4 w-4" />
