@@ -626,11 +626,35 @@ const OrderDetail: React.FC = () => {
                           <p className="text-sm text-blue-800 mb-2">
                             Please email your proof of payment to:
                           </p>
-                          <p className="font-mono text-sm font-medium text-blue-900 bg-blue-100 px-2 py-1 rounded">
+                          <button
+                            onClick={() => {
+                              const subject = `Payment Proof - Order ${order.orderNumber}`;
+                              const body = `Dear TeeMeYou Team,
+
+Please find attached the proof of payment for my order.
+
+Order Details:
+- Order Number: ${order.orderNumber}
+- Payment Reference: ${order.paymentReferenceNumber || order.orderNumber}
+- Total Amount: R${order.totalAmount.toFixed(2)}
+- Payment Method: ${order.paymentMethod.toUpperCase()}
+
+I have attached the proof of payment document to this email.
+
+Thank you for your assistance.
+
+Best regards,
+${order.customerName}`;
+                              
+                              const mailtoLink = `mailto:orders@teemeyou.shop?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                              window.open(mailtoLink, '_blank');
+                            }}
+                            className="font-mono text-sm font-medium text-blue-900 bg-blue-100 px-2 py-1 rounded hover:bg-blue-200 transition-colors cursor-pointer"
+                          >
                             orders@teemeyou.shop
-                          </p>
+                          </button>
                           <p className="text-xs text-blue-700 mt-2">
-                            Include your order number ({order.orderNumber}) in the email subject
+                            Click the email address above to open your email client with pre-filled order details. Attach your proof of payment and send.
                           </p>
                         </div>
                       </div>
