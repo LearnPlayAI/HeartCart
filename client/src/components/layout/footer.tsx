@@ -18,6 +18,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import Logo from '@/components/ui/logo';
 import InstallButton from '@/components/pwa/InstallButton';
+import MobileInstallButton from '@/components/pwa/MobileInstallButton';
 import ContextualInstallPrompts from '@/components/pwa/ContextualInstallPrompts';
 
 const Footer = () => {
@@ -53,12 +54,11 @@ const Footer = () => {
                 Get Our Mobile App
               </h4>
               <div className="space-y-2">
-                <InstallButton 
-                  variant="outline"
+                <MobileInstallButton 
+                  variant="default"
                   size="sm"
-                  className="w-full justify-start border-[#FF69B4] text-[#FF69B4] hover:bg-[#FF69B4] hover:text-white"
-                  showIcon={true}
-                  text="Install Mobile App"
+                  className="w-full justify-start"
+                  showAlways={true}
                 />
                 <p className="text-xs text-gray-500">
                   Fast, offline-capable shopping experience right on your phone
