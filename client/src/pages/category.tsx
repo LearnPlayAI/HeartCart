@@ -83,8 +83,8 @@ const CategoryPage = () => {
   });
   
   // Extract the products and pagination data from the standardized response
-  const products = productsResponse?.success ? productsResponse.data?.data || [] : [];
-  const totalProducts = productsResponse?.success ? productsResponse.data?.meta?.total || 0 : 0;
+  const products = productsResponse?.success ? productsResponse.data || [] : [];
+  const totalProducts = productsResponse?.success ? productsResponse.meta?.total || 0 : 0;
   const totalPages = Math.ceil(totalProducts / limit);
 
   // Reset page when category changes
@@ -97,8 +97,9 @@ const CategoryPage = () => {
     if (productsResponse) {
       console.log("Category products response:", productsResponse);
       console.log("Products extracted:", products);
+      console.log("Total products:", totalProducts, "Total pages:", totalPages);
     }
-  }, [productsResponse, products]);
+  }, [productsResponse, products, totalProducts, totalPages]);
   
   // Fetch all categories for the sidebar
   const { data: categoriesResponse } = useQuery({
