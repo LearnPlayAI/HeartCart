@@ -4671,14 +4671,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         let updatedOrder;
         
-        // If status is "payment_received", automatically update payment status and then order status to "processing"
+        // If status is "payment_received", only update payment status (not order status)
         if (status === 'payment_received') {
-          logger.info('Processing payment_received status update', { orderId, adminUserId: req.user?.id });
+          logger.info('Processing payment_received status update - updating payment status only', { orderId, adminUserId: req.user?.id });
           
-          // First update payment status to "payment_received"
-          const paymentUpdated = await storage.updateOrderPaymentStatus(orderId, "payment_received");
+          // Only update payment status to "payment_received" - do NOT change order status
+          updatedOrder = await storage.updateOrderPaymentStatus(orderId, "payment_received");
           
-          if (!paymentUpdated) {
+          if (!updatedOrder) {
             logger.error('Failed to update payment status to payment_received', { orderId });
             return res.status(404).json({
               success: false,
@@ -4688,29 +4688,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           logger.info('Payment status updated to payment_received', { orderId });
           
-          // Then automatically update order status to "processing" 
-          updatedOrder = await storage.updateOrderStatus(orderId, "processing");
-          
-          if (!updatedOrder) {
-            logger.error('Failed to update order status to processing', { orderId });
-            return res.status(500).json({
-              success: false,
-              error: { message: "Failed to update order status to processing" }
-            });
-          }
-          
-          logger.info('Order status updated to processing', { orderId });
-          
           // Add status history entry for payment received
           try {
             await storage.addOrderStatusHistory(
               orderId,
-              "processing", 
-              "payment_received",
+              updatedOrder.status, // Keep current order status
+              "payment_received",  // Update payment status
               'Admin',
               null,
               'payment_received',
-              'Payment received by admin, order moved to processing'
+              'Payment marked as received by admin'
             );
             logger.info('Status history entry added for payment_received', { orderId });
           } catch (historyError) {
@@ -4718,10 +4705,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Don't fail the request for history entry failure
           }
           
-          logger.info('Order marked as payment received and moved to processing by admin', { 
+          logger.info('Payment marked as received by admin', { 
             orderId, 
             paymentStatus: "payment_received",
-            orderStatus: "processing",
+            orderStatus: updatedOrder.status, // Keep existing order status
             adminUserId: req.user?.id
           });
         } else {
@@ -4743,7 +4730,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         const message = status === 'payment_received' 
-          ? "Payment received and order moved to processing" 
+          ? "Payment status updated to received" 
           : `Order status updated to ${status}`;
         
         return res.json({
