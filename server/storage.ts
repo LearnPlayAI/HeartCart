@@ -11735,7 +11735,7 @@ export class DatabaseStorage implements IStorage {
 
   async getAllPudoLockers(): Promise<PudoLocker[]> {
     try {
-      const lockers = await db
+      const lockers = await this.db
         .select()
         .from(pudoLockers)
         .where(eq(pudoLockers.isActive, true))
