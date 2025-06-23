@@ -659,7 +659,7 @@ ${order.customerName}`;
                   </div>
 
                   {/* PUDO Locker Information */}
-                  {order.shippingMethod === 'pudo' && order.lockerDetails && (
+                  {(order.shippingMethod === 'pudo' || order.shippingMethod === 'Pudo') && (order.lockerDetails || order.pudoLocker) && (
                     <div className="border-t pt-4">
                       <div className="bg-white border-2 border-gray-200 rounded-lg p-4">
                         <div className="flex items-start">
@@ -672,10 +672,10 @@ ${order.customerName}`;
                               {/* Locker Name and Code */}
                               <div>
                                 <p className="font-medium text-gray-900 text-lg">
-                                  {order.lockerDetails.name}
+                                  {(order.lockerDetails?.name || order.pudoLocker?.name)}
                                 </p>
                                 <p className="text-sm text-gray-500">
-                                  Code: {order.lockerDetails.code} • Provider: {order.lockerDetails.provider}
+                                  Code: {(order.lockerDetails?.code || order.pudoLocker?.code)} • Provider: {(order.lockerDetails?.provider || order.pudoLocker?.provider || 'PUDO')}
                                 </p>
                               </div>
 
@@ -683,23 +683,23 @@ ${order.customerName}`;
                               <div className="space-y-1">
                                 <p className="text-sm font-medium text-gray-700">Address:</p>
                                 <p className="text-sm text-gray-600">
-                                  {order.lockerDetails.address}
+                                  {(order.lockerDetails?.address || order.pudoLocker?.address)}
                                 </p>
-                                {order.lockerDetails.detailedAddress && (
+                                {(order.lockerDetails?.detailedAddress || order.pudoLocker?.detailedAddress) && (
                                   <p className="text-sm text-gray-600">
-                                    {order.lockerDetails.detailedAddress.locality && `${order.lockerDetails.detailedAddress.locality}, `}
-                                    {order.lockerDetails.detailedAddress.province && `${order.lockerDetails.detailedAddress.province} `}
-                                    {order.lockerDetails.detailedAddress.postal_code}
+                                    {(order.lockerDetails?.detailedAddress?.locality || order.pudoLocker?.detailedAddress?.locality) && `${(order.lockerDetails?.detailedAddress?.locality || order.pudoLocker?.detailedAddress?.locality)}, `}
+                                    {(order.lockerDetails?.detailedAddress?.province || order.pudoLocker?.detailedAddress?.province) && `${(order.lockerDetails?.detailedAddress?.province || order.pudoLocker?.detailedAddress?.province)} `}
+                                    {(order.lockerDetails?.detailedAddress?.postal_code || order.pudoLocker?.detailedAddress?.postal_code)}
                                   </p>
                                 )}
                               </div>
 
                               {/* Opening Hours */}
-                              {order.lockerDetails.openingHours && order.lockerDetails.openingHours.length > 0 && (
+                              {((order.lockerDetails?.openingHours && order.lockerDetails.openingHours.length > 0) || (order.pudoLocker?.openingHours && order.pudoLocker.openingHours.length > 0)) && (
                                 <div className="space-y-1">
                                   <p className="text-sm font-medium text-gray-700">Opening Hours:</p>
                                   <div className="text-xs text-gray-600 space-y-1">
-                                    {order.lockerDetails.openingHours.map((hours, index) => (
+                                    {(order.lockerDetails?.openingHours || order.pudoLocker?.openingHours || []).map((hours, index) => (
                                       <div key={index} className="flex justify-between">
                                         <span className="font-medium">{hours.day}:</span>
                                         <span>
@@ -715,19 +715,19 @@ ${order.customerName}`;
                               )}
 
                               {/* Locker Type */}
-                              {order.lockerDetails.lockerType && (
+                              {(order.lockerDetails?.lockerType || order.pudoLocker?.lockerType) && (
                                 <div className="flex items-center text-sm text-gray-600">
                                   <span className="font-medium mr-2">Locker Type:</span>
-                                  <span>{order.lockerDetails.lockerType.name}</span>
+                                  <span>{(order.lockerDetails?.lockerType?.name || order.pudoLocker?.lockerType?.name)}</span>
                                 </div>
                               )}
 
                               {/* Available Box Types */}
-                              {order.lockerDetails.lstTypesBoxes && order.lockerDetails.lstTypesBoxes.length > 0 && (
+                              {((order.lockerDetails?.lstTypesBoxes && order.lockerDetails.lstTypesBoxes.length > 0) || (order.pudoLocker?.lstTypesBoxes && order.pudoLocker.lstTypesBoxes.length > 0)) && (
                                 <div className="space-y-1">
                                   <p className="text-sm font-medium text-gray-700">Available Box Sizes:</p>
                                   <div className="flex flex-wrap gap-1">
-                                    {order.lockerDetails.lstTypesBoxes.slice(0, 3).map((box, index) => (
+                                    {(order.lockerDetails?.lstTypesBoxes || order.pudoLocker?.lstTypesBoxes || []).slice(0, 3).map((box, index) => (
                                       <span 
                                         key={index}
                                         className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded"
@@ -735,9 +735,9 @@ ${order.customerName}`;
                                         {box.name} ({box.width}×{box.height}×{box.length}cm)
                                       </span>
                                     ))}
-                                    {order.lockerDetails.lstTypesBoxes.length > 3 && (
+                                    {(order.lockerDetails?.lstTypesBoxes || order.pudoLocker?.lstTypesBoxes || []).length > 3 && (
                                       <span className="inline-block bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded">
-                                        +{order.lockerDetails.lstTypesBoxes.length - 3} more
+                                        +{(order.lockerDetails?.lstTypesBoxes || order.pudoLocker?.lstTypesBoxes || []).length - 3} more
                                       </span>
                                     )}
                                   </div>
@@ -745,7 +745,7 @@ ${order.customerName}`;
                               )}
 
                               {/* Coordinates for GPS */}
-                              {order.lockerDetails.latitude && order.lockerDetails.longitude && (
+                              {((order.lockerDetails?.latitude && order.lockerDetails?.longitude) || (order.pudoLocker?.latitude && order.pudoLocker?.longitude)) && (
                                 <div className="pt-2 border-t border-gray-100">
                                   <button
                                     onClick={() => {
