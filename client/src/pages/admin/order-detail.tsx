@@ -48,7 +48,7 @@ import {
   ShoppingCart,
   Building2
 } from 'lucide-react';
-import OrderStatusTimeline from '@/components/OrderStatusTimeline';
+
 
 // Types
 interface SupplierOrder {
@@ -1000,12 +1000,7 @@ export default function AdminOrderDetail() {
             </CardContent>
           </Card>
 
-          {/* Order Status Timeline */}
-          <OrderStatusTimeline 
-            orderId={order.id}
-            currentStatus={order.status}
-            currentPaymentStatus={order.paymentStatus}
-          />
+
 
           {/* Notes */}
           {order.customerNotes && (

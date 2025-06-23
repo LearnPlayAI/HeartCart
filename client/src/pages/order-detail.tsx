@@ -38,7 +38,7 @@ import {
   XCircle
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import OrderStatusTimeline from '@/components/OrderStatusTimeline';
+
 
 // Supplier Order interface
 interface SupplierOrder {
@@ -630,12 +630,7 @@ const OrderDetail: React.FC = () => {
               </Card>
             )}
 
-            {/* Order Status Timeline */}
-            <OrderStatusTimeline 
-              orderId={order.id}
-              currentStatus={order.status}
-              currentPaymentStatus={order.paymentStatus}
-            />
+
 
             {/* Order Notes */}
             {order.customerNotes && (
@@ -794,12 +789,7 @@ ${order.customerName}`;
               </Card>
             )}
 
-            {/* Order Status Timeline */}
-            <OrderStatusTimeline 
-              orderId={order.id} 
-              currentStatus={order.status} 
-              currentPaymentStatus={order.paymentStatus} 
-            />
+
           </div>
 
           {/* Sidebar */}

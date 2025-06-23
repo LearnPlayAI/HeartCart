@@ -268,109 +268,102 @@ export default function OrderStatusTimeline({ orderId, currentStatus, currentPay
   const history: OrderStatusHistoryEntry[] = statusHistory?.data || [];
 
   return (
-    <>
-      <div className="flex items-center gap-2 mb-4">
-        <Clock className="w-5 h-5" />
-        <h3 className="text-lg font-semibold">Order Timeline</h3>
+    history.length === 0 ? (
+      <div className="text-center py-8 text-muted-foreground">
+        <Clock className="w-12 h-12 mx-auto mb-4 opacity-50" />
+        <p>No timeline events recorded yet.</p>
       </div>
-      
-      {history.length === 0 ? (
-        <div className="text-center py-8 text-muted-foreground">
-          <Clock className="w-12 h-12 mx-auto mb-4 opacity-50" />
-          <p>No timeline events recorded yet.</p>
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {history.map((entry, index) => {
-            const isLast = index === history.length - 1;
-            const sastTime = formatSASTTime(entry.createdAt);
-            
-            return (
-              <div 
-                key={entry.id} 
-                className="relative animate-in fade-in-50 slide-in-from-left-2 duration-500"
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
-                <div className="flex items-start gap-4">
-                  {/* Timeline connector */}
-                  <div className="relative flex-shrink-0">
-                    <div className={`w-12 h-12 rounded-full ${getTimelineEntryColor(entry)} flex items-center justify-center text-white transition-all duration-300 hover:scale-110 hover:rotate-3`}>
-                      {getStatusIcon(entry.eventType, entry.status)}
-                    </div>
-                    {!isLast && (
-                      <div className="absolute top-12 left-1/2 w-0.5 h-8 bg-gradient-to-b from-border to-transparent transform -translate-x-1/2" />
-                    )}
+    ) : (
+      <div className="space-y-6">
+        {history.map((entry, index) => {
+          const isLast = index === history.length - 1;
+          const sastTime = formatSASTTime(entry.createdAt);
+          
+          return (
+            <div 
+              key={entry.id} 
+              className="relative animate-in fade-in-50 slide-in-from-left-2 duration-500"
+              style={{ animationDelay: `${index * 100}ms` }}
+            >
+              <div className="flex items-start gap-4">
+                {/* Timeline connector */}
+                <div className="relative flex-shrink-0">
+                  <div className={`w-12 h-12 rounded-full ${getTimelineEntryColor(entry)} flex items-center justify-center text-white transition-all duration-300 hover:scale-110 hover:rotate-3`}>
+                    {getStatusIcon(entry.eventType, entry.status)}
                   </div>
+                  {!isLast && (
+                    <div className="absolute top-12 left-1/2 w-0.5 h-8 bg-gradient-to-b from-border to-transparent transform -translate-x-1/2" />
+                  )}
+                </div>
 
-                  {/* Event content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1">
-                        <h4 className="font-medium text-foreground">
-                          {formatStatusText(entry)}
-                        </h4>
-                        
-                        {/* Status badges */}
-                        <div className="flex items-center gap-2 mt-1">
+                {/* Event content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1">
+                      <h4 className="font-medium text-foreground">
+                        {formatStatusText(entry)}
+                      </h4>
+                      
+                      {/* Status badges */}
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge 
+                          variant="outline" 
+                          className={`text-xs ${getOrderStatusBadgeColor(entry.status)}`}
+                        >
+                          {entry.status.charAt(0).toUpperCase() + entry.status.slice(1)}
+                        </Badge>
+                        {entry.paymentStatus && (
                           <Badge 
                             variant="outline" 
-                            className={`text-xs ${getOrderStatusBadgeColor(entry.status)}`}
+                            className={`text-xs ${getPaymentStatusBadgeColor(entry.paymentStatus)}`}
                           >
-                            {entry.status.charAt(0).toUpperCase() + entry.status.slice(1)}
+                            Payment: {getCustomerPaymentStatusText(entry.paymentStatus)}
                           </Badge>
-                          {entry.paymentStatus && (
-                            <Badge 
-                              variant="outline" 
-                              className={`text-xs ${getPaymentStatusBadgeColor(entry.paymentStatus)}`}
-                            >
-                              Payment: {getCustomerPaymentStatusText(entry.paymentStatus)}
-                            </Badge>
-                          )}
-                        </div>
-
-                        {/* Changed by info */}
-                        <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
-                          {entry.changedBy === 'admin' ? (
-                            <Shield className="w-3 h-3" />
-                          ) : (
-                            <User className="w-3 h-3" />
-                          )}
-                          <span>
-                            Changed by {entry.changedBy}
-                            {entry.changedBy === 'customer' && ' (you)'}
-                          </span>
-                        </div>
-
-                        {/* Notes */}
-                        {entry.notes && (
-                          <p className="text-sm text-muted-foreground mt-2 bg-muted/50 p-2 rounded">
-                            {entry.notes}
-                          </p>
-                        )}
-
-                        {/* Tracking number */}
-                        {entry.trackingNumber && (
-                          <div className="mt-2">
-                            <Badge variant="outline" className="text-xs">
-                              Tracking: {entry.trackingNumber}
-                            </Badge>
-                          </div>
                         )}
                       </div>
 
-                      {/* Timestamp */}
-                      <div className="text-right text-xs text-muted-foreground whitespace-nowrap">
-                        <div className="font-medium">{sastTime.time}</div>
-                        <div>{sastTime.date}</div>
+                      {/* Changed by info */}
+                      <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
+                        {entry.changedBy === 'admin' ? (
+                          <Shield className="w-3 h-3" />
+                        ) : (
+                          <User className="w-3 h-3" />
+                        )}
+                        <span>
+                          Changed by {entry.changedBy}
+                          {entry.changedBy === 'customer' && ' (you)'}
+                        </span>
                       </div>
+
+                      {/* Notes */}
+                      {entry.notes && (
+                        <p className="text-sm text-muted-foreground mt-2 bg-muted/50 p-2 rounded">
+                          {entry.notes}
+                        </p>
+                      )}
+
+                      {/* Tracking number */}
+                      {entry.trackingNumber && (
+                        <div className="mt-2">
+                          <Badge variant="outline" className="text-xs">
+                            Tracking: {entry.trackingNumber}
+                          </Badge>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Timestamp */}
+                    <div className="text-right text-xs text-muted-foreground whitespace-nowrap">
+                      <div className="font-medium">{sastTime.time}</div>
+                      <div>{sastTime.date}</div>
                     </div>
                   </div>
                 </div>
               </div>
-            );
-          })}
-        </div>
-      )}
-    </>
+            </div>
+          );
+        })}
+      </div>
+    )
   );
 }
