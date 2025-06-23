@@ -523,6 +523,96 @@ const OrderDetail: React.FC = () => {
               </CardContent>
             </Card>
 
+            {/* PUDO Locker Information */}
+            {(order.lockerDetails || order.pudoLocker) && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Building2 className="h-5 w-5" />
+                    <span>PUDO Delivery Locker</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <Package className="h-4 w-4 text-blue-600" />
+                      <span className="font-medium text-blue-900">Collection Location</span>
+                    </div>
+                    <p className="text-sm text-blue-700">
+                      Your order will be delivered to this PUDO locker for pickup
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    {/* Locker Name and Code */}
+                    <div>
+                      <p className="text-sm font-medium text-gray-600 mb-1">Locker Name & Code</p>
+                      <div className="flex items-center space-x-2">
+                        <div className="bg-blue-100 px-2 py-1 rounded text-sm font-medium text-blue-800">
+                          {(order.lockerDetails?.code || order.pudoLocker?.code)}
+                        </div>
+                        <span className="text-gray-400">•</span>
+                        <span className="font-medium">{(order.lockerDetails?.name || order.pudoLocker?.name)}</span>
+                      </div>
+                    </div>
+
+                    {/* Address */}
+                    <div>
+                      <p className="text-sm font-medium text-gray-600 mb-1">Address</p>
+                      <p className="text-gray-900">{(order.lockerDetails?.address || order.pudoLocker?.address)}</p>
+                    </div>
+
+                    {/* Provider */}
+                    {(order.lockerDetails?.provider || order.pudoLocker?.provider) && (
+                      <div>
+                        <p className="text-sm font-medium text-gray-600 mb-1">Provider</p>
+                        <p className="text-gray-900 capitalize">{(order.lockerDetails?.provider || order.pudoLocker?.provider)}</p>
+                      </div>
+                    )}
+
+                    {/* Opening Hours */}
+                    {(order.lockerDetails?.openingHours || order.pudoLocker?.openingHours) && (
+                      <div>
+                        <p className="text-sm font-medium text-gray-600 mb-2">Opening Hours</p>
+                        <div className="bg-gray-50 rounded-lg p-3">
+                          <div className="grid grid-cols-1 gap-1">
+                            {(order.lockerDetails?.openingHours || order.pudoLocker?.openingHours || []).map((hours: any, index: number) => (
+                              <div key={index} className="flex justify-between text-sm">
+                                <span className="font-medium capitalize">{hours.day}:</span>
+                                <span className="text-gray-600">
+                                  {hours.isStoreOpen === 'Open' || hours.isStoreOpen === '1'
+                                    ? `${hours.open_time?.substring(0, 5)} - ${hours.close_time?.substring(0, 5)}`
+                                    : 'Closed'
+                                  }
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Google Maps Link */}
+                    {(order.lockerDetails?.latitude && order.lockerDetails?.longitude) && (
+                      <div>
+                        <p className="text-sm font-medium text-gray-600 mb-2">Location</p>
+                        <a
+                          href={`https://www.google.com/maps?q=${order.lockerDetails.latitude},${order.lockerDetails.longitude}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition-colors"
+                        >
+                          <MapPin className="h-4 w-4" />
+                          <span>View Location on Google Maps</span>
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Order Notes */}
             {order.customerNotes && (
               <Card>
@@ -675,95 +765,7 @@ ${order.customerName}`;
                     </div>
                   </div>
 
-                  {/* PUDO Locker Information */}
-                  {(order.lockerDetails || order.pudoLocker) && (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center space-x-2">
-                          <Building2 className="h-5 w-5" />
-                          <span>PUDO Delivery Locker</span>
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                          <div className="flex items-center space-x-2 mb-2">
-                            <Package className="h-4 w-4 text-blue-600" />
-                            <span className="font-medium text-blue-900">Collection Location</span>
-                          </div>
-                          <p className="text-sm text-blue-700">
-                            Your order will be delivered to this PUDO locker for pickup
-                          </p>
-                        </div>
-                        
-                        <div className="space-y-4">
-                          {/* Locker Name and Code */}
-                          <div>
-                            <p className="text-sm font-medium text-gray-600 mb-1">Locker Name & Code</p>
-                            <div className="flex items-center space-x-2">
-                              <div className="bg-blue-100 px-2 py-1 rounded text-sm font-medium text-blue-800">
-                                {(order.lockerDetails?.code || order.pudoLocker?.code)}
-                              </div>
-                              <span className="text-gray-400">•</span>
-                              <span className="font-medium">{(order.lockerDetails?.name || order.pudoLocker?.name)}</span>
-                            </div>
-                          </div>
 
-                          {/* Address */}
-                          <div>
-                            <p className="text-sm font-medium text-gray-600 mb-1">Address</p>
-                            <p className="text-gray-900">{(order.lockerDetails?.address || order.pudoLocker?.address)}</p>
-                          </div>
-
-                          {/* Provider */}
-                          {(order.lockerDetails?.provider || order.pudoLocker?.provider) && (
-                            <div>
-                              <p className="text-sm font-medium text-gray-600 mb-1">Provider</p>
-                              <p className="text-gray-900 capitalize">{(order.lockerDetails?.provider || order.pudoLocker?.provider)}</p>
-                            </div>
-                          )}
-
-                          {/* Opening Hours */}
-                          {(order.lockerDetails?.openingHours || order.pudoLocker?.openingHours) && (
-                            <div>
-                              <p className="text-sm font-medium text-gray-600 mb-2">Opening Hours</p>
-                              <div className="bg-gray-50 rounded-lg p-3">
-                                <div className="grid grid-cols-1 gap-1">
-                                  {(order.lockerDetails?.openingHours || order.pudoLocker?.openingHours || []).map((hours: any, index: number) => (
-                                    <div key={index} className="flex justify-between text-sm">
-                                      <span className="font-medium capitalize">{hours.day}:</span>
-                                      <span className="text-gray-600">
-                                        {hours.isStoreOpen === 'Open' || hours.isStoreOpen === '1'
-                                          ? `${hours.open_time?.substring(0, 5)} - ${hours.close_time?.substring(0, 5)}`
-                                          : 'Closed'
-                                        }
-                                      </span>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Google Maps Link */}
-                          {(order.lockerDetails?.latitude && order.lockerDetails?.longitude) && (
-                            <div>
-                              <p className="text-sm font-medium text-gray-600 mb-2">Location</p>
-                              <a
-                                href={`https://www.google.com/maps?q=${order.lockerDetails.latitude},${order.lockerDetails.longitude}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition-colors"
-                              >
-                                <MapPin className="h-4 w-4" />
-                                <span>View Location on Google Maps</span>
-                                <ExternalLink className="h-3 w-3" />
-                              </a>
-                            </div>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
                 </CardContent>
               </Card>
             )}
