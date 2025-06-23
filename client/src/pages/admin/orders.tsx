@@ -287,7 +287,7 @@ function OrderCard({ order }: { order: Order }) {
         {/* Actions */}
         <div className="flex justify-end pt-2">
           <Link href={`/admin/orders/${order.id}`}>
-            <Button size="sm" variant="outline">
+            <Button size="sm" className="bg-[#ff1493] text-[#ffffff] hover:bg-[#ff1493]/90">
               <Eye className="h-4 w-4 mr-2" />
               View Details
             </Button>

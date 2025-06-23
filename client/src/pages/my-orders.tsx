@@ -607,6 +607,13 @@ const MyOrdersPage: React.FC = () => {
                             {getStatusIcon(order.status)}
                             {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                           </Badge>
+                          <Badge 
+                            variant="outline" 
+                            className={`${getPaymentStatusColor(order.paymentStatus)} flex items-center gap-1`}
+                          >
+                            <CreditCard className="h-3 w-3" />
+                            {order.paymentStatus.charAt(0).toUpperCase() + order.paymentStatus.slice(1)}
+                          </Badge>
                         </div>
                         
                         <div className="text-sm text-gray-600 space-y-1">
