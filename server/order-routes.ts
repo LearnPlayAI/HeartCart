@@ -185,7 +185,7 @@ router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Respons
     }
 
     // Validate credit balance if specified, but don't deduct yet
-    let finalPaymentStatus = "pending";
+    let finalPaymentStatus = orderData.paymentStatus || "pending"; // Use client-provided status first
     let remainingBalance = orderData.total;
     let shippingExemption = false;
     
@@ -214,8 +214,8 @@ router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Respons
       // Calculate remaining balance after credit application
       remainingBalance = orderData.total - orderData.creditUsed;
       
-      // If credit covers full amount, mark as paid
-      if (remainingBalance <= 0) {
+      // If credit covers full amount, mark as paid (only if not already set by client)
+      if (remainingBalance <= 0 && !orderData.paymentStatus) {
         finalPaymentStatus = "paid";
         remainingBalance = 0;
       }
@@ -224,7 +224,9 @@ router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Respons
         userId: userId,
         creditUsed: orderData.creditUsed,
         remainingBalance: remainingBalance,
-        shippingExemption: shippingExemption
+        shippingExemption: shippingExemption,
+        clientPaymentStatus: orderData.paymentStatus,
+        finalPaymentStatus: finalPaymentStatus
       });
     }
 
