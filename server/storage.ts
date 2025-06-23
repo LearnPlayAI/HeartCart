@@ -17,6 +17,9 @@ import {
   orderItems,
   type OrderItem,
   type InsertOrderItem,
+  orderStatusHistory,
+  type OrderStatusHistory,
+  type InsertOrderStatusHistory,
   productImages,
   type ProductImage,
   type InsertProductImage,
@@ -304,6 +307,20 @@ export interface IStorage {
   >;
   getOrderItems(orderId: number): Promise<(OrderItem & { product: Product })[]>;
   updateOrderStatus(id: number, status: string): Promise<Order | undefined>;
+  
+  // Order Status History operations
+  createOrderStatusHistoryEntry(entry: InsertOrderStatusHistory): Promise<OrderStatusHistory>;
+  getOrderStatusHistory(orderId: number): Promise<OrderStatusHistory[]>;
+  addOrderStatusHistory(
+    orderId: number,
+    status: string,
+    paymentStatus: string | null,
+    changedBy: string,
+    changedByUserId: number | null,
+    eventType: string,
+    notes?: string,
+    trackingNumber?: string
+  ): Promise<OrderStatusHistory>;
 
   // AI Recommendation operations
   saveRecommendation(
@@ -3672,6 +3689,96 @@ export class DatabaseStorage implements IStorage {
         error,
         orderId: id,
         newPaymentStatus: paymentStatus,
+      });
+      throw error;
+    }
+  }
+
+  // Order Status History implementation
+  async createOrderStatusHistoryEntry(entry: InsertOrderStatusHistory): Promise<OrderStatusHistory> {
+    try {
+      const [newEntry] = await db
+        .insert(orderStatusHistory)
+        .values({
+          ...entry,
+          createdAt: new Date().toISOString()
+        })
+        .returning();
+      
+      logger.info(`Created order status history entry`, { 
+        orderId: entry.orderId, 
+        eventType: entry.eventType,
+        status: entry.status 
+      });
+      
+      return newEntry;
+    } catch (error) {
+      logger.error(`Error creating order status history entry`, { error, entry });
+      throw error;
+    }
+  }
+
+  async getOrderStatusHistory(orderId: number): Promise<OrderStatusHistory[]> {
+    try {
+      const history = await db
+        .select()
+        .from(orderStatusHistory)
+        .where(eq(orderStatusHistory.orderId, orderId))
+        .orderBy(orderStatusHistory.createdAt);
+        
+      logger.debug(`Retrieved order status history`, { 
+        orderId, 
+        entryCount: history.length 
+      });
+      
+      return history;
+    } catch (error) {
+      logger.error(`Error retrieving order status history`, { error, orderId });
+      throw error;
+    }
+  }
+
+  async addOrderStatusHistory(
+    orderId: number,
+    status: string,
+    paymentStatus: string | null,
+    changedBy: string,
+    changedByUserId: number | null,
+    eventType: string,
+    notes?: string,
+    trackingNumber?: string
+  ): Promise<OrderStatusHistory> {
+    try {
+      // Get current order to capture previous status
+      const [currentOrder] = await db
+        .select()
+        .from(orders)
+        .where(eq(orders.id, orderId));
+
+      if (!currentOrder) {
+        throw new Error(`Order ${orderId} not found`);
+      }
+
+      const entry: InsertOrderStatusHistory = {
+        orderId,
+        status,
+        paymentStatus,
+        previousStatus: currentOrder.status,
+        previousPaymentStatus: currentOrder.paymentStatus,
+        changedBy,
+        changedByUserId,
+        eventType,
+        notes,
+        trackingNumber
+      };
+
+      return await this.createOrderStatusHistoryEntry(entry);
+    } catch (error) {
+      logger.error(`Error adding order status history`, { 
+        error, 
+        orderId, 
+        eventType, 
+        status 
       });
       throw error;
     }
