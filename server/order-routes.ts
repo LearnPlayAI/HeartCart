@@ -38,6 +38,8 @@ const checkoutOrderSchema = z.object({
   subtotal: z.number(),
   total: z.number(),
   specialInstructions: z.string().optional(),
+  paymentReferenceNumber: z.string().optional(),
+  paymentStatus: z.string().optional(),
 });
 
 const router = express.Router();
@@ -85,7 +87,9 @@ const createOrderSchema = z.object({
   })),
   subtotal: z.number(),
   total: z.number(),
-  creditUsed: z.number().default(0)
+  creditUsed: z.number().default(0),
+  paymentReferenceNumber: z.string().optional(),
+  paymentStatus: z.string().optional()
 });
 
 // Helper function to generate attribute display text
@@ -233,6 +237,7 @@ router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Respons
       customerNotes: orderData.specialInstructions || null,
       creditUsed: orderData.creditUsed || 0,
       remainingBalance: remainingBalance,
+      paymentReferenceNumber: orderData.paymentReferenceNumber || null,
     };
 
     // Create the order
