@@ -1,8 +1,9 @@
 import * as React from "react";
 import { Menu } from "lucide-react";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { CategorySidebar } from "@/components/ui/category-sidebar";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface CategorySidebarDrawerProps {
   className?: string;
@@ -34,6 +35,12 @@ export function CategorySidebarDrawer({ className, onCategorySelect }: CategoryS
         </Button>
       </SheetTrigger>
       <SheetContent side="left" className="p-0 w-80 h-full flex flex-col">
+        <VisuallyHidden>
+          <SheetHeader>
+            <SheetTitle>Categories Menu</SheetTitle>
+            <SheetDescription>Browse and select from product categories</SheetDescription>
+          </SheetHeader>
+        </VisuallyHidden>
         <CategorySidebar onCategorySelect={handleCategorySelect} className="h-full" />
       </SheetContent>
     </Sheet>

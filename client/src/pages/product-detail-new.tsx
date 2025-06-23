@@ -676,6 +676,10 @@ const ProductDetailView = ({
             {/* Image Carousel Modal */}
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
               <DialogContent className="max-w-4xl p-0 bg-black/95 border-none">
+                <DialogHeader className="sr-only">
+                  <DialogTitle>Product Image Gallery</DialogTitle>
+                  <DialogDescription>View product images in full size with navigation controls</DialogDescription>
+                </DialogHeader>
                 <div className="relative flex items-center justify-center h-[80vh]">
                   <Button 
                     variant="ghost" 
