@@ -137,8 +137,8 @@ export default function PudoLockerPicker({
 
   // Determine which lockers to display
   const displayLockers = searchQuery 
-    ? searchResults || []
-    : locationBasedLockers || [];
+    ? (searchResults?.data || [])
+    : (locationBasedLockers?.data || []);
 
   const isLoading = searchQuery ? searchLoading : locationLoading;
 
@@ -147,11 +147,13 @@ export default function PudoLockerPicker({
     customerProvince,
     customerCity,
     searchQuery,
-    locationBasedLockers: locationBasedLockers?.length || 0,
-    searchResults: searchResults?.length || 0,
+    locationBasedLockers: locationBasedLockers?.data?.length || 0,
+    searchResults: searchResults?.data?.length || 0,
     displayLockers: displayLockers.length,
     isLoading,
-    queryEnabled: !!customerProvince && !searchQuery
+    queryEnabled: !!customerProvince && !searchQuery,
+    locationData: locationBasedLockers,
+    searchData: searchResults
   });
 
   // Auto-select preferred locker if available and no locker is selected
