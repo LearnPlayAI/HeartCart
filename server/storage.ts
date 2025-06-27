@@ -98,6 +98,7 @@ import {
   eq,
   ne,
   like,
+  lt,
   ilike,
   and,
   or,
@@ -10834,6 +10835,136 @@ export class DatabaseStorage implements IStorage {
       return createdSetting;
     } catch (error) {
       logger.error('Error creating system setting', { error, setting });
+      throw error;
+    }
+  }
+
+  // =============================================================================
+  // EMAIL TOKEN OPERATIONS
+  // =============================================================================
+
+  async createToken(tokenData: InsertMailToken): Promise<MailToken> {
+    try {
+      const [token] = await db
+        .insert(mailTokens)
+        .values(tokenData)
+        .returning();
+
+      logger.info('Email token created', { 
+        tokenType: tokenData.tokenType, 
+        userId: tokenData.userId,
+        email: tokenData.email 
+      });
+      return token;
+    } catch (error) {
+      logger.error('Error creating email token', { error, tokenData });
+      throw error;
+    }
+  }
+
+  async getToken(hashedToken: string): Promise<MailToken | undefined> {
+    try {
+      const [token] = await db
+        .select()
+        .from(mailTokens)
+        .where(eq(mailTokens.hashedToken, hashedToken));
+
+      return token;
+    } catch (error) {
+      logger.error('Error getting email token', { error, hashedToken: hashedToken.substring(0, 10) + '...' });
+      throw error;
+    }
+  }
+
+  async useToken(hashedToken: string): Promise<boolean> {
+    try {
+      const [updatedToken] = await db
+        .update(mailTokens)
+        .set({ 
+          usedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        })
+        .where(eq(mailTokens.hashedToken, hashedToken))
+        .returning();
+
+      if (updatedToken) {
+        logger.info('Email token marked as used', { 
+          tokenType: updatedToken.tokenType, 
+          userId: updatedToken.userId 
+        });
+        return true;
+      }
+      return false;
+    } catch (error) {
+      logger.error('Error marking token as used', { error, hashedToken: hashedToken.substring(0, 10) + '...' });
+      throw error;
+    }
+  }
+
+  async cleanupExpiredTokens(): Promise<number> {
+    try {
+      const result = await db
+        .delete(mailTokens)
+        .where(lt(mailTokens.expiresAt, new Date().toISOString()));
+
+      logger.info('Cleaned up expired email tokens', { deletedCount: result.rowCount || 0 });
+      return result.rowCount || 0;
+    } catch (error) {
+      logger.error('Error cleaning up expired tokens', { error });
+      throw error;
+    }
+  }
+
+  async logEmail(emailData: InsertEmailLog): Promise<EmailLog> {
+    try {
+      const [emailLog] = await db
+        .insert(emailLogs)
+        .values(emailData)
+        .returning();
+
+      logger.info('Email logged', { 
+        emailType: emailData.emailType, 
+        recipientEmail: emailData.recipientEmail,
+        userId: emailData.userId 
+      });
+      return emailLog;
+    } catch (error) {
+      logger.error('Error logging email', { error, emailData });
+      throw error;
+    }
+  }
+
+  async getEmailLogs(filters?: {
+    userId?: number;
+    emailType?: string;
+    recipientEmail?: string;
+    limit?: number;
+  }): Promise<EmailLog[]> {
+    try {
+      let query = db.select().from(emailLogs);
+
+      if (filters?.userId) {
+        query = query.where(eq(emailLogs.userId, filters.userId));
+      }
+      if (filters?.emailType) {
+        query = query.where(eq(emailLogs.emailType, filters.emailType));
+      }
+      if (filters?.recipientEmail) {
+        query = query.where(eq(emailLogs.recipientEmail, filters.recipientEmail));
+      }
+      if (filters?.limit) {
+        query = query.limit(filters.limit);
+      }
+
+      const logs = await query.orderBy(desc(emailLogs.sentAt));
+      
+      logger.info('Retrieved email logs', { 
+        count: logs.length, 
+        filters 
+      });
+      return logs;
+    } catch (error) {
+      logger.error('Error getting email logs', { error, filters });
       throw error;
     }
   }
