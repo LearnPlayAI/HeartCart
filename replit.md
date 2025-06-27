@@ -272,6 +272,12 @@ Changelog:
   * Email template maintains all PUDO locker information: tracking URL, operating hours, collection instructions
   * Comprehensive testing confirms fix resolves URL conversion issue while preserving email functionality
   * All order status emails with PUDO tracking URLs now display correctly without broken Google Maps links
+- June 27, 2025. Customer email links corrected to individual order details page:
+  * Updated all customer email templates to use correct order details URL format: /order/{orderNumber}
+  * Fixed payment confirmation, order status, and order confirmation emails to link to individual order pages
+  * Changed from generic orders list (/orders) to specific customer order details (/order/{orderNumber})
+  * All 4 customer-facing email templates now correctly direct customers to their specific order information
+  * Maintains proper customer experience with direct access to relevant order details from email notifications
 ```
 
 ## User Preferences
