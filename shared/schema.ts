@@ -905,8 +905,6 @@ export type InsertMailToken = z.infer<typeof insertMailTokenSchema>;
 export const insertEmailLogSchema = createInsertSchema(emailLogs).omit({
   id: true,
   sentAt: true,
-}).extend({
-  metadata: z.record(z.any()).optional(),
 });
 
 export type EmailLog = typeof emailLogs.$inferSelect;

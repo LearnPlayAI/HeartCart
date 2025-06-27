@@ -60,9 +60,9 @@ router.post('/forgot-password', asyncHandler(async (req: Request, res: Response)
 // Password Reset Verification
 router.post('/reset-password', asyncHandler(async (req: Request, res: Response) => {
   try {
-    const { token, newPassword } = z.object({
+    const { token, password } = z.object({
       token: z.string(),
-      newPassword: z.string().min(6)
+      password: z.string().min(6)
     }).parse(req.body);
 
     console.log(`🔄 Processing password reset with token: ${token.substring(0, 8)}...`);
@@ -78,7 +78,7 @@ router.post('/reset-password', asyncHandler(async (req: Request, res: Response) 
     console.log(`✅ Token validated for user ID: ${validation.userId}`);
 
     // Hash new password
-    const hashedPassword = await bcrypt.hash(newPassword, 12);
+    const hashedPassword = await bcrypt.hash(password, 12);
 
     // Update user password
     await db.update(users)
