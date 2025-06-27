@@ -326,10 +326,28 @@ const OrderDetail: React.FC = () => {
 
   // Invoice download function
   const downloadInvoice = async () => {
+    if (!order) {
+      console.log('Download invoice called but order is null');
+      toast({
+        title: "Error",
+        description: "Order data not available. Please refresh the page.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    console.log('Starting invoice download for order:', order.id);
+    
     try {
       const response = await fetch(`/api/orders/${order.id}/invoice`, {
         method: 'GET',
         credentials: 'include',
+      });
+
+      console.log('Download response:', {
+        status: response.status,
+        ok: response.ok,
+        headers: Object.fromEntries(response.headers.entries())
       });
 
       if (!response.ok) {
