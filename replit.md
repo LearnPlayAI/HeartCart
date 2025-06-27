@@ -250,6 +250,14 @@ Changelog:
   * Email logs properly captured in database with delivery status tracking
   * System sends appropriate emails for order lifecycle: creation → payment verification → shipping → delivery
   * Email automation respects admin workflow requiring manual payment verification before confirmation emails
+- June 27, 2025. Enhanced order status update email system:
+  * Extended order status emails to ALL status changes (pending, confirmed, processing, shipped, delivered, cancelled)
+  * Added intelligent delivery messaging based on order status with getEstimatedDeliveryText helper function
+  * Status-specific messaging: "Processing your order" → "Order confirmed" → "Being processed" → "3-5 business days" → "Delivered"
+  * Tracking numbers automatically included when available for shipped orders
+  * Comprehensive error handling ensures order updates succeed even if email delivery fails
+  * All status update emails use hot pink TeeMeYou branding with professional messaging
+  * Customer communication maintained throughout entire order lifecycle from placement to delivery
 ```
 
 ## User Preferences

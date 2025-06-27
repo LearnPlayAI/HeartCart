@@ -9,6 +9,26 @@ import { databaseEmailService } from "./database-email-service";
 
 const router = express.Router();
 
+// Helper function to get estimated delivery text based on status
+function getEstimatedDeliveryText(status: string): string {
+  switch (status) {
+    case 'pending':
+      return 'Processing your order';
+    case 'confirmed':
+      return 'Order confirmed, preparing for shipment';
+    case 'processing':
+      return 'Order is being processed';
+    case 'shipped':
+      return '3-5 business days';
+    case 'delivered':
+      return 'Delivered';
+    case 'cancelled':
+      return 'Order cancelled';
+    default:
+      return 'Status updated';
+  }
+}
+
 // Get all orders for admin management
 router.get("/orders", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
   try {
@@ -67,27 +87,25 @@ router.patch("/orders/:id/status", isAuthenticated, asyncHandler(async (req: Req
       return sendError(res, "Order not found", 404);
     }
 
-    // Send order status update email
+    // Send order status update email for all status changes
     try {
-      if (status === 'shipped' || status === 'delivered') {
-        const emailData = {
-          email: updatedOrder.customerEmail,
-          customerName: updatedOrder.customerName,
-          orderNumber: updatedOrder.orderNumber,
-          status: status,
-          trackingNumber: updatedOrder.trackingNumber,
-          estimatedDelivery: status === 'shipped' ? '3-5 business days' : 'Delivered'
-        };
+      const emailData = {
+        email: updatedOrder.customerEmail,
+        customerName: updatedOrder.customerName,
+        orderNumber: updatedOrder.orderNumber,
+        status: status,
+        trackingNumber: updatedOrder.trackingNumber || null,
+        estimatedDelivery: getEstimatedDeliveryText(status)
+      };
 
-        await databaseEmailService.sendOrderStatusEmail(emailData);
-        
-        logger.info("Order status update email sent", {
-          orderId,
-          status,
-          customerEmail: updatedOrder.customerEmail,
-          adminUserId: req.user?.id
-        });
-      }
+      await databaseEmailService.sendOrderStatusEmail(emailData);
+      
+      logger.info("Order status update email sent", {
+        orderId,
+        status,
+        customerEmail: updatedOrder.customerEmail,
+        adminUserId: req.user?.id
+      });
     } catch (emailError) {
       // Log email error but don't fail the status update
       logger.error("Failed to send order status update email", {
@@ -127,8 +145,47 @@ router.patch("/orders/:id/payment-status", isAuthenticated, asyncHandler(async (
       return sendError(res, "Order not found", 404);
     }
 
-    // Note: Payment confirmation emails are only sent when admin specifically marks payment as received
-    // This happens in the /orders/:id/payment-received endpoint
+    // Send payment confirmation email when status is changed to "payment_received"
+    if (paymentStatus === "payment_received") {
+      try {
+        // Get full order details with items for payment confirmation email
+        const fullOrder = await storage.getOrderById(orderId);
+        if (fullOrder && fullOrder.orderItems && fullOrder.orderItems.length > 0) {
+          const emailData = {
+            email: fullOrder.customerEmail,
+            customerName: fullOrder.customerName,
+            orderNumber: fullOrder.orderNumber,
+            orderItems: fullOrder.orderItems.map(item => ({
+              productName: item.productName,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              totalPrice: item.totalPrice,
+              attributeDisplayText: item.attributeDisplayText
+            })),
+            subtotalAmount: fullOrder.subtotalAmount,
+            shippingCost: fullOrder.shippingCost,
+            totalAmount: fullOrder.totalAmount,
+            paymentMethod: fullOrder.paymentMethod,
+            shippingMethod: fullOrder.shippingMethod
+          };
+
+          await databaseEmailService.sendPaymentConfirmationEmail(emailData);
+          
+          logger.info("Payment confirmation email sent", {
+            orderId,
+            customerEmail: fullOrder.customerEmail,
+            adminUserId: req.user?.id
+          });
+        }
+      } catch (emailError) {
+        // Log email error but don't fail the payment status update
+        logger.error("Failed to send payment confirmation email", {
+          error: emailError,
+          orderId,
+          customerEmail: updatedOrder.customerEmail
+        });
+      }
+    }
 
     logger.info("Order payment status updated by admin", { orderId, paymentStatus, adminUserId: req.user?.id });
     return sendSuccess(res, updatedOrder);
