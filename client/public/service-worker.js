@@ -1,7 +1,10 @@
-// Service Worker for TEE ME YOU PWA
+// Service Worker for TEE ME YOU PWA with Auto-Update Support
 
-const CACHE_NAME = 'teemeyou-cache-v1';
-const RUNTIME = 'runtime';
+// Generate version based on timestamp - this ensures cache busting on each deployment
+const APP_VERSION = '2025.06.27.002'; // Update this on each deployment
+const CACHE_NAME = `teemeyou-cache-${APP_VERSION}`;
+const RUNTIME = `runtime-${APP_VERSION}`;
+const VERSION_KEY = 'app-version';
 
 // Resources to cache on install
 const PRECACHE_URLS = [
@@ -15,27 +18,54 @@ const PRECACHE_URLS = [
   '/favicon.ico'
 ];
 
-// Installation event - precache static assets
+// Installation event - precache static assets and store version
 self.addEventListener('install', event => {
+  console.log(`[SW] Installing version ${APP_VERSION}`);
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(PRECACHE_URLS))
-      .then(self.skipWaiting())
-      .catch(error => console.error('Error during service worker installation:', error))
+    Promise.all([
+      caches.open(CACHE_NAME)
+        .then(cache => cache.addAll(PRECACHE_URLS)),
+      // Store current version in cache for version checking
+      caches.open('app-metadata')
+        .then(cache => cache.put(VERSION_KEY, new Response(APP_VERSION)))
+    ])
+    .then(() => {
+      console.log(`[SW] Installation complete for version ${APP_VERSION}`);
+      return self.skipWaiting();
+    })
+    .catch(error => console.error('[SW] Error during service worker installation:', error))
   );
 });
 
-// Activation event - clean up old caches
+// Activation event - clean up old caches and notify clients of updates
 self.addEventListener('activate', event => {
-  const currentCaches = [CACHE_NAME, RUNTIME];
+  console.log(`[SW] Activating version ${APP_VERSION}`);
+  const currentCaches = [CACHE_NAME, RUNTIME, 'app-metadata'];
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return cacheNames.filter(cacheName => !currentCaches.includes(cacheName));
     }).then(cachesToDelete => {
+      if (cachesToDelete.length > 0) {
+        console.log(`[SW] Deleting old caches:`, cachesToDelete);
+      }
       return Promise.all(cachesToDelete.map(cacheToDelete => {
         return caches.delete(cacheToDelete);
       }));
-    }).then(() => self.clients.claim())
+    }).then(() => {
+      console.log(`[SW] Cache cleanup complete, claiming clients`);
+      return self.clients.claim();
+    }).then(() => {
+      // Notify all clients that a new version is available
+      return self.clients.matchAll().then(clients => {
+        clients.forEach(client => {
+          client.postMessage({
+            type: 'SW_UPDATE',
+            version: APP_VERSION,
+            action: 'RELOAD_REQUIRED'
+          });
+        });
+      });
+    })
   );
 });
 
@@ -123,6 +153,40 @@ self.addEventListener('push', event => {
   event.waitUntil(
     self.registration.showNotification('TEE ME YOU', options)
   );
+});
+
+// Message event listener for version checks and updates
+self.addEventListener('message', event => {
+  if (event.data && event.data.type === 'CHECK_VERSION') {
+    // Check current version against cached version
+    caches.open('app-metadata')
+      .then(cache => cache.match(VERSION_KEY))
+      .then(response => {
+        if (response) {
+          return response.text();
+        }
+        return null;
+      })
+      .then(cachedVersion => {
+        event.ports[0].postMessage({
+          type: 'VERSION_INFO',
+          currentVersion: APP_VERSION,
+          cachedVersion: cachedVersion,
+          updateAvailable: cachedVersion && cachedVersion !== APP_VERSION
+        });
+      })
+      .catch(error => {
+        console.error('[SW] Error checking version:', error);
+        event.ports[0].postMessage({
+          type: 'VERSION_ERROR',
+          error: error.message
+        });
+      });
+  }
+  
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 // Notification click event listener
