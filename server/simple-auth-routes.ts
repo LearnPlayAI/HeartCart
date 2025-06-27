@@ -101,6 +101,35 @@ router.post('/reset-password', asyncHandler(async (req: Request, res: Response) 
   }
 }));
 
+// Token validation endpoint (for frontend validation before showing reset form)
+router.get('/validate-reset-token/:token', asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { token } = req.params;
+
+    console.log(`🔄 Validating reset token: ${token.substring(0, 8)}...`);
+
+    // Validate token
+    const validation = await unifiedEmailService.validatePasswordResetToken(token);
+
+    if (!validation.valid) {
+      console.log(`❌ Token validation failed: ${validation.error}`);
+      return sendError(res, validation.error || "Invalid or expired token", 400);
+    }
+
+    console.log(`✅ Token validated successfully for user ID: ${validation.userId}`);
+
+    return sendSuccess(res, {
+      valid: true,
+      userId: validation.userId,
+      email: validation.email
+    });
+
+  } catch (error: any) {
+    console.error('❌ Error in token validation:', error);
+    return sendError(res, "An error occurred while validating the token", 500);
+  }
+}));
+
 // Test endpoint for debugging
 router.get('/test-email', asyncHandler(async (req: Request, res: Response) => {
   try {

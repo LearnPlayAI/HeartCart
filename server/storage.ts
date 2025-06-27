@@ -12625,21 +12625,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   /**
-   * Verify an email token by hash and type
+   * Verify an email token by token and type
    */
-  async verifyEmailToken(tokenHash: string, tokenType: string): Promise<MailToken | undefined> {
-    const [token] = await db
+  async verifyEmailToken(token: string, tokenType: string): Promise<MailToken | undefined> {
+    const [tokenRecord] = await db
       .select()
       .from(mailTokens)
       .where(
         and(
-          eq(mailTokens.tokenHash, tokenHash),
+          eq(mailTokens.token, token),
           eq(mailTokens.tokenType, tokenType),
           eq(mailTokens.isActive, true),
           isNull(mailTokens.usedAt)
         )
       );
-    return token;
+    return tokenRecord;
   }
 
   /**
