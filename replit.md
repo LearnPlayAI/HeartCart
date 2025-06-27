@@ -213,6 +213,14 @@ Changelog:
   * Updated simple-auth-routes.ts to use hashPassword from auth.ts (scrypt-based) instead of bcrypt
   * Users can now successfully login with new passwords after password reset
   * Maintained consistent scrypt hashing throughout entire authentication system
+- June 27, 2025. Progressive Web App (PWA) mobile installation implemented:
+  * Re-enabled PWA install functionality with branded TeeMeYou logo for all mobile devices
+  * Created comprehensive MobileAppInstallButton component with device-specific install instructions
+  * Updated PWA icons with TeeMeYou branded logo (pink shopping cart with heart design)
+  * Implemented automatic install prompts for mobile users with user-friendly interface
+  * Added support for iOS Safari and Android Chrome installation methods
+  * Enhanced PWA manifest with proper branding and shortcuts for optimal mobile experience
+  * Mobile users can now install the app to home screen for native-like experience
 ```
 
 ## User Preferences

@@ -144,6 +144,7 @@ function App() {
               <Toaster />
               <SessionExpiryWarning />
               <UpdateNotification />
+              <MobileAppInstallButton />
               <div className="flex flex-col min-h-screen">
                 <Switch>
                   {/* Admin Routes - No header/footer */}
