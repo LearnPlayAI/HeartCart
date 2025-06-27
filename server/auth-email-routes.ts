@@ -128,34 +128,20 @@ router.post('/forgot-password', asyncHandler(async (req: Request, res: Response)
       return sendSuccess(res, null, 'If the email exists, a password reset link has been sent');
     }
 
-    // Generate and store reset token directly (bypassing email service for now)
+    // Send password reset email using database service with enhanced debugging
+    logger.info('Starting password reset email process', { email, userId: user.id });
+    
     try {
-      const token = crypto.randomBytes(32).toString('hex');
-      const hash = crypto.createHash('sha256').update(token).digest('hex');
-      const expiresAt = new Date(Date.now() + 3 * 60 * 60 * 1000); // 3 hours
-
-      // Store token in database
-      const tokenData = {
-        userId: user.id,
-        email,
-        tokenHash: hash,
-        tokenType: 'password_reset' as const,
-        expiresAt,
-        isActive: true
-      };
-
-      await storage.createMailToken(tokenData);
-      
-      // Log the reset token for development/testing
-      logger.info('Password reset token generated', { 
+      const result = await databaseEmailService.sendPasswordResetEmail(user.id, email, user.username);
+      logger.info('Password reset email sent successfully', { email, userId: user.id, token: result });
+    } catch (emailError) {
+      logger.error('Password reset email failed', { 
         email, 
         userId: user.id, 
-        resetUrl: `https://teemeyou.shop/reset-password?token=${token}`
+        error: emailError instanceof Error ? emailError.message : String(emailError),
+        stack: emailError instanceof Error ? emailError.stack : undefined
       });
-
-      // TODO: Send actual email via MailerSend once API issues are resolved
-    } catch (tokenError) {
-      logger.error('Password reset token generation failed', { email, userId: user.id, error: tokenError });
+      throw emailError;
     }
 
     sendSuccess(res, null, 'If the email exists, a password reset link has been sent');
