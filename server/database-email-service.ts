@@ -198,11 +198,10 @@ export class DatabaseEmailService {
       // Log email
       const emailLogData: InsertEmailLog = {
         userId,
-        email,
+        recipientEmail: email,
         emailType: 'verification',
         subject: 'Verify Your TeeMeYou Account',
         deliveryStatus: 'sent',
-        sentAt: new Date(),
         mailerSendId: response.body?.message_id || null
       };
 
@@ -331,11 +330,10 @@ export class DatabaseEmailService {
       // Log email
       const emailLogData: InsertEmailLog = {
         userId,
-        email,
+        recipientEmail: email,
         emailType: 'password_reset',
         subject: 'Reset Your TeeMeYou Password',
         deliveryStatus: 'sent',
-        sentAt: new Date(),
         mailerSendId: response.body?.message_id || null
       };
 
