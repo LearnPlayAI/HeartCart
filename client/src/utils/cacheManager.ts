@@ -115,30 +115,24 @@ export class CacheManager {
   }
 
   /**
-   * Initialize cache management with automatic checks
+   * Initialize cache management with automatic checks - DISABLED to prevent reload loops
    */
   initialize(): void {
-    console.log('[CacheManager] Initializing cache management');
+    console.log('[CacheManager] Cache management disabled to prevent reload loops');
     
-    // Check immediately
-    this.checkForUpdates();
-
-    // Set up periodic checks
-    setInterval(() => {
-      this.checkForUpdates();
-    }, this.CHECK_INTERVAL);
-
-    // Check when page becomes visible
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) {
-        this.checkForUpdates();
-      }
-    });
-
-    // Check on focus
-    window.addEventListener('focus', () => {
-      this.checkForUpdates();
-    });
+    // Disable automatic checks to prevent infinite reload loops
+    // this.checkForUpdates();
+    // setInterval(() => {
+    //   this.checkForUpdates();
+    // }, this.CHECK_INTERVAL);
+    // document.addEventListener('visibilitychange', () => {
+    //   if (!document.hidden) {
+    //     this.checkForUpdates();
+    //   }
+    // });
+    // window.addEventListener('focus', () => {
+    //   this.checkForUpdates();
+    // });
   }
 
   /**
@@ -151,16 +145,16 @@ export class CacheManager {
   }
 }
 
-// Auto-initialize when module loads
-if (typeof window !== 'undefined') {
-  // Wait for DOM to be ready
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-      CacheManager.getInstance().initialize();
-    });
-  } else {
-    CacheManager.getInstance().initialize();
-  }
-}
+// Auto-initialization DISABLED to prevent reload loops
+// if (typeof window !== 'undefined') {
+//   // Wait for DOM to be ready
+//   if (document.readyState === 'loading') {
+//     document.addEventListener('DOMContentLoaded', () => {
+//       CacheManager.getInstance().initialize();
+//     });
+//   } else {
+//     CacheManager.getInstance().initialize();
+//   }
+// }
 
 export const cacheManager = CacheManager.getInstance();
