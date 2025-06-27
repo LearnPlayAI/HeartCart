@@ -48,6 +48,13 @@ import {
   attributeOptions,
   type AttributeOption,
   type InsertAttributeOption,
+  // Email and token management
+  mailTokens,
+  type MailToken,
+  type InsertMailToken,
+  emailLogs,
+  type EmailLog,
+  type InsertEmailLog,
   productAttributes,
   type ProductAttribute,
   type InsertProductAttribute,
@@ -542,6 +549,18 @@ export interface IStorage {
   getPudoLockerById(id: number): Promise<PudoLocker | undefined>;
   updateUserPreferredLocker(userId: number, lockerId: number, lockerCode: string): Promise<boolean>;
   getUserPreferredLocker(userId: number): Promise<PudoLocker | undefined>;
+
+  // Token Management operations
+  createMailToken(tokenData: InsertMailToken): Promise<MailToken>;
+  getMailTokenByHash(tokenHash: string): Promise<MailToken | undefined>;
+  markTokenUsed(tokenHash: string): Promise<boolean>;
+  deleteExpiredTokens(): Promise<number>;
+  cleanupUserTokens(userId: number, tokenType: string): Promise<number>;
+
+  // Email Log operations
+  logEmail(emailData: InsertEmailLog): Promise<EmailLog>;
+  getEmailLogs(userId?: number, emailType?: string, limit?: number): Promise<EmailLog[]>;
+  updateEmailDeliveryStatus(emailId: number, status: string, errorMessage?: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
