@@ -340,8 +340,15 @@ export class DatabaseEmailService {
           https://teemeyou.shop
         `);
 
-      // Send email
-      const response = await this.mailerSend.email.send(emailParams);
+      // Send email with timeout protection
+      logger.info('Attempting to send password reset email', { userId, email });
+      
+      const emailSendPromise = this.mailerSend.email.send(emailParams);
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Email send timeout after 30 seconds')), 30000);
+      });
+
+      const response = await Promise.race([emailSendPromise, timeoutPromise]) as any;
       
       // Log email with proper response handling and SAST time
       const emailLogData: InsertEmailLog = {
