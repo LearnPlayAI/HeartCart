@@ -152,7 +152,7 @@ export class InvoiceGenerator {
     // Right column - Invoice details
     const rightColumn = margin + (contentWidth / 2);
     doc.text(`Invoice Number: ${data.orderNumber}`, rightColumn, yPosition);
-    doc.text(`Date: ${data.paymentReceivedDate}`, rightColumn, yPosition + 5);
+    doc.text(`Date: ${this.convertToSAST(data.paymentReceivedDate)}`, rightColumn, yPosition + 5);
     doc.text(`Customer: ${data.customerName}`, rightColumn, yPosition + 10);
     doc.text(`Email: ${data.customerEmail}`, rightColumn, yPosition + 15);
     doc.text(`Phone: ${data.customerPhone}`, rightColumn, yPosition + 20);
