@@ -22,6 +22,7 @@ export interface PaymentConfirmationEmailData {
   email: string;
   customerName: string;
   orderNumber: string;
+  orderId: number;
   amount: number;
   currency: string;
   paymentMethod: string;
@@ -32,6 +33,7 @@ export interface OrderStatusEmailData {
   email: string;
   customerName: string;
   orderNumber: string;
+  orderId: number;
   status: string;
   trackingNumber?: string;
   estimatedDelivery?: string;
@@ -50,6 +52,7 @@ export interface OrderConfirmationEmailData {
   email: string;
   customerName: string;
   orderNumber: string;
+  orderId: number;
   orderItems: Array<{
     productName: string;
     quantity: number;
@@ -619,7 +622,7 @@ export class DatabaseEmailService {
               </div>
               
               <div style="text-align: center; margin: 30px 0;">
-                <a href="https://teemeyou.shop/order/${data.orderNumber}" 
+                <a href="https://teemeyou.shop/order/${data.orderId}" 
                    style="background: linear-gradient(135deg, #FF69B4 0%, #E91E63 100%); 
                           color: white; 
                           padding: 16px 32px; 
@@ -840,7 +843,7 @@ export class DatabaseEmailService {
               ` : ''}
               
               <div style="text-align: center; margin: 30px 0;">
-                <a href="https://teemeyou.shop/order/${data.orderNumber}" 
+                <a href="https://teemeyou.shop/order/${data.orderId}" 
                    style="background: linear-gradient(135deg, #FF69B4 0%, #E91E63 100%); 
                           color: white; 
                           padding: 16px 32px; 
