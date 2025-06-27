@@ -3,8 +3,21 @@
  * Tests the new order confirmation email functionality
  */
 
-import { databaseEmailService } from './server/database-email-service.js';
-import { logger } from './server/logger.js';
+const { MailerSend, EmailParams, Sender, Recipient } = require('mailersend');
+
+// Test the order confirmation email directly
+const MAILERSEND_API_KEY = process.env.MAILERSEND_API_KEY;
+
+if (!MAILERSEND_API_KEY) {
+  console.error('MAILERSEND_API_KEY environment variable is required');
+  process.exit(1);
+}
+
+const mailerSend = new MailerSend({
+  apiKey: MAILERSEND_API_KEY,
+});
+
+const sender = new Sender('sales@teemeyou.shop', 'TeeMeYou Support');
 
 const testOrderData = {
   email: 'admin@teemeyou.shop',
