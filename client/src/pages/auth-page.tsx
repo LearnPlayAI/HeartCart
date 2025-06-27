@@ -83,6 +83,26 @@ export default function AuthPage() {
     }
   }, [user]);
 
+  // Handle reset password page with token validation
+  React.useEffect(() => {
+    if (isResetPasswordPage && currentResetToken) {
+      validateTokenMutation.mutate(currentResetToken, {
+        onSuccess: (response) => {
+          setResetTokenData(response.data);
+          setIsResetPasswordModalOpen(true);
+        },
+        onError: (error: Error) => {
+          toast({
+            title: "Invalid Reset Link",
+            description: error.message,
+            variant: "destructive",
+          });
+          navigate("/auth");
+        },
+      });
+    }
+  }, [isResetPasswordPage, currentResetToken]);
+
   // Forgot password mutation
   const forgotPasswordMutation = useMutation({
     mutationFn: async (data: ForgotPasswordFormData) => {
@@ -96,19 +116,21 @@ export default function AuthPage() {
   // Token validation mutation
   const validateTokenMutation = useMutation({
     mutationFn: async (token: string) => {
-      return await apiRequest(`/api/auth/validate-reset-token/${token}`, {
+      const response = await apiRequest(`/api/auth/validate-reset-token/${token}`, {
         method: 'GET',
       });
+      return await response.json();
     },
   });
 
   // Reset password mutation
   const resetPasswordMutation = useMutation({
     mutationFn: async (data: { token: string; password: string }) => {
-      return await apiRequest('/api/auth/reset-password', {
+      const response = await apiRequest('/api/auth/reset-password', {
         method: 'POST',
         body: JSON.stringify(data),
       });
+      return await response.json();
     },
   });
 
@@ -126,6 +148,15 @@ export default function AuthPage() {
     resolver: zodResolver(forgotPasswordSchema),
     defaultValues: {
       email: "",
+    },
+  });
+
+  // Reset password form
+  const resetPasswordForm = useForm<ResetPasswordFormData>({
+    resolver: zodResolver(resetPasswordSchema),
+    defaultValues: {
+      password: "",
+      confirmPassword: "",
     },
   });
 
@@ -163,11 +194,8 @@ export default function AuthPage() {
   const onForgotPasswordSubmit = (data: ForgotPasswordFormData) => {
     forgotPasswordMutation.mutate(data, {
       onSuccess: () => {
-        toast({
-          title: "Reset email sent",
-          description: "Please check your email for password reset instructions.",
-        });
         setIsForgotPasswordOpen(false);
+        setIsEmailSentModalOpen(true);
         forgotPasswordForm.reset();
       },
       onError: (error: Error) => {
@@ -178,6 +206,51 @@ export default function AuthPage() {
         });
       },
     });
+  };
+
+  // Handle reset password submit
+  const onResetPasswordSubmit = (data: ResetPasswordFormData) => {
+    if (!currentResetToken) return;
+    
+    resetPasswordMutation.mutate(
+      { token: currentResetToken, password: data.password },
+      {
+        onSuccess: () => {
+          setIsResetPasswordModalOpen(false);
+          toast({
+            title: "Password reset successful",
+            description: "Your password has been updated. You can now sign in with your new password.",
+          });
+          
+          // Auto-login with the email from token data
+          if (resetTokenData?.email) {
+            loginMutation.mutate(
+              { email: resetTokenData.email, password: data.password },
+              {
+                onSuccess: () => {
+                  queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+                  queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
+                  navigate('/');
+                },
+                onError: () => {
+                  // If auto-login fails, just redirect to auth page
+                  navigate('/auth');
+                }
+              }
+            );
+          } else {
+            navigate('/auth');
+          }
+        },
+        onError: (error: Error) => {
+          toast({
+            title: "Reset failed",
+            description: error.message,
+            variant: "destructive",
+          });
+        },
+      }
+    );
   };
 
   // Handle register submit
