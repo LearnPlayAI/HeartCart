@@ -889,6 +889,21 @@ ${order.customerName}`;
                     {order.status === 'payment received' ? 'Payment Received' : order.paymentStatus}
                   </Badge>
                 </div>
+                
+                {/* Invoice Download Button */}
+                {(order.paymentStatus === 'paid' || order.status === 'payment received') && (
+                  <div className="pt-2">
+                    <Button 
+                      onClick={downloadInvoice}
+                      variant="outline"
+                      size="sm"
+                      className="w-full flex items-center gap-2 text-[#FF69B4] border-[#FF69B4] hover:bg-[#FF69B4] hover:text-white"
+                    >
+                      <Download className="h-4 w-4" />
+                      Download Invoice
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
 

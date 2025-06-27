@@ -46,7 +46,8 @@ import {
   Receipt,
   MessageSquare,
   ShoppingCart,
-  Building2
+  Building2,
+  Download
 } from 'lucide-react';
 import OrderStatusTimeline from '@/components/OrderStatusTimeline';
 
@@ -456,6 +457,57 @@ export default function AdminOrderDetail() {
     }
   });
 
+  // Invoice download function
+  const downloadInvoice = async () => {
+    if (!order) return;
+    
+    try {
+      const response = await fetch(`/api/admin/orders/${order.id}/invoice`, {
+        method: 'GET',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          toast({
+            title: "Invoice Not Available",
+            description: "No invoice is available for this order yet.",
+            variant: "destructive",
+          });
+        } else {
+          throw new Error('Failed to download invoice');
+        }
+        return;
+      }
+
+      // Create blob from response
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      
+      // Create download link
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Invoice-${order.orderNumber}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Invoice Downloaded",
+        description: "Invoice has been downloaded successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Download Failed",
+        description: "Failed to download invoice. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (isLoading) {
     return (
       <AdminLayout>
@@ -669,6 +721,19 @@ export default function AdminOrderDetail() {
                        order.paymentStatus || 'Unknown'}
                     </Badge>
                   </div>
+                  
+                  {/* Invoice Download Button */}
+                  {(order.paymentStatus === 'payment_received' || order.status === 'payment received') && (
+                    <Button 
+                      onClick={downloadInvoice}
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-2"
+                    >
+                      <Download className="h-4 w-4" />
+                      Download Invoice
+                    </Button>
+                  )}
                 </div>
 
                 {order.paymentReceivedDate && (
