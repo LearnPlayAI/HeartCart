@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Download, Smartphone, Plus, Share } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { usePWAInstall } from '@/hooks/usePWAInstall';
 
 interface MobileInstallButtonProps {
   className?: string;
@@ -25,12 +26,21 @@ const MobileInstallButton: React.FC<MobileInstallButtonProps> = ({
     isStandalone: false
   });
 
+  // Use PWA install hook for automatic installation
+  const { 
+    isInstallable, 
+    isStandalone, 
+    installApp, 
+    canInstall,
+    isIOSDevice 
+  } = usePWAInstall();
+
   useEffect(() => {
     const userAgent = navigator.userAgent;
     const isIOS = /iPad|iPhone|iPod/.test(userAgent);
     const isAndroid = /Android/.test(userAgent);
     const isMobile = isIOS || isAndroid || /Mobile/.test(userAgent);
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+    const isStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || 
                         (window.navigator as any).standalone === true;
 
     let browser = 'unknown';
@@ -44,16 +54,25 @@ const MobileInstallButton: React.FC<MobileInstallButtonProps> = ({
       isAndroid,
       isMobile,
       browser,
-      isStandalone
+      isStandalone: isStandaloneMode
     });
   }, []);
 
   // Show button if mobile device and not already installed, or if forced to show
-  const shouldShowButton = (deviceInfo.isMobile && !deviceInfo.isStandalone) || showAlways;
+  const shouldShowButton = (deviceInfo.isMobile && !isStandalone) || showAlways;
 
   if (!shouldShowButton) return null;
 
-  const handleInstallClick = () => {
+  const handleInstallClick = async () => {
+    // Try automatic installation first if available
+    if (canInstall) {
+      const success = await installApp();
+      if (success) {
+        return; // Installation successful, no need to show manual instructions
+      }
+    }
+    
+    // Fall back to manual instructions if automatic installation fails or not available
     setShowInstructions(true);
   };
 
@@ -129,7 +148,7 @@ const MobileInstallButton: React.FC<MobileInstallButtonProps> = ({
         className={`${className} bg-[#FF1493] hover:bg-[#E91E63] text-white border-0 shadow-lg font-medium`}
       >
         <Smartphone className="h-4 w-4 mr-2" />
-        Install App
+        {canInstall ? 'Install App' : 'Get App'}
       </Button>
 
       <Dialog open={showInstructions} onOpenChange={setShowInstructions}>
