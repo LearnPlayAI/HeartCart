@@ -1,8 +1,9 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
-import { sendError } from "./api-response";
+import { sendError, sendSuccess } from "./api-response";
 import { storage } from "./storage";
 import { objectStore } from "./object-store";
+import asyncHandler from 'express-async-handler';
 import { ZodError } from "zod";
 import { logger } from "./logger";
 import { db } from "./db";
@@ -215,6 +216,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Mount upload handler routes
   app.use('/api/upload', uploadHandlers);
   
+  // Health check endpoint with build version for cache busting
+  app.get('/api/health', asyncHandler(async (req: Request, res: Response) => {
+    const buildVersion = `${Date.now()}-${process.pid}-${Math.random().toString(36).substr(2, 9)}`;
+    sendSuccess(res, {
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      buildVersion,
+      deploymentTime: new Date().toISOString(),
+      nodeVersion: process.version
+    });
+  }));
+
   // Legacy route redirects to new file serving endpoint
   app.get('/object-storage/:folder/:subfolder/:filename', async (req: Request, res: Response) => {
     const { folder, subfolder, filename } = req.params;

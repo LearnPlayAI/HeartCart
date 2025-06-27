@@ -1,159 +1,60 @@
-import { useState, useEffect, useCallback } from 'react';
-
-interface UpdateInfo {
-  updateAvailable: boolean;
-  currentVersion?: string;
-  cachedVersion?: string;
-  isUpdating: boolean;
-}
-
-interface ServiceWorkerMessage {
-  type: string;
-  version?: string;
-  action?: string;
-  currentVersion?: string;
-  cachedVersion?: string;
-  updateAvailable?: boolean;
-  error?: string;
-}
+import { useEffect, useState } from 'react';
+import { cacheManager } from '../utils/cacheManager';
 
 export function useAppUpdate() {
-  const [updateInfo, setUpdateInfo] = useState<UpdateInfo>({
-    updateAvailable: false,
-    isUpdating: false
-  });
-  const [registration, setRegistration] = useState<ServiceWorkerRegistration | null>(null);
+  const [updateAvailable, setUpdateAvailable] = useState(false);
+  const [isChecking, setIsChecking] = useState(false);
 
-  // Check for updates by comparing versions
-  const checkForUpdates = useCallback(async () => {
-    if (!('serviceWorker' in navigator) || !registration) {
-      return;
-    }
-
-    try {
-      // Force service worker to check for updates
-      await registration.update();
-      
-      // Check version information
-      const messageChannel = new MessageChannel();
-      const serviceWorker = registration.active || registration.waiting || registration.installing;
-      
-      if (serviceWorker) {
-        serviceWorker.postMessage({ type: 'CHECK_VERSION' }, [messageChannel.port2]);
-        
-        messageChannel.port1.onmessage = (event) => {
-          const data: ServiceWorkerMessage = event.data;
-          
-          if (data.type === 'VERSION_INFO') {
-            setUpdateInfo(prev => ({
-              ...prev,
-              updateAvailable: data.updateAvailable || false,
-              currentVersion: data.currentVersion,
-              cachedVersion: data.cachedVersion
-            }));
-          }
-        };
-      }
-    } catch (error) {
-      console.error('[Update] Error checking for updates:', error);
-    }
-  }, [registration]);
-
-  // Apply update by reloading the page
-  const applyUpdate = useCallback(async () => {
-    setUpdateInfo(prev => ({ ...prev, isUpdating: true }));
-    
-    try {
-      // Clear all caches to ensure fresh content
-      if ('caches' in window) {
-        const cacheNames = await caches.keys();
-        await Promise.all(
-          cacheNames.map(cacheName => caches.delete(cacheName))
-        );
-      }
-      
-      // Clear localStorage and sessionStorage
-      if (typeof Storage !== 'undefined') {
-        localStorage.clear();
-        sessionStorage.clear();
-      }
-      
-      // If there's a waiting service worker, tell it to skip waiting
-      if (registration?.waiting) {
-        registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-        
-        // Wait for the new service worker to control the page
-        registration.addEventListener('controllerchange', () => {
-          window.location.reload();
-        });
-      } else {
-        // No waiting worker, just reload
-        window.location.reload();
-      }
-    } catch (error) {
-      console.error('[Update] Error applying update:', error);
-      // Fallback: hard reload
-      window.location.reload();
-    }
-  }, [registration]);
-
-  // Dismiss update notification
-  const dismissUpdate = useCallback(() => {
-    setUpdateInfo(prev => ({ ...prev, updateAvailable: false }));
-  }, []);
-
-  // Initialize service worker and set up listeners
   useEffect(() => {
-    if (!('serviceWorker' in navigator)) {
-      return;
-    }
+    let mounted = true;
 
-    navigator.serviceWorker.ready.then((reg) => {
-      setRegistration(reg);
+    const checkForUpdates = async () => {
+      if (!mounted) return;
       
-      // Listen for service worker messages
-      navigator.serviceWorker.addEventListener('message', (event) => {
-        const data: ServiceWorkerMessage = event.data;
-        
-        if (data.type === 'SW_UPDATE') {
-          setUpdateInfo(prev => ({
-            ...prev,
-            updateAvailable: true,
-            currentVersion: data.version
-          }));
+      setIsChecking(true);
+      try {
+        const hasUpdate = await cacheManager.checkForUpdates();
+        if (mounted && hasUpdate) {
+          setUpdateAvailable(true);
         }
-      });
-      
-      // Check for updates immediately
-      checkForUpdates();
-    });
+      } catch (error) {
+        console.error('[useAppUpdate] Error checking for updates:', error);
+      } finally {
+        if (mounted) {
+          setIsChecking(false);
+        }
+      }
+    };
 
-    // Set up periodic update checks (every 30 seconds)
-    const updateInterval = setInterval(checkForUpdates, 30000);
+    // Check immediately
+    checkForUpdates();
 
-    // Check for updates when page becomes visible
+    // Set up periodic checks
+    const interval = setInterval(checkForUpdates, 30000);
+
+    // Check when page becomes visible
     const handleVisibilityChange = () => {
       if (!document.hidden) {
         checkForUpdates();
       }
     };
-    
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    // Cleanup
     return () => {
-      clearInterval(updateInterval);
+      mounted = false;
+      clearInterval(interval);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [checkForUpdates]);
+  }, []);
+
+  const applyUpdate = async () => {
+    await cacheManager.forceReload();
+  };
 
   return {
-    updateAvailable: updateInfo.updateAvailable,
-    isUpdating: updateInfo.isUpdating,
-    currentVersion: updateInfo.currentVersion,
-    cachedVersion: updateInfo.cachedVersion,
-    applyUpdate,
-    dismissUpdate,
-    checkForUpdates
+    updateAvailable,
+    isChecking,
+    applyUpdate
   };
 }
