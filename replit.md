@@ -278,6 +278,15 @@ Changelog:
   * Changed from generic orders list (/orders) to specific customer order details (/order/{orderNumber})
   * All 4 customer-facing email templates now correctly direct customers to their specific order information
   * Maintains proper customer experience with direct access to relevant order details from email notifications
+- June 27, 2025. Complete PDF invoice system implemented and operational:
+  * Full PDF invoice generator service with Puppeteer for superior HTML/CSS rendering
+  * Hot pink TeeMeYou branding with SA business compliance (registration 2025/499123/07, no VAT)
+  * Automatic invoice generation when admin marks payment status as "payment_received"
+  * Object storage integration with organized file paths: /Invoices/{year}/{userId}/{orderNumber}.pdf
+  * Dual access system: admin download via /api/admin/orders/{id}/invoice, customer via /api/orders/{id}/invoice
+  * Frontend UI integration with download buttons in both admin and customer order detail pages
+  * Database column invoicePath automatically updated with storage location for tracking
+  * Complete end-to-end system ready for production use with existing orders
 ```
 
 ## User Preferences
