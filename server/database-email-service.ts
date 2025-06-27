@@ -195,25 +195,29 @@ export class DatabaseEmailService {
       // Send email
       const response = await this.mailerSend.email.send(emailParams);
       
-      // Log email
+      // Log email with proper response handling
       const emailLogData: InsertEmailLog = {
         userId,
         recipientEmail: email,
         emailType: 'verification',
         subject: 'Verify Your TeeMeYou Account',
-        deliveryStatus: 'sent',
-        mailerSendId: response.body?.message_id || null
+        deliveryStatus: response.statusCode === 202 ? 'sent' : 'failed',
+        mailerSendId: response.body?.message_id || null,
+        errorMessage: response.statusCode !== 202 ? `HTTP ${response.statusCode}` : null
       };
 
       await storage.logEmail(emailLogData);
       
-      logger.info('Verification email sent successfully', { 
-        userId, 
-        email,
-        messageId: response.body?.message_id 
-      });
-
-      return token;
+      if (response.statusCode === 202) {
+        logger.info('Verification email sent successfully', { 
+          userId, 
+          email,
+          messageId: response.body?.message_id 
+        });
+        return token;
+      } else {
+        throw new Error(`Email send failed with status ${response.statusCode}`);
+      }
     } catch (error) {
       logger.error('Error sending verification email', { error, userId, email });
       throw error;
@@ -327,25 +331,29 @@ export class DatabaseEmailService {
       // Send email
       const response = await this.mailerSend.email.send(emailParams);
       
-      // Log email
+      // Log email with proper response handling
       const emailLogData: InsertEmailLog = {
         userId,
         recipientEmail: email,
         emailType: 'password_reset',
         subject: 'Reset Your TeeMeYou Password',
-        deliveryStatus: 'sent',
-        mailerSendId: response.body?.message_id || null
+        deliveryStatus: response.statusCode === 202 ? 'sent' : 'failed',
+        mailerSendId: response.body?.message_id || null,
+        errorMessage: response.statusCode !== 202 ? `HTTP ${response.statusCode}` : null
       };
 
       await storage.logEmail(emailLogData);
       
-      logger.info('Password reset email sent successfully', { 
-        userId, 
-        email,
-        messageId: response.body?.message_id 
-      });
-
-      return token;
+      if (response.statusCode === 202) {
+        logger.info('Password reset email sent successfully', { 
+          userId, 
+          email,
+          messageId: response.body?.message_id 
+        });
+        return token;
+      } else {
+        throw new Error(`Email send failed with status ${response.statusCode}`);
+      }
     } catch (error) {
       logger.error('Error sending password reset email', { error, userId, email });
       throw error;

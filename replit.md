@@ -162,6 +162,13 @@ Changelog:
   * Implemented one-time token usage tracking with usedAt timestamp
   * Added comprehensive token validation preventing reuse after password change
   * Fixed timezone-related token expiration issues for South African users
+- June 27, 2025. Complete database-driven email system migration:
+  * Replaced all in-memory token storage with PostgreSQL database tables (mailTokens, emailLogs)
+  * Implemented comprehensive token management with hashed tokens and one-time usage tracking
+  * Created unified database email service with proper response handling and error logging
+  * Added automatic token cleanup and comprehensive email logging for audit trails
+  * Eliminated deployment cache issues by removing server memory dependencies
+  * All email types now use database storage: verification, password reset, payment confirmations, order updates
 ```
 
 ## User Preferences
