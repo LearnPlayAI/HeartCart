@@ -84,13 +84,13 @@ router.patch("/orders/:id/status", isAuthenticated, asyncHandler(async (req: Req
     // Update order status
     const updatedOrder = await storage.updateOrderStatus(orderId, status);
     
-    // If tracking number is provided (for shipped status), update it
-    if (trackingNumber && status === 'shipped') {
-      await storage.updateOrderTrackingNumber(orderId, trackingNumber);
-    }
-    
     if (!updatedOrder) {
       return sendError(res, "Order not found", 404);
+    }
+    
+    // If tracking number is provided (for shipped status), update it
+    if (trackingNumber && status === 'shipped') {
+      await storage.updateOrderTracking(orderId, trackingNumber);
     }
 
     // Send order status update email for all status changes
