@@ -61,6 +61,7 @@ import supplierOrderRoutes from "./supplier-order-routes-simple";
 import { registerStorageTestRoutes } from "./storage-test-routes";
 import { registerFileManagerTestRoutes } from "./file-manager-test-routes";
 import authEmailRoutes from "./auth-email-routes";
+import simpleAuthRoutes from "./simple-auth-routes";
 import { validateRequest, idSchema } from './validation-middleware';
 import { trackProductInteraction, trackCartActivity } from './interaction-middleware';
 import { 
@@ -132,6 +133,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Set up authentication with our new auth module
   setupAuth(app);
+  
+  // Register simple auth routes early
+  app.use("/api/auth", simpleAuthRoutes);
   
   // Register PDF proof endpoint BEFORE response wrapper to serve raw PDF data
   app.get('/api/orders/:id/proof', async (req, res) => {
