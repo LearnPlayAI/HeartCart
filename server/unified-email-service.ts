@@ -70,6 +70,21 @@ export class UnifiedEmailService {
     return { token, expires: expiresAt };
   }
 
+  async createVerificationToken(userId: number, email: string): Promise<{ token: string; expires: Date }> {
+    const token = this.generateSecureToken();
+    const expiresAt = new Date(Date.now() + 3 * 60 * 60 * 1000); // 3 hours for SAST timezone
+
+    await db.insert(mailTokens).values({
+      token: token,
+      tokenType: 'verification',
+      userId,
+      email,
+      expiresAt
+    });
+
+    return { token, expires: expiresAt };
+  }
+
   async sendMailerSendEmail(recipientEmail: string, subject: string, htmlContent: string, textContent: string): Promise<{ success: boolean; messageId?: string; error?: string }> {
     try {
       if (!this.isInitialized) {
@@ -348,6 +363,130 @@ export class UnifiedEmailService {
         usedAt: new Date()
       })
       .where(eq(mailTokens.token, token));
+  }
+
+  async sendVerificationEmail(userId: number, email: string, userName: string): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    try {
+      // Create verification token
+      const { token } = await this.createVerificationToken(userId, email);
+      
+      // Create verification URL
+      const verificationUrl = `https://teemeyou.shop/verify-email?token=${token}`;
+
+      const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Verify Your Account - TeeMeYou</title>
+      </head>
+      <body style="margin: 0; padding: 0; background: linear-gradient(135deg, ${SA_COLORS.LIGHT_GRAY} 0%, ${SA_COLORS.WHITE} 100%); font-family: 'Segoe UI', Arial, sans-serif;">
+        <div class="container" style="max-width: 600px; margin: 20px auto; background: ${SA_COLORS.WHITE}; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);">
+          
+          <!-- Header -->
+          <div class="header" style="background: linear-gradient(135deg, ${SA_COLORS.GREEN} 0%, ${SA_COLORS.BLUE} 100%); padding: 40px; text-align: center; position: relative;">
+            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 6px; background: linear-gradient(90deg, ${SA_COLORS.GREEN} 0%, ${SA_COLORS.YELLOW} 33%, ${SA_COLORS.RED} 66%, ${SA_COLORS.BLUE} 100%);"></div>
+            <div style="display: inline-block; background: ${SA_COLORS.WHITE}; padding: 8px 16px; border-radius: 25px; margin-bottom: 10px;">
+              <span style="font-size: 24px;">🇿🇦</span>
+            </div>
+            <h1 style="color: ${SA_COLORS.WHITE}; margin: 0; font-size: 32px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">TeeMeYou</h1>
+            <p style="color: ${SA_COLORS.WHITE}; margin: 8px 0 0 0; font-size: 16px; opacity: 0.9;">Welcome to TeeMeYou!</p>
+          </div>
+          
+          <!-- Main Content -->
+          <div class="content" style="padding: 40px; background: ${SA_COLORS.WHITE};">
+            <div style="text-align: center; margin-bottom: 30px;">
+              <div style="display: inline-block; background: linear-gradient(135deg, ${SA_COLORS.GREEN} 0%, ${SA_COLORS.LIGHT_GREEN} 100%); padding: 12px; border-radius: 50%; margin-bottom: 15px;">
+                <span style="font-size: 32px; color: ${SA_COLORS.WHITE};">✉️</span>
+              </div>
+              <h2 style="color: ${SA_COLORS.BLUE}; margin: 0; font-size: 28px; font-weight: 600;">Verify Your Account</h2>
+            </div>
+            
+            <p style="font-size: 16px; line-height: 1.6; color: ${SA_COLORS.DARK_GRAY}; margin-bottom: 30px; text-align: center;">
+              Hi ${userName || 'User'}, welcome to TeeMeYou - South Africa's premium t-shirt marketplace! Please verify your email address to activate your account and start shopping.
+            </p>
+            
+            <!-- CTA Button -->
+            <div style="text-align: center; margin: 40px 0;">
+              <a href="${verificationUrl}" class="button"
+                 style="background: linear-gradient(135deg, ${SA_COLORS.GREEN} 0%, ${SA_COLORS.LIGHT_GREEN} 100%); 
+                        color: ${SA_COLORS.WHITE}; 
+                        padding: 16px 32px; 
+                        text-decoration: none; 
+                        border-radius: 8px; 
+                        font-weight: 600; 
+                        font-size: 16px; 
+                        display: inline-block;
+                        box-shadow: 0 4px 12px rgba(0, 119, 73, 0.3);
+                        transition: all 0.3s ease;
+                        text-transform: uppercase;
+                        letter-spacing: 0.5px;">
+                ✅ Verify My Account
+              </a>
+            </div>
+            
+            <!-- Security Notice -->
+            <div style="background: linear-gradient(135deg, ${SA_COLORS.YELLOW} 0%, ${SA_COLORS.GOLD} 100%); padding: 20px; border-radius: 8px; margin: 30px 0; border-left: 4px solid ${SA_COLORS.ORANGE}; position: relative;">
+              <div style="position: absolute; top: -8px; left: 16px; background: ${SA_COLORS.ORANGE}; color: ${SA_COLORS.WHITE}; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">SECURITY</div>
+              <p style="margin: 0; font-weight: 600; color: ${SA_COLORS.BLACK}; font-size: 14px;">
+                🔒 This verification link expires in 1 hour for your protection.
+              </p>
+            </div>
+            
+            <!-- Fallback Link -->
+            <div style="background: ${SA_COLORS.LIGHT_GRAY}; padding: 15px; border-radius: 6px; margin-top: 30px; text-align: center;">
+              <p style="margin: 0; font-size: 14px; color: ${SA_COLORS.DARK_GRAY};">
+                Button not working? Copy and paste this link:
+              </p>
+              <p style="margin: 5px 0 0 0;">
+                <a href="${verificationUrl}" style="color: ${SA_COLORS.BLUE}; word-break: break-all; font-size: 12px;">${verificationUrl}</a>
+              </p>
+            </div>
+          </div>
+          
+          <!-- Footer -->
+          <div style="background: ${SA_COLORS.DARK_GRAY}; padding: 25px; text-align: center;">
+            <div style="margin-bottom: 15px;">
+              <span style="display: inline-block; background: ${SA_COLORS.WHITE}; padding: 6px 12px; border-radius: 20px; margin: 0 5px;">
+                <span style="font-size: 16px;">🇿🇦</span>
+              </span>
+            </div>
+            <p style="color: ${SA_COLORS.WHITE}; margin: 0; font-size: 14px; font-weight: 500;">
+              © 2024 TeeMeYou • South Africa's Premium T-Shirt Marketplace
+            </p>
+            <p style="color: ${SA_COLORS.LIGHT_GRAY}; margin: 8px 0 0 0; font-size: 12px;">
+              If you didn't create this account, you can safely ignore this email.
+            </p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const textContent = `
+      Welcome to TeeMeYou!
+      
+      Hi ${userName || 'User'},
+      
+      Welcome to TeeMeYou - South Africa's premium t-shirt marketplace! Please verify your email address to activate your account and start shopping.
+      
+      Click here to verify: ${verificationUrl}
+      
+      This verification link expires in 1 hour for your security.
+      
+      If you didn't create this account, you can safely ignore this email.
+      
+      Best regards,
+      The TeeMeYou Team
+    `;
+
+      console.log(`📧 Sending verification email to ${email}`);
+      return await this.sendMailerSendEmail(email, "Verify Your TeeMeYou Account", htmlContent, textContent);
+    } catch (error: any) {
+      console.error('❌ Error sending verification email:', error);
+      return { success: false, error: error.message };
+    }
   }
 
   async cleanupExpiredTokens(): Promise<void> {

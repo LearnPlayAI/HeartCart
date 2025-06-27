@@ -183,6 +183,14 @@ Changelog:
   * All token functionality verified through comprehensive testing: creation, validation, usage tracking
   * Database schema updated with token column replacing tokenHash for streamlined operations
   * Password reset system fully functional with proper security measures and timezone handling
+- June 27, 2025. Password reset system verification and completion:
+  * Fixed missing /api/auth/validate-reset-token/{token} endpoint in simple-auth-routes.ts
+  * Updated storage.ts methods (verifyEmailToken, markTokenAsUsed, markTokenUsed) to use plain tokens
+  * Eliminated all references to tokenHash ensuring consistent plain token approach throughout codebase
+  * Comprehensive end-to-end testing confirms full functionality: token creation, validation, password reset, one-time usage
+  * System properly handles SAST timezone (UTC+2) with 3-hour server-side validity window
+  * All 5 email scenarios operational: verification, password reset, payment confirmations, order updates, invoices
+  * Plain token password reset system fully deployed and production-ready
 - June 27, 2025. Deployment cache invalidation system implemented:
   * Created comprehensive cache manager with automatic version detection and aggressive cache clearing
   * Added health endpoint with build version tracking for deployment change detection
