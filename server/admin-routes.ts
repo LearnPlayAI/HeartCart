@@ -95,37 +95,42 @@ router.patch("/orders/:id/status", isAuthenticated, asyncHandler(async (req: Req
       await storage.updateOrderTracking(orderId, trackingNumber);
     }
 
-    // Send order status update email for all status changes
-    try {
-      // Get updated order details to ensure we have the latest tracking number
-      const finalOrder = await storage.getOrderById(orderId);
-      
-      const emailData = {
-        email: finalOrder.customerEmail,
-        customerName: finalOrder.customerName,
-        orderNumber: finalOrder.orderNumber,
-        orderId: finalOrder.id,
-        status: status,
-        trackingNumber: finalOrder.trackingNumber || null,
-        estimatedDelivery: getEstimatedDeliveryText(status)
-      };
+    // Send order status update email only for shipped and delivered status changes
+    if (status === 'shipped' || status === 'delivered') {
+      try {
+        // Get updated order details to ensure we have the latest tracking number
+        const finalOrder = await storage.getOrderById(orderId);
+        
+        const emailData = {
+          email: finalOrder.customerEmail,
+          customerName: finalOrder.customerName,
+          orderNumber: finalOrder.orderNumber,
+          orderId: finalOrder.id,
+          status: status,
+          trackingNumber: finalOrder.trackingNumber || null,
+          estimatedDelivery: getEstimatedDeliveryText(status),
+          shippingMethod: finalOrder.shippingMethod,
+          selectedLockerName: finalOrder.lockerDetails?.name || null,
+          selectedLockerAddress: finalOrder.lockerDetails?.address || null
+        };
 
-      await databaseEmailService.sendOrderStatusEmail(emailData);
-      
-      logger.info("Order status update email sent", {
-        orderId,
-        status,
-        customerEmail: updatedOrder.customerEmail,
-        adminUserId: req.user?.id
-      });
-    } catch (emailError) {
-      // Log email error but don't fail the status update
-      logger.error("Failed to send order status update email", {
-        error: emailError,
-        orderId,
-        status,
-        customerEmail: updatedOrder.customerEmail
-      });
+        await databaseEmailService.sendOrderStatusEmail(emailData);
+        
+        logger.info("Order status update email sent", {
+          orderId,
+          status,
+          customerEmail: updatedOrder.customerEmail,
+          adminUserId: req.user?.id
+        });
+      } catch (emailError) {
+        // Log email error but don't fail the status update
+        logger.error("Failed to send order status update email", {
+          error: emailError,
+          orderId,
+          status,
+          customerEmail: updatedOrder.customerEmail
+        });
+      }
     }
 
     logger.info("Order status updated by admin", { orderId, status, adminUserId: req.user?.id });

@@ -310,6 +310,14 @@ Changelog:
   * Customers can now successfully access their order details directly from email links
   * Maintains open tracking for delivery analytics while preventing URL conversion issues
   * All order detail links (https://teemeyou.shop/order/{orderNumber}) now function correctly
+- June 28, 2025. Enhanced PUDO locker email system with Google Maps integration:
+  * Updated OrderStatusEmailData interface to include shippingMethod, selectedLockerName, and selectedLockerAddress
+  * Enhanced shipped notification emails to include direct Google Maps links to specific PUDO locker locations
+  * When locker details are available, customers receive clickable "Open in Google Maps" link with exact locker address
+  * Fallback to generic "Search PUDO locker near me" link when specific locker details are unavailable
+  * Restricted shipped notification emails to only send when admin specifically marks order status as "shipped" or "delivered"
+  * Eliminated unnecessary email notifications for other status changes (pending, confirmed, processing, cancelled)
+  * Admin workflow now requires explicit "shipped" status selection to trigger customer shipping notifications
 ```
 
 ## User Preferences

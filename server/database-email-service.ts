@@ -37,6 +37,9 @@ export interface OrderStatusEmailData {
   status: string;
   trackingNumber?: string;
   estimatedDelivery?: string;
+  shippingMethod?: string;
+  selectedLockerName?: string;
+  selectedLockerAddress?: string;
 }
 
 export interface InvoiceEmailData {
@@ -788,14 +791,28 @@ export class DatabaseEmailService {
                       <p style="margin: 0 0 8px 0; color: #065F46; font-weight: bold; font-size: 14px;">
                         🗺️ <strong>Find Your Locker:</strong>
                       </p>
-                      <p style="margin: 0; font-size: 14px; color: #065F46;">
-                        Use Google Maps to locate your PUDO locker:
-                      </p>
-                      <p style="margin: 8px 0 0 0;">
-                        <span style="background: #10B981; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px; font-size: 12px; font-weight: bold; display: inline-block; cursor: pointer;">
-                          🗺️ Search "PUDO locker near me" in Google Maps
-                        </span>
-                      </p>
+                      ${data.selectedLockerName && data.selectedLockerAddress ? `
+                        <p style="margin: 0; font-size: 14px; color: #065F46;">
+                          <strong>${data.selectedLockerName}</strong><br>
+                          ${data.selectedLockerAddress}
+                        </p>
+                        <p style="margin: 8px 0 0 0;">
+                          <a href="https://www.google.com/maps/search/${encodeURIComponent(data.selectedLockerName + ' ' + data.selectedLockerAddress)}" 
+                             style="background: #10B981; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px; font-size: 12px; font-weight: bold; display: inline-block;">
+                            🗺️ Open in Google Maps
+                          </a>
+                        </p>
+                      ` : `
+                        <p style="margin: 0; font-size: 14px; color: #065F46;">
+                          Use Google Maps to locate your PUDO locker:
+                        </p>
+                        <p style="margin: 8px 0 0 0;">
+                          <a href="https://www.google.com/maps/search/PUDO+locker+near+me" 
+                             style="background: #10B981; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px; font-size: 12px; font-weight: bold; display: inline-block;">
+                            🗺️ Search "PUDO locker near me" in Google Maps
+                          </a>
+                        </p>
+                      `}
                     </div>
                     
                     <div style="background: linear-gradient(135deg, #FDF2F8 0%, #FCE7F3 100%); padding: 15px; border-radius: 6px; margin: 12px 0; border-left: 4px solid #EC4899;">
