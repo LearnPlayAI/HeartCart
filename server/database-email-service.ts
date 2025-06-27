@@ -603,7 +603,7 @@ export class DatabaseEmailService {
               </div>
               
               <div style="text-align: center; margin: 30px 0;">
-                <a href="https://teemeyou.shop/orders" 
+                <a href="https://teemeyou.shop/order/${data.orderNumber}" 
                    style="background: linear-gradient(135deg, #FF69B4 0%, #E91E63 100%); 
                           color: white; 
                           padding: 16px 32px; 
@@ -615,7 +615,7 @@ export class DatabaseEmailService {
                           box-shadow: 0 4px 15px rgba(255, 105, 180, 0.4);
                           text-transform: uppercase;
                           letter-spacing: 0.5px;">
-                  🔍 Track Your Order
+                  🔍 View Order Details
                 </a>
               </div>
               
@@ -780,7 +780,7 @@ export class DatabaseEmailService {
               ` : ''}
               
               <div style="text-align: center; margin: 30px 0;">
-                <a href="https://teemeyou.shop/orders" 
+                <a href="https://teemeyou.shop/order/${data.orderNumber}" 
                    style="background: linear-gradient(135deg, #FF69B4 0%, #E91E63 100%); 
                           color: white; 
                           padding: 16px 32px; 
@@ -984,7 +984,7 @@ export class DatabaseEmailService {
               `}
               
               <div style="text-align: center; margin: 30px 0;">
-                <a href="https://teemeyou.shop/orders/${data.orderNumber}" 
+                <a href="https://teemeyou.shop/order/${data.orderNumber}" 
                    style="background: linear-gradient(135deg, #FF69B4 0%, #E91E63 100%); 
                           color: white; 
                           padding: 16px 32px; 
@@ -996,7 +996,7 @@ export class DatabaseEmailService {
                           box-shadow: 0 4px 15px rgba(255, 105, 180, 0.4);
                           text-transform: uppercase;
                           letter-spacing: 0.5px;">
-                  🔍 Track Your Order
+                  🔍 View Order Details
                 </a>
               </div>
               
@@ -1066,7 +1066,7 @@ export class DatabaseEmailService {
             'We\'ll process your order once payment is confirmed.'
           }
           
-          Track your order: https://teemeyou.shop/orders/${data.orderNumber}
+          Track your order: https://teemeyou.shop/order/${data.orderNumber}
           
           Best regards,
           The TeeMeYou Team
