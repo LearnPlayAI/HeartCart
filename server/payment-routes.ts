@@ -289,6 +289,53 @@ router.post("/confirm", isAuthenticated, asyncHandler(async (req: Request, res: 
         paymentStatus: finalPaymentStatus
       });
 
+      // Send payment confirmation email if payment was verified
+      if (paymentVerified) {
+        try {
+          const orderEmailData = {
+            id: newOrder.id,
+            orderNumber: newOrder.orderNumber,
+            status: newOrder.status,
+            customerName: newOrder.customerName,
+            customerEmail: newOrder.customerEmail,
+            customerPhone: newOrder.customerPhone,
+            shippingAddress: newOrder.shippingAddress,
+            shippingCity: newOrder.shippingCity,
+            shippingPostalCode: newOrder.shippingPostalCode,
+            shippingMethod: newOrder.shippingMethod,
+            shippingCost: newOrder.shippingCost,
+            paymentMethod: newOrder.paymentMethod,
+            paymentStatus: finalPaymentStatus,
+            subtotalAmount: newOrder.subtotalAmount,
+            totalAmount: newOrder.totalAmount,
+            createdAt: newOrder.createdAt.toISOString(),
+            trackingNumber: newOrder.trackingNumber,
+            orderItems: orderItems.map(item => ({
+              productName: item.productName,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              totalPrice: item.totalPrice
+            }))
+          };
+
+          const paymentEmailData = {
+            orderNumber: newOrder.orderNumber,
+            amount: sessionData.total,
+            paymentMethod: sessionData.paymentMethod,
+            transactionReference: paymentData.paymentProof.transactionReference,
+            paymentDate: new Date().toISOString()
+          };
+
+          await unifiedEmailService.sendPaymentReceivedEmail(orderEmailData, paymentEmailData);
+          logger.info("Payment confirmation email sent", { orderId: newOrder.id });
+        } catch (emailError) {
+          logger.warn("Failed to send payment confirmation email", { 
+            orderId: newOrder.id, 
+            error: emailError 
+          });
+        }
+      }
+
       return sendSuccess(res, {
         id: newOrder.id,
         orderNumber: newOrder.orderNumber,
