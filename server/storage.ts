@@ -562,6 +562,12 @@ export interface IStorage {
   logEmail(emailData: InsertEmailLog): Promise<EmailLog>;
   getEmailLogs(userId?: number, emailType?: string, limit?: number): Promise<EmailLog[]>;
   updateEmailDeliveryStatus(emailId: number, status: string, errorMessage?: string): Promise<boolean>;
+
+  // Additional email token methods for verification test compatibility
+  storeEmailToken(token: InsertMailToken): Promise<MailToken>;
+  verifyEmailToken(tokenHash: string, tokenType: string): Promise<MailToken | undefined>;
+  markTokenAsUsed(tokenHash: string): Promise<boolean>;
+  cleanupExpiredTokens(): Promise<number>;
 }
 
 export class DatabaseStorage implements IStorage {
