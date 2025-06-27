@@ -12609,6 +12609,79 @@ export class DatabaseStorage implements IStorage {
       throw error;
     }
   }
+  // ===============================================================
+  // EMAIL TOKEN MANAGEMENT METHODS
+  // ===============================================================
+
+  /**
+   * Store an email token for password reset or email verification
+   */
+  async storeEmailToken(token: InsertMailToken): Promise<MailToken> {
+    const [newToken] = await db
+      .insert(mailTokens)
+      .values(token)
+      .returning();
+    return newToken;
+  }
+
+  /**
+   * Verify an email token by hash and type
+   */
+  async verifyEmailToken(tokenHash: string, tokenType: string): Promise<MailToken | undefined> {
+    const [token] = await db
+      .select()
+      .from(mailTokens)
+      .where(
+        and(
+          eq(mailTokens.tokenHash, tokenHash),
+          eq(mailTokens.tokenType, tokenType),
+          eq(mailTokens.isActive, true),
+          isNull(mailTokens.usedAt)
+        )
+      );
+    return token;
+  }
+
+  /**
+   * Mark a token as used
+   */
+  async markTokenAsUsed(tokenHash: string): Promise<boolean> {
+    try {
+      const [updatedToken] = await db
+        .update(mailTokens)
+        .set({ 
+          usedAt: new Date(),
+          isActive: false 
+        })
+        .where(eq(mailTokens.tokenHash, tokenHash))
+        .returning();
+      return !!updatedToken;
+    } catch (error) {
+      logger.error('Error marking token as used', { tokenHash, error });
+      return false;
+    }
+  }
+
+  /**
+   * Clean up expired tokens
+   */
+  async cleanupExpiredTokens(): Promise<number> {
+    try {
+      const now = new Date();
+      const result = await db
+        .delete(mailTokens)
+        .where(
+          or(
+            lt(mailTokens.expiresAt, now),
+            eq(mailTokens.isActive, false)
+          )
+        );
+      return result.rowCount || 0;
+    } catch (error) {
+      logger.error('Error cleaning up expired tokens', { error });
+      return 0;
+    }
+  }
 }
 
 export const storage = new DatabaseStorage();

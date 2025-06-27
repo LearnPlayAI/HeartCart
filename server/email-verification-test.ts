@@ -84,7 +84,7 @@ export class EmailSystemVerifier {
         tokenType: 'verification_test',
         userId: 1,
         email: 'test@verification.com',
-        expiresAt: new Date(Date.now() + 3600000).toISOString(),
+        expiresAt: new Date(Date.now() + 3600000),
         isActive: true
       });
 
