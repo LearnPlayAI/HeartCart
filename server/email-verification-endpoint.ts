@@ -52,9 +52,13 @@ router.get('/full-test', asyncHandler(async (req: Request, res: Response) => {
       sentAt: new Date()
     });
 
-    // Cleanup test data
-    await storage.db.delete(storage.db.mailTokens).where(storage.db.eq(storage.db.mailTokens.id, testToken.id));
-    await storage.db.delete(storage.db.emailLogs).where(storage.db.eq(storage.db.emailLogs.id, testLog.id));
+    // Cleanup test data safely
+    if (testToken && typeof testToken === 'object' && 'id' in testToken) {
+      await db.delete(mailTokens).where(eq(mailTokens.id, testToken.id));
+    }
+    if (testLog && typeof testLog === 'object' && 'id' in testLog) {
+      await db.delete(emailLogs).where(eq(emailLogs.id, testLog.id));
+    }
 
     tests.push({
       name: 'Database Schema',

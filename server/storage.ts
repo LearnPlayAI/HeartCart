@@ -10911,7 +10911,7 @@ export class DatabaseStorage implements IStorage {
     try {
       const result = await db
         .delete(mailTokens)
-        .where(lt(mailTokens.expiresAt, new Date().toISOString()));
+        .where(lt(mailTokens.expiresAt, new Date()));
 
       logger.info('Cleaned up expired email tokens', { deletedCount: result.rowCount || 0 });
       return result.rowCount || 0;
