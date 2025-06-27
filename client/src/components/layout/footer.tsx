@@ -138,30 +138,21 @@ const Footer = () => {
 
           {/* Features */}
           <div className="space-y-4">
-            <h4 className="font-semibold text-gray-900">Why Choose TeeMeYou</h4>
-
-            {/* PWA Features Card */}
-            <Card className="bg-gradient-to-br from-[#FF69B4]/5 to-purple-500/5 border-[#FF69B4]/20">
-              <CardContent className="p-4 space-y-2">
-                <div className="flex items-center gap-2 text-sm font-medium text-gray-900">
-                  <Download className="h-4 w-4 text-[#FF69B4]" />
-                  Why Install Our App?
-                </div>
-                <ul className="text-xs text-gray-600 space-y-1">
-                  <li>• Works offline</li>
-                  <li>• Faster loading</li>
-                  <li>• Desktop shortcuts</li>
-                  <li>• Push notifications</li>
-                  <li>• No app store needed</li>
-                </ul>
-                <InstallButton 
-                  variant="default"
-                  size="sm"
-                  className="w-full text-xs h-8"
-                  text="Install Now"
-                />
-              </CardContent>
-            </Card>
+            <h4 className="font-semibold text-gray-900">Contact Us</h4>
+            <div className="space-y-2 text-sm text-gray-600">
+              <div className="flex items-center gap-2">
+                <Mail className="h-4 w-4 text-[#FF69B4]" />
+                <span>sales@teemeyou.shop</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Phone className="h-4 w-4 text-[#FF69B4]" />
+                <span>+27 (0) 11 123 4567</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-[#FF69B4]" />
+                <span>Johannesburg, South Africa</span>
+              </div>
+            </div>
           </div>
         </div>
 
