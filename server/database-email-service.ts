@@ -137,9 +137,9 @@ export class DatabaseEmailService {
 
       // Store token in database
       const tokenData: InsertMailToken = {
+        token,
         userId,
         email,
-        tokenHash: hash,
         tokenType: 'verification',
         expiresAt,
         isActive: true
@@ -275,9 +275,9 @@ export class DatabaseEmailService {
 
       // Store token in database
       const tokenData: InsertMailToken = {
+        token,
         userId,
         email,
-        tokenHash: hash,
         tokenType: 'password_reset',
         expiresAt,
         isActive: true
@@ -575,61 +575,90 @@ export class DatabaseEmailService {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Payment Confirmed - TeeMeYou</title>
           </head>
-          <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <div style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-              <h1 style="color: white; margin: 0; font-size: 28px;">Payment Confirmed!</h1>
-            </div>
-            
-            <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e9ecef;">
-              <h2 style="color: #495057; margin-top: 0;">Thank you, ${data.customerName}!</h2>
+          <body style="margin: 0; padding: 0; background: linear-gradient(135deg, #F3F4F6 0%, #FFFFFF 100%); font-family: 'Segoe UI', Arial, sans-serif;">
+            <div class="container" style="max-width: 600px; margin: 20px auto; background: #FFFFFF; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 32px rgba(255, 105, 180, 0.2);">
               
-              <p style="font-size: 16px; margin-bottom: 25px;">
+              <!-- Header -->
+              <div class="header" style="background: linear-gradient(135deg, #FF69B4 0%, #E91E63 100%); padding: 40px; text-align: center; position: relative;">
+                <div style="position: absolute; top: 0; left: 0; width: 100%; height: 6px; background: linear-gradient(90deg, #FF69B4 0%, #FF1493 50%, #E91E63 100%);"></div>
+                <div style="display: inline-block; background: #FFFFFF; padding: 12px; border-radius: 50%; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);">
+                  <span style="font-size: 28px; color: #FF69B4;">💳</span>
+                </div>
+                <h1 style="color: #FFFFFF; margin: 0; font-size: 36px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3); letter-spacing: 1px;">TeeMeYou</h1>
+                <p style="color: #FFFFFF; margin: 8px 0 0 0; font-size: 18px; opacity: 0.9;">Payment Confirmed!</p>
+              </div>
+            
+            <div style="background: #FFFFFF; padding: 40px; border-radius: 0 0 12px 12px;">
+              <div style="text-align: center; margin-bottom: 30px;">
+                <div style="display: inline-block; background: linear-gradient(135deg, #10B981 0%, #059669 100%); padding: 12px; border-radius: 50%; margin-bottom: 15px;">
+                  <span style="font-size: 32px; color: #FFFFFF;">✅</span>
+                </div>
+                <h2 style="color: #E91E63; margin: 0; font-size: 28px; font-weight: 600;">Thank you, ${data.customerName}!</h2>
+              </div>
+              
+              <p style="font-size: 16px; line-height: 1.6; color: #4A5568; margin-bottom: 30px; text-align: center;">
                 Your payment has been successfully processed. Here are your payment details:
               </p>
               
-              <div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6; margin: 25px 0;">
+              <div style="background: linear-gradient(135deg, #FFF0F6 0%, #FFFFFF 100%); padding: 25px; border-radius: 12px; border: 2px solid #FF69B4; margin: 25px 0; box-shadow: 0 4px 12px rgba(255, 105, 180, 0.1);">
                 <table style="width: 100%; border-collapse: collapse;">
                   <tr>
-                    <td style="padding: 8px 0; font-weight: bold;">Order Number:</td>
-                    <td style="padding: 8px 0;">${data.orderNumber}</td>
+                    <td style="padding: 12px 0; font-weight: bold; color: #E91E63;">Order Number:</td>
+                    <td style="padding: 12px 0; color: #4A5568;">${data.orderNumber}</td>
                   </tr>
                   <tr>
-                    <td style="padding: 8px 0; font-weight: bold;">Amount:</td>
-                    <td style="padding: 8px 0;">${data.currency} ${data.amount.toFixed(2)}</td>
+                    <td style="padding: 12px 0; font-weight: bold; color: #E91E63;">Amount:</td>
+                    <td style="padding: 12px 0; color: #10B981; font-weight: bold; font-size: 18px;">${data.currency} ${data.amount.toFixed(2)}</td>
                   </tr>
                   <tr>
-                    <td style="padding: 8px 0; font-weight: bold;">Payment Method:</td>
-                    <td style="padding: 8px 0;">${data.paymentMethod}</td>
+                    <td style="padding: 12px 0; font-weight: bold; color: #E91E63;">Payment Method:</td>
+                    <td style="padding: 12px 0; color: #4A5568;">${data.paymentMethod}</td>
                   </tr>
                 </table>
               </div>
               
-              <p style="font-size: 16px; margin: 25px 0;">
-                We're now processing your order and will send you a shipping confirmation once your items are on their way.
-              </p>
+              <div style="background: linear-gradient(135deg, #DCFCE7 0%, #BBF7D0 100%); border: 2px solid #10B981; padding: 20px; border-radius: 12px; margin: 25px 0; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);">
+                <p style="margin: 0; color: #047857; font-weight: bold; display: flex; align-items: center;">
+                  <span style="font-size: 18px; margin-right: 8px;">🚀</span>
+                  Order Processing Started
+                </p>
+                <p style="margin: 10px 0 0 0; color: #065F46; font-size: 14px;">We're now processing your order and will send you a shipping confirmation once your items are on their way.</p>
+              </div>
               
               <div style="text-align: center; margin: 30px 0;">
                 <a href="https://teemeyou.shop/orders" 
-                   style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                   style="background: linear-gradient(135deg, #FF69B4 0%, #E91E63 100%); 
                           color: white; 
-                          padding: 15px 30px; 
+                          padding: 16px 32px; 
                           text-decoration: none; 
                           border-radius: 8px; 
-                          font-weight: bold; 
+                          font-weight: 600; 
                           font-size: 16px; 
                           display: inline-block;
-                          box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
-                  Track Your Order
+                          box-shadow: 0 4px 15px rgba(255, 105, 180, 0.4);
+                          text-transform: uppercase;
+                          letter-spacing: 0.5px;">
+                  🔍 Track Your Order
                 </a>
               </div>
               
-              <hr style="border: none; border-top: 1px solid #dee2e6; margin: 30px 0;">
+              <hr style="border: none; border-top: 2px solid #FF69B4; margin: 30px 0; opacity: 0.3;">
               
-              <p style="color: #6c757d; font-size: 12px; text-align: center; margin-bottom: 0;">
-                Best regards,<br>
-                The TeeMeYou Team<br>
-                <a href="https://teemeyou.shop" style="color: #667eea;">teemeyou.shop</a>
-              </p>
+              <!-- Footer -->
+              <div style="background: #4A5568; padding: 25px; text-align: center; border-radius: 12px; margin: 25px 0;">
+                <div style="margin-bottom: 15px;">
+                  <span style="display: inline-block; background: #FFFFFF; padding: 8px 12px; border-radius: 20px; margin: 0 5px; box-shadow: 0 2px 8px rgba(255, 105, 180, 0.2);">
+                    <span style="font-size: 16px; color: #FF69B4;">🛍️</span>
+                  </span>
+                </div>
+                <p style="color: #FFFFFF; margin: 0; font-size: 14px; font-weight: 500;">
+                  © 2024 TeeMeYou • South Africa's Premium Shopping Platform
+                </p>
+                <p style="color: #CBD5E0; margin: 8px 0 0 0; font-size: 12px;">
+                  <a href="https://teemeyou.shop" style="color: #FF69B4; text-decoration: none;">teemeyou.shop</a> | 
+                  <a href="mailto:sales@teemeyou.shop" style="color: #FF69B4; text-decoration: none;">sales@teemeyou.shop</a>
+                </p>
+              </div>
             </div>
           </body>
           </html>
@@ -664,53 +693,89 @@ export class DatabaseEmailService {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Order Update - TeeMeYou</title>
           </head>
-          <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-              <h1 style="color: white; margin: 0; font-size: 28px;">Order Update</h1>
-            </div>
-            
-            <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e9ecef;">
-              <h2 style="color: #495057; margin-top: 0;">Hello ${data.customerName}!</h2>
+          <body style="margin: 0; padding: 0; background: linear-gradient(135deg, #F3F4F6 0%, #FFFFFF 100%); font-family: 'Segoe UI', Arial, sans-serif;">
+            <div class="container" style="max-width: 600px; margin: 20px auto; background: #FFFFFF; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 32px rgba(255, 105, 180, 0.2);">
               
-              <p style="font-size: 16px; margin-bottom: 25px;">
-                Your order ${data.orderNumber} status has been updated to: <strong>${data.status}</strong>
-              </p>
+              <!-- Header -->
+              <div class="header" style="background: linear-gradient(135deg, #FF69B4 0%, #E91E63 100%); padding: 40px; text-align: center; position: relative;">
+                <div style="position: absolute; top: 0; left: 0; width: 100%; height: 6px; background: linear-gradient(90deg, #FF69B4 0%, #FF1493 50%, #E91E63 100%);"></div>
+                <div style="display: inline-block; background: #FFFFFF; padding: 12px; border-radius: 50%; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);">
+                  <span style="font-size: 28px; color: #FF69B4;">📦</span>
+                </div>
+                <h1 style="color: #FFFFFF; margin: 0; font-size: 36px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3); letter-spacing: 1px;">TeeMeYou</h1>
+                <p style="color: #FFFFFF; margin: 8px 0 0 0; font-size: 18px; opacity: 0.9;">Order Update</p>
+              </div>
+            
+            <div style="background: #FFFFFF; padding: 40px; border-radius: 0 0 12px 12px;">
+              <div style="text-align: center; margin-bottom: 30px;">
+                <div style="display: inline-block; background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%); padding: 12px; border-radius: 50%; margin-bottom: 15px;">
+                  <span style="font-size: 32px; color: #FFFFFF;">🚚</span>
+                </div>
+                <h2 style="color: #E91E63; margin: 0; font-size: 28px; font-weight: 600;">Hello ${data.customerName}!</h2>
+              </div>
+              
+              <div style="background: linear-gradient(135deg, #FFF0F6 0%, #FFFFFF 100%); padding: 25px; border-radius: 12px; border: 2px solid #FF69B4; margin: 25px 0; text-align: center; box-shadow: 0 4px 12px rgba(255, 105, 180, 0.1);">
+                <p style="font-size: 16px; line-height: 1.6; color: #4A5568; margin-bottom: 15px;">
+                  Your order <strong style="color: #E91E63;">${data.orderNumber}</strong> status has been updated to:
+                </p>
+                <div style="display: inline-block; background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: #FFFFFF; padding: 12px 24px; border-radius: 20px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
+                  ${data.status}
+                </div>
+              </div>
               
               ${data.trackingNumber ? `
-                <div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6; margin: 25px 0;">
-                  <p style="margin: 0; font-weight: bold;">Tracking Number:</p>
-                  <p style="margin: 5px 0 0 0; font-size: 18px; color: #667eea;">${data.trackingNumber}</p>
+                <div style="background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%); border: 2px solid #3B82F6; padding: 25px; border-radius: 12px; margin: 25px 0; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);">
+                  <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                    <span style="font-size: 20px; margin-right: 10px;">🔍</span>
+                    <p style="margin: 0; font-weight: bold; color: #1E40AF;">Tracking Information</p>
+                  </div>
+                  <p style="margin: 0; font-size: 18px; color: #1E40AF; font-weight: bold; word-break: break-all;">${data.trackingNumber}</p>
                 </div>
               ` : ''}
               
               ${data.estimatedDelivery ? `
-                <p style="font-size: 16px; margin: 25px 0;">
-                  <strong>Estimated Delivery:</strong> ${data.estimatedDelivery}
-                </p>
+                <div style="background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%); border: 2px solid #F59E0B; padding: 20px; border-radius: 12px; margin: 25px 0; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);">
+                  <p style="margin: 0; color: #92400E; font-weight: bold; display: flex; align-items: center;">
+                    <span style="font-size: 18px; margin-right: 8px;">📅</span>
+                    Estimated Delivery: ${data.estimatedDelivery}
+                  </p>
+                </div>
               ` : ''}
               
               <div style="text-align: center; margin: 30px 0;">
                 <a href="https://teemeyou.shop/orders" 
-                   style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                   style="background: linear-gradient(135deg, #FF69B4 0%, #E91E63 100%); 
                           color: white; 
-                          padding: 15px 30px; 
+                          padding: 16px 32px; 
                           text-decoration: none; 
                           border-radius: 8px; 
-                          font-weight: bold; 
+                          font-weight: 600; 
                           font-size: 16px; 
                           display: inline-block;
-                          box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
-                  View Order Details
+                          box-shadow: 0 4px 15px rgba(255, 105, 180, 0.4);
+                          text-transform: uppercase;
+                          letter-spacing: 0.5px;">
+                  📋 View Order Details
                 </a>
               </div>
               
-              <hr style="border: none; border-top: 1px solid #dee2e6; margin: 30px 0;">
+              <hr style="border: none; border-top: 2px solid #FF69B4; margin: 30px 0; opacity: 0.3;">
               
-              <p style="color: #6c757d; font-size: 12px; text-align: center; margin-bottom: 0;">
-                Best regards,<br>
-                The TeeMeYou Team<br>
-                <a href="https://teemeyou.shop" style="color: #667eea;">teemeyou.shop</a>
-              </p>
+              <!-- Footer -->
+              <div style="background: #4A5568; padding: 25px; text-align: center; border-radius: 12px; margin: 25px 0;">
+                <div style="margin-bottom: 15px;">
+                  <span style="display: inline-block; background: #FFFFFF; padding: 8px 12px; border-radius: 20px; margin: 0 5px; box-shadow: 0 2px 8px rgba(255, 105, 180, 0.2);">
+                    <span style="font-size: 16px; color: #FF69B4;">🛍️</span>
+                  </span>
+                </div>
+                <p style="color: #FFFFFF; margin: 0; font-size: 14px; font-weight: 500;">
+                  © 2024 TeeMeYou • South Africa's Premium Shopping Platform
+                </p>
+                <p style="color: #CBD5E0; margin: 8px 0 0 0; font-size: 12px;">
+                  <a href="https://teemeyou.shop" style="color: #FF69B4; text-decoration: none;">teemeyou.shop</a> | 
+                  <a href="mailto:sales@teemeyou.shop" style="color: #FF69B4; text-decoration: none;">sales@teemeyou.shop</a>
+                </p>
+              </div>
             </div>
           </body>
           </html>
@@ -1020,53 +1085,85 @@ export class DatabaseEmailService {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Invoice - TeeMeYou</title>
           </head>
-          <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-              <h1 style="color: white; margin: 0; font-size: 28px;">Invoice</h1>
-            </div>
-            
-            <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e9ecef;">
-              <h2 style="color: #495057; margin-top: 0;">Hello ${data.customerName}!</h2>
+          <body style="margin: 0; padding: 0; background: linear-gradient(135deg, #F3F4F6 0%, #FFFFFF 100%); font-family: 'Segoe UI', Arial, sans-serif;">
+            <div class="container" style="max-width: 600px; margin: 20px auto; background: #FFFFFF; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 32px rgba(255, 105, 180, 0.2);">
               
-              <p style="font-size: 16px; margin-bottom: 25px;">
-                Your invoice for order ${data.orderNumber} is ready. You can download it using the link below.
+              <!-- Header -->
+              <div class="header" style="background: linear-gradient(135deg, #FF69B4 0%, #E91E63 100%); padding: 40px; text-align: center; position: relative;">
+                <div style="position: absolute; top: 0; left: 0; width: 100%; height: 6px; background: linear-gradient(90deg, #FF69B4 0%, #FF1493 50%, #E91E63 100%);"></div>
+                <div style="display: inline-block; background: #FFFFFF; padding: 12px; border-radius: 50%; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);">
+                  <span style="font-size: 28px; color: #FF69B4;">📄</span>
+                </div>
+                <h1 style="color: #FFFFFF; margin: 0; font-size: 36px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3); letter-spacing: 1px;">TeeMeYou</h1>
+                <p style="color: #FFFFFF; margin: 8px 0 0 0; font-size: 18px; opacity: 0.9;">Invoice Ready</p>
+              </div>
+            
+            <div style="background: #FFFFFF; padding: 40px; border-radius: 0 0 12px 12px;">
+              <div style="text-align: center; margin-bottom: 30px;">
+                <div style="display: inline-block; background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%); padding: 12px; border-radius: 50%; margin-bottom: 15px;">
+                  <span style="font-size: 32px; color: #FFFFFF;">💼</span>
+                </div>
+                <h2 style="color: #E91E63; margin: 0; font-size: 28px; font-weight: 600;">Hello ${data.customerName}!</h2>
+              </div>
+              
+              <p style="font-size: 16px; line-height: 1.6; color: #4A5568; margin-bottom: 30px; text-align: center;">
+                Your invoice for order <strong style="color: #E91E63;">${data.orderNumber}</strong> is ready. You can download it using the link below.
               </p>
               
-              <div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6; margin: 25px 0;">
+              <div style="background: linear-gradient(135deg, #FFF0F6 0%, #FFFFFF 100%); padding: 25px; border-radius: 12px; border: 2px solid #FF69B4; margin: 25px 0; box-shadow: 0 4px 12px rgba(255, 105, 180, 0.1);">
                 <table style="width: 100%; border-collapse: collapse;">
                   <tr>
-                    <td style="padding: 8px 0; font-weight: bold;">Order Number:</td>
-                    <td style="padding: 8px 0;">${data.orderNumber}</td>
+                    <td style="padding: 12px 0; font-weight: bold; color: #E91E63;">Order Number:</td>
+                    <td style="padding: 12px 0; color: #4A5568;">${data.orderNumber}</td>
                   </tr>
                   <tr>
-                    <td style="padding: 8px 0; font-weight: bold;">Total Amount:</td>
-                    <td style="padding: 8px 0;">${data.currency} ${data.amount.toFixed(2)}</td>
+                    <td style="padding: 12px 0; font-weight: bold; color: #E91E63;">Total Amount:</td>
+                    <td style="padding: 12px 0; color: #10B981; font-weight: bold; font-size: 18px;">${data.currency} ${data.amount.toFixed(2)}</td>
                   </tr>
                 </table>
               </div>
               
+              <div style="background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%); border: 2px solid #3B82F6; padding: 20px; border-radius: 12px; margin: 25px 0; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);">
+                <p style="margin: 0; color: #1E40AF; font-weight: bold; display: flex; align-items: center;">
+                  <span style="font-size: 18px; margin-right: 8px;">📊</span>
+                  Invoice Details Available for Download
+                </p>
+              </div>
+              
               <div style="text-align: center; margin: 30px 0;">
                 <a href="${data.invoiceUrl}" 
-                   style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                   style="background: linear-gradient(135deg, #FF69B4 0%, #E91E63 100%); 
                           color: white; 
-                          padding: 15px 30px; 
+                          padding: 16px 32px; 
                           text-decoration: none; 
                           border-radius: 8px; 
-                          font-weight: bold; 
+                          font-weight: 600; 
                           font-size: 16px; 
                           display: inline-block;
-                          box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
-                  Download Invoice
+                          box-shadow: 0 4px 15px rgba(255, 105, 180, 0.4);
+                          text-transform: uppercase;
+                          letter-spacing: 0.5px;">
+                  📥 Download Invoice
                 </a>
               </div>
               
-              <hr style="border: none; border-top: 1px solid #dee2e6; margin: 30px 0;">
+              <hr style="border: none; border-top: 2px solid #FF69B4; margin: 30px 0; opacity: 0.3;">
               
-              <p style="color: #6c757d; font-size: 12px; text-align: center; margin-bottom: 0;">
-                Best regards,<br>
-                The TeeMeYou Team<br>
-                <a href="https://teemeyou.shop" style="color: #667eea;">teemeyou.shop</a>
-              </p>
+              <!-- Footer -->
+              <div style="background: #4A5568; padding: 25px; text-align: center; border-radius: 12px; margin: 25px 0;">
+                <div style="margin-bottom: 15px;">
+                  <span style="display: inline-block; background: #FFFFFF; padding: 8px 12px; border-radius: 20px; margin: 0 5px; box-shadow: 0 2px 8px rgba(255, 105, 180, 0.2);">
+                    <span style="font-size: 16px; color: #FF69B4;">🛍️</span>
+                  </span>
+                </div>
+                <p style="color: #FFFFFF; margin: 0; font-size: 14px; font-weight: 500;">
+                  © 2024 TeeMeYou • South Africa's Premium Shopping Platform
+                </p>
+                <p style="color: #CBD5E0; margin: 8px 0 0 0; font-size: 12px;">
+                  <a href="https://teemeyou.shop" style="color: #FF69B4; text-decoration: none;">teemeyou.shop</a> | 
+                  <a href="mailto:sales@teemeyou.shop" style="color: #FF69B4; text-decoration: none;">sales@teemeyou.shop</a>
+                </p>
+              </div>
             </div>
           </body>
           </html>
