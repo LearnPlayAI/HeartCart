@@ -58,7 +58,7 @@ import creditRoutes from "./credit-routes";
 import supplierOrderRoutes from "./supplier-order-routes-simple";
 import { registerStorageTestRoutes } from "./storage-test-routes";
 import { registerFileManagerTestRoutes } from "./file-manager-test-routes";
-import { authEmailRoutes } from "./auth-email-routes";
+import authEmailRoutes from "./auth-email-routes";
 import { validateRequest, idSchema } from './validation-middleware';
 import { trackProductInteraction, trackCartActivity } from './interaction-middleware';
 import { 

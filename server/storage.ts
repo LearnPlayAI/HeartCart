@@ -12300,6 +12300,178 @@ export class DatabaseStorage implements IStorage {
       throw error;
     }
   }
+
+  // =============================================================================
+  // TOKEN MANAGEMENT OPERATIONS
+  // =============================================================================
+
+  /**
+   * Create a mail token with hashed token for security
+   */
+  async createMailToken(tokenData: InsertMailToken): Promise<MailToken> {
+    try {
+      const [newToken] = await db
+        .insert(mailTokens)
+        .values(tokenData)
+        .returning();
+      return newToken;
+    } catch (error) {
+      logger.error('Error creating mail token', { error });
+      throw error;
+    }
+  }
+
+  /**
+   * Get mail token by hash
+   */
+  async getMailTokenByHash(tokenHash: string): Promise<MailToken | undefined> {
+    try {
+      const [token] = await db
+        .select()
+        .from(mailTokens)
+        .where(eq(mailTokens.tokenHash, tokenHash));
+      return token;
+    } catch (error) {
+      logger.error('Error getting mail token by hash', { error, tokenHash });
+      throw error;
+    }
+  }
+
+  /**
+   * Mark a token as used
+   */
+  async markTokenUsed(tokenHash: string): Promise<boolean> {
+    try {
+      const result = await db
+        .update(mailTokens)
+        .set({
+          usedAt: new Date(),
+          isActive: false
+        })
+        .where(eq(mailTokens.tokenHash, tokenHash));
+      
+      return result.rowCount !== null && result.rowCount > 0;
+    } catch (error) {
+      logger.error('Error marking token as used', { error, tokenHash });
+      throw error;
+    }
+  }
+
+  /**
+   * Delete expired tokens
+   */
+  async deleteExpiredTokens(): Promise<number> {
+    try {
+      const result = await db
+        .delete(mailTokens)
+        .where(lte(mailTokens.expiresAt, new Date()));
+      
+      return result.rowCount || 0;
+    } catch (error) {
+      logger.error('Error deleting expired tokens', { error });
+      throw error;
+    }
+  }
+
+  /**
+   * Clean up old tokens for a specific user and token type
+   */
+  async cleanupUserTokens(userId: number, tokenType: string): Promise<number> {
+    try {
+      const result = await db
+        .delete(mailTokens)
+        .where(
+          and(
+            eq(mailTokens.userId, userId),
+            eq(mailTokens.tokenType, tokenType)
+          )
+        );
+      
+      return result.rowCount || 0;
+    } catch (error) {
+      logger.error('Error cleaning up user tokens', { error, userId, tokenType });
+      throw error;
+    }
+  }
+
+  // =============================================================================
+  // EMAIL LOG OPERATIONS
+  // =============================================================================
+
+  /**
+   * Log an email that was sent
+   */
+  async logEmail(emailData: InsertEmailLog): Promise<EmailLog> {
+    try {
+      const [newEmailLog] = await db
+        .insert(emailLogs)
+        .values(emailData)
+        .returning();
+      return newEmailLog;
+    } catch (error) {
+      logger.error('Error logging email', { error });
+      throw error;
+    }
+  }
+
+  /**
+   * Get email logs with optional filtering
+   */
+  async getEmailLogs(userId?: number, emailType?: string, limit?: number): Promise<EmailLog[]> {
+    try {
+      let query = db.select().from(emailLogs);
+
+      const conditions: SQL<unknown>[] = [];
+
+      if (userId !== undefined) {
+        conditions.push(eq(emailLogs.userId, userId));
+      }
+
+      if (emailType) {
+        conditions.push(eq(emailLogs.emailType, emailType));
+      }
+
+      if (conditions.length > 0) {
+        query = query.where(and(...conditions));
+      }
+
+      query = query.orderBy(desc(emailLogs.sentAt));
+
+      if (limit) {
+        query = query.limit(limit);
+      }
+
+      return await query;
+    } catch (error) {
+      logger.error('Error getting email logs', { error, userId, emailType, limit });
+      throw error;
+    }
+  }
+
+  /**
+   * Update email delivery status
+   */
+  async updateEmailDeliveryStatus(emailId: number, status: string, errorMessage?: string): Promise<boolean> {
+    try {
+      const updateData: Partial<EmailLog> = {
+        deliveryStatus: status
+      };
+
+      if (errorMessage) {
+        updateData.errorMessage = errorMessage;
+      }
+
+      const result = await db
+        .update(emailLogs)
+        .set(updateData)
+        .where(eq(emailLogs.id, emailId));
+      
+      return result.rowCount !== null && result.rowCount > 0;
+    } catch (error) {
+      logger.error('Error updating email delivery status', { error, emailId, status });
+      throw error;
+    }
+  }
 }
 
 export const storage = new DatabaseStorage();

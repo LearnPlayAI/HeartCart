@@ -1,358 +1,257 @@
 /**
- * Authentication Email Routes
+ * Authentication Email Routes - Database-Driven Version
  * Handles email verification and password reset functionality
+ * Uses PostgreSQL database for token storage instead of memory
  */
 
 import express, { Request, Response } from "express";
 import { z } from "zod";
-import crypto from "crypto";
 import asyncHandler from "express-async-handler";
 import { storage } from "./storage";
-import { mailerSendService } from "./mailersend-service";
+import { databaseEmailService } from "./database-email-service";
 import { hashPassword } from "./auth";
 import { sendSuccess, sendError } from "./api-response";
 import { logger } from "./logger";
-// import { validateRequest } from "./middlewares/validation-middleware";
 
 const router = express.Router();
 
-// Email verification token storage (in production, use Redis or database)
-interface VerificationToken {
-  userId: number;
-  email: string;
-  token: string;
-  createdAt: Date;
-  expiresAt: Date;
-}
-
-interface PasswordResetToken {
-  userId: number;
-  email: string;
-  token: string;
-  createdAt: Date;
-  expiresAt: Date;
-  usedAt?: Date; // Track when token was used to prevent reuse
-}
-
-// In-memory storage for tokens (should be replaced with database/Redis in production)
-const verificationTokens = new Map<string, VerificationToken>();
-const passwordResetTokens = new Map<string, PasswordResetToken>();
-
-// Clean up expired tokens periodically
-setInterval(() => {
-  const now = new Date();
-  
-  // Clean verification tokens
-  for (const [token, data] of verificationTokens.entries()) {
-    if (data.expiresAt < now) {
-      verificationTokens.delete(token);
-    }
+// Clean up expired tokens periodically using database storage
+setInterval(async () => {
+  try {
+    await databaseEmailService.cleanupExpiredTokens();
+  } catch (error) {
+    logger.error('Error during scheduled token cleanup', { error });
   }
-  
-  // Clean password reset tokens
-  for (const [token, data] of passwordResetTokens.entries()) {
-    if (data.expiresAt < now) {
-      passwordResetTokens.delete(token);
-    }
-  }
-}, 60 * 60 * 1000); // Clean every hour
+}, 5 * 60 * 1000); // Clean every 5 minutes
 
 // Validation schemas
-const emailVerificationRequestSchema = z.object({
-  email: z.string().email("Invalid email address")
+const emailSchema = z.object({
+  email: z.string().email("Invalid email format"),
 });
 
-const emailVerificationSchema = z.object({
-  token: z.string().min(1, "Verification token is required")
+const resetPasswordSchema = z.object({
+  token: z.string().min(1, "Token is required"),
+  newPassword: z.string().min(6, "Password must be at least 6 characters"),
 });
 
-const passwordResetRequestSchema = z.object({
-  email: z.string().email("Invalid email address")
-});
-
-const passwordResetSchema = z.object({
-  token: z.string().min(1, "Reset token is required"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-  confirmPassword: z.string().min(1, "Password confirmation is required")
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"]
+const verifyEmailSchema = z.object({
+  token: z.string().min(1, "Token is required"),
 });
 
 /**
- * Request email verification
- * POST /api/auth/request-verification
+ * Send email verification
+ * POST /api/auth/send-verification
  */
-router.post("/request-verification", 
-  asyncHandler(async (req: Request, res: Response) => {
-    const { email } = req.body;
+router.post('/send-verification', asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { email } = emailSchema.parse(req.body);
+    
+    logger.info('Email verification request received', { email });
 
-    try {
-      // Find user by email
-      const user = await storage.getUserByEmail(email);
-      if (!user) {
-        // Don't reveal if email exists for security
-        return sendSuccess(res, null, "If an account with this email exists, a verification email has been sent.");
-      }
-
-      // Check if user is already verified (assuming we have an isEmailVerified field)
-      // For now, we'll assume all users need verification on request
-      
-      // Generate verification token
-      const token = crypto.randomBytes(32).toString('hex');
-      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
-
-      // Store token
-      verificationTokens.set(token, {
-        userId: user.id,
-        email: user.email,
-        token,
-        createdAt: new Date(),
-        expiresAt
-      });
-
-      // Send verification email
-      const emailSent = await mailerSendService.sendAccountVerificationEmail(
-        {
-          id: user.id,
-          username: user.username,
-          email: user.email,
-          firstName: user.fullName ? user.fullName.split(' ')[0] : undefined
-        },
-        token
-      );
-
-      if (!emailSent) {
-        logger.error('Failed to send verification email', { userId: user.id, email });
-        return sendError(res, "Failed to send verification email. Please try again later.", 500);
-      }
-
-      logger.info('Verification email sent', { userId: user.id, email });
-      return sendSuccess(res, null, "Verification email sent successfully.");
-
-    } catch (error) {
-      logger.error('Error in email verification request', { email, error });
-      return sendError(res, "An error occurred. Please try again later.", 500);
+    // Check if user exists
+    const user = await storage.getUserByEmail(email);
+    if (!user) {
+      return sendError(res, 'User not found with this email address', 404);
     }
-  })
-);
+
+    // Check if user is already verified
+    if (user.emailVerified) {
+      return sendError(res, 'Email is already verified', 400);
+    }
+
+    // Send verification email using database service
+    await databaseEmailService.sendVerificationEmail(user.id, email, user.username);
+
+    logger.info('Verification email sent successfully', { email, userId: user.id });
+
+    sendSuccess(res, null, 'Verification email sent successfully');
+  } catch (error) {
+    logger.error('Error sending verification email', { error, body: req.body });
+    
+    if (error instanceof z.ZodError) {
+      return sendError(res, error.errors[0].message, 400);
+    }
+    
+    sendError(res, 'Failed to send verification email', 500);
+  }
+}));
 
 /**
  * Verify email with token
  * POST /api/auth/verify-email
  */
-router.post("/verify-email",
-  asyncHandler(async (req: Request, res: Response) => {
-    const { token } = req.body;
+router.post('/verify-email', asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { token } = verifyEmailSchema.parse(req.body);
+    
+    logger.info('Email verification attempt', { token: token.substring(0, 10) + '...' });
 
-    try {
-      // Find token
-      const tokenData = verificationTokens.get(token);
-      if (!tokenData) {
-        return sendError(res, "Invalid or expired verification token.", 400);
-      }
-
-      // Check if token is expired
-      if (tokenData.expiresAt < new Date()) {
-        verificationTokens.delete(token);
-        return sendError(res, "Verification token has expired. Please request a new one.", 400);
-      }
-
-      // Find user
-      const user = await storage.getUserByEmail(tokenData.email);
-      if (!user) {
-        verificationTokens.delete(token);
-        return sendError(res, "User not found.", 404);
-      }
-
-      // Mark user as verified (assuming we have an isEmailVerified field)
-      // For now, we'll just update the user as active
-      await storage.updateUser(user.id, { isActive: true });
-
-      // Remove used token
-      verificationTokens.delete(token);
-
-      logger.info('Email verified successfully', { userId: user.id, email: user.email });
-      return sendSuccess(res, null, "Email verified successfully! Your account is now active.");
-
-    } catch (error) {
-      logger.error('Error in email verification', { token, error });
-      return sendError(res, "An error occurred during verification. Please try again.", 500);
+    // Verify token using database service
+    const tokenResult = await databaseEmailService.verifyToken(token, 'verification');
+    
+    if (!tokenResult.valid || !tokenResult.userId) {
+      return sendError(res, 'Invalid or expired verification token', 400);
     }
-  })
-);
+
+    // Mark token as used (one-time use)
+    await databaseEmailService.useToken(token);
+
+    // Update user as verified
+    const user = await storage.getUserById(tokenResult.userId);
+    if (!user) {
+      return sendError(res, 'User not found', 404);
+    }
+
+    await storage.updateUser(tokenResult.userId, { emailVerified: true });
+
+    logger.info('Email verified successfully', { 
+      userId: tokenResult.userId, 
+      email: tokenResult.email 
+    });
+
+    sendSuccess(res, { verified: true }, 'Email verified successfully');
+  } catch (error) {
+    logger.error('Error verifying email', { error, body: req.body });
+    
+    if (error instanceof z.ZodError) {
+      return sendError(res, error.errors[0].message, 400);
+    }
+    
+    sendError(res, 'Failed to verify email', 500);
+  }
+}));
 
 /**
- * Request password reset
+ * Send password reset email
  * POST /api/auth/forgot-password
  */
-router.post("/forgot-password",
-  asyncHandler(async (req: Request, res: Response) => {
-    const { email } = req.body;
+router.post('/forgot-password', asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { email } = emailSchema.parse(req.body);
+    
+    logger.info('Password reset request received', { email });
 
-    try {
-      // Find user by email
-      const user = await storage.getUserByEmail(email);
-      if (!user) {
-        // Don't reveal if email exists for security
-        return sendSuccess(res, null, "If an account with this email exists, a password reset email has been sent.");
-      }
-
-      // Generate reset token
-      const token = crypto.randomBytes(32).toString('hex');
-      const expiresAt = new Date(Date.now() + 3 * 60 * 60 * 1000); // 3 hours to account for timezone differences
-
-      // Store token
-      passwordResetTokens.set(token, {
-        userId: user.id,
-        email: user.email,
-        token,
-        createdAt: new Date(),
-        expiresAt
-      });
-
-      // Send password reset email
-      const emailSent = await mailerSendService.sendPasswordResetEmail(
-        {
-          id: user.id,
-          username: user.username,
-          email: user.email,
-          firstName: user.fullName ? user.fullName.split(' ')[0] : undefined
-        },
-        token
-      );
-
-      if (!emailSent) {
-        logger.error('Failed to send password reset email', { userId: user.id, email });
-        return sendError(res, "Failed to send password reset email. Please try again later.", 500);
-      }
-
-      logger.info('Password reset email sent', { userId: user.id, email });
-      return sendSuccess(res, null, "Password reset email sent successfully.");
-
-    } catch (error) {
-      logger.error('Error in password reset request', { email, error });
-      return sendError(res, "An error occurred. Please try again later.", 500);
+    // Check if user exists
+    const user = await storage.getUserByEmail(email);
+    if (!user) {
+      // Don't reveal if email exists or not for security
+      return sendSuccess(res, null, 'If the email exists, a password reset link has been sent');
     }
-  })
-);
 
-/**
- * Validate password reset token
- * GET /api/auth/validate-reset-token/:token
- */
-router.get("/validate-reset-token/:token",
-  asyncHandler(async (req: Request, res: Response) => {
-    const { token } = req.params;
+    // Send password reset email using database service
+    await databaseEmailService.sendPasswordResetEmail(user.id, email, user.username);
 
-    try {
-      // Find token
-      const tokenData = passwordResetTokens.get(token);
-      if (!tokenData) {
-        return sendError(res, "Invalid or expired reset token.", 400);
-      }
+    logger.info('Password reset email sent successfully', { email, userId: user.id });
 
-      // Check if token is expired
-      if (tokenData.expiresAt < new Date()) {
-        passwordResetTokens.delete(token);
-        return sendError(res, "Reset token has expired. Please request a new password reset.", 400);
-      }
-
-      // Check if token has already been used
-      if (tokenData.usedAt) {
-        passwordResetTokens.delete(token);
-        return sendError(res, "Reset token has already been used. Please request a new password reset.", 400);
-      }
-
-      // Find user
-      const user = await storage.getUserByEmail(tokenData.email);
-      if (!user) {
-        passwordResetTokens.delete(token);
-        return sendError(res, "User not found.", 404);
-      }
-
-      return sendSuccess(res, { 
-        email: tokenData.email,
-        valid: true 
-      }, "Reset token is valid.");
-
-    } catch (error) {
-      logger.error('Error validating reset token', { token, error });
-      return sendError(res, "An error occurred during token validation.", 500);
+    sendSuccess(res, null, 'If the email exists, a password reset link has been sent');
+  } catch (error) {
+    logger.error('Error sending password reset email', { error, body: req.body });
+    
+    if (error instanceof z.ZodError) {
+      return sendError(res, error.errors[0].message, 400);
     }
-  })
-);
+    
+    sendError(res, 'Failed to process password reset request', 500);
+  }
+}));
 
 /**
  * Reset password with token
  * POST /api/auth/reset-password
  */
-router.post("/reset-password",
-  asyncHandler(async (req: Request, res: Response) => {
-    const { token, password } = req.body;
+router.post('/reset-password', asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { token, newPassword } = resetPasswordSchema.parse(req.body);
+    
+    logger.info('Password reset attempt', { token: token.substring(0, 10) + '...' });
 
-    try {
-      // Find token
-      const tokenData = passwordResetTokens.get(token);
-      if (!tokenData) {
-        return sendError(res, "Invalid or expired reset token.", 400);
-      }
-
-      // Check if token is expired
-      if (tokenData.expiresAt < new Date()) {
-        passwordResetTokens.delete(token);
-        return sendError(res, "Reset token has expired. Please request a new password reset.", 400);
-      }
-
-      // Check if token has already been used
-      if (tokenData.usedAt) {
-        passwordResetTokens.delete(token);
-        return sendError(res, "Reset token has already been used. Please request a new password reset.", 400);
-      }
-
-      // Find user
-      const user = await storage.getUserByEmail(tokenData.email);
-      if (!user) {
-        passwordResetTokens.delete(token);
-        return sendError(res, "User not found.", 404);
-      }
-
-      // Mark token as used before updating password
-      tokenData.usedAt = new Date();
-      passwordResetTokens.set(token, tokenData);
-
-      // Hash new password
-      const hashedPassword = await hashPassword(password);
-
-      // Update user password
-      await storage.updateUser(user.id, { password: hashedPassword });
-
-      // Remove used token after successful password update
-      passwordResetTokens.delete(token);
-
-      logger.info('Password reset successfully', { userId: user.id, email: user.email });
-      return sendSuccess(res, null, "Password reset successfully! You can now log in with your new password.");
-
-    } catch (error) {
-      logger.error('Error in password reset', { token, error });
-      return sendError(res, "An error occurred during password reset. Please try again.", 500);
+    // Verify token using database service
+    const tokenResult = await databaseEmailService.verifyToken(token, 'password_reset');
+    
+    if (!tokenResult.valid || !tokenResult.userId) {
+      return sendError(res, 'Invalid or expired reset token', 400);
     }
-  })
-);
 
-/**
- * Get verification status for debugging (admin only)
- * GET /api/auth/verification-status
- */
-router.get("/verification-status", asyncHandler(async (req: Request, res: Response) => {
-  // This is for debugging - in production, add admin middleware
-  const stats = {
-    activeVerificationTokens: verificationTokens.size,
-    activePasswordResetTokens: passwordResetTokens.size,
-    mailerSendConfigured: mailerSendService.isReady()
-  };
+    // Mark token as used (one-time use)
+    await databaseEmailService.useToken(token);
 
-  return sendSuccess(res, stats, "Verification system status");
+    // Update user password
+    const hashedPassword = await hashPassword(newPassword);
+    await storage.updateUser(tokenResult.userId, { password: hashedPassword });
+
+    logger.info('Password reset successfully', { 
+      userId: tokenResult.userId, 
+      email: tokenResult.email 
+    });
+
+    sendSuccess(res, { reset: true }, 'Password reset successfully');
+  } catch (error) {
+    logger.error('Error resetting password', { error, body: req.body });
+    
+    if (error instanceof z.ZodError) {
+      return sendError(res, error.errors[0].message, 400);
+    }
+    
+    sendError(res, 'Failed to reset password', 500);
+  }
 }));
 
-export { router as authEmailRoutes };
+/**
+ * Validate reset token (for frontend form display)
+ * GET /api/auth/validate-reset-token/:token
+ */
+router.get('/validate-reset-token/:token', asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { token } = req.params;
+    
+    if (!token) {
+      return sendError(res, 'Token is required', 400);
+    }
+
+    // Verify token using database service
+    const tokenResult = await databaseEmailService.verifyToken(token, 'password_reset');
+    
+    if (!tokenResult.valid) {
+      return sendError(res, 'Invalid or expired reset token', 400);
+    }
+
+    sendSuccess(res, { 
+      valid: true, 
+      email: tokenResult.email 
+    }, 'Token is valid');
+  } catch (error) {
+    logger.error('Error validating reset token', { error, token: req.params.token });
+    sendError(res, 'Invalid token', 400);
+  }
+}));
+
+/**
+ * Validate verification token (for frontend form display)
+ * GET /api/auth/validate-verification-token/:token
+ */
+router.get('/validate-verification-token/:token', asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { token } = req.params;
+    
+    if (!token) {
+      return sendError(res, 'Token is required', 400);
+    }
+
+    // Verify token using database service
+    const tokenResult = await databaseEmailService.verifyToken(token, 'verification');
+    
+    if (!tokenResult.valid) {
+      return sendError(res, 'Invalid or expired verification token', 400);
+    }
+
+    sendSuccess(res, { 
+      valid: true, 
+      email: tokenResult.email 
+    }, 'Token is valid');
+  } catch (error) {
+    logger.error('Error validating verification token', { error, token: req.params.token });
+    sendError(res, 'Invalid token', 400);
+  }
+}));
+
+export default router;
