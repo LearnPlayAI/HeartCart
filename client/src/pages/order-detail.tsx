@@ -319,7 +319,7 @@ const OrderDetail: React.FC = () => {
   // Invoice download function
   const downloadInvoice = async () => {
     try {
-      const response = await fetch(`/api/order/${order.orderNumber}/invoice`, {
+      const response = await fetch(`/api/orders/${order.id}/invoice`, {
         method: 'GET',
         credentials: 'include',
       });
