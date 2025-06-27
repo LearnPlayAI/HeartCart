@@ -289,15 +289,11 @@ export class UnifiedEmailService {
     try {
       console.log(`🔍 Validating token: ${token.substring(0, 8)}...`);
       
-      // Hash the provided token to compare with stored hash
-      const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-      console.log(`🔍 Generated hash: ${tokenHash.substring(0, 16)}...`);
-      
       const tokenRecord = await db.select()
         .from(mailTokens)
         .where(
           and(
-            eq(mailTokens.tokenHash, tokenHash),
+            eq(mailTokens.token, token),
             eq(mailTokens.tokenType, 'password_reset'),
             eq(mailTokens.isActive, true)
           )
@@ -316,7 +312,7 @@ export class UnifiedEmailService {
         
         console.log(`🔍 Recent password reset tokens in DB: ${allTokens.length}`);
         for (const t of allTokens) {
-          console.log(`🔍 Token hash: ${t.tokenHash.substring(0, 16)}..., active: ${t.isActive}, expires: ${t.expiresAt}`);
+          console.log(`🔍 Token: ${t.token.substring(0, 16)}..., active: ${t.isActive}, expires: ${t.expiresAt}`);
         }
         
         return { valid: false, error: 'Invalid or expired token' };
