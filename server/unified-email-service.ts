@@ -275,8 +275,7 @@ export class UnifiedEmailService {
         emailType: 'password_reset',
         subject: '🇿🇦 Reset Your TeeMeYou Password',
         deliveryStatus: 'failed',
-        errorMessage: error.message || 'Unknown error',
-        sentAt: new Date().toISOString()
+        errorMessage: error.message || 'Unknown error'
       });
 
       return {
