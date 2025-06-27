@@ -258,6 +258,13 @@ Changelog:
   * Comprehensive error handling ensures order updates succeed even if email delivery fails
   * All status update emails use hot pink TeeMeYou branding with professional messaging
   * Customer communication maintained throughout entire order lifecycle from placement to delivery
+- June 27, 2025. Fixed admin workflow email integration issues:
+  * Resolved missing payment confirmation emails when admin changes payment status to "payment_received" via dropdown
+  * Added email sending logic to /orders/:id/payment-status endpoint for payment_received status changes
+  * Verified order status update emails are sent for all admin status changes via /orders/:id/status endpoint
+  * Both payment confirmation and order status emails now trigger correctly from admin panel dropdowns
+  * Email logs confirm successful delivery with proper hot pink TeeMeYou branding and customer data
+  * Complete admin workflow integration: order creation → payment verification → status updates → delivery notifications
 ```
 
 ## User Preferences
