@@ -546,6 +546,10 @@ export class DatabaseEmailService {
         .setFrom(this.sender)
         .setTo([new Recipient(data.email, data.customerName)])
         .setSubject(`Payment Confirmed - Order ${data.orderNumber}`)
+        .setSettings({
+          track_clicks: false,
+          track_opens: true
+        })
         .setHtml(`
           <!DOCTYPE html>
           <html>
@@ -714,6 +718,10 @@ export class DatabaseEmailService {
         .setFrom(this.sender)
         .setTo([new Recipient(data.email, data.customerName)])
         .setSubject(`Order Update - ${data.orderNumber}`)
+        .setSettings({
+          track_clicks: false,
+          track_opens: true
+        })
         .setHtml(`
           <!DOCTYPE html>
           <html>
@@ -931,6 +939,10 @@ export class DatabaseEmailService {
         .setFrom(this.sender)
         .setTo([new Recipient(data.email, data.customerName)])
         .setSubject(`Order Confirmation - ${data.orderNumber}`)
+        .setSettings({
+          track_clicks: false,
+          track_opens: true
+        })
         .setHtml(`
           <!DOCTYPE html>
           <html>
