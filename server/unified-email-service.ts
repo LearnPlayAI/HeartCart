@@ -1,12 +1,11 @@
 /**
- * Unified MailerSend Email Service
+ * Unified Email Service - Simplified Implementation
  * Handles all email communications for TeeMeYou platform
  */
 
 import { MailerSend, EmailParams, Sender, Recipient, Attachment } from "mailersend";
 import { logger } from "./logger";
 import fs from "fs";
-import path from "path";
 
 interface EmailTemplate {
   subject: string;
@@ -14,7 +13,7 @@ interface EmailTemplate {
   text: string;
 }
 
-interface UserData {
+interface UserEmailData {
   id: number;
   username: string;
   email: string;
@@ -22,7 +21,7 @@ interface UserData {
   lastName?: string;
 }
 
-interface OrderData {
+interface OrderEmailData {
   id: number;
   orderNumber: string;
   status: string;
@@ -48,7 +47,7 @@ interface OrderData {
   }>;
 }
 
-interface PaymentData {
+interface PaymentEmailData {
   orderNumber: string;
   amount: number;
   paymentMethod: string;
@@ -56,7 +55,7 @@ interface PaymentData {
   paymentDate: string;
 }
 
-class MailerSendService {
+class UnifiedEmailService {
   private mailerSend: MailerSend | null = null;
   private isConfigured = false;
   private fromEmail = "sales@teemeyou.shop";
@@ -92,23 +91,15 @@ class MailerSendService {
     return this.isConfigured && this.mailerSend !== null;
   }
 
-  /**
-   * Send email verification for new user accounts
-   */
-  public async sendAccountVerificationEmail(userData: UserData, verificationToken: string): Promise<boolean> {
-    if (!this.isReady()) {
+  private async sendEmail(template: EmailTemplate, recipientEmail: string, recipientName: string, attachments?: Attachment[]): Promise<boolean> {
+    if (!this.isReady() || !this.mailerSend) {
       logger.error('MailerSend service not configured');
       return false;
     }
 
     try {
-      const verificationUrl = `${this.baseUrl}/verify-email?token=${verificationToken}`;
-      const displayName = userData.firstName || userData.username;
-
-      const template = this.generateAccountVerificationTemplate(displayName, verificationUrl);
-      
       const sentFrom = new Sender(this.fromEmail, this.fromName);
-      const recipients = [new Recipient(userData.email, displayName)];
+      const recipients = [new Recipient(recipientEmail, recipientName)];
 
       const emailParams = new EmailParams()
         .setFrom(sentFrom)
@@ -118,217 +109,153 @@ class MailerSendService {
         .setHtml(template.html)
         .setText(template.text);
 
-      await this.mailerSend!.email.send(emailParams);
-      
+      if (attachments && attachments.length > 0) {
+        emailParams.setAttachments(attachments);
+      }
+
+      await this.mailerSend.email.send(emailParams);
+      return true;
+    } catch (error) {
+      logger.error('Failed to send email', { error, recipientEmail });
+      return false;
+    }
+  }
+
+  /**
+   * Send account verification email
+   */
+  public async sendAccountVerificationEmail(userData: UserEmailData, verificationToken: string): Promise<boolean> {
+    const displayName = userData.firstName || userData.username;
+    const verificationUrl = `${this.baseUrl}/verify-email?token=${verificationToken}`;
+
+    const template: EmailTemplate = {
+      subject: "Verify Your TeeMeYou Account",
+      html: this.generateAccountVerificationHtml(displayName, verificationUrl),
+      text: this.generateAccountVerificationText(displayName, verificationUrl)
+    };
+
+    const result = await this.sendEmail(template, userData.email, displayName);
+    
+    if (result) {
       logger.info('Account verification email sent successfully', {
         userId: userData.id,
         email: userData.email
       });
-      
-      return true;
-    } catch (error) {
-      logger.error('Failed to send account verification email', {
-        userId: userData.id,
-        email: userData.email,
-        error
-      });
-      return false;
     }
+    
+    return result;
   }
 
   /**
    * Send password reset email
    */
-  public async sendPasswordResetEmail(userData: UserData, resetToken: string): Promise<boolean> {
-    if (!this.isReady()) {
-      logger.error('MailerSend service not configured');
-      return false;
-    }
+  public async sendPasswordResetEmail(userData: UserEmailData, resetToken: string): Promise<boolean> {
+    const displayName = userData.firstName || userData.username;
+    const resetUrl = `${this.baseUrl}/reset-password?token=${resetToken}`;
 
-    try {
-      const resetUrl = `${this.baseUrl}/reset-password?token=${resetToken}`;
-      const displayName = userData.firstName || userData.username;
+    const template: EmailTemplate = {
+      subject: "Reset Your TeeMeYou Password",
+      html: this.generatePasswordResetHtml(displayName, resetUrl),
+      text: this.generatePasswordResetText(displayName, resetUrl)
+    };
 
-      const template = this.generatePasswordResetTemplate(displayName, resetUrl);
-      
-      const sentFrom = new Sender(this.fromEmail, this.fromName);
-      const recipients = [new Recipient(userData.email, displayName)];
-
-      const emailParams = new EmailParams()
-        .setFrom(sentFrom)
-        .setTo(recipients)
-        .setReplyTo(sentFrom)
-        .setSubject(template.subject)
-        .setHtml(template.html)
-        .setText(template.text);
-
-      await this.mailerSend!.email.send(emailParams);
-      
+    const result = await this.sendEmail(template, userData.email, displayName);
+    
+    if (result) {
       logger.info('Password reset email sent successfully', {
         userId: userData.id,
         email: userData.email
       });
-      
-      return true;
-    } catch (error) {
-      logger.error('Failed to send password reset email', {
-        userId: userData.id,
-        email: userData.email,
-        error
-      });
-      return false;
     }
+    
+    return result;
   }
 
   /**
    * Send payment received notification
    */
-  public async sendPaymentReceivedEmail(orderData: OrderData, paymentData: PaymentData): Promise<boolean> {
-    if (!this.isReady()) {
-      logger.error('MailerSend service not configured');
-      return false;
-    }
+  public async sendPaymentReceivedEmail(orderData: OrderEmailData, paymentData: PaymentEmailData): Promise<boolean> {
+    const template: EmailTemplate = {
+      subject: `Payment Received - Order #${orderData.orderNumber}`,
+      html: this.generatePaymentReceivedHtml(orderData, paymentData),
+      text: this.generatePaymentReceivedText(orderData, paymentData)
+    };
 
-    try {
-      const template = this.generatePaymentReceivedTemplate(orderData, paymentData);
-      
-      const sentFrom = new Sender(this.fromEmail, this.fromName);
-      const recipients = [new Recipient(orderData.customerEmail, orderData.customerName)];
-
-      const emailParams = new EmailParams()
-        .setFrom(sentFrom)
-        .setTo(recipients)
-        .setReplyTo(sentFrom)
-        .setSubject(template.subject)
-        .setHtml(template.html)
-        .setText(template.text);
-
-      await this.mailerSend!.email.send(emailParams);
-      
+    const result = await this.sendEmail(template, orderData.customerEmail, orderData.customerName);
+    
+    if (result) {
       logger.info('Payment received email sent successfully', {
         orderId: orderData.id,
         orderNumber: orderData.orderNumber,
         email: orderData.customerEmail
       });
-      
-      return true;
-    } catch (error) {
-      logger.error('Failed to send payment received email', {
-        orderId: orderData.id,
-        orderNumber: orderData.orderNumber,
-        email: orderData.customerEmail,
-        error
-      });
-      return false;
     }
+    
+    return result;
   }
 
   /**
    * Send order status update email
    */
-  public async sendOrderStatusUpdateEmail(orderData: OrderData, previousStatus: string): Promise<boolean> {
-    if (!this.isReady()) {
-      logger.error('MailerSend service not configured');
-      return false;
-    }
+  public async sendOrderStatusUpdateEmail(orderData: OrderEmailData, previousStatus: string): Promise<boolean> {
+    const template: EmailTemplate = {
+      subject: `Order Update - #${orderData.orderNumber} is now ${orderData.status.charAt(0).toUpperCase() + orderData.status.slice(1)}`,
+      html: this.generateOrderStatusUpdateHtml(orderData, previousStatus),
+      text: this.generateOrderStatusUpdateText(orderData, previousStatus)
+    };
 
-    try {
-      const template = this.generateOrderStatusUpdateTemplate(orderData, previousStatus);
-      
-      const sentFrom = new Sender(this.fromEmail, this.fromName);
-      const recipients = [new Recipient(orderData.customerEmail, orderData.customerName)];
-
-      const emailParams = new EmailParams()
-        .setFrom(sentFrom)
-        .setTo(recipients)
-        .setReplyTo(sentFrom)
-        .setSubject(template.subject)
-        .setHtml(template.html)
-        .setText(template.text);
-
-      await this.mailerSend!.email.send(emailParams);
-      
+    const result = await this.sendEmail(template, orderData.customerEmail, orderData.customerName);
+    
+    if (result) {
       logger.info('Order status update email sent successfully', {
         orderId: orderData.id,
         orderNumber: orderData.orderNumber,
         status: orderData.status,
         email: orderData.customerEmail
       });
-      
-      return true;
-    } catch (error) {
-      logger.error('Failed to send order status update email', {
-        orderId: orderData.id,
-        orderNumber: orderData.orderNumber,
-        status: orderData.status,
-        email: orderData.customerEmail,
-        error
-      });
-      return false;
     }
+    
+    return result;
   }
 
   /**
    * Send invoice email with PDF attachment
    */
-  public async sendInvoiceEmail(orderData: OrderData, invoicePdfPath: string): Promise<boolean> {
-    if (!this.isReady()) {
-      logger.error('MailerSend service not configured');
-      return false;
-    }
+  public async sendInvoiceEmail(orderData: OrderEmailData, invoicePdfPath?: string): Promise<boolean> {
+    const template: EmailTemplate = {
+      subject: `Invoice for Order #${orderData.orderNumber}`,
+      html: this.generateInvoiceHtml(orderData),
+      text: this.generateInvoiceText(orderData)
+    };
 
-    try {
-      const template = this.generateInvoiceTemplate(orderData);
-      
-      const sentFrom = new Sender(this.fromEmail, this.fromName);
-      const recipients = [new Recipient(orderData.customerEmail, orderData.customerName)];
-
-      // Create attachment from PDF file
-      const attachments = [];
-      if (fs.existsSync(invoicePdfPath)) {
+    let attachments: Attachment[] = [];
+    if (invoicePdfPath && fs.existsSync(invoicePdfPath)) {
+      try {
         const pdfContent = fs.readFileSync(invoicePdfPath, { encoding: 'base64' });
         const filename = `invoice-${orderData.orderNumber}.pdf`;
         attachments.push(new Attachment(pdfContent, filename, 'attachment'));
+      } catch (error) {
+        logger.warn('Failed to attach invoice PDF', { error, invoicePdfPath });
       }
+    }
 
-      const emailParams = new EmailParams()
-        .setFrom(sentFrom)
-        .setTo(recipients)
-        .setReplyTo(sentFrom)
-        .setSubject(template.subject)
-        .setHtml(template.html)
-        .setText(template.text);
-
-      if (attachments.length > 0) {
-        emailParams.setAttachments(attachments);
-      }
-
-      await this.mailerSend!.email.send(emailParams);
-      
+    const result = await this.sendEmail(template, orderData.customerEmail, orderData.customerName, attachments);
+    
+    if (result) {
       logger.info('Invoice email sent successfully', {
         orderId: orderData.id,
         orderNumber: orderData.orderNumber,
         email: orderData.customerEmail,
         hasAttachment: attachments.length > 0
       });
-      
-      return true;
-    } catch (error) {
-      logger.error('Failed to send invoice email', {
-        orderId: orderData.id,
-        orderNumber: orderData.orderNumber,
-        email: orderData.customerEmail,
-        error
-      });
-      return false;
     }
+    
+    return result;
   }
 
   // Template generation methods
-  private generateAccountVerificationTemplate(displayName: string, verificationUrl: string): EmailTemplate {
-    const subject = "Verify Your TeeMeYou Account";
-    
-    const html = `
+  private generateAccountVerificationHtml(displayName: string, verificationUrl: string): string {
+    return `
       <!DOCTYPE html>
       <html>
       <head>
@@ -366,8 +293,10 @@ class MailerSendService {
       </body>
       </html>
     `;
+  }
 
-    const text = `
+  private generateAccountVerificationText(displayName: string, verificationUrl: string): string {
+    return `
       Welcome to TeeMeYou!
       
       Hi ${displayName},
@@ -386,14 +315,10 @@ class MailerSendService {
       © 2025 TeeMeYou. All rights reserved.
       Visit us at ${this.baseUrl}
     `;
-
-    return { subject, html, text };
   }
 
-  private generatePasswordResetTemplate(displayName: string, resetUrl: string): EmailTemplate {
-    const subject = "Reset Your TeeMeYou Password";
-    
-    const html = `
+  private generatePasswordResetHtml(displayName: string, resetUrl: string): string {
+    return `
       <!DOCTYPE html>
       <html>
       <head>
@@ -434,8 +359,10 @@ class MailerSendService {
       </body>
       </html>
     `;
+  }
 
-    const text = `
+  private generatePasswordResetText(displayName: string, resetUrl: string): string {
+    return `
       Password Reset Request
       
       Hi ${displayName},
@@ -454,14 +381,10 @@ class MailerSendService {
       © 2025 TeeMeYou. All rights reserved.
       Visit us at ${this.baseUrl}
     `;
-
-    return { subject, html, text };
   }
 
-  private generatePaymentReceivedTemplate(orderData: OrderData, paymentData: PaymentData): EmailTemplate {
-    const subject = `Payment Received - Order #${orderData.orderNumber}`;
-    
-    const html = `
+  private generatePaymentReceivedHtml(orderData: OrderEmailData, paymentData: PaymentEmailData): string {
+    return `
       <!DOCTYPE html>
       <html>
       <head>
@@ -509,8 +432,10 @@ class MailerSendService {
       </body>
       </html>
     `;
+  }
 
-    const text = `
+  private generatePaymentReceivedText(orderData: OrderEmailData, paymentData: PaymentEmailData): string {
+    return `
       Payment Received!
       
       Hi ${orderData.customerName},
@@ -536,12 +461,10 @@ class MailerSendService {
       © 2025 TeeMeYou. All rights reserved.
       Visit us at ${this.baseUrl}
     `;
-
-    return { subject, html, text };
   }
 
-  private generateOrderStatusUpdateTemplate(orderData: OrderData, previousStatus: string): EmailTemplate {
-    const statusMessages = {
+  private generateOrderStatusUpdateHtml(orderData: OrderEmailData, previousStatus: string): string {
+    const statusMessages: Record<string, string> = {
       'pending': 'Your order has been placed and is awaiting payment.',
       'paid': 'Payment confirmed! Your order is being prepared.',
       'processing': 'Your order is being processed and prepared for shipment.',
@@ -550,10 +473,9 @@ class MailerSendService {
       'cancelled': 'Your order has been cancelled.'
     };
 
-    const currentStatusMessage = statusMessages[orderData.status as keyof typeof statusMessages] || 'Your order status has been updated.';
-    const subject = `Order Update - #${orderData.orderNumber} is now ${orderData.status.charAt(0).toUpperCase() + orderData.status.slice(1)}`;
-    
-    const html = `
+    const currentStatusMessage = statusMessages[orderData.status] || 'Your order status has been updated.';
+
+    return `
       <!DOCTYPE html>
       <html>
       <head>
@@ -607,8 +529,21 @@ class MailerSendService {
       </body>
       </html>
     `;
+  }
 
-    const text = `
+  private generateOrderStatusUpdateText(orderData: OrderEmailData, previousStatus: string): string {
+    const statusMessages: Record<string, string> = {
+      'pending': 'Your order has been placed and is awaiting payment.',
+      'paid': 'Payment confirmed! Your order is being prepared.',
+      'processing': 'Your order is being processed and prepared for shipment.',
+      'shipped': 'Great news! Your order has been shipped.',
+      'delivered': 'Your order has been delivered successfully.',
+      'cancelled': 'Your order has been cancelled.'
+    };
+
+    const currentStatusMessage = statusMessages[orderData.status] || 'Your order status has been updated.';
+
+    return `
       Order Status Update
       
       Hi ${orderData.customerName},
@@ -639,13 +574,9 @@ class MailerSendService {
       © 2025 TeeMeYou. All rights reserved.
       Visit us at ${this.baseUrl}
     `;
-
-    return { subject, html, text };
   }
 
-  private generateInvoiceTemplate(orderData: OrderData): EmailTemplate {
-    const subject = `Invoice for Order #${orderData.orderNumber}`;
-    
+  private generateInvoiceHtml(orderData: OrderEmailData): string {
     const itemsHtml = orderData.orderItems.map(item => `
       <tr>
         <td style="padding: 8px; border-bottom: 1px solid #eee;">${item.productName}</td>
@@ -655,11 +586,7 @@ class MailerSendService {
       </tr>
     `).join('');
 
-    const itemsText = orderData.orderItems.map(item => 
-      `${item.productName} (Qty: ${item.quantity}) - R${item.unitPrice.toFixed(2)} each = R${item.totalPrice.toFixed(2)}`
-    ).join('\n');
-    
-    const html = `
+    return `
       <!DOCTYPE html>
       <html>
       <head>
@@ -734,8 +661,14 @@ class MailerSendService {
       </body>
       </html>
     `;
+  }
 
-    const text = `
+  private generateInvoiceText(orderData: OrderEmailData): string {
+    const itemsText = orderData.orderItems.map(item => 
+      `${item.productName} (Qty: ${item.quantity}) - R${item.unitPrice.toFixed(2)} each = R${item.totalPrice.toFixed(2)}`
+    ).join('\n');
+
+    return `
       INVOICE - Order #${orderData.orderNumber}
       
       Invoice Details:
@@ -764,11 +697,9 @@ class MailerSendService {
       © 2025 TeeMeYou. All rights reserved.
       Visit us at ${this.baseUrl}
     `;
-
-    return { subject, html, text };
   }
 }
 
 // Export singleton instance
-export const mailerSendService = new MailerSendService();
-export { MailerSendService, UserData, OrderData, PaymentData };
+export const unifiedEmailService = new UnifiedEmailService();
+export { UnifiedEmailService, UserEmailData, OrderEmailData, PaymentEmailData };

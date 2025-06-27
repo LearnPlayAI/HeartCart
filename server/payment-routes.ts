@@ -5,6 +5,7 @@ import { storage } from "./storage";
 import { isAuthenticated } from "./auth-middleware";
 import { sendSuccess, sendError } from "./api-response";
 import { logger } from "./logger";
+import { unifiedEmailService } from "./unified-email-service";
 
 const router = express.Router();
 
