@@ -191,13 +191,13 @@ Changelog:
   * System properly handles SAST timezone (UTC+2) with 3-hour server-side validity window
   * All 5 email scenarios operational: verification, password reset, payment confirmations, order updates, invoices
   * Plain token password reset system fully deployed and production-ready
-- June 27, 2025. Deployment cache invalidation system implemented:
-  * Created comprehensive cache manager with automatic version detection and aggressive cache clearing
-  * Added health endpoint with build version tracking for deployment change detection
-  * Implemented UpdateNotification component with user-friendly update prompts
-  * Added automatic cache clearing on deployment detection and periodic update checks
-  * Integrated service worker updates and browser cache management
-  * Eliminates need for manual cache clearing after deployments, resolves frontend loading errors
+- June 27, 2025. User-controlled deployment update system implemented:
+  * Fixed cache management system to prevent automatic page reload loops in production
+  * Created user-friendly update notification system that asks users before updating
+  * Maintained version detection and health endpoint tracking for deployment changes
+  * Users now see update notification with choice to update when ready or dismiss
+  * Periodic update checks continue every 30 seconds without forced reloads
+  * Eliminates infinite reload loops while preserving update awareness functionality
 - June 27, 2025. Email verification system fully implemented and operational:
   * Complete unified email verification system using MailerSend from sales@teemeyou.shop
   * Database-driven token management with plain token storage for reliable validation

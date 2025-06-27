@@ -93,12 +93,10 @@ export class CacheManager {
           current: currentVersion
         });
         
-        // Clear all caches and reload
-        await this.clearAllCaches();
+        // Store new version but don't auto-reload
         localStorage.setItem(this.VERSION_KEY, currentVersion);
         
-        // Force reload with cache bypass
-        window.location.reload();
+        // Return true to indicate update is available
         return true;
       }
 
@@ -115,24 +113,30 @@ export class CacheManager {
   }
 
   /**
-   * Initialize cache management with automatic checks - DISABLED to prevent reload loops
+   * Initialize cache management with user-controlled updates
    */
   initialize(): void {
-    console.log('[CacheManager] Cache management disabled to prevent reload loops');
+    console.log('[CacheManager] Cache management initialized with user-controlled updates');
     
-    // Disable automatic checks to prevent infinite reload loops
-    // this.checkForUpdates();
-    // setInterval(() => {
-    //   this.checkForUpdates();
-    // }, this.CHECK_INTERVAL);
-    // document.addEventListener('visibilitychange', () => {
-    //   if (!document.hidden) {
-    //     this.checkForUpdates();
-    //   }
-    // });
-    // window.addEventListener('focus', () => {
-    //   this.checkForUpdates();
-    // });
+    // Check immediately but don't auto-reload
+    this.checkForUpdates();
+
+    // Set up periodic checks
+    setInterval(() => {
+      this.checkForUpdates();
+    }, this.CHECK_INTERVAL);
+
+    // Check when page becomes visible
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        this.checkForUpdates();
+      }
+    });
+
+    // Check on focus
+    window.addEventListener('focus', () => {
+      this.checkForUpdates();
+    });
   }
 
   /**
@@ -145,16 +149,16 @@ export class CacheManager {
   }
 }
 
-// Auto-initialization DISABLED to prevent reload loops
-// if (typeof window !== 'undefined') {
-//   // Wait for DOM to be ready
-//   if (document.readyState === 'loading') {
-//     document.addEventListener('DOMContentLoaded', () => {
-//       CacheManager.getInstance().initialize();
-//     });
-//   } else {
-//     CacheManager.getInstance().initialize();
-//   }
-// }
+// Auto-initialization enabled with user-controlled updates
+if (typeof window !== 'undefined') {
+  // Wait for DOM to be ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      CacheManager.getInstance().initialize();
+    });
+  } else {
+    CacheManager.getInstance().initialize();
+  }
+}
 
 export const cacheManager = CacheManager.getInstance();
