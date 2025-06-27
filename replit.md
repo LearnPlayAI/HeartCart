@@ -144,6 +144,11 @@ Changelog:
   * Removed social media links (Facebook, Twitter, Instagram) from footer
   * Removed PWA features card per user request
   * Updated footer with contact information instead
+- June 27, 2025. PWA install functionality disabled:
+  * Removed PWA install notifications from desktop and mobile
+  * Disabled InstallPrompt and FloatingInstallButton components
+  * Updated usePWAInstall hook to return disabled state
+  * Eliminated "Install App" prompts per user request
 ```
 
 ## User Preferences

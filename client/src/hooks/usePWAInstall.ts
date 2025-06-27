@@ -10,6 +10,7 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 export const usePWAInstall = () => {
+  // PWA install functionality disabled per user request
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstallable, setIsInstallable] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
@@ -153,13 +154,13 @@ export const usePWAInstall = () => {
   };
 
   return {
-    isInstallable: isInstallable && !isInstalled && !isStandalone,
-    isInstalled,
-    isStandalone,
-    isIOSDevice,
-    showInstallPrompt: showInstallPrompt && canShowPrompt(),
-    installApp,
-    dismissInstallPrompt,
-    canInstall: !!deferredPrompt
+    isInstallable: false, // PWA install disabled
+    isInstalled: false,
+    isStandalone: false,
+    isIOSDevice: false,
+    showInstallPrompt: false,
+    installApp: () => Promise.resolve(false),
+    dismissInstallPrompt: () => {},
+    canInstall: false
   };
 };
