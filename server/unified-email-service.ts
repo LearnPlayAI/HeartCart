@@ -2,7 +2,7 @@ import { MailerSend, EmailParams, Sender, Recipient } from 'mailersend';
 import crypto from 'crypto';
 import { db } from './db';
 import { users, mailTokens, emailLogs } from '@shared/schema';
-import { eq, and, lt } from 'drizzle-orm';
+import { eq, and, lt, desc } from 'drizzle-orm';
 
 // South African themed styling from the guide
 const SA_COLORS = {
@@ -60,7 +60,7 @@ export class UnifiedEmailService {
     const expiresAt = new Date(Date.now() + 3 * 60 * 60 * 1000); // 3 hours for SAST timezone
 
     await db.insert(mailTokens).values({
-      tokenHash: token,
+      token: token,
       tokenType: 'password_reset',
       userId,
       email,
@@ -287,18 +287,38 @@ export class UnifiedEmailService {
 
   async validatePasswordResetToken(token: string): Promise<{ valid: boolean; userId?: number; email?: string; error?: string }> {
     try {
+      console.log(`🔍 Validating token: ${token.substring(0, 8)}...`);
+      
+      // Hash the provided token to compare with stored hash
+      const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+      console.log(`🔍 Generated hash: ${tokenHash.substring(0, 16)}...`);
+      
       const tokenRecord = await db.select()
         .from(mailTokens)
         .where(
           and(
-            eq(mailTokens.tokenHash, token),
+            eq(mailTokens.tokenHash, tokenHash),
             eq(mailTokens.tokenType, 'password_reset'),
             eq(mailTokens.isActive, true)
           )
         )
         .limit(1);
 
+      console.log(`🔍 Found ${tokenRecord.length} matching token records`);
+
       if (tokenRecord.length === 0) {
+        // Let's debug by checking what tokens exist
+        const allTokens = await db.select()
+          .from(mailTokens)
+          .where(eq(mailTokens.tokenType, 'password_reset'))
+          .orderBy(desc(mailTokens.createdAt))
+          .limit(5);
+        
+        console.log(`🔍 Recent password reset tokens in DB: ${allTokens.length}`);
+        for (const t of allTokens) {
+          console.log(`🔍 Token hash: ${t.tokenHash.substring(0, 16)}..., active: ${t.isActive}, expires: ${t.expiresAt}`);
+        }
+        
         return { valid: false, error: 'Invalid or expired token' };
       }
 
@@ -306,9 +326,13 @@ export class UnifiedEmailService {
       const now = new Date();
       const expiresAt = new Date(record.expiresAt);
 
+      console.log(`🔍 Token expires at: ${expiresAt}, current time: ${now}`);
+
       if (now > expiresAt) {
         return { valid: false, error: 'Token has expired' };
       }
+
+      console.log(`✅ Token validation successful for user: ${record.userId}`);
 
       return {
         valid: true,

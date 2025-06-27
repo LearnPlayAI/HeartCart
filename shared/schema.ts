@@ -855,7 +855,7 @@ export type InsertOrderStatusHistory = z.infer<typeof insertOrderStatusHistorySc
 // Mail Tokens table - stores all email-related tokens (password reset, verification, etc.)
 export const mailTokens = pgTable("mailTokens", {
   id: serial("id").primaryKey(),
-  tokenHash: varchar("tokenHash", { length: 255 }).notNull().unique(),
+  token: varchar("token", { length: 255 }).notNull().unique(), // Store plain token, not hash
   tokenType: varchar("tokenType", { length: 50 }).notNull(), // 'password_reset', 'email_verification'
   userId: integer("userId").notNull().references(() => users.id, { onDelete: 'cascade' }),
   email: varchar("email", { length: 255 }).notNull(),
@@ -864,7 +864,7 @@ export const mailTokens = pgTable("mailTokens", {
   usedAt: timestamp("usedAt"),
   isActive: boolean("isActive").default(true).notNull(),
 }, (table) => ({
-  tokenHashIdx: index("mailTokens_tokenHash_idx").on(table.tokenHash),
+  tokenIdx: index("mailTokens_token_idx").on(table.token),
   userIdIdx: index("mailTokens_userId_idx").on(table.userId),
   emailIdx: index("mailTokens_email_idx").on(table.email),
   tokenTypeIdx: index("mailTokens_tokenType_idx").on(table.tokenType),
