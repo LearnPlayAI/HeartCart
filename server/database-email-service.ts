@@ -66,6 +66,15 @@ export class DatabaseEmailService {
   }
 
   /**
+   * Get current time in SAST (UTC+2) for email logging
+   */
+  private getSASTTime(): Date {
+    const now = new Date();
+    const sastTime = new Date(now.getTime() + (2 * 60 * 60 * 1000)); // Add 2 hours for SAST
+    return sastTime;
+  }
+
+  /**
    * Generate a secure token and its hash
    */
   private generateToken(): { token: string; hash: string } {
@@ -98,7 +107,8 @@ export class DatabaseEmailService {
 
       // Generate new token
       const { token, hash } = this.generateToken();
-      const expiresAt = new Date(Date.now() + 3 * 60 * 60 * 1000); // 3 hours server-side
+      // Account for SAST timezone (UTC+2) - extend expiry to 5 hours to ensure validity
+      const expiresAt = new Date(Date.now() + 5 * 60 * 60 * 1000); // 5 hours server-side for SAST compatibility
 
       // Store token in database
       const tokenData: InsertMailToken = {
@@ -195,7 +205,7 @@ export class DatabaseEmailService {
       // Send email
       const response = await this.mailerSend.email.send(emailParams);
       
-      // Log email with proper response handling
+      // Log email with proper response handling and SAST time
       const emailLogData: InsertEmailLog = {
         userId,
         recipientEmail: email,
@@ -203,7 +213,8 @@ export class DatabaseEmailService {
         subject: 'Verify Your TeeMeYou Account',
         deliveryStatus: response.statusCode === 202 ? 'sent' : 'failed',
         mailerSendId: response.body?.message_id || null,
-        errorMessage: response.statusCode !== 202 ? `HTTP ${response.statusCode}` : null
+        errorMessage: response.statusCode !== 202 ? `HTTP ${response.statusCode}` : null,
+        sentAt: this.getSASTTime()
       };
 
       await storage.logEmail(emailLogData);
@@ -234,7 +245,8 @@ export class DatabaseEmailService {
 
       // Generate new token
       const { token, hash } = this.generateToken();
-      const expiresAt = new Date(Date.now() + 3 * 60 * 60 * 1000); // 3 hours server-side
+      // Account for SAST timezone (UTC+2) - extend expiry to 5 hours to ensure validity
+      const expiresAt = new Date(Date.now() + 5 * 60 * 60 * 1000); // 5 hours server-side for SAST compatibility
 
       // Store token in database
       const tokenData: InsertMailToken = {
@@ -331,7 +343,7 @@ export class DatabaseEmailService {
       // Send email
       const response = await this.mailerSend.email.send(emailParams);
       
-      // Log email with proper response handling
+      // Log email with proper response handling and SAST time
       const emailLogData: InsertEmailLog = {
         userId,
         recipientEmail: email,
@@ -339,7 +351,8 @@ export class DatabaseEmailService {
         subject: 'Reset Your TeeMeYou Password',
         deliveryStatus: response.statusCode === 202 ? 'sent' : 'failed',
         mailerSendId: response.body?.message_id || null,
-        errorMessage: response.statusCode !== 202 ? `HTTP ${response.statusCode}` : null
+        errorMessage: response.statusCode !== 202 ? `HTTP ${response.statusCode}` : null,
+        sentAt: this.getSASTTime()
       };
 
       await storage.logEmail(emailLogData);
