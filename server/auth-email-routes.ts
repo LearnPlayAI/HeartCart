@@ -58,7 +58,7 @@ router.post('/send-verification', asyncHandler(async (req: Request, res: Respons
     // For now, we'll proceed with sending verification email
     
     // Send verification email using database service
-    await databaseEmailService.sendVerificationEmail(user.id, email, user.username);
+    await databaseEmailService.sendVerificationEmail(Number(user.id), email, user.username);
 
     logger.info('Verification email sent successfully', { email, userId: user.id });
 
@@ -129,7 +129,7 @@ router.post('/forgot-password', asyncHandler(async (req: Request, res: Response)
     }
 
     // Send password reset email using database service
-    await databaseEmailService.sendPasswordResetEmail(user.id, email, user.username);
+    await databaseEmailService.sendPasswordResetEmail(Number(user.id), email, user.username);
 
     logger.info('Password reset email sent successfully', { email, userId: user.id });
 
@@ -167,7 +167,7 @@ router.post('/reset-password', asyncHandler(async (req: Request, res: Response) 
 
     // Update user password
     const hashedPassword = await hashPassword(newPassword);
-    await storage.updateUser(tokenResult.userId, { password: hashedPassword });
+    await storage.updateUser(Number(tokenResult.userId), { password: hashedPassword });
 
     logger.info('Password reset successfully', { 
       userId: tokenResult.userId, 

@@ -143,6 +143,7 @@ function App() {
             <ScrollManager>
               <Toaster />
               <SessionExpiryWarning />
+              <UpdateNotification />
               <div className="flex flex-col min-h-screen">
                 <Switch>
                   {/* Admin Routes - No header/footer */}
