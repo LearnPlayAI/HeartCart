@@ -8,6 +8,7 @@ import { ZodError } from "zod";
 import { logger } from "./logger";
 import { db } from "./db";
 import { desc, eq, sql } from "drizzle-orm";
+import { databaseEmailService } from "./database-email-service";
 import crypto from "crypto";
 import { cleanupOrphanedDraftImages, cleanupAllOrphanedDraftImages } from "./clean-orphaned-images";
 // Import AI routes separately
@@ -4770,6 +4771,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
             newStatus: status,
             adminUserId: req.user?.id
           });
+
+          // Send order status update email for all status changes except payment_received
+          try {
+            logger.info('Attempting to send order status update email', { orderId, status });
+            
+            // Get full order details with items for email
+            const orderWithItems = await storage.getOrderById(orderId);
+            
+            logger.info('Retrieved order details for email', { 
+              orderId, 
+              hasOrder: !!orderWithItems, 
+              hasItems: orderWithItems?.orderItems?.length > 0 
+            });
+            
+            if (orderWithItems && orderWithItems.orderItems && orderWithItems.orderItems.length > 0) {
+              // Generate estimated delivery text based on new status
+              const getEstimatedDeliveryText = (status: string): string => {
+                switch (status) {
+                  case 'pending':
+                    return 'Processing your order';
+                  case 'confirmed':
+                    return 'Order confirmed, preparing for shipment';
+                  case 'processing':
+                    return 'Order is being processed';
+                  case 'shipped':
+                    return '3-5 business days';
+                  case 'delivered':
+                    return 'Delivered';
+                  case 'cancelled':
+                    return 'Order cancelled';
+                  default:
+                    return 'Status updated';
+                }
+              };
+
+              const emailData = {
+                email: orderWithItems.customerEmail,
+                customerName: orderWithItems.customerName,
+                orderNumber: orderWithItems.orderNumber,
+                orderId: orderWithItems.id,
+                status: status,
+                trackingNumber: orderWithItems.trackingNumber,
+                estimatedDelivery: getEstimatedDeliveryText(status),
+                shippingMethod: orderWithItems.shippingMethod,
+                selectedLockerName: orderWithItems.selectedLockerName,
+                selectedLockerAddress: orderWithItems.selectedLockerAddress
+              };
+
+              await databaseEmailService.sendOrderStatusEmail(emailData);
+
+              logger.info('Order status update email sent successfully', {
+                orderId,
+                status,
+                customerEmail: orderWithItems.customerEmail
+              });
+            }
+          } catch (emailError) {
+            logger.error('Failed to send order status update email', {
+              orderId,
+              status,
+              error: emailError
+            });
+            // Don't fail the status update if email fails
+          }
         }
         
         const message = status === 'payment_received' 
