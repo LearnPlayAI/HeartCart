@@ -347,7 +347,7 @@ export class UnifiedEmailService {
         isActive: false,
         usedAt: new Date()
       })
-      .where(eq(mailTokens.tokenHash, token));
+      .where(eq(mailTokens.token, token));
   }
 
   async cleanupExpiredTokens(): Promise<void> {

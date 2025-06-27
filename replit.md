@@ -176,6 +176,13 @@ Changelog:
   * Comprehensive email logging with SAST timestamps for audit trails
   * Production-ready with 4/6 verification tests passing (core functionality operational)
   * Email system ready for live use with proper error handling and security measures
+- June 27, 2025. Plain token password reset system completed:
+  * Migrated from hashed tokens to plain text token storage in mailTokens table
+  * Updated unified email service to use direct string comparison for token validation
+  * Implemented secure one-time token usage tracking preventing reuse after password changes
+  * All token functionality verified through comprehensive testing: creation, validation, usage tracking
+  * Database schema updated with token column replacing tokenHash for streamlined operations
+  * Password reset system fully functional with proper security measures and timezone handling
 - June 27, 2025. Deployment cache invalidation system implemented:
   * Created comprehensive cache manager with automatic version detection and aggressive cache clearing
   * Added health endpoint with build version tracking for deployment change detection
