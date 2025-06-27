@@ -1825,6 +1825,7 @@ export class DatabaseStorage implements IStorage {
   async getFeaturedProducts(
     limit = 10,
     options?: { includeInactive?: boolean; includeCategoryInactive?: boolean },
+    offset = 0,
   ): Promise<Product[]> {
     try {
       let productList: Product[] = [];
@@ -1847,7 +1848,8 @@ export class DatabaseStorage implements IStorage {
                 eq(categories.isActive, true),
               ),
             )
-            .limit(limit);
+            .limit(limit)
+            .offset(offset);
 
           const result = await query;
           productList = result.map((row) => row.product);
@@ -1872,18 +1874,24 @@ export class DatabaseStorage implements IStorage {
                   : eq(products.isActive, true),
               ),
             )
-            .limit(limit);
+            .limit(limit)
+            .offset(offset);
         } catch (queryError) {
           console.error("Error fetching featured products:", queryError);
           throw queryError; // Rethrow so the route handler can catch it and send a proper error response
         }
       }
 
-      // Enrich products with main image URLs
+      // Enrich products with main image URLs - handle potential null/undefined gracefully
+      if (!productList || productList.length === 0) {
+        return [];
+      }
+
       return await this.enrichProductsWithMainImage(productList);
     } catch (error) {
       console.error("Error in getFeaturedProducts:", error);
-      throw error; // Rethrow so the route handler can catch it and send a proper error response
+      // Return empty array instead of throwing to prevent site crashes
+      return [];
     }
   }
 

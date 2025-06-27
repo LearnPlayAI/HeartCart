@@ -1114,7 +1114,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Create featured products query schema
   const featuredProductsQuerySchema = z.object({
-    limit: z.coerce.number().int().nonnegative().default(10)
+    limit: z.coerce.number().int().nonnegative().default(10),
+    offset: z.coerce.number().int().nonnegative().default(0)
   });
 
   app.get(
@@ -1123,7 +1124,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       query: featuredProductsQuerySchema
     }),
     asyncHandler(async (req: Request, res: Response) => {
-      const { limit } = req.query;
+      const { limit, offset } = req.query;
       
       const user = req.user as any;
       const isAdmin = user && user.role === 'admin';
@@ -1134,29 +1135,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       try {
-        const products = await storage.getFeaturedProducts(Number(limit), options);
+        const products = await storage.getFeaturedProducts(Number(limit), options, Number(offset));
         
         // Return standardized response format
         res.json({
           success: true,
-          data: products,
+          data: products || [], // Ensure we always return an array
           meta: {
-            total: products.length,
-            limit: Number(limit)
+            total: products ? products.length : 0,
+            limit: Number(limit),
+            offset: Number(offset)
           }
         });
       } catch (error) {
         // Log detailed error for debugging
         logger.error('Error fetching featured products', { 
           error,
-          limit: Number(limit)
+          limit: Number(limit),
+          offset: Number(offset)
         });
         
-        throw new AppError(
-          "Failed to fetch featured products. Please try again later.",
-          ErrorCode.INTERNAL_SERVER_ERROR,
-          500
-        );
+        // Return empty array instead of throwing error to prevent site crash
+        res.json({
+          success: true,
+          data: [],
+          meta: {
+            total: 0,
+            limit: Number(limit),
+            offset: Number(offset)
+          }
+        });
       }
     })
   );
