@@ -257,6 +257,74 @@ export default function AuthPage() {
                       </Button>
                     </form>
                   </Form>
+                  
+                  {/* Forgot Password Link */}
+                  <div className="text-center">
+                    <Dialog open={isForgotPasswordOpen} onOpenChange={setIsForgotPasswordOpen}>
+                      <DialogTrigger asChild>
+                        <button className="text-sm text-primary hover:underline">
+                          Forgot Password?
+                        </button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-[425px]">
+                        <DialogHeader>
+                          <DialogTitle>Reset Your Password</DialogTitle>
+                          <DialogDescription>
+                            Enter your email address and we'll send you a link to reset your password.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <Form {...forgotPasswordForm}>
+                          <form onSubmit={forgotPasswordForm.handleSubmit(onForgotPasswordSubmit)} className="space-y-4">
+                            <FormField
+                              control={forgotPasswordForm.control}
+                              name="email"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Email</FormLabel>
+                                  <FormControl>
+                                    <div className="relative">
+                                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                                        <AtSign size={16} />
+                                      </span>
+                                      <Input
+                                        type="email"
+                                        placeholder="Enter your email address"
+                                        className="pl-10"
+                                        {...field}
+                                      />
+                                    </div>
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <DialogFooter>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setIsForgotPasswordOpen(false)}
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                type="submit"
+                                disabled={forgotPasswordMutation.isPending}
+                              >
+                                {forgotPasswordMutation.isPending ? (
+                                  <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Sending...
+                                  </>
+                                ) : (
+                                  "Send Reset Email"
+                                )}
+                              </Button>
+                            </DialogFooter>
+                          </form>
+                        </Form>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
                 </CardContent>
                 <CardFooter className="flex flex-col space-y-4">
                   <div className="text-center text-sm text-muted-foreground">
