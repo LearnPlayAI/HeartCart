@@ -33,12 +33,12 @@ router.get('/full-test', asyncHandler(async (req: Request, res: Response) => {
   // Test 1: Database Schema Verification
   try {
     // Test mailTokens table
-    const testToken = await storage.storeEmailToken({
+    const testToken = await storage.createMailToken({
       tokenHash: 'test_verification_' + Date.now(),
       tokenType: 'verification_test',
       userId: 1,
       email: 'test@schema.verification',
-      expiresAt: new Date(Date.now() + 3600000).toISOString(),
+      expiresAt: new Date(Date.now() + 3600000),
       isActive: true
     });
 
@@ -48,7 +48,8 @@ router.get('/full-test', asyncHandler(async (req: Request, res: Response) => {
       recipientEmail: 'test@schema.verification',
       emailType: 'verification_test',
       subject: 'Schema Verification Test',
-      deliveryStatus: 'sent'
+      deliveryStatus: 'sent',
+      sentAt: new Date()
     });
 
     // Cleanup test data
