@@ -17,7 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useCredits } from '@/hooks/use-credits';
 import { CategorySidebarDrawer } from '@/components/ui/category-sidebar-drawer';
 import ProductSearch from '@/components/ui/product-search';
-import InstallButton from '@/components/pwa/InstallButton';
+import MobileInstallButton from '@/components/pwa/MobileInstallButton';
 import { StandardApiResponse } from "@/types/api";
 
 type Category = {
@@ -158,11 +158,10 @@ const Header = () => {
                 </Link>
                 
                 {/* Install App Button */}
-                <InstallButton 
+                <MobileInstallButton 
                   variant="outline"
                   size="sm"
                   className="hidden sm:flex"
-                  text="Get App"
                 />
                 
                 <Button 
