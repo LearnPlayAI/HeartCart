@@ -280,6 +280,8 @@ router.get('/full-test', asyncHandler(async (req: Request, res: Response) => {
     warningCount 
   });
 
+  const httpStatusCode = overallStatus === 'READY' ? 200 : overallStatus === 'ISSUES' ? 200 : 422;
+
   return sendSuccess(res, {
     summary,
     tests,
@@ -300,7 +302,7 @@ router.get('/full-test', asyncHandler(async (req: Request, res: Response) => {
       'MailerSend integration',
       'SAST timezone support'
     ]
-  }, summary.message);
+  }, httpStatusCode);
 }));
 
 /**
