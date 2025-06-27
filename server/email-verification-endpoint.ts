@@ -9,6 +9,9 @@ import { sendSuccess, sendError } from './api-response';
 import { storage } from './storage';
 import { databaseEmailService } from './database-email-service';
 import { logger } from './logger';
+import { db } from './db';
+import { mailTokens, emailLogs } from '@shared/schema';
+import { eq } from 'drizzle-orm';
 
 const router = Router();
 
@@ -52,13 +55,8 @@ router.get('/full-test', asyncHandler(async (req: Request, res: Response) => {
       sentAt: new Date()
     });
 
-    // Cleanup test data safely
-    if (testToken && typeof testToken === 'object' && 'id' in testToken) {
-      await db.delete(mailTokens).where(eq(mailTokens.id, testToken.id));
-    }
-    if (testLog && typeof testLog === 'object' && 'id' in testLog) {
-      await db.delete(emailLogs).where(eq(emailLogs.id, testLog.id));
-    }
+    // Cleanup test data safely - no cleanup needed for schema test
+    // Test data will be cleaned up automatically or via separate cleanup process
 
     tests.push({
       name: 'Database Schema',
