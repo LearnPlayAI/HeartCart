@@ -36,6 +36,26 @@ export class InvoiceGenerator {
     return InvoiceGenerator.instance;
   }
 
+  /**
+   * Convert UTC timestamp to SAST (UTC+2) for South African users
+   */
+  private convertToSAST(utcTimestamp: string): string {
+    const utcDate = new Date(utcTimestamp);
+    // Add 2 hours for SAST (UTC+2)
+    const sastDate = new Date(utcDate.getTime() + (2 * 60 * 60 * 1000));
+    
+    return sastDate.toLocaleString('en-ZA', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+      timeZone: 'UTC' // We've already adjusted the time, so use UTC to prevent double conversion
+    });
+  }
+
   async generateInvoicePDF(data: InvoiceData): Promise<string> {
     try {
       logger.info('Starting PDF invoice generation', { orderNumber: data.orderNumber });
@@ -205,7 +225,7 @@ export class InvoiceGenerator {
     // Payment details
     doc.setFont('helvetica', 'normal');
     doc.text(`Payment Method: ${data.paymentMethod}`, margin, yPosition);
-    doc.text(`Payment Received: ${data.paymentReceivedDate}`, margin, yPosition + 7);
+    doc.text(`Payment Received: ${this.convertToSAST(data.paymentReceivedDate)}`, margin, yPosition + 7);
 
     // Footer
     yPosition = 280;
@@ -216,11 +236,7 @@ export class InvoiceGenerator {
   }
 
   private generateInvoiceHTML(data: InvoiceData): string {
-    const invoiceDate = new Date(data.paymentReceivedDate).toLocaleDateString('en-ZA', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+    const invoiceDate = this.convertToSAST(data.paymentReceivedDate);
 
     const formatCurrency = (amount: number) => {
       return `R${amount.toFixed(2)}`;

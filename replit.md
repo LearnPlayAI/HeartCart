@@ -296,6 +296,13 @@ Changelog:
   * Professional email notifications informing customers when invoice is attached
   * Complete integration: payment status → PDF generation → email with attachment → customer receives invoice
   * Production-ready system handles all edge cases including missing files and network issues
+- June 27, 2025. PDF invoice timezone fix implemented:
+  * Fixed timezone display issue where UTC timestamps were shown instead of South African time
+  * Added convertToSAST() method to invoice generator for proper timezone conversion
+  * Payment received timestamps now display in SAST (UTC+2) instead of UTC
+  * Applied timezone conversion to both jsPDF and HTML-based invoice generation methods
+  * South African users now see correct local time on PDF invoices (e.g., 23:43 instead of 21:43)
+  * Ensures consistency with user expectations and local business practices
 ```
 
 ## User Preferences
