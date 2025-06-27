@@ -516,29 +516,7 @@ export class DatabaseEmailService {
    */
   async verifyToken(token: string, tokenType: string): Promise<{ valid: boolean; userId?: number; email?: string }> {
     try {
-      const hash = crypto.createHash('sha256').update(token).digest('hex');
-      const dbToken = await storage.getMailTokenByHash(hash);
-
-      if (!dbToken) {
-        return { valid: false };
-      }
-
-      // Check if token is active, not expired, and correct type
-      const now = new Date();
-      const isValid = dbToken.isActive && 
-                     dbToken.expiresAt > now && 
-                     dbToken.tokenType === tokenType &&
-                     !dbToken.usedAt; // Token hasn't been used
-
-      if (!isValid) {
-        return { valid: false };
-      }
-
-      return {
-        valid: true,
-        userId: dbToken.userId,
-        email: dbToken.email
-      };
+      return await storage.verifyEmailToken(token, tokenType);
     } catch (error) {
       logger.error('Error verifying token', { error, tokenType });
       return { valid: false };
@@ -550,8 +528,7 @@ export class DatabaseEmailService {
    */
   async useToken(token: string): Promise<boolean> {
     try {
-      const hash = crypto.createHash('sha256').update(token).digest('hex');
-      return await storage.markTokenUsed(hash);
+      return await storage.markTokenUsed(token);
     } catch (error) {
       logger.error('Error marking token as used', { error });
       return false;
