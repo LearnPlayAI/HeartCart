@@ -1,7 +1,8 @@
 import crypto from 'crypto';
 import { storage } from './storage';
 import { logger } from './logger';
-import { MailerSend, EmailParams, Sender, Recipient } from 'mailersend';
+import { MailerSend, EmailParams, Sender, Recipient, Attachment } from 'mailersend';
+import { objectStoreAdapter } from './object-store-adapter';
 import type { InsertMailToken, InsertEmailLog } from '@shared/schema';
 
 // Types for email templates
@@ -24,6 +25,7 @@ export interface PaymentConfirmationEmailData {
   amount: number;
   currency: string;
   paymentMethod: string;
+  invoicePath?: string; // Optional path to PDF invoice in object storage
 }
 
 export interface OrderStatusEmailData {
@@ -574,7 +576,7 @@ export class DatabaseEmailService {
               </div>
               
               <p style="font-size: 16px; line-height: 1.6; color: #4A5568; margin-bottom: 30px; text-align: center;">
-                Your payment has been successfully processed. Here are your payment details:
+                Your payment has been successfully processed${data.invoicePath ? '. Please find your invoice attached to this email.' : '.'} Here are your payment details:
               </p>
               
               <div style="background: linear-gradient(135deg, #FFF0F6 0%, #FFFFFF 100%); padding: 25px; border-radius: 12px; border: 2px solid #FF69B4; margin: 25px 0; box-shadow: 0 4px 12px rgba(255, 105, 180, 0.1);">
@@ -593,6 +595,16 @@ export class DatabaseEmailService {
                   </tr>
                 </table>
               </div>
+              
+              ${data.invoicePath ? `
+              <div style="background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%); border: 2px solid #F59E0B; padding: 20px; border-radius: 12px; margin: 25px 0; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);">
+                <p style="margin: 0; color: #92400E; font-weight: bold; display: flex; align-items: center;">
+                  <span style="font-size: 18px; margin-right: 8px;">📄</span>
+                  Invoice Attached
+                </p>
+                <p style="margin: 10px 0 0 0; color: #78350F; font-size: 14px;">Your official invoice has been attached to this email for your records.</p>
+              </div>
+              ` : ''}
               
               <div style="background: linear-gradient(135deg, #DCFCE7 0%, #BBF7D0 100%); border: 2px solid #10B981; padding: 20px; border-radius: 12px; margin: 25px 0; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);">
                 <p style="margin: 0; color: #047857; font-weight: bold; display: flex; align-items: center;">
@@ -641,11 +653,51 @@ export class DatabaseEmailService {
           </html>
         `);
 
+      // Add PDF invoice attachment if available
+      if (data.invoicePath) {
+        try {
+          logger.info('Attempting to attach PDF invoice to payment confirmation email', {
+            invoicePath: data.invoicePath,
+            orderNumber: data.orderNumber
+          });
+
+          // Get the PDF file from object storage
+          const { data: fileData, contentType } = await objectStoreAdapter.getFileAsBuffer(data.invoicePath);
+          
+          if (fileData && fileData.length > 0) {
+            const base64Data = fileData.toString('base64');
+            const invoiceFilename = `Invoice_${data.orderNumber}.pdf`;
+            
+            const attachment = new Attachment(base64Data, invoiceFilename, 'attachment');
+            emailParams.setAttachments([attachment]);
+            
+            logger.info('PDF invoice attachment prepared successfully', {
+              filename: invoiceFilename,
+              size: fileData.length,
+              orderNumber: data.orderNumber
+            });
+          } else {
+            logger.warn('Invoice file data is empty or null, skipping attachment', {
+              invoicePath: data.invoicePath,
+              orderNumber: data.orderNumber
+            });
+          }
+        } catch (attachmentError) {
+          logger.error('Failed to attach invoice PDF to email', {
+            error: attachmentError,
+            invoicePath: data.invoicePath,
+            orderNumber: data.orderNumber
+          });
+          // Continue sending email without attachment rather than failing
+        }
+      }
+
       await this.mailerSend.email.send(emailParams);
       
       logger.info('Payment confirmation email sent successfully', { 
         email: data.email,
-        orderNumber: data.orderNumber 
+        orderNumber: data.orderNumber,
+        hasAttachment: !!data.invoicePath
       });
     } catch (error) {
       logger.error('Error sending payment confirmation email', { error, data });

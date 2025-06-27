@@ -156,42 +156,15 @@ router.patch("/orders/:id/payment-status", isAuthenticated, asyncHandler(async (
       return sendError(res, "Order not found", 404);
     }
 
-    // Send payment confirmation email and generate PDF invoice when status is changed to "payment_received"
+    // Generate PDF invoice and send payment confirmation email when status is changed to "payment_received"
     if (paymentStatus === "payment_received") {
       try {
         // Get full order details with items for payment confirmation email and invoice
         const fullOrder = await storage.getOrderById(orderId);
         if (fullOrder && fullOrder.items && fullOrder.items.length > 0) {
-          // Send payment confirmation email
-          const emailData = {
-            email: fullOrder.customerEmail,
-            customerName: fullOrder.customerName,
-            orderNumber: fullOrder.orderNumber,
-            amount: fullOrder.totalAmount,
-            currency: 'ZAR',
-            orderItems: fullOrder.items.map(item => ({
-              productName: item.productName,
-              quantity: item.quantity,
-              unitPrice: item.unitPrice,
-              totalPrice: item.totalPrice,
-              attributeDisplayText: item.attributeDisplayText
-            })),
-            subtotalAmount: fullOrder.subtotalAmount,
-            shippingCost: fullOrder.shippingCost,
-            totalAmount: fullOrder.totalAmount,
-            paymentMethod: fullOrder.paymentMethod,
-            shippingMethod: fullOrder.shippingMethod
-          };
-
-          await databaseEmailService.sendPaymentConfirmationEmail(emailData);
+          let invoicePath = null;
           
-          logger.info("Payment confirmation email sent", {
-            orderId,
-            customerEmail: fullOrder.customerEmail,
-            adminUserId: req.user?.id
-          });
-
-          // Generate PDF invoice
+          // Generate PDF invoice first
           try {
             const invoiceData = {
               orderNumber: fullOrder.orderNumber,
@@ -217,7 +190,7 @@ router.patch("/orders/:id/payment-status", isAuthenticated, asyncHandler(async (
             };
 
             const invoiceGenerator = InvoiceGenerator.getInstance();
-            const invoicePath = await invoiceGenerator.generateInvoicePDF(invoiceData);
+            invoicePath = await invoiceGenerator.generateInvoicePDF(invoiceData);
             
             // Update order with invoice path
             await storage.updateOrderInvoicePath(orderId, invoicePath);
@@ -229,13 +202,33 @@ router.patch("/orders/:id/payment-status", isAuthenticated, asyncHandler(async (
               adminUserId: req.user?.id
             });
           } catch (invoiceError) {
-            // Log invoice error but don't fail the payment status update
+            // Log invoice error but continue with email
             logger.error("Failed to generate PDF invoice", {
               error: invoiceError,
               orderId,
               customerEmail: fullOrder.customerEmail
             });
           }
+
+          // Send payment confirmation email with invoice attachment if available
+          const emailData = {
+            email: fullOrder.customerEmail,
+            customerName: fullOrder.customerName,
+            orderNumber: fullOrder.orderNumber,
+            amount: fullOrder.totalAmount,
+            currency: 'ZAR',
+            paymentMethod: fullOrder.paymentMethod,
+            invoicePath: invoicePath // Include invoice path for attachment
+          };
+
+          await databaseEmailService.sendPaymentConfirmationEmail(emailData);
+          
+          logger.info("Payment confirmation email sent with invoice attachment", {
+            orderId,
+            customerEmail: fullOrder.customerEmail,
+            hasInvoiceAttachment: !!invoicePath,
+            adminUserId: req.user?.id
+          });
         }
       } catch (emailError) {
         // Log email error but don't fail the payment status update
