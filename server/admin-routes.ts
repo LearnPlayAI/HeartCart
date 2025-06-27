@@ -127,49 +127,8 @@ router.patch("/orders/:id/payment-status", isAuthenticated, asyncHandler(async (
       return sendError(res, "Order not found", 404);
     }
 
-    // Send payment confirmation email when payment is confirmed
-    try {
-      if (paymentStatus === 'paid' || paymentStatus === 'payment_received') {
-        // Get full order details with items for payment confirmation email
-        const fullOrder = await storage.getOrderById(orderId);
-        if (fullOrder && fullOrder.orderItems && fullOrder.orderItems.length > 0) {
-          const emailData = {
-            email: fullOrder.customerEmail,
-            customerName: fullOrder.customerName,
-            orderNumber: fullOrder.orderNumber,
-            orderItems: fullOrder.orderItems.map(item => ({
-              productName: item.productName,
-              quantity: item.quantity,
-              unitPrice: item.unitPrice,
-              totalPrice: item.totalPrice,
-              attributeDisplayText: item.attributeDisplayText
-            })),
-            subtotalAmount: fullOrder.subtotalAmount,
-            shippingCost: fullOrder.shippingCost,
-            totalAmount: fullOrder.totalAmount,
-            paymentMethod: fullOrder.paymentMethod,
-            shippingMethod: fullOrder.shippingMethod
-          };
-
-          await databaseEmailService.sendPaymentConfirmationEmail(emailData);
-          
-          logger.info("Payment confirmation email sent", {
-            orderId,
-            paymentStatus,
-            customerEmail: fullOrder.customerEmail,
-            adminUserId: req.user?.id
-          });
-        }
-      }
-    } catch (emailError) {
-      // Log email error but don't fail the payment status update
-      logger.error("Failed to send payment confirmation email", {
-        error: emailError,
-        orderId,
-        paymentStatus,
-        customerEmail: updatedOrder.customerEmail
-      });
-    }
+    // Note: Payment confirmation emails are only sent when admin specifically marks payment as received
+    // This happens in the /orders/:id/payment-received endpoint
 
     logger.info("Order payment status updated by admin", { orderId, paymentStatus, adminUserId: req.user?.id });
     return sendSuccess(res, updatedOrder);
