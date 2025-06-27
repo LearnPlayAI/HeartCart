@@ -236,7 +236,7 @@ const OrderDetail: React.FC = () => {
         paymentStatus: order.paymentStatus,
         status: order.status,
         invoicePath: order.invoicePath,
-        shouldShowDownload: (order.paymentStatus === 'paid' || order.status === 'payment received' || order.status === 'Payment_received' || order.paymentStatus === 'Payment_received') && order.invoicePath
+        shouldShowDownload: (order.paymentStatus === 'paid' || order.status === 'payment received' || order.status === 'Payment_received' || order.paymentStatus === 'Payment_received' || order.paymentStatus === 'payment_received') && order.invoicePath
       });
     }
   }, [order]);
@@ -899,7 +899,7 @@ ${order.customerName}`;
                 </div>
                 
                 {/* Invoice Download Button */}
-                {(order.paymentStatus === 'paid' || order.status === 'payment received' || order.status === 'Payment_received' || order.paymentStatus === 'Payment_received') && order.invoicePath && (
+                {(order.paymentStatus === 'paid' || order.status === 'payment received' || order.status === 'Payment_received' || order.paymentStatus === 'Payment_received' || order.paymentStatus === 'payment_received') && order.invoicePath && (
                   <div className="pt-2">
                     <Button 
                       onClick={downloadInvoice}
