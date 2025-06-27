@@ -270,6 +270,25 @@ class ObjectStoreService {
   }
   
   /**
+   * Upload a file directly with custom path and options
+   */
+  async uploadFile(
+    objectKey: string,
+    buffer: Buffer,
+    options: UploadOptions = {}
+  ): Promise<string> {
+    await this.initialize();
+    
+    try {
+      await this.uploadFromBuffer(objectKey, buffer, options);
+      return this.getPublicUrl(objectKey);
+    } catch (error) {
+      console.error(`Failed to upload file to ${objectKey}:`, error);
+      throw new Error(`File upload failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  /**
    * Upload a file directly to a product's folder
    */
   async uploadProductFile(

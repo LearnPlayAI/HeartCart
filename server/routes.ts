@@ -7205,6 +7205,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
     })
   );
 
+  // Download invoice (customer access)
+  app.get("/api/order/:orderNumber/invoice", 
+    isAuthenticated,
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const orderNumber = req.params.orderNumber;
+        const userId = req.user!.id;
+
+        // Get order by order number and verify ownership
+        const order = await storage.getOrderByNumber(orderNumber);
+        
+        if (!order) {
+          return sendError(res, "Order not found", 404);
+        }
+
+        // Verify the order belongs to the current user
+        if (order.userId !== userId) {
+          return sendError(res, "Access denied", 403);
+        }
+
+        if (!order.invoicePath) {
+          return sendError(res, "No invoice available for this order", 404);
+        }
+
+        try {
+          // Get the PDF file from object storage
+          const fileData = await objectStore.getFile(order.invoicePath);
+          
+          if (!fileData) {
+            return sendError(res, "Invoice file not found", 404);
+          }
+
+          // Set proper headers for PDF download
+          res.setHeader('Content-Type', 'application/pdf');
+          res.setHeader('Content-Disposition', `attachment; filename="Invoice-${order.orderNumber}.pdf"`);
+          res.setHeader('Cache-Control', 'private, max-age=3600');
+          
+          // Send the PDF buffer
+          res.send(fileData);
+          
+          logger.info("Customer downloaded invoice", {
+            orderId: order.id,
+            orderNumber: order.orderNumber,
+            invoicePath: order.invoicePath,
+            userId
+          });
+        } catch (fileError) {
+          logger.error("Error retrieving customer invoice file", {
+            error: fileError,
+            orderNumber,
+            invoicePath: order.invoicePath,
+            userId
+          });
+          return sendError(res, "Failed to retrieve invoice file", 500);
+        }
+      } catch (error) {
+        logger.error("Error downloading customer invoice", { 
+          error, 
+          orderNumber: req.params.orderNumber,
+          userId: req.user?.id 
+        });
+        return sendError(res, "Failed to download invoice", 500);
+      }
+    })
+  );
+
   const httpServer = createServer(app);
   return httpServer;
 }

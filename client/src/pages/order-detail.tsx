@@ -35,7 +35,8 @@ import {
   FileCheck,
   DollarSign,
   ShoppingCart,
-  XCircle
+  XCircle,
+  Download
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import OrderStatusTimeline from '@/components/OrderStatusTimeline';
@@ -314,6 +315,55 @@ const OrderDetail: React.FC = () => {
       });
     },
   });
+
+  // Invoice download function
+  const downloadInvoice = async () => {
+    try {
+      const response = await fetch(`/api/order/${order.orderNumber}/invoice`, {
+        method: 'GET',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          toast({
+            title: "Invoice Not Available",
+            description: "No invoice is available for this order yet.",
+            variant: "destructive",
+          });
+        } else {
+          throw new Error('Failed to download invoice');
+        }
+        return;
+      }
+
+      // Create blob from response
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      
+      // Create download link
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Invoice-${order.orderNumber}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Invoice Downloaded",
+        description: "Your invoice has been downloaded successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Download Failed",
+        description: "Failed to download invoice. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Handle file upload
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {

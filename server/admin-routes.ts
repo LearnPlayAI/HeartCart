@@ -253,6 +253,61 @@ router.patch("/orders/:id/payment-status", isAuthenticated, asyncHandler(async (
   }
 }));
 
+// Download invoice (admin access)
+router.get("/orders/:id/invoice", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const orderId = parseInt(req.params.id);
+    
+    if (isNaN(orderId)) {
+      return sendError(res, "Invalid order ID", 400);
+    }
+
+    const order = await storage.getOrderById(orderId);
+    
+    if (!order) {
+      return sendError(res, "Order not found", 404);
+    }
+
+    if (!order.invoicePath) {
+      return sendError(res, "No invoice available for this order", 404);
+    }
+
+    try {
+      // Get the PDF file from object storage
+      const fileData = await objectStore.getFile(order.invoicePath);
+      
+      if (!fileData) {
+        return sendError(res, "Invoice file not found", 404);
+      }
+
+      // Set proper headers for PDF download
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="Invoice-${order.orderNumber}.pdf"`);
+      res.setHeader('Cache-Control', 'private, max-age=3600');
+      
+      // Send the PDF buffer
+      res.send(fileData);
+      
+      logger.info("Admin downloaded invoice", {
+        orderId,
+        orderNumber: order.orderNumber,
+        invoicePath: order.invoicePath,
+        adminUserId: req.user?.id
+      });
+    } catch (fileError) {
+      logger.error("Error retrieving invoice file", {
+        error: fileError,
+        orderId,
+        invoicePath: order.invoicePath
+      });
+      return sendError(res, "Failed to retrieve invoice file", 500);
+    }
+  } catch (error) {
+    logger.error("Error downloading invoice", { error, orderId: req.params.id });
+    return sendError(res, "Failed to download invoice", 500);
+  }
+}));
+
 // Update tracking number
 router.patch("/orders/:id/tracking", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
   try {
