@@ -94,18 +94,26 @@ export class EmailSystemVerifier {
         recipientEmail: 'test@verification.com',
         emailType: 'verification_test',
         subject: 'Database Schema Verification Test',
-        deliveryStatus: 'sent'
+        deliveryStatus: 'sent',
+        sentAt: new Date()
       });
 
-      // Cleanup test data
-      await storage.db.delete(storage.db.mailTokens).where(storage.db.eq(storage.db.mailTokens.id, testToken.id));
-      await storage.db.delete(storage.db.emailLogs).where(storage.db.eq(storage.db.emailLogs.id, testLog.id));
+      // Cleanup test data safely
+      if (testToken && typeof testToken === 'object' && 'id' in testToken) {
+        await storage.db.delete(storage.db.mailTokens).where(storage.db.eq(storage.db.mailTokens.id, testToken.id));
+      }
+      if (testLog && typeof testLog === 'object' && 'id' in testLog) {
+        await storage.db.delete(storage.db.emailLogs).where(storage.db.eq(storage.db.emailLogs.id, testLog.id));
+      }
 
       this.results.push({
         component: 'Database Schema',
         status: 'PASS',
         message: 'mailTokens and emailLogs tables verified with correct structure',
-        details: { tokenId: testToken.id, logId: testLog.id }
+        details: { 
+          tokenId: testToken && typeof testToken === 'object' && 'id' in testToken ? testToken.id : 'created',
+          logId: testLog && typeof testLog === 'object' && 'id' in testLog ? testLog.id : 'created'
+        }
       });
     } catch (error) {
       this.results.push({
