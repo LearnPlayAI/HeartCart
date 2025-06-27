@@ -1,12 +1,13 @@
 import express, { Request, Response } from "express";
 import asyncHandler from "express-async-handler";
 import { storage } from "./storage";
-import { isAuthenticated } from "./auth-middleware";
+import { isAuthenticated, isAdmin } from "./auth-middleware";
 import { sendSuccess, sendError } from "./api-response";
 import { logger } from "./logger";
 import { z } from "zod";
 import { databaseEmailService } from "./database-email-service";
 import { InvoiceGenerator } from "./services/invoice-generator";
+import { objectStoreAdapter } from "./object-store-adapter";
 
 const router = express.Router();
 
@@ -255,7 +256,7 @@ router.patch("/orders/:id/payment-status", isAuthenticated, asyncHandler(async (
 }));
 
 // Download invoice (admin access)
-router.get("/orders/:id/invoice", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
+router.get("/orders/:id/invoice", isAdmin, asyncHandler(async (req: Request, res: Response) => {
   try {
     const orderId = parseInt(req.params.id);
     
@@ -288,7 +289,7 @@ router.get("/orders/:id/invoice", isAuthenticated, asyncHandler(async (req: Requ
 
     try {
       // Get the PDF file from object storage using the correct method
-      const { data: fileData, contentType } = await objectStore.getFileAsBuffer(order.invoicePath);
+      const { data: fileData, contentType } = await objectStoreAdapter.getFileAsBuffer(order.invoicePath);
       
       if (!fileData) {
         logger.error("File data is null from object store", { 
