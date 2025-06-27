@@ -4700,8 +4700,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     "/api/admin/orders/:id/status", 
     isAuthenticated,
     asyncHandler(async (req: Request, res: Response) => {
+      const user = req.user as any;
       const orderId = Number(req.params.id);
       const { status } = req.body;
+      
+      // Check if user is admin
+      if (user.role !== 'admin') {
+        return res.status(403).json({
+          success: false,
+          error: { message: "Admin access required" }
+        });
+      }
       
       // Validate status - added "payment_received" as valid status
       const validStatuses = ['pending', 'confirmed', 'processing', 'payment_received', 'shipped', 'delivered', 'cancelled'];
