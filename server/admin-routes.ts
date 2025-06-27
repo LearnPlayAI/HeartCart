@@ -6,7 +6,7 @@ import { sendSuccess, sendError } from "./api-response";
 import { logger } from "./logger";
 import { z } from "zod";
 import { databaseEmailService } from "./database-email-service";
-import { invoiceGenerator } from "./services/invoice-generator";
+import { InvoiceGenerator } from "./services/invoice-generator";
 
 const router = express.Router();
 
@@ -215,6 +215,7 @@ router.patch("/orders/:id/payment-status", isAuthenticated, asyncHandler(async (
               userId: fullOrder.userId
             };
 
+            const invoiceGenerator = InvoiceGenerator.getInstance();
             const invoicePath = await invoiceGenerator.generateInvoicePDF(invoiceData);
             
             // Update order with invoice path
