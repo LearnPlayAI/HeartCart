@@ -12477,7 +12477,7 @@ export class DatabaseStorage implements IStorage {
   /**
    * Mark a token as used
    */
-  async markTokenUsed(tokenHash: string): Promise<boolean> {
+  async markTokenUsed(token: string): Promise<boolean> {
     try {
       const result = await db
         .update(mailTokens)
@@ -12485,11 +12485,11 @@ export class DatabaseStorage implements IStorage {
           usedAt: new Date(),
           isActive: false
         })
-        .where(eq(mailTokens.tokenHash, tokenHash));
+        .where(eq(mailTokens.token, token));
       
       return result.rowCount !== null && result.rowCount > 0;
     } catch (error) {
-      logger.error('Error marking token as used', { error, tokenHash });
+      logger.error('Error marking token as used', { error, token: token.substring(0, 8) + '...' });
       throw error;
     }
   }
@@ -12645,7 +12645,7 @@ export class DatabaseStorage implements IStorage {
   /**
    * Mark a token as used
    */
-  async markTokenAsUsed(tokenHash: string): Promise<boolean> {
+  async markTokenAsUsed(token: string): Promise<boolean> {
     try {
       const [updatedToken] = await db
         .update(mailTokens)
@@ -12653,11 +12653,11 @@ export class DatabaseStorage implements IStorage {
           usedAt: new Date(),
           isActive: false 
         })
-        .where(eq(mailTokens.tokenHash, tokenHash))
+        .where(eq(mailTokens.token, token))
         .returning();
       return !!updatedToken;
     } catch (error) {
-      logger.error('Error marking token as used', { tokenHash, error });
+      logger.error('Error marking token as used', { token: token.substring(0, 8) + '...', error });
       return false;
     }
   }
