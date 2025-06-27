@@ -1051,7 +1051,7 @@ export class DatabaseEmailService {
               `}
               
               <div style="text-align: center; margin: 30px 0;">
-                <a href="https://teemeyou.shop/order/${data.orderNumber}" 
+                <a href="https://teemeyou.shop/order/${data.orderId}" 
                    style="background: linear-gradient(135deg, #FF69B4 0%, #E91E63 100%); 
                           color: white; 
                           padding: 16px 32px; 

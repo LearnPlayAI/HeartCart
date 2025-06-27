@@ -104,6 +104,7 @@ router.patch("/orders/:id/status", isAuthenticated, asyncHandler(async (req: Req
         email: finalOrder.customerEmail,
         customerName: finalOrder.customerName,
         orderNumber: finalOrder.orderNumber,
+        orderId: finalOrder.id,
         status: status,
         trackingNumber: finalOrder.trackingNumber || null,
         estimatedDelivery: getEstimatedDeliveryText(status)
@@ -215,8 +216,9 @@ router.patch("/orders/:id/payment-status", isAuthenticated, asyncHandler(async (
             email: fullOrder.customerEmail,
             customerName: fullOrder.customerName,
             orderNumber: fullOrder.orderNumber,
+            orderId: fullOrder.id,
             amount: fullOrder.totalAmount,
-            currency: 'ZAR',
+            currency: 'R',
             paymentMethod: fullOrder.paymentMethod,
             invoicePath: invoicePath // Include invoice path for attachment
           };
@@ -396,18 +398,11 @@ router.post("/orders/:id/payment-received", isAuthenticated, asyncHandler(async 
           email: fullOrder.customerEmail,
           customerName: fullOrder.customerName,
           orderNumber: fullOrder.orderNumber,
-          orderItems: fullOrder.orderItems.map(item => ({
-            productName: item.productName,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            totalPrice: item.totalPrice,
-            attributeDisplayText: item.attributeDisplayText
-          })),
-          subtotalAmount: fullOrder.subtotalAmount,
-          shippingCost: fullOrder.shippingCost,
-          totalAmount: fullOrder.totalAmount,
+          orderId: fullOrder.id,
+          amount: fullOrder.totalAmount,
+          currency: 'R',
           paymentMethod: fullOrder.paymentMethod,
-          shippingMethod: fullOrder.shippingMethod
+          invoicePath: fullOrder.invoicePath
         };
 
         await databaseEmailService.sendPaymentConfirmationEmail(emailData);
