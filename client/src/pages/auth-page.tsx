@@ -13,7 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useLocation } from "wouter";
-import { AtSign, KeyRound, User, ShoppingBag, Loader2 } from "lucide-react";
+import { AtSign, KeyRound, User, ShoppingBag, Loader2, Mail, CheckCircle, Lock as LockIcon } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -88,7 +88,7 @@ export default function AuthPage() {
     if (isResetPasswordPage && currentResetToken) {
       validateTokenMutation.mutate(currentResetToken, {
         onSuccess: (response) => {
-          setResetTokenData(response.data);
+          setResetTokenData(response.data || response);
           setIsResetPasswordModalOpen(true);
         },
         onError: (error: Error) => {
@@ -627,6 +627,115 @@ export default function AuthPage() {
           </div>
         </div>
       </div>
+
+      {/* Email Sent Confirmation Modal */}
+      <Dialog open={isEmailSentModalOpen} onOpenChange={setIsEmailSentModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="w-5 h-5 text-green-600" />
+              Email Sent Successfully
+            </DialogTitle>
+            <DialogDescription>
+              We've sent password reset instructions to your email address. Please check your inbox and follow the link to reset your password.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-4 py-4">
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-green-800">
+                  <p className="font-medium">Check your email</p>
+                  <p className="mt-1">The reset link will expire in 1 hour for security.</p>
+                </div>
+              </div>
+            </div>
+            <div className="text-sm text-gray-600">
+              <p>Didn't receive the email? Check your spam folder or contact support.</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setIsEmailSentModalOpen(false)} className="w-full">
+              Got it
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset Password Modal */}
+      <Dialog open={isResetPasswordModalOpen} onOpenChange={setIsResetPasswordModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <LockIcon className="w-5 h-5 text-blue-600" />
+              Create New Password
+            </DialogTitle>
+            <DialogDescription>
+              {resetTokenData?.email && (
+                <>Enter a new password for <strong>{resetTokenData.email}</strong></>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...resetPasswordForm}>
+            <form onSubmit={resetPasswordForm.handleSubmit(onResetPasswordSubmit)} className="space-y-4">
+              <FormField
+                control={resetPasswordForm.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>New Password</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="password"
+                        placeholder="Enter your new password"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={resetPasswordForm.control}
+                name="confirmPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Confirm Password</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="password"
+                        placeholder="Confirm your new password"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsResetPasswordModalOpen(false)}
+                  disabled={resetPasswordMutation.isPending}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={resetPasswordMutation.isPending}>
+                  {resetPasswordMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Updating Password...
+                    </>
+                  ) : (
+                    "Update Password"
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
