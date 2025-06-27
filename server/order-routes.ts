@@ -318,6 +318,13 @@ router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Respons
 
     // Send order confirmation email
     try {
+      // Debug logging for order ID
+      logger.info("Order confirmation email data preparation", {
+        newOrderId: newOrder.id,
+        newOrderNumber: newOrder.orderNumber,
+        newOrderStructure: Object.keys(newOrder)
+      });
+
       const emailData = {
         email: orderData.customerInfo.email,
         customerName: `${orderData.customerInfo.firstName} ${orderData.customerInfo.lastName}`,
