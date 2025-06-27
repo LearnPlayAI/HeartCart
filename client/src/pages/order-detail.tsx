@@ -230,6 +230,14 @@ const OrderDetail: React.FC = () => {
         pudoLockerKeys: order.pudoLocker ? Object.keys(order.pudoLocker) : [],
         shouldShowLockerCard: (order.shippingMethod === 'pudo' || order.shippingMethod === 'Pudo' || order.shippingMethod?.toLowerCase() === 'pudo') && (order.lockerDetails || order.pudoLocker)
       });
+      
+      // Debug invoice download button condition
+      console.log('Invoice download debug:', {
+        paymentStatus: order.paymentStatus,
+        status: order.status,
+        invoicePath: order.invoicePath,
+        shouldShowDownload: (order.paymentStatus === 'paid' || order.status === 'payment received' || order.status === 'Payment_received' || order.paymentStatus === 'Payment_received') && order.invoicePath
+      });
     }
   }, [order]);
 
@@ -891,7 +899,7 @@ ${order.customerName}`;
                 </div>
                 
                 {/* Invoice Download Button */}
-                {(order.paymentStatus === 'paid' || order.status === 'payment received') && (
+                {(order.paymentStatus === 'paid' || order.status === 'payment received' || order.status === 'Payment_received' || order.paymentStatus === 'Payment_received') && order.invoicePath && (
                   <div className="pt-2">
                     <Button 
                       onClick={downloadInvoice}
