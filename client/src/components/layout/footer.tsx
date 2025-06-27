@@ -106,7 +106,7 @@ const Footer = () => {
               </li>
               <li className="flex items-center gap-2 text-gray-600">
                 <Mail className="h-4 w-4" />
-                <span>support@teemeyou.co.za</span>
+                <span>sales@teemeyou.co.za</span>
               </li>
               <li className="flex items-center gap-2 text-gray-600">
                 <MapPin className="h-4 w-4" />
