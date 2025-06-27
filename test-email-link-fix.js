@@ -3,8 +3,8 @@
  * Verifies that MailerSend click tracking is disabled and order detail links work correctly
  */
 
-const { databaseEmailService } = require('./server/database-email-service');
-const { storage } = require('./server/storage');
+import { databaseEmailService } from './server/database-email-service.ts';
+import { storage } from './server/storage.ts';
 
 async function testEmailLinkFix() {
   console.log('🔗 Testing Email Link Fix - MailerSend Click Tracking Disabled');

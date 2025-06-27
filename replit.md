@@ -303,6 +303,13 @@ Changelog:
   * Applied timezone conversion to both jsPDF and HTML-based invoice generation methods
   * South African users now see correct local time on PDF invoices (e.g., 23:43 instead of 21:43)
   * Ensures consistency with user expectations and local business practices
+- June 28, 2025. MailerSend click tracking issue resolved:
+  * Fixed critical issue where MailerSend was converting direct order detail URLs into broken tracking links
+  * Added .setSettings({ track_clicks: false, track_opens: true }) to all customer-facing email templates
+  * Applied fix to order status updates, payment confirmations, and order confirmation emails
+  * Customers can now successfully access their order details directly from email links
+  * Maintains open tracking for delivery analytics while preventing URL conversion issues
+  * All order detail links (https://teemeyou.shop/order/{orderNumber}) now function correctly
 ```
 
 ## User Preferences
