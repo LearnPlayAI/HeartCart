@@ -274,8 +274,8 @@ router.get("/orders/:id/invoice", isAuthenticated, asyncHandler(async (req: Requ
     }
 
     try {
-      // Get the PDF file from object storage
-      const fileData = await objectStore.getFile(order.invoicePath);
+      // Get the PDF file from object storage using the correct method
+      const { data: fileData, contentType } = await objectStore.getFileAsBuffer(order.invoicePath);
       
       if (!fileData) {
         return sendError(res, "Invoice file not found", 404);
@@ -285,6 +285,7 @@ router.get("/orders/:id/invoice", isAuthenticated, asyncHandler(async (req: Requ
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="Invoice-${order.orderNumber}.pdf"`);
       res.setHeader('Cache-Control', 'private, max-age=3600');
+      res.setHeader('Content-Length', fileData.length.toString());
       
       // Send the PDF buffer
       res.send(fileData);
