@@ -28,6 +28,7 @@ import FlashDeals from "@/pages/flash-deals";
 import NotFound from "@/pages/not-found";
 import CartDrawer from "@/components/cart/cart-drawer";
 import { SessionExpiryWarning } from "@/components/session/session-expiry-warning";
+import { UpdateNotification } from "@/components/layout/UpdateNotification";
 // PWA install components removed per user request
 import React, { Suspense } from "react";
 
@@ -279,6 +280,7 @@ function App() {
           </TooltipProvider>
         </CartProvider>
       </FavouritesProvider>
+      <UpdateNotification />
     </AuthProvider>
   );
 }

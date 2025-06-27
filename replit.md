@@ -149,6 +149,13 @@ Changelog:
   * Disabled InstallPrompt and FloatingInstallButton components
   * Updated usePWAInstall hook to return disabled state
   * Eliminated "Install App" prompts per user request
+- June 27, 2025. Comprehensive cache invalidation system implemented:
+  * Enhanced service worker with automatic version detection and cache management
+  * Created useAppUpdate hook for client-side update monitoring
+  * Added UpdateNotification component with user-friendly update prompts
+  * Implemented automatic cache clearing and page reload for seamless updates
+  * Periodic update checks every 30 seconds and on page visibility changes
+  * Eliminates need for manual cache clearing after deployments
 ```
 
 ## User Preferences
