@@ -197,6 +197,9 @@ export const orders = pgTable("orders", {
   // EFT Proof of Payment
   eftPop: text("eftPop"), // File path to the EFT proof of payment PDF document
   
+  // Invoice PDF Path
+  invoicePath: text("invoicePath"), // File path to the generated invoice PDF document
+  
   // PUDO Locker Information
   selectedLockerId: integer("selectedLockerId").references(() => pudoLockers.id),
   selectedLockerCode: text("selectedLockerCode"),
