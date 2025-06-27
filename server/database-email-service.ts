@@ -747,25 +747,31 @@ export class DatabaseEmailService {
         </tr>
       `).join('');
 
-      // Generate shipping information
+      // Generate shipping information with hot pink styling
       const shippingInfoHtml = data.shippingMethod === 'pudo' && data.selectedLockerName ? `
-        <div style="background: #e8f4f8; padding: 15px; border-left: 4px solid #17a2b8; margin: 20px 0;">
-          <h4 style="margin: 0 0 10px 0; color: #17a2b8;">PUDO Locker Delivery</h4>
-          <p style="margin: 0; font-size: 14px;"><strong>Selected Locker:</strong> ${data.selectedLockerName}</p>
-          <p style="margin: 5px 0 0 0; font-size: 14px; color: #6c757d;">${data.selectedLockerAddress}</p>
+        <div style="background: linear-gradient(135deg, #FFF0F6 0%, #FFE4E1 100%); padding: 20px; border-left: 4px solid #FF69B4; margin: 25px 0; border-radius: 8px;">
+          <h4 style="margin: 0 0 10px 0; color: #E91E63; display: flex; align-items: center;">
+            <span style="font-size: 18px; margin-right: 8px;">📦</span>
+            PUDO Locker Delivery
+          </h4>
+          <p style="margin: 0; font-size: 14px; color: #4A5568;"><strong>Selected Locker:</strong> ${data.selectedLockerName}</p>
+          <p style="margin: 5px 0 0 0; font-size: 14px; color: #718096;">${data.selectedLockerAddress}</p>
         </div>
       ` : `
-        <div style="background: #f8f9fa; padding: 15px; border-left: 4px solid #6c757d; margin: 20px 0;">
-          <h4 style="margin: 0 0 10px 0; color: #495057;">Delivery Address</h4>
-          <p style="margin: 0; font-size: 14px;">${data.shippingAddress}</p>
-          <p style="margin: 5px 0 0 0; font-size: 14px;">${data.shippingCity}, ${data.shippingPostalCode}</p>
+        <div style="background: linear-gradient(135deg, #FFF0F6 0%, #FFE4E1 100%); padding: 20px; border-left: 4px solid #FF69B4; margin: 25px 0; border-radius: 8px;">
+          <h4 style="margin: 0 0 10px 0; color: #E91E63; display: flex; align-items: center;">
+            <span style="font-size: 18px; margin-right: 8px;">🏠</span>
+            Delivery Address
+          </h4>
+          <p style="margin: 0; font-size: 14px; color: #4A5568;">${data.shippingAddress}</p>
+          <p style="margin: 5px 0 0 0; font-size: 14px; color: #718096;">${data.shippingCity}, ${data.shippingPostalCode}</p>
         </div>
       `;
 
-      // Generate payment status badge
+      // Generate payment status badge with hot pink styling
       const paymentStatusBadge = data.paymentStatus === 'paid' ? 
-        '<span style="background: #28a745; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">PAID</span>' :
-        '<span style="background: #ffc107; color: #212529; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">PENDING VERIFICATION</span>';
+        '<span style="background: #10B981; color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold;">✓ PAID</span>' :
+        '<span style="background: #FF69B4; color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold;">⏳ PENDING VERIFICATION</span>';
 
       const emailParams = new EmailParams()
         .setFrom(this.sender)
@@ -779,12 +785,20 @@ export class DatabaseEmailService {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Order Confirmation - TeeMeYou</title>
           </head>
-          <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <div style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-              <h1 style="color: white; margin: 0; font-size: 28px;">Order Confirmed!</h1>
-            </div>
+          <body style="margin: 0; padding: 0; background: linear-gradient(135deg, #F3F4F6 0%, #FFFFFF 100%); font-family: 'Segoe UI', Arial, sans-serif;">
+            <div class="container" style="max-width: 600px; margin: 20px auto; background: #FFFFFF; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 32px rgba(255, 105, 180, 0.2);">
+              
+              <!-- Header -->
+              <div class="header" style="background: linear-gradient(135deg, #FF69B4 0%, #E91E63 100%); padding: 40px; text-align: center; position: relative;">
+                <div style="position: absolute; top: 0; left: 0; width: 100%; height: 6px; background: linear-gradient(90deg, #FF69B4 0%, #FF1493 50%, #E91E63 100%);"></div>
+                <div style="display: inline-block; background: #FFFFFF; padding: 12px; border-radius: 50%; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);">
+                  <span style="font-size: 28px; color: #FF69B4;">🛍️</span>
+                </div>
+                <h1 style="color: #FFFFFF; margin: 0; font-size: 36px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3); letter-spacing: 1px;">TeeMeYou</h1>
+                <p style="color: #FFFFFF; margin: 8px 0 0 0; font-size: 18px; opacity: 0.9;">Order Confirmed!</p>
+              </div>
             
-            <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e9ecef;">
+            <div style="background: #FFFFFF; padding: 40px; border-radius: 0 0 12px 12px;">
               <h2 style="color: #495057; margin-top: 0;">Thank you, ${data.customerName}!</h2>
               
               <p style="font-size: 16px; margin-bottom: 25px;">

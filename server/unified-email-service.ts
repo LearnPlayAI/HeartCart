@@ -4,20 +4,20 @@ import { db } from './db';
 import { users, mailTokens, emailLogs } from '@shared/schema';
 import { eq, and, lt, desc } from 'drizzle-orm';
 
-// South African themed styling from the guide
-const SA_COLORS = {
-  GREEN: '#007749',
-  BLUE: '#002395', 
-  YELLOW: '#FFB612',
+// TeeMeYou hot pink styling and company branding
+const TEEMEYOU_COLORS = {
+  HOT_PINK: '#FF69B4',
+  DARK_PINK: '#E91E63',
+  LIGHT_PINK: '#FFB6C1',
+  ACCENT_PINK: '#FF1493',
   BLACK: '#000000',
   WHITE: '#FFFFFF',
-  RED: '#DE3831',
-  ORANGE: '#FF8C00',
-  LIGHT_GREEN: '#00A86B',
-  LIGHT_BLUE: '#1E3A8A',
-  GOLD: '#F59E0B',
+  GRAY: '#6B7280',
   LIGHT_GRAY: '#F3F4F6',
-  DARK_GRAY: '#374151'
+  DARK_GRAY: '#374151',
+  SUCCESS: '#10B981',
+  WARNING: '#F59E0B',
+  DANGER: '#EF4444'
 };
 
 export class UnifiedEmailService {
@@ -174,44 +174,44 @@ export class UnifiedEmailService {
           }
         </style>
       </head>
-      <body style="margin: 0; padding: 0; background: linear-gradient(135deg, ${SA_COLORS.LIGHT_GRAY} 0%, ${SA_COLORS.WHITE} 100%); font-family: 'Segoe UI', Arial, sans-serif;">
-        <div class="container" style="max-width: 600px; margin: 20px auto; background: ${SA_COLORS.WHITE}; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);">
+      <body style="margin: 0; padding: 0; background: linear-gradient(135deg, ${TEEMEYOU_COLORS.LIGHT_GRAY} 0%, ${TEEMEYOU_COLORS.WHITE} 100%); font-family: 'Segoe UI', Arial, sans-serif;">
+        <div class="container" style="max-width: 600px; margin: 20px auto; background: ${TEEMEYOU_COLORS.WHITE}; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 32px rgba(255, 105, 180, 0.2);">
           
           <!-- Header -->
-          <div class="header" style="background: linear-gradient(135deg, ${SA_COLORS.RED} 0%, ${SA_COLORS.BLUE} 100%); padding: 40px; text-align: center; position: relative;">
-            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 6px; background: linear-gradient(90deg, ${SA_COLORS.GREEN} 0%, ${SA_COLORS.YELLOW} 33%, ${SA_COLORS.RED} 66%, ${SA_COLORS.BLUE} 100%);"></div>
-            <div style="display: inline-block; background: ${SA_COLORS.WHITE}; padding: 8px 16px; border-radius: 25px; margin-bottom: 10px;">
-              <span style="font-size: 24px;">🇿🇦</span>
+          <div class="header" style="background: linear-gradient(135deg, ${TEEMEYOU_COLORS.HOT_PINK} 0%, ${TEEMEYOU_COLORS.DARK_PINK} 100%); padding: 40px; text-align: center; position: relative;">
+            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 6px; background: linear-gradient(90deg, ${TEEMEYOU_COLORS.HOT_PINK} 0%, ${TEEMEYOU_COLORS.ACCENT_PINK} 50%, ${TEEMEYOU_COLORS.DARK_PINK} 100%);"></div>
+            <div style="display: inline-block; background: ${TEEMEYOU_COLORS.WHITE}; padding: 12px; border-radius: 50%; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);">
+              <span style="font-size: 28px; color: ${TEEMEYOU_COLORS.HOT_PINK};">🛍️</span>
             </div>
-            <h1 style="color: ${SA_COLORS.WHITE}; margin: 0; font-size: 32px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">TeeMeYou</h1>
-            <p style="color: ${SA_COLORS.WHITE}; margin: 8px 0 0 0; font-size: 16px; opacity: 0.9;">Password Reset Request</p>
+            <h1 style="color: ${TEEMEYOU_COLORS.WHITE}; margin: 0; font-size: 36px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3); letter-spacing: 1px;">TeeMeYou</h1>
+            <p style="color: ${TEEMEYOU_COLORS.WHITE}; margin: 8px 0 0 0; font-size: 16px; opacity: 0.9;">Password Reset Request</p>
           </div>
           
           <!-- Main Content -->
-          <div class="content" style="padding: 40px; background: ${SA_COLORS.WHITE};">
+          <div class="content" style="padding: 40px; background: ${TEEMEYOU_COLORS.WHITE};">
             <div style="text-align: center; margin-bottom: 30px;">
-              <div style="display: inline-block; background: linear-gradient(135deg, ${SA_COLORS.RED} 0%, ${SA_COLORS.ORANGE} 100%); padding: 12px; border-radius: 50%; margin-bottom: 15px;">
-                <span style="font-size: 32px; color: ${SA_COLORS.WHITE};">🔑</span>
+              <div style="display: inline-block; background: linear-gradient(135deg, ${TEEMEYOU_COLORS.HOT_PINK} 0%, ${TEEMEYOU_COLORS.ACCENT_PINK} 100%); padding: 12px; border-radius: 50%; margin-bottom: 15px;">
+                <span style="font-size: 32px; color: ${TEEMEYOU_COLORS.WHITE};">🔑</span>
               </div>
-              <h2 style="color: ${SA_COLORS.BLUE}; margin: 0; font-size: 28px; font-weight: 600;">Reset Your Password</h2>
+              <h2 style="color: ${TEEMEYOU_COLORS.DARK_PINK}; margin: 0; font-size: 28px; font-weight: 600;">Reset Your Password</h2>
             </div>
             
-            <p style="font-size: 16px; line-height: 1.6; color: ${SA_COLORS.DARK_GRAY}; margin-bottom: 30px; text-align: center;">
+            <p style="font-size: 16px; line-height: 1.6; color: ${TEEMEYOU_COLORS.DARK_GRAY}; margin-bottom: 30px; text-align: center;">
               Hi ${userName || 'User'}, we received a request to reset your TeeMeYou account password. If you made this request, click the button below to set a new password.
             </p>
             
             <!-- CTA Button -->
             <div style="text-align: center; margin: 40px 0;">
               <a href="${resetUrl}" class="button"
-                 style="background: linear-gradient(135deg, ${SA_COLORS.RED} 0%, ${SA_COLORS.ORANGE} 100%); 
-                        color: ${SA_COLORS.WHITE}; 
+                 style="background: linear-gradient(135deg, ${TEEMEYOU_COLORS.HOT_PINK} 0%, ${TEEMEYOU_COLORS.DARK_PINK} 100%); 
+                        color: ${TEEMEYOU_COLORS.WHITE}; 
                         padding: 16px 32px; 
                         text-decoration: none; 
                         border-radius: 8px; 
                         font-weight: 600; 
                         font-size: 16px; 
                         display: inline-block;
-                        box-shadow: 0 4px 12px rgba(222, 56, 49, 0.3);
+                        box-shadow: 0 4px 12px rgba(255, 105, 180, 0.4);
                         transition: all 0.3s ease;
                         text-transform: uppercase;
                         letter-spacing: 0.5px;">
@@ -220,35 +220,35 @@ export class UnifiedEmailService {
             </div>
             
             <!-- Security Notice -->
-            <div style="background: linear-gradient(135deg, ${SA_COLORS.YELLOW} 0%, ${SA_COLORS.GOLD} 100%); padding: 20px; border-radius: 8px; margin: 30px 0; border-left: 4px solid ${SA_COLORS.ORANGE}; position: relative;">
-              <div style="position: absolute; top: -8px; left: 16px; background: ${SA_COLORS.ORANGE}; color: ${SA_COLORS.WHITE}; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">SECURITY</div>
-              <p style="margin: 0; font-weight: 600; color: ${SA_COLORS.BLACK}; font-size: 14px;">
+            <div style="background: linear-gradient(135deg, ${TEEMEYOU_COLORS.LIGHT_PINK} 0%, ${TEEMEYOU_COLORS.HOT_PINK} 20%); padding: 20px; border-radius: 8px; margin: 30px 0; border-left: 4px solid ${TEEMEYOU_COLORS.DARK_PINK}; position: relative;">
+              <div style="position: absolute; top: -8px; left: 16px; background: ${TEEMEYOU_COLORS.DARK_PINK}; color: ${TEEMEYOU_COLORS.WHITE}; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">SECURITY</div>
+              <p style="margin: 0; font-weight: 600; color: ${TEEMEYOU_COLORS.BLACK}; font-size: 14px;">
                 🔒 This password reset link expires in 1 hour for your protection.
               </p>
             </div>
             
             <!-- Fallback Link -->
-            <div style="background: ${SA_COLORS.LIGHT_GRAY}; padding: 15px; border-radius: 6px; margin-top: 30px; text-align: center;">
-              <p style="margin: 0; font-size: 14px; color: ${SA_COLORS.DARK_GRAY};">
+            <div style="background: ${TEEMEYOU_COLORS.LIGHT_GRAY}; padding: 15px; border-radius: 6px; margin-top: 30px; text-align: center;">
+              <p style="margin: 0; font-size: 14px; color: ${TEEMEYOU_COLORS.DARK_GRAY};">
                 Button not working? Copy and paste this link:
               </p>
               <p style="margin: 5px 0 0 0;">
-                <a href="${resetUrl}" style="color: ${SA_COLORS.BLUE}; word-break: break-all; font-size: 12px;">${resetUrl}</a>
+                <a href="${resetUrl}" style="color: ${TEEMEYOU_COLORS.HOT_PINK}; word-break: break-all; font-size: 12px;">${resetUrl}</a>
               </p>
             </div>
           </div>
           
           <!-- Footer -->
-          <div style="background: ${SA_COLORS.DARK_GRAY}; padding: 25px; text-align: center;">
+          <div style="background: ${TEEMEYOU_COLORS.DARK_GRAY}; padding: 25px; text-align: center;">
             <div style="margin-bottom: 15px;">
-              <span style="display: inline-block; background: ${SA_COLORS.WHITE}; padding: 6px 12px; border-radius: 20px; margin: 0 5px;">
-                <span style="font-size: 16px;">🇿🇦</span>
+              <span style="display: inline-block; background: ${TEEMEYOU_COLORS.WHITE}; padding: 8px 12px; border-radius: 20px; margin: 0 5px; box-shadow: 0 2px 8px rgba(255, 105, 180, 0.2);">
+                <span style="font-size: 16px; color: ${TEEMEYOU_COLORS.HOT_PINK};">🛍️</span>
               </span>
             </div>
-            <p style="color: ${SA_COLORS.WHITE}; margin: 0; font-size: 14px; font-weight: 500;">
-              © 2024 TeeMeYou • South Africa's Premium T-Shirt Marketplace
+            <p style="color: ${TEEMEYOU_COLORS.WHITE}; margin: 0; font-size: 14px; font-weight: 500;">
+              © 2024 TeeMeYou • South Africa's Premium Shopping Platform
             </p>
-            <p style="color: ${SA_COLORS.LIGHT_GRAY}; margin: 8px 0 0 0; font-size: 12px;">
+            <p style="color: ${TEEMEYOU_COLORS.LIGHT_GRAY}; margin: 8px 0 0 0; font-size: 12px;">
               If you didn't request this password reset, you can safely ignore this email.
             </p>
           </div>
@@ -449,44 +449,44 @@ export class UnifiedEmailService {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Verify Your Account - TeeMeYou</title>
       </head>
-      <body style="margin: 0; padding: 0; background: linear-gradient(135deg, ${SA_COLORS.LIGHT_GRAY} 0%, ${SA_COLORS.WHITE} 100%); font-family: 'Segoe UI', Arial, sans-serif;">
-        <div class="container" style="max-width: 600px; margin: 20px auto; background: ${SA_COLORS.WHITE}; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);">
+      <body style="margin: 0; padding: 0; background: linear-gradient(135deg, ${TEEMEYOU_COLORS.LIGHT_GRAY} 0%, ${TEEMEYOU_COLORS.WHITE} 100%); font-family: 'Segoe UI', Arial, sans-serif;">
+        <div class="container" style="max-width: 600px; margin: 20px auto; background: ${TEEMEYOU_COLORS.WHITE}; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 32px rgba(255, 105, 180, 0.2);">
           
           <!-- Header -->
-          <div class="header" style="background: linear-gradient(135deg, ${SA_COLORS.GREEN} 0%, ${SA_COLORS.BLUE} 100%); padding: 40px; text-align: center; position: relative;">
-            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 6px; background: linear-gradient(90deg, ${SA_COLORS.GREEN} 0%, ${SA_COLORS.YELLOW} 33%, ${SA_COLORS.RED} 66%, ${SA_COLORS.BLUE} 100%);"></div>
-            <div style="display: inline-block; background: ${SA_COLORS.WHITE}; padding: 8px 16px; border-radius: 25px; margin-bottom: 10px;">
-              <span style="font-size: 24px;">🇿🇦</span>
+          <div class="header" style="background: linear-gradient(135deg, ${TEEMEYOU_COLORS.HOT_PINK} 0%, ${TEEMEYOU_COLORS.DARK_PINK} 100%); padding: 40px; text-align: center; position: relative;">
+            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 6px; background: linear-gradient(90deg, ${TEEMEYOU_COLORS.HOT_PINK} 0%, ${TEEMEYOU_COLORS.ACCENT_PINK} 50%, ${TEEMEYOU_COLORS.DARK_PINK} 100%);"></div>
+            <div style="display: inline-block; background: ${TEEMEYOU_COLORS.WHITE}; padding: 12px; border-radius: 50%; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);">
+              <span style="font-size: 28px; color: ${TEEMEYOU_COLORS.HOT_PINK};">🛍️</span>
             </div>
-            <h1 style="color: ${SA_COLORS.WHITE}; margin: 0; font-size: 32px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">TeeMeYou</h1>
-            <p style="color: ${SA_COLORS.WHITE}; margin: 8px 0 0 0; font-size: 16px; opacity: 0.9;">Welcome to TeeMeYou!</p>
+            <h1 style="color: ${TEEMEYOU_COLORS.WHITE}; margin: 0; font-size: 36px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3); letter-spacing: 1px;">TeeMeYou</h1>
+            <p style="color: ${TEEMEYOU_COLORS.WHITE}; margin: 8px 0 0 0; font-size: 16px; opacity: 0.9;">Welcome to TeeMeYou!</p>
           </div>
           
           <!-- Main Content -->
-          <div class="content" style="padding: 40px; background: ${SA_COLORS.WHITE};">
+          <div class="content" style="padding: 40px; background: ${TEEMEYOU_COLORS.WHITE};">
             <div style="text-align: center; margin-bottom: 30px;">
-              <div style="display: inline-block; background: linear-gradient(135deg, ${SA_COLORS.GREEN} 0%, ${SA_COLORS.LIGHT_GREEN} 100%); padding: 12px; border-radius: 50%; margin-bottom: 15px;">
-                <span style="font-size: 32px; color: ${SA_COLORS.WHITE};">✉️</span>
+              <div style="display: inline-block; background: linear-gradient(135deg, ${TEEMEYOU_COLORS.HOT_PINK} 0%, ${TEEMEYOU_COLORS.ACCENT_PINK} 100%); padding: 12px; border-radius: 50%; margin-bottom: 15px;">
+                <span style="font-size: 32px; color: ${TEEMEYOU_COLORS.WHITE};">✉️</span>
               </div>
-              <h2 style="color: ${SA_COLORS.BLUE}; margin: 0; font-size: 28px; font-weight: 600;">Verify Your Account</h2>
+              <h2 style="color: ${TEEMEYOU_COLORS.DARK_PINK}; margin: 0; font-size: 28px; font-weight: 600;">Verify Your Account</h2>
             </div>
             
-            <p style="font-size: 16px; line-height: 1.6; color: ${SA_COLORS.DARK_GRAY}; margin-bottom: 30px; text-align: center;">
-              Hi ${userName || 'User'}, welcome to TeeMeYou - South Africa's premium t-shirt marketplace! Please verify your email address to activate your account and start shopping.
+            <p style="font-size: 16px; line-height: 1.6; color: ${TEEMEYOU_COLORS.DARK_GRAY}; margin-bottom: 30px; text-align: center;">
+              Hi ${userName || 'User'}, welcome to TeeMeYou - South Africa's premium shopping platform! Please verify your email address to activate your account and start shopping.
             </p>
             
             <!-- CTA Button -->
             <div style="text-align: center; margin: 40px 0;">
               <a href="${verificationUrl}" class="button"
-                 style="background: linear-gradient(135deg, ${SA_COLORS.GREEN} 0%, ${SA_COLORS.LIGHT_GREEN} 100%); 
-                        color: ${SA_COLORS.WHITE}; 
+                 style="background: linear-gradient(135deg, ${TEEMEYOU_COLORS.HOT_PINK} 0%, ${TEEMEYOU_COLORS.DARK_PINK} 100%); 
+                        color: ${TEEMEYOU_COLORS.WHITE}; 
                         padding: 16px 32px; 
                         text-decoration: none; 
                         border-radius: 8px; 
                         font-weight: 600; 
                         font-size: 16px; 
                         display: inline-block;
-                        box-shadow: 0 4px 12px rgba(0, 119, 73, 0.3);
+                        box-shadow: 0 4px 12px rgba(255, 105, 180, 0.4);
                         transition: all 0.3s ease;
                         text-transform: uppercase;
                         letter-spacing: 0.5px;">
@@ -495,35 +495,35 @@ export class UnifiedEmailService {
             </div>
             
             <!-- Security Notice -->
-            <div style="background: linear-gradient(135deg, ${SA_COLORS.YELLOW} 0%, ${SA_COLORS.GOLD} 100%); padding: 20px; border-radius: 8px; margin: 30px 0; border-left: 4px solid ${SA_COLORS.ORANGE}; position: relative;">
-              <div style="position: absolute; top: -8px; left: 16px; background: ${SA_COLORS.ORANGE}; color: ${SA_COLORS.WHITE}; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">SECURITY</div>
-              <p style="margin: 0; font-weight: 600; color: ${SA_COLORS.BLACK}; font-size: 14px;">
+            <div style="background: linear-gradient(135deg, ${TEEMEYOU_COLORS.LIGHT_PINK} 0%, ${TEEMEYOU_COLORS.HOT_PINK} 20%); padding: 20px; border-radius: 8px; margin: 30px 0; border-left: 4px solid ${TEEMEYOU_COLORS.DARK_PINK}; position: relative;">
+              <div style="position: absolute; top: -8px; left: 16px; background: ${TEEMEYOU_COLORS.DARK_PINK}; color: ${TEEMEYOU_COLORS.WHITE}; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">SECURITY</div>
+              <p style="margin: 0; font-weight: 600; color: ${TEEMEYOU_COLORS.BLACK}; font-size: 14px;">
                 🔒 This verification link expires in 1 hour for your protection.
               </p>
             </div>
             
             <!-- Fallback Link -->
-            <div style="background: ${SA_COLORS.LIGHT_GRAY}; padding: 15px; border-radius: 6px; margin-top: 30px; text-align: center;">
-              <p style="margin: 0; font-size: 14px; color: ${SA_COLORS.DARK_GRAY};">
+            <div style="background: ${TEEMEYOU_COLORS.LIGHT_GRAY}; padding: 15px; border-radius: 6px; margin-top: 30px; text-align: center;">
+              <p style="margin: 0; font-size: 14px; color: ${TEEMEYOU_COLORS.DARK_GRAY};">
                 Button not working? Copy and paste this link:
               </p>
               <p style="margin: 5px 0 0 0;">
-                <a href="${verificationUrl}" style="color: ${SA_COLORS.BLUE}; word-break: break-all; font-size: 12px;">${verificationUrl}</a>
+                <a href="${verificationUrl}" style="color: ${TEEMEYOU_COLORS.HOT_PINK}; word-break: break-all; font-size: 12px;">${verificationUrl}</a>
               </p>
             </div>
           </div>
           
           <!-- Footer -->
-          <div style="background: ${SA_COLORS.DARK_GRAY}; padding: 25px; text-align: center;">
+          <div style="background: ${TEEMEYOU_COLORS.DARK_GRAY}; padding: 25px; text-align: center;">
             <div style="margin-bottom: 15px;">
-              <span style="display: inline-block; background: ${SA_COLORS.WHITE}; padding: 6px 12px; border-radius: 20px; margin: 0 5px;">
-                <span style="font-size: 16px;">🇿🇦</span>
+              <span style="display: inline-block; background: ${TEEMEYOU_COLORS.WHITE}; padding: 8px 12px; border-radius: 20px; margin: 0 5px; box-shadow: 0 2px 8px rgba(255, 105, 180, 0.2);">
+                <span style="font-size: 16px; color: ${TEEMEYOU_COLORS.HOT_PINK};">🛍️</span>
               </span>
             </div>
-            <p style="color: ${SA_COLORS.WHITE}; margin: 0; font-size: 14px; font-weight: 500;">
-              © 2024 TeeMeYou • South Africa's Premium T-Shirt Marketplace
+            <p style="color: ${TEEMEYOU_COLORS.WHITE}; margin: 0; font-size: 14px; font-weight: 500;">
+              © 2024 TeeMeYou • South Africa's Premium Shopping Platform
             </p>
-            <p style="color: ${SA_COLORS.LIGHT_GRAY}; margin: 8px 0 0 0; font-size: 12px;">
+            <p style="color: ${TEEMEYOU_COLORS.LIGHT_GRAY}; margin: 8px 0 0 0; font-size: 12px;">
               If you didn't create this account, you can safely ignore this email.
             </p>
           </div>
