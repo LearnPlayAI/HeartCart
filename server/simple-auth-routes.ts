@@ -165,4 +165,116 @@ router.get('/test-email', asyncHandler(async (req: Request, res: Response) => {
   }
 }));
 
+// Email Verification Routes
+router.post('/send-verification', asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { email } = z.object({
+      email: z.string().email()
+    }).parse(req.body);
+
+    console.log(`🔄 Processing verification email request for: ${email}`);
+
+    // Find user by email
+    const user = await db.select()
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
+
+    if (user.length === 0) {
+      console.log(`⚠️ User not found for email: ${email}`);
+      return sendError(res, 'User not found', 404);
+    }
+
+    const foundUser = user[0];
+    console.log(`✅ User found: ${foundUser.username} (ID: ${foundUser.id})`);
+
+    // Check if already verified
+    if (foundUser.mailVerified) {
+      return sendSuccess(res, { message: "Email is already verified" });
+    }
+
+    // Send verification email
+    const result = await unifiedEmailService.sendVerificationEmail(foundUser.id, email, foundUser.username);
+
+    if (result.success) {
+      console.log(`✅ Verification email sent successfully to: ${email}`);
+      return sendSuccess(res, { 
+        message: "Verification email sent successfully"
+      });
+    } else {
+      console.error(`❌ Failed to send verification email to: ${email}`, result.error);
+      return sendError(res, 'Failed to send verification email', 500);
+    }
+  } catch (error: any) {
+    console.error('❌ Error in send verification:', error);
+    return sendError(res, 'Failed to send verification email', 500);
+  }
+}));
+
+router.get('/validate-verification-token/:token', asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { token } = req.params;
+    
+    if (!token) {
+      return sendError(res, 'Token is required', 400);
+    }
+
+    console.log(`🔄 Validating verification token: ${token.substring(0, 8)}...`);
+
+    // We need to create a verification-specific validation method
+    const result = await unifiedEmailService.validateToken(token, 'verification');
+
+    if (!result.valid) {
+      console.log(`❌ Token validation failed: ${result.error}`);
+      return sendError(res, 'Invalid or expired verification token', 400);
+    }
+
+    console.log(`✅ Verification token validated successfully for user ID: ${result.userId}`);
+    return sendSuccess(res, { 
+      valid: true, 
+      userId: result.userId,
+      email: result.email 
+    });
+  } catch (error: any) {
+    console.error('❌ Error validating verification token:', error);
+    return sendError(res, 'Token validation failed', 500);
+  }
+}));
+
+router.post('/verify-email', asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { token } = z.object({
+      token: z.string()
+    }).parse(req.body);
+
+    console.log(`🔄 Processing email verification with token: ${token.substring(0, 8)}...`);
+
+    // Validate token for verification type
+    const result = await unifiedEmailService.validateToken(token, 'verification');
+
+    if (!result.valid) {
+      console.log(`❌ Verification token validation failed: ${result.error}`);
+      return sendError(res, 'Invalid or expired verification token', 400);
+    }
+
+    // Mark user as verified
+    await db.update(users)
+      .set({ mailVerified: true })
+      .where(eq(users.id, result.userId!));
+
+    // Mark token as used
+    await unifiedEmailService.markTokenAsUsed(token);
+
+    console.log(`✅ Email verified successfully for user ID: ${result.userId}`);
+    
+    return sendSuccess(res, { 
+      message: "Email verified successfully! You can now log in.",
+      verified: true
+    });
+  } catch (error: any) {
+    console.error('❌ Error in email verification:', error);
+    return sendError(res, 'Email verification failed', 500);
+  }
+}));
+
 export default router;

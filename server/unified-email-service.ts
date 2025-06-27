@@ -74,15 +74,27 @@ export class UnifiedEmailService {
     const token = this.generateSecureToken();
     const expiresAt = new Date(Date.now() + 3 * 60 * 60 * 1000); // 3 hours for SAST timezone
 
-    await db.insert(mailTokens).values({
-      token: token,
-      tokenType: 'verification',
-      userId,
-      email,
-      expiresAt
-    });
+    console.log(`🔑 Creating verification token for user ${userId}: ${token ? token.substring(0, 16) + '...' : 'NULL TOKEN'}`);
 
-    return { token, expires: expiresAt };
+    if (!token) {
+      throw new Error('Failed to generate secure token');
+    }
+
+    try {
+      await db.insert(mailTokens).values({
+        token: token,
+        tokenType: 'verification',
+        userId,
+        email,
+        expiresAt
+      });
+
+      console.log(`✅ Verification token successfully stored in database`);
+      return { token, expires: expiresAt };
+    } catch (error: any) {
+      console.error('❌ Error creating mail token:', error);
+      throw error;
+    }
   }
 
   async sendMailerSendEmail(recipientEmail: string, subject: string, htmlContent: string, textContent: string): Promise<{ success: boolean; messageId?: string; error?: string }> {
@@ -352,6 +364,62 @@ export class UnifiedEmailService {
       };
     } catch (error: any) {
       console.error('❌ Error validating password reset token:', error);
+      return { valid: false, error: 'Token validation failed' };
+    }
+  }
+
+  async validateToken(token: string, tokenType: string): Promise<{ valid: boolean; userId?: number; email?: string; error?: string }> {
+    try {
+      console.log(`🔍 Validating ${tokenType} token: ${token.substring(0, 8)}...`);
+
+      const tokenRecord = await db.select()
+        .from(mailTokens)
+        .where(
+          and(
+            eq(mailTokens.token, token),
+            eq(mailTokens.tokenType, tokenType),
+            eq(mailTokens.isActive, true)
+          )
+        )
+        .limit(1);
+
+      console.log(`🔍 Found ${tokenRecord.length} matching ${tokenType} token records`);
+
+      if (tokenRecord.length === 0) {
+        // Let's debug by checking what tokens exist
+        const allTokens = await db.select()
+          .from(mailTokens)
+          .where(eq(mailTokens.tokenType, tokenType))
+          .orderBy(desc(mailTokens.createdAt))
+          .limit(5);
+        
+        console.log(`🔍 Recent ${tokenType} tokens in DB: ${allTokens.length}`);
+        for (const t of allTokens) {
+          console.log(`🔍 Token: ${t.token.substring(0, 16)}..., active: ${t.isActive}, expires: ${t.expiresAt}`);
+        }
+        
+        return { valid: false, error: 'Invalid or expired token' };
+      }
+
+      const record = tokenRecord[0];
+      const now = new Date();
+      const expiresAt = new Date(record.expiresAt);
+
+      console.log(`🔍 Token expires at: ${expiresAt}, current time: ${now}`);
+
+      if (now > expiresAt) {
+        return { valid: false, error: 'Token has expired' };
+      }
+
+      console.log(`✅ ${tokenType} token validation successful for user: ${record.userId}`);
+
+      return {
+        valid: true,
+        userId: record.userId,
+        email: record.email
+      };
+    } catch (error: any) {
+      console.error(`❌ Error validating ${tokenType} token:`, error);
       return { valid: false, error: 'Token validation failed' };
     }
   }
