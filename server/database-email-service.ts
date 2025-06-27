@@ -799,40 +799,48 @@ export class DatabaseEmailService {
               </div>
             
             <div style="background: #FFFFFF; padding: 40px; border-radius: 0 0 12px 12px;">
-              <h2 style="color: #495057; margin-top: 0;">Thank you, ${data.customerName}!</h2>
+              <div style="text-align: center; margin-bottom: 30px;">
+                <div style="display: inline-block; background: linear-gradient(135deg, #FF69B4 0%, #E91E63 100%); padding: 12px; border-radius: 50%; margin-bottom: 15px;">
+                  <span style="font-size: 32px; color: #FFFFFF;">✅</span>
+                </div>
+                <h2 style="color: #E91E63; margin: 0; font-size: 28px; font-weight: 600;">Thank you, ${data.customerName}!</h2>
+              </div>
               
-              <p style="font-size: 16px; margin-bottom: 25px;">
+              <p style="font-size: 16px; line-height: 1.6; color: #4A5568; margin-bottom: 30px; text-align: center;">
                 Your order has been successfully placed! Here are your order details:
               </p>
               
-              <div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6; margin: 25px 0;">
+              <div style="background: linear-gradient(135deg, #FFF0F6 0%, #FFFFFF 100%); padding: 25px; border-radius: 12px; border: 2px solid #FF69B4; margin: 25px 0; box-shadow: 0 4px 12px rgba(255, 105, 180, 0.1);">
                 <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px;">
                   <tr>
-                    <td style="padding: 8px 0; font-weight: bold;">Order Number:</td>
-                    <td style="padding: 8px 0;">${data.orderNumber}</td>
+                    <td style="padding: 12px 0; font-weight: bold; color: #E91E63;">Order Number:</td>
+                    <td style="padding: 12px 0; color: #4A5568;">${data.orderNumber}</td>
                   </tr>
                   <tr>
-                    <td style="padding: 8px 0; font-weight: bold;">Payment Status:</td>
-                    <td style="padding: 8px 0;">${paymentStatusBadge}</td>
+                    <td style="padding: 12px 0; font-weight: bold; color: #E91E63;">Payment Status:</td>
+                    <td style="padding: 12px 0;">${paymentStatusBadge}</td>
                   </tr>
                   <tr>
-                    <td style="padding: 8px 0; font-weight: bold;">Payment Method:</td>
-                    <td style="padding: 8px 0;">${data.paymentMethod === 'eft' ? 'EFT Bank Transfer' : data.paymentMethod}</td>
+                    <td style="padding: 12px 0; font-weight: bold; color: #E91E63;">Payment Method:</td>
+                    <td style="padding: 12px 0; color: #4A5568;">${data.paymentMethod === 'eft' ? 'EFT Bank Transfer' : data.paymentMethod}</td>
                   </tr>
                 </table>
               </div>
 
               ${shippingInfoHtml}
               
-              <div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6; margin: 25px 0;">
-                <h3 style="margin: 0 0 15px 0; color: #495057;">Order Items</h3>
+              <div style="background: linear-gradient(135deg, #FFF0F6 0%, #FFFFFF 100%); padding: 25px; border-radius: 12px; border: 2px solid #FF69B4; margin: 25px 0; box-shadow: 0 4px 12px rgba(255, 105, 180, 0.1);">
+                <h3 style="margin: 0 0 15px 0; color: #E91E63; display: flex; align-items: center;">
+                  <span style="font-size: 18px; margin-right: 8px;">📋</span>
+                  Order Items
+                </h3>
                 <table style="width: 100%; border-collapse: collapse;">
                   <thead>
-                    <tr style="background: #f8f9fa;">
-                      <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6;">Item</th>
-                      <th style="padding: 12px; text-align: center; border-bottom: 2px solid #dee2e6;">Qty</th>
-                      <th style="padding: 12px; text-align: right; border-bottom: 2px solid #dee2e6;">Price</th>
-                      <th style="padding: 12px; text-align: right; border-bottom: 2px solid #dee2e6;">Total</th>
+                    <tr style="background: linear-gradient(135deg, #FF69B4 0%, #E91E63 100%);">
+                      <th style="padding: 15px 12px; text-align: left; border-bottom: 2px solid #E91E63; color: #FFFFFF; font-weight: 600;">Item</th>
+                      <th style="padding: 15px 12px; text-align: center; border-bottom: 2px solid #E91E63; color: #FFFFFF; font-weight: 600;">Qty</th>
+                      <th style="padding: 15px 12px; text-align: right; border-bottom: 2px solid #E91E63; color: #FFFFFF; font-weight: 600;">Price</th>
+                      <th style="padding: 15px 12px; text-align: right; border-bottom: 2px solid #E91E63; color: #FFFFFF; font-weight: 600;">Total</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -840,66 +848,86 @@ export class DatabaseEmailService {
                   </tbody>
                   <tfoot>
                     <tr>
-                      <td colspan="3" style="padding: 12px; text-align: right; font-weight: bold;">Subtotal:</td>
-                      <td style="padding: 12px; text-align: right; font-weight: bold;">R ${data.subtotalAmount.toFixed(2)}</td>
+                      <td colspan="3" style="padding: 12px; text-align: right; font-weight: bold; color: #E91E63;">Subtotal:</td>
+                      <td style="padding: 12px; text-align: right; font-weight: bold; color: #4A5568;">R ${data.subtotalAmount.toFixed(2)}</td>
                     </tr>
                     <tr>
-                      <td colspan="3" style="padding: 12px; text-align: right; font-weight: bold;">Shipping:</td>
-                      <td style="padding: 12px; text-align: right; font-weight: bold;">R ${data.shippingCost.toFixed(2)}</td>
+                      <td colspan="3" style="padding: 12px; text-align: right; font-weight: bold; color: #E91E63;">Shipping:</td>
+                      <td style="padding: 12px; text-align: right; font-weight: bold; color: #4A5568;">R ${data.shippingCost.toFixed(2)}</td>
                     </tr>
-                    <tr style="background: #f8f9fa;">
-                      <td colspan="3" style="padding: 12px; text-align: right; font-weight: bold; font-size: 18px;">Total:</td>
-                      <td style="padding: 12px; text-align: right; font-weight: bold; font-size: 18px; color: #28a745;">R ${data.totalAmount.toFixed(2)}</td>
+                    <tr style="background: linear-gradient(135deg, #FFF0F6 0%, #FFE4E1 100%);">
+                      <td colspan="3" style="padding: 15px 12px; text-align: right; font-weight: bold; font-size: 18px; color: #E91E63;">Total:</td>
+                      <td style="padding: 15px 12px; text-align: right; font-weight: bold; font-size: 18px; color: #10B981;">R ${data.totalAmount.toFixed(2)}</td>
                     </tr>
                   </tfoot>
                 </table>
               </div>
               
               ${data.paymentStatus === 'paid' ? `
-                <div style="background: #d4edda; border: 1px solid #c3e6cb; padding: 15px; border-radius: 8px; margin: 25px 0;">
-                  <p style="margin: 0; color: #155724; font-weight: bold;">✓ Payment Confirmed</p>
-                  <p style="margin: 5px 0 0 0; color: #155724; font-size: 14px;">Your order will be processed and shipped within 1-2 business days.</p>
+                <div style="background: linear-gradient(135deg, #DCFCE7 0%, #BBF7D0 100%); border: 2px solid #10B981; padding: 20px; border-radius: 12px; margin: 25px 0; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);">
+                  <p style="margin: 0; color: #047857; font-weight: bold; display: flex; align-items: center;">
+                    <span style="font-size: 18px; margin-right: 8px;">✅</span>
+                    Payment Confirmed
+                  </p>
+                  <p style="margin: 10px 0 0 0; color: #065F46; font-size: 14px;">Your order will be processed and shipped within 1-2 business days.</p>
                 </div>
               ` : `
-                <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 8px; margin: 25px 0;">
-                  <p style="margin: 0; color: #856404; font-weight: bold;">⏳ Payment Verification Required</p>
-                  <p style="margin: 5px 0 0 0; color: #856404; font-size: 14px;">We'll process your order once payment is confirmed. This usually takes 1-2 business hours during business days.</p>
+                <div style="background: linear-gradient(135deg, #FFF0F6 0%, #FFE4E1 100%); border: 2px solid #FF69B4; padding: 20px; border-radius: 12px; margin: 25px 0; box-shadow: 0 4px 12px rgba(255, 105, 180, 0.2);">
+                  <p style="margin: 0; color: #E91E63; font-weight: bold; display: flex; align-items: center;">
+                    <span style="font-size: 18px; margin-right: 8px;">⏳</span>
+                    Payment Verification Required
+                  </p>
+                  <p style="margin: 10px 0 0 0; color: #AD1457; font-size: 14px;">We'll process your order once payment is confirmed. This usually takes 1-2 business hours during business days.</p>
                 </div>
               `}
               
               <div style="text-align: center; margin: 30px 0;">
                 <a href="https://teemeyou.shop/orders/${data.orderNumber}" 
-                   style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                   style="background: linear-gradient(135deg, #FF69B4 0%, #E91E63 100%); 
                           color: white; 
-                          padding: 15px 30px; 
+                          padding: 16px 32px; 
                           text-decoration: none; 
                           border-radius: 8px; 
-                          font-weight: bold; 
+                          font-weight: 600; 
                           font-size: 16px; 
                           display: inline-block;
-                          box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
-                  Track Your Order
+                          box-shadow: 0 4px 15px rgba(255, 105, 180, 0.4);
+                          text-transform: uppercase;
+                          letter-spacing: 0.5px;">
+                  🔍 Track Your Order
                 </a>
               </div>
               
-              <div style="background: #e9ecef; padding: 15px; border-radius: 8px; margin: 25px 0;">
-                <h4 style="margin: 0 0 10px 0; color: #495057;">What happens next?</h4>
-                <ul style="margin: 0; padding-left: 20px; color: #6c757d;">
-                  <li>We'll verify your payment (if EFT transfer)</li>
-                  <li>Your order will be prepared for shipping</li>
-                  <li>You'll receive tracking information via email</li>
-                  ${data.shippingMethod === 'pudo' ? '<li>Your items will be delivered to your selected PUDO locker</li>' : '<li>Your items will be delivered to your address</li>'}
+              <div style="background: linear-gradient(135deg, #FFF0F6 0%, #FFE4E1 100%); padding: 20px; border-left: 4px solid #FF69B4; border-radius: 8px; margin: 25px 0;">
+                <h4 style="margin: 0 0 15px 0; color: #E91E63; display: flex; align-items: center;">
+                  <span style="font-size: 18px; margin-right: 8px;">📋</span>
+                  What happens next?
+                </h4>
+                <ul style="margin: 0; padding-left: 20px; color: #4A5568; line-height: 1.8;">
+                  <li style="margin-bottom: 8px;">We'll verify your payment (if EFT transfer)</li>
+                  <li style="margin-bottom: 8px;">Your order will be prepared for shipping</li>
+                  <li style="margin-bottom: 8px;">You'll receive tracking information via email</li>
+                  ${data.shippingMethod === 'pudo' ? '<li style="margin-bottom: 8px;">Your items will be delivered to your selected PUDO locker</li>' : '<li style="margin-bottom: 8px;">Your items will be delivered to your address</li>'}
                 </ul>
               </div>
               
-              <hr style="border: none; border-top: 1px solid #dee2e6; margin: 30px 0;">
+              <hr style="border: none; border-top: 2px solid #FF69B4; margin: 30px 0; opacity: 0.3;">
               
-              <p style="color: #6c757d; font-size: 12px; text-align: center; margin-bottom: 0;">
-                Best regards,<br>
-                The TeeMeYou Team<br>
-                <a href="https://teemeyou.shop" style="color: #667eea;">teemeyou.shop</a> | 
-                <a href="mailto:sales@teemeyou.shop" style="color: #667eea;">sales@teemeyou.shop</a>
-              </p>
+              <!-- Footer -->
+              <div style="background: #4A5568; padding: 25px; text-align: center; border-radius: 12px; margin: 25px 0;">
+                <div style="margin-bottom: 15px;">
+                  <span style="display: inline-block; background: #FFFFFF; padding: 8px 12px; border-radius: 20px; margin: 0 5px; box-shadow: 0 2px 8px rgba(255, 105, 180, 0.2);">
+                    <span style="font-size: 16px; color: #FF69B4;">🛍️</span>
+                  </span>
+                </div>
+                <p style="color: #FFFFFF; margin: 0; font-size: 14px; font-weight: 500;">
+                  © 2024 TeeMeYou • South Africa's Premium Shopping Platform
+                </p>
+                <p style="color: #CBD5E0; margin: 8px 0 0 0; font-size: 12px;">
+                  <a href="https://teemeyou.shop" style="color: #FF69B4; text-decoration: none;">teemeyou.shop</a> | 
+                  <a href="mailto:sales@teemeyou.shop" style="color: #FF69B4; text-decoration: none;">sales@teemeyou.shop</a>
+                </p>
+              </div>
             </div>
           </body>
           </html>
