@@ -19,10 +19,50 @@ export const usePWAInstall = () => {
   const [isStandalone, setIsStandalone] = useState(false);
 
   useEffect(() => {
-    // PWA install functionality disabled per user request
-    // No browser detection, no event listeners, no logging
+    // Re-enabled PWA functionality for MobileInstallButton only
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isAndroid = /Android/.test(navigator.userAgent);
+    const isMobile = isIOS || isAndroid || /Mobile/.test(navigator.userAgent);
+    const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches;
+    const isInWebAppiOS = (window.navigator as any).standalone === true;
+    const isChrome = /Chrome/.test(navigator.userAgent);
+    const isEdge = /Edg/.test(navigator.userAgent);
+    
+    setIsIOSDevice(isIOS);
+    
+    // Check if app is already installed
+    const isAlreadyInstalled = isInStandaloneMode || isInWebAppiOS;
+    setIsStandalone(isAlreadyInstalled);
+    setIsInstalled(isAlreadyInstalled);
+    
+    // Only show install button on mobile devices when not already installed
+    if (!isAlreadyInstalled && isMobile) {
+      setIsInstallable(true);
+    }
+
+    // Listen for the beforeinstallprompt event
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      const installEvent = e as BeforeInstallPromptEvent;
+      setDeferredPrompt(installEvent);
+      setIsInstallable(true);
+    };
+
+    // Listen for app installed event
+    const handleAppInstalled = () => {
+      setIsInstalled(true);
+      setIsInstallable(false);
+      setShowInstallPrompt(false);
+      setDeferredPrompt(null);
+      localStorage.setItem('pwa-installed', 'true');
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleAppInstalled);
+
     return () => {
-      // No cleanup needed
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
     };
   }, []);
 
@@ -64,13 +104,13 @@ export const usePWAInstall = () => {
   };
 
   return {
-    isInstallable: false, // PWA install disabled
-    isInstalled: false,
-    isStandalone: false,
-    isIOSDevice: false,
-    showInstallPrompt: false,
-    installApp: () => Promise.resolve(false),
-    dismissInstallPrompt: () => {},
-    canInstall: false
+    isInstallable: isInstallable && !isInstalled && !isStandalone,
+    isInstalled,
+    isStandalone,
+    isIOSDevice,
+    showInstallPrompt: showInstallPrompt && canShowPrompt(),
+    installApp,
+    dismissInstallPrompt,
+    canInstall: !!deferredPrompt
   };
 };
