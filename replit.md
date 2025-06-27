@@ -139,6 +139,11 @@ Changelog:
   * Order status update emails for shipping notifications
   * Invoice emails with PDF attachment support
   * All emails branded with TeeMeYou design and sent from sales@teemeyou.shop
+  * Domain verification completed and all email types successfully tested
+- June 27, 2025. UI improvements:
+  * Removed social media links (Facebook, Twitter, Instagram) from footer
+  * Removed PWA features card per user request
+  * Updated footer with contact information instead
 ```
 
 ## User Preferences
