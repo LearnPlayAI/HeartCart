@@ -1,4 +1,4 @@
-import puppeteer from 'puppeteer';
+import pdf from 'html-pdf-node';
 import { logger } from '../logger';
 import { objectStore } from '../object-store';
 import path from 'path';
@@ -37,41 +37,14 @@ export class InvoiceGenerator {
   }
 
   async generateInvoicePDF(data: InvoiceData): Promise<string> {
-    let browser;
     try {
       logger.info('Starting PDF invoice generation', { orderNumber: data.orderNumber });
-
-      // Launch Puppeteer with optimized settings for Replit
-      browser = await puppeteer.launch({
-        headless: true,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-accelerated-2d-canvas',
-          '--disable-gpu',
-          '--no-first-run',
-          '--no-zygote',
-          '--single-process',
-          '--disable-background-timer-throttling',
-          '--disable-backgrounding-occluded-windows',
-          '--disable-renderer-backgrounding'
-        ]
-      });
-
-      const page = await browser.newPage();
-      
-      // Set viewport for consistent PDF generation
-      await page.setViewport({ width: 1200, height: 1600 });
 
       // Generate the invoice HTML content
       const htmlContent = this.generateInvoiceHTML(data);
 
-      // Set content and wait for fonts/styles to load
-      await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
-
-      // Generate PDF with A4 settings
-      const pdfBuffer = await page.pdf({
+      // Configure PDF options
+      const options = {
         format: 'A4',
         printBackground: true,
         margin: {
@@ -80,9 +53,11 @@ export class InvoiceGenerator {
           bottom: '20mm',
           left: '15mm'
         }
-      });
+      };
 
-      await browser.close();
+      // Generate PDF using html-pdf-node
+      const file = { content: htmlContent };
+      const pdfBuffer = await pdf.generatePdf(file, options);
 
       // Create storage path: /Invoices/{year}/{userId}/{orderNumber}.pdf
       const currentYear = new Date().getFullYear();
@@ -109,9 +84,6 @@ export class InvoiceGenerator {
       return storagePath;
 
     } catch (error) {
-      if (browser) {
-        await browser.close().catch(() => {});
-      }
       logger.error('Error generating invoice PDF', { 
         error: error instanceof Error ? error.message : String(error),
         orderNumber: data.orderNumber 
