@@ -207,6 +207,12 @@ Changelog:
   * One-time token usage tracking preventing reuse after email verification
   * All verification flows tested and confirmed operational: token generation, validation, verification completion
   * Email verification system matches password reset system reliability and security standards
+- June 27, 2025. Password reset authentication issue resolved:
+  * Fixed critical password hashing mismatch between reset function and authentication system
+  * Password reset was using bcrypt while authentication uses scrypt, preventing login with new passwords
+  * Updated simple-auth-routes.ts to use hashPassword from auth.ts (scrypt-based) instead of bcrypt
+  * Users can now successfully login with new passwords after password reset
+  * Maintained consistent scrypt hashing throughout entire authentication system
 ```
 
 ## User Preferences

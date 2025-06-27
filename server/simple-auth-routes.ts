@@ -1,11 +1,11 @@
 import express, { Request, Response } from "express";
 import { z } from "zod";
 import asyncHandler from "express-async-handler";
-import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { db } from "./db";
 import { users } from "@shared/schema";
 import { unifiedEmailService } from "./unified-email-service";
+import { hashPassword } from "./auth";
 import { sendSuccess, sendError } from "./api-response";
 
 const router = express.Router();
@@ -77,8 +77,8 @@ router.post('/reset-password', asyncHandler(async (req: Request, res: Response) 
 
     console.log(`✅ Token validated for user ID: ${validation.userId}`);
 
-    // Hash new password
-    const hashedPassword = await bcrypt.hash(password, 12);
+    // Hash new password using scrypt (same method as authentication)
+    const hashedPassword = await hashPassword(password);
 
     // Update user password
     await db.update(users)
