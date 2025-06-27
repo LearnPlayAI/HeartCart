@@ -51,6 +51,7 @@ import { registerDatabaseTestRoutes } from "./database-test-routes";
 import { unifiedEmailService } from "./unified-email-service";
 import { emailIntegrationRoutes } from "./email-integration-routes";
 import { emailTestRoutes } from "./email-test-routes";
+import { emailVerificationRoutes } from "./email-verification-endpoint";
 import { registerApiTestRoutes } from "./api-test-routes";
 import analyticsRoutes from "./analytics-routes";
 import favouritesRoutes from "./favourites-routes";
@@ -195,6 +196,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register email testing routes
   app.use("/api/email-test", emailTestRoutes);
+  
+  // Register email verification endpoint for comprehensive testing
+  app.use("/api/email-verification", emailVerificationRoutes);
   
   // Register Storage testing routes
   registerStorageTestRoutes(app);
