@@ -847,6 +847,70 @@ export const insertOrderStatusHistorySchema = createInsertSchema(orderStatusHist
 export type OrderStatusHistory = typeof orderStatusHistory.$inferSelect;
 export type InsertOrderStatusHistory = z.infer<typeof insertOrderStatusHistorySchema>;
 
+// =============================================================================
+// EMAIL AND TOKEN MANAGEMENT TABLES
+// =============================================================================
+
+// Mail Tokens table - stores all email-related tokens (password reset, verification, etc.)
+export const mailTokens = pgTable("mailTokens", {
+  id: serial("id").primaryKey(),
+  tokenHash: varchar("tokenHash", { length: 255 }).notNull().unique(),
+  tokenType: varchar("tokenType", { length: 50 }).notNull(), // 'password_reset', 'email_verification'
+  userId: integer("userId").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  email: varchar("email", { length: 255 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  usedAt: timestamp("usedAt"),
+  isActive: boolean("isActive").default(true).notNull(),
+}, (table) => ({
+  tokenHashIdx: index("mailTokens_tokenHash_idx").on(table.tokenHash),
+  userIdIdx: index("mailTokens_userId_idx").on(table.userId),
+  emailIdx: index("mailTokens_email_idx").on(table.email),
+  tokenTypeIdx: index("mailTokens_tokenType_idx").on(table.tokenType),
+  expiresAtIdx: index("mailTokens_expiresAt_idx").on(table.expiresAt),
+}));
+
+// Email Logs table - tracks all emails sent through the system
+export const emailLogs = pgTable("emailLogs", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").references(() => users.id, { onDelete: 'set null' }),
+  recipientEmail: varchar("recipientEmail", { length: 255 }).notNull(),
+  emailType: varchar("emailType", { length: 50 }).notNull(), // 'password_reset', 'order_confirmation', 'invoice', etc.
+  templateId: varchar("templateId", { length: 100 }),
+  subject: varchar("subject", { length: 500 }).notNull(),
+  sentAt: timestamp("sentAt").defaultNow().notNull(),
+  deliveryStatus: varchar("deliveryStatus", { length: 50 }).default('sent').notNull(), // 'sent', 'delivered', 'failed', 'bounced'
+  errorMessage: text("errorMessage"),
+  mailerSendId: varchar("mailerSendId", { length: 255 }),
+  metadata: jsonb("metadata"), // Store additional data like order IDs, token references, etc.
+}, (table) => ({
+  userIdIdx: index("emailLogs_userId_idx").on(table.userId),
+  recipientEmailIdx: index("emailLogs_recipientEmail_idx").on(table.recipientEmail),
+  emailTypeIdx: index("emailLogs_emailType_idx").on(table.emailType),
+  sentAtIdx: index("emailLogs_sentAt_idx").on(table.sentAt),
+  deliveryStatusIdx: index("emailLogs_deliveryStatus_idx").on(table.deliveryStatus),
+}));
+
+// Mail Tokens insert schema and types
+export const insertMailTokenSchema = createInsertSchema(mailTokens).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type MailToken = typeof mailTokens.$inferSelect;
+export type InsertMailToken = z.infer<typeof insertMailTokenSchema>;
+
+// Email Logs insert schema and types
+export const insertEmailLogSchema = createInsertSchema(emailLogs).omit({
+  id: true,
+  sentAt: true,
+}).extend({
+  metadata: z.record(z.any()).optional(),
+});
+
+export type EmailLog = typeof emailLogs.$inferSelect;
+export type InsertEmailLog = z.infer<typeof insertEmailLogSchema>;
+
 // Define all table relations after all tables and types are defined
 export const categoriesRelations = relations(categories, ({ one, many }) => ({
   parent: one(categories, {
@@ -930,7 +994,25 @@ export const usersRelations = relations(users, ({ many }) => ({
   interactions: many(productInteractions),
   abandonedCarts: many(abandonedCarts),
   orders: many(orders),
-  cartItems: many(cartItems)
+  cartItems: many(cartItems),
+  mailTokens: many(mailTokens),
+  emailLogs: many(emailLogs)
+}));
+
+// Mail Tokens relations
+export const mailTokensRelations = relations(mailTokens, ({ one }) => ({
+  user: one(users, {
+    fields: [mailTokens.userId],
+    references: [users.id]
+  })
+}));
+
+// Email Logs relations
+export const emailLogsRelations = relations(emailLogs, ({ one }) => ({
+  user: one(users, {
+    fields: [emailLogs.userId],
+    references: [users.id]
+  })
 }));
 
 // Orders relations
