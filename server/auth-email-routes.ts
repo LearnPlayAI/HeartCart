@@ -241,7 +241,6 @@ router.post("/forgot-password",
  * POST /api/auth/reset-password
  */
 router.post("/reset-password",
-  validateRequest(passwordResetSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const { token, password } = req.body;
 
