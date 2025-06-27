@@ -58,6 +58,7 @@ import creditRoutes from "./credit-routes";
 import supplierOrderRoutes from "./supplier-order-routes-simple";
 import { registerStorageTestRoutes } from "./storage-test-routes";
 import { registerFileManagerTestRoutes } from "./file-manager-test-routes";
+import { authEmailRoutes } from "./auth-email-routes";
 import { validateRequest, idSchema } from './validation-middleware';
 import { trackProductInteraction, trackCartActivity } from './interaction-middleware';
 import { 
@@ -188,6 +189,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register email integration routes for authentication emails
   app.use("/api/auth", emailIntegrationRoutes);
+  
+  // Register auth email routes for forgot password functionality
+  app.use("/api/auth", authEmailRoutes);
   
   // Register email testing routes
   app.use("/api/email-test", emailTestRoutes);

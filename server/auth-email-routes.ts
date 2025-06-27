@@ -12,7 +12,7 @@ import { mailerSendService } from "./mailersend-service";
 import { hashPassword } from "./auth";
 import { sendSuccess, sendError } from "./api-response";
 import { logger } from "./logger";
-import { validateRequest } from "./middlewares/validation-middleware";
+// import { validateRequest } from "./middlewares/validation-middleware";
 
 const router = express.Router();
 
@@ -83,7 +83,6 @@ const passwordResetSchema = z.object({
  * POST /api/auth/request-verification
  */
 router.post("/request-verification", 
-  validateRequest(emailVerificationRequestSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const { email } = req.body;
 
@@ -142,7 +141,6 @@ router.post("/request-verification",
  * POST /api/auth/verify-email
  */
 router.post("/verify-email",
-  validateRequest(emailVerificationSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const { token } = req.body;
 
@@ -188,7 +186,6 @@ router.post("/verify-email",
  * POST /api/auth/forgot-password
  */
 router.post("/forgot-password",
-  validateRequest(passwordResetRequestSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const { email } = req.body;
 
