@@ -60,12 +60,11 @@ export class UnifiedEmailService {
     const expiresAt = new Date(Date.now() + 3 * 60 * 60 * 1000); // 3 hours for SAST timezone
 
     await db.insert(mailTokens).values({
+      tokenHash: token,
+      tokenType: 'password_reset',
       userId,
       email,
-      token,
-      tokenType: 'password_reset',
-      expiresAt: expiresAt.toISOString(),
-      isUsed: false
+      expiresAt
     });
 
     return { token, expires: expiresAt };
@@ -263,8 +262,7 @@ export class UnifiedEmailService {
         subject: '🇿🇦 Reset Your TeeMeYou Password',
         deliveryStatus: result.success ? 'sent' : 'failed',
         errorMessage: result.error || null,
-        mailerSendId: result.messageId || null,
-        sentAt: new Date().toISOString()
+        mailerSendId: result.messageId || null
       });
 
       return result;
@@ -294,9 +292,9 @@ export class UnifiedEmailService {
         .from(mailTokens)
         .where(
           and(
-            eq(mailTokens.token, token),
+            eq(mailTokens.tokenHash, token),
             eq(mailTokens.tokenType, 'password_reset'),
-            eq(mailTokens.isUsed, false)
+            eq(mailTokens.isActive, true)
           )
         )
         .limit(1);
@@ -327,14 +325,14 @@ export class UnifiedEmailService {
   async markTokenAsUsed(token: string): Promise<void> {
     await db.update(mailTokens)
       .set({ 
-        isUsed: true,
-        usedAt: new Date().toISOString()
+        isActive: false,
+        usedAt: new Date()
       })
-      .where(eq(mailTokens.token, token));
+      .where(eq(mailTokens.tokenHash, token));
   }
 
   async cleanupExpiredTokens(): Promise<void> {
-    const now = new Date().toISOString();
+    const now = new Date();
     await db.delete(mailTokens)
       .where(lt(mailTokens.expiresAt, now));
   }

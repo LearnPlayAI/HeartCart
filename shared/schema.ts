@@ -18,6 +18,7 @@ export const users = pgTable("users", {
   postalCode: text("postalCode"),
   country: text("country").default("South Africa"),
   isActive: boolean("isActive").default(true).notNull(),
+  mailVerified: boolean("mailVerified").default(false).notNull(),
   role: text("role").default("user").notNull(), // 'user', 'admin', etc.
   createdAt: text("createdAt").default(String(new Date().toISOString())).notNull(),
   updatedAt: text("updatedAt").default(String(new Date().toISOString())).notNull(),
