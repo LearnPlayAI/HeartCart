@@ -44,6 +44,30 @@ export interface InvoiceEmailData {
   currency: string;
 }
 
+export interface OrderConfirmationEmailData {
+  email: string;
+  customerName: string;
+  orderNumber: string;
+  orderItems: Array<{
+    productName: string;
+    quantity: number;
+    unitPrice: number;
+    totalPrice: number;
+    attributeDisplayText?: string;
+  }>;
+  subtotalAmount: number;
+  shippingCost: number;
+  totalAmount: number;
+  paymentMethod: string;
+  paymentStatus: string;
+  shippingMethod: string;
+  selectedLockerName?: string;
+  selectedLockerAddress?: string;
+  shippingAddress?: string;
+  shippingCity?: string;
+  shippingPostalCode?: string;
+}
+
 /**
  * Database-driven email service using MailerSend
  * All tokens and email logs are stored in PostgreSQL database
@@ -701,6 +725,238 @@ export class DatabaseEmailService {
       });
     } catch (error) {
       logger.error('Error sending order status email', { error, data });
+      throw error;
+    }
+  }
+
+  /**
+   * Send order confirmation email
+   */
+  async sendOrderConfirmationEmail(data: OrderConfirmationEmailData): Promise<void> {
+    try {
+      // Generate order items HTML
+      const orderItemsHtml = data.orderItems.map(item => `
+        <tr>
+          <td style="padding: 12px; border-bottom: 1px solid #e9ecef; vertical-align: top;">
+            <strong>${item.productName}</strong>
+            ${item.attributeDisplayText ? `<br><small style="color: #6c757d;">${item.attributeDisplayText}</small>` : ''}
+          </td>
+          <td style="padding: 12px; border-bottom: 1px solid #e9ecef; text-align: center;">${item.quantity}</td>
+          <td style="padding: 12px; border-bottom: 1px solid #e9ecef; text-align: right;">R ${item.unitPrice.toFixed(2)}</td>
+          <td style="padding: 12px; border-bottom: 1px solid #e9ecef; text-align: right;"><strong>R ${item.totalPrice.toFixed(2)}</strong></td>
+        </tr>
+      `).join('');
+
+      // Generate shipping information
+      const shippingInfoHtml = data.shippingMethod === 'pudo' && data.selectedLockerName ? `
+        <div style="background: #e8f4f8; padding: 15px; border-left: 4px solid #17a2b8; margin: 20px 0;">
+          <h4 style="margin: 0 0 10px 0; color: #17a2b8;">PUDO Locker Delivery</h4>
+          <p style="margin: 0; font-size: 14px;"><strong>Selected Locker:</strong> ${data.selectedLockerName}</p>
+          <p style="margin: 5px 0 0 0; font-size: 14px; color: #6c757d;">${data.selectedLockerAddress}</p>
+        </div>
+      ` : `
+        <div style="background: #f8f9fa; padding: 15px; border-left: 4px solid #6c757d; margin: 20px 0;">
+          <h4 style="margin: 0 0 10px 0; color: #495057;">Delivery Address</h4>
+          <p style="margin: 0; font-size: 14px;">${data.shippingAddress}</p>
+          <p style="margin: 5px 0 0 0; font-size: 14px;">${data.shippingCity}, ${data.shippingPostalCode}</p>
+        </div>
+      `;
+
+      // Generate payment status badge
+      const paymentStatusBadge = data.paymentStatus === 'paid' ? 
+        '<span style="background: #28a745; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">PAID</span>' :
+        '<span style="background: #ffc107; color: #212529; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">PENDING VERIFICATION</span>';
+
+      const emailParams = new EmailParams()
+        .setFrom(this.sender)
+        .setTo([new Recipient(data.email, data.customerName)])
+        .setSubject(`Order Confirmation - ${data.orderNumber}`)
+        .setHtml(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Order Confirmation - TeeMeYou</title>
+          </head>
+          <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+              <h1 style="color: white; margin: 0; font-size: 28px;">Order Confirmed!</h1>
+            </div>
+            
+            <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e9ecef;">
+              <h2 style="color: #495057; margin-top: 0;">Thank you, ${data.customerName}!</h2>
+              
+              <p style="font-size: 16px; margin-bottom: 25px;">
+                Your order has been successfully placed! Here are your order details:
+              </p>
+              
+              <div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6; margin: 25px 0;">
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px;">
+                  <tr>
+                    <td style="padding: 8px 0; font-weight: bold;">Order Number:</td>
+                    <td style="padding: 8px 0;">${data.orderNumber}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; font-weight: bold;">Payment Status:</td>
+                    <td style="padding: 8px 0;">${paymentStatusBadge}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; font-weight: bold;">Payment Method:</td>
+                    <td style="padding: 8px 0;">${data.paymentMethod === 'eft' ? 'EFT Bank Transfer' : data.paymentMethod}</td>
+                  </tr>
+                </table>
+              </div>
+
+              ${shippingInfoHtml}
+              
+              <div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6; margin: 25px 0;">
+                <h3 style="margin: 0 0 15px 0; color: #495057;">Order Items</h3>
+                <table style="width: 100%; border-collapse: collapse;">
+                  <thead>
+                    <tr style="background: #f8f9fa;">
+                      <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6;">Item</th>
+                      <th style="padding: 12px; text-align: center; border-bottom: 2px solid #dee2e6;">Qty</th>
+                      <th style="padding: 12px; text-align: right; border-bottom: 2px solid #dee2e6;">Price</th>
+                      <th style="padding: 12px; text-align: right; border-bottom: 2px solid #dee2e6;">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${orderItemsHtml}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td colspan="3" style="padding: 12px; text-align: right; font-weight: bold;">Subtotal:</td>
+                      <td style="padding: 12px; text-align: right; font-weight: bold;">R ${data.subtotalAmount.toFixed(2)}</td>
+                    </tr>
+                    <tr>
+                      <td colspan="3" style="padding: 12px; text-align: right; font-weight: bold;">Shipping:</td>
+                      <td style="padding: 12px; text-align: right; font-weight: bold;">R ${data.shippingCost.toFixed(2)}</td>
+                    </tr>
+                    <tr style="background: #f8f9fa;">
+                      <td colspan="3" style="padding: 12px; text-align: right; font-weight: bold; font-size: 18px;">Total:</td>
+                      <td style="padding: 12px; text-align: right; font-weight: bold; font-size: 18px; color: #28a745;">R ${data.totalAmount.toFixed(2)}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+              
+              ${data.paymentStatus === 'paid' ? `
+                <div style="background: #d4edda; border: 1px solid #c3e6cb; padding: 15px; border-radius: 8px; margin: 25px 0;">
+                  <p style="margin: 0; color: #155724; font-weight: bold;">✓ Payment Confirmed</p>
+                  <p style="margin: 5px 0 0 0; color: #155724; font-size: 14px;">Your order will be processed and shipped within 1-2 business days.</p>
+                </div>
+              ` : `
+                <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 8px; margin: 25px 0;">
+                  <p style="margin: 0; color: #856404; font-weight: bold;">⏳ Payment Verification Required</p>
+                  <p style="margin: 5px 0 0 0; color: #856404; font-size: 14px;">We'll process your order once payment is confirmed. This usually takes 1-2 business hours during business days.</p>
+                </div>
+              `}
+              
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="https://teemeyou.shop/orders/${data.orderNumber}" 
+                   style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                          color: white; 
+                          padding: 15px 30px; 
+                          text-decoration: none; 
+                          border-radius: 8px; 
+                          font-weight: bold; 
+                          font-size: 16px; 
+                          display: inline-block;
+                          box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
+                  Track Your Order
+                </a>
+              </div>
+              
+              <div style="background: #e9ecef; padding: 15px; border-radius: 8px; margin: 25px 0;">
+                <h4 style="margin: 0 0 10px 0; color: #495057;">What happens next?</h4>
+                <ul style="margin: 0; padding-left: 20px; color: #6c757d;">
+                  <li>We'll verify your payment (if EFT transfer)</li>
+                  <li>Your order will be prepared for shipping</li>
+                  <li>You'll receive tracking information via email</li>
+                  ${data.shippingMethod === 'pudo' ? '<li>Your items will be delivered to your selected PUDO locker</li>' : '<li>Your items will be delivered to your address</li>'}
+                </ul>
+              </div>
+              
+              <hr style="border: none; border-top: 1px solid #dee2e6; margin: 30px 0;">
+              
+              <p style="color: #6c757d; font-size: 12px; text-align: center; margin-bottom: 0;">
+                Best regards,<br>
+                The TeeMeYou Team<br>
+                <a href="https://teemeyou.shop" style="color: #667eea;">teemeyou.shop</a> | 
+                <a href="mailto:sales@teemeyou.shop" style="color: #667eea;">sales@teemeyou.shop</a>
+              </p>
+            </div>
+          </body>
+          </html>
+        `)
+        .setText(`
+          Order Confirmation - ${data.orderNumber}
+          
+          Thank you, ${data.customerName}!
+          
+          Your order has been successfully placed!
+          
+          Order Details:
+          - Order Number: ${data.orderNumber}
+          - Payment Status: ${data.paymentStatus}
+          - Payment Method: ${data.paymentMethod}
+          - Total Amount: R ${data.totalAmount.toFixed(2)}
+          
+          ${data.shippingMethod === 'pudo' && data.selectedLockerName ? 
+            `PUDO Locker Delivery: ${data.selectedLockerName}\n${data.selectedLockerAddress}` :
+            `Delivery Address: ${data.shippingAddress}, ${data.shippingCity}, ${data.shippingPostalCode}`
+          }
+          
+          Order Items:
+          ${data.orderItems.map(item => 
+            `- ${item.productName} ${item.attributeDisplayText ? `(${item.attributeDisplayText})` : ''} x ${item.quantity} = R ${item.totalPrice.toFixed(2)}`
+          ).join('\n')}
+          
+          Subtotal: R ${data.subtotalAmount.toFixed(2)}
+          Shipping: R ${data.shippingCost.toFixed(2)}
+          Total: R ${data.totalAmount.toFixed(2)}
+          
+          ${data.paymentStatus === 'paid' ? 
+            'Payment confirmed! Your order will be processed within 1-2 business days.' :
+            'We\'ll process your order once payment is confirmed.'
+          }
+          
+          Track your order: https://teemeyou.shop/orders/${data.orderNumber}
+          
+          Best regards,
+          The TeeMeYou Team
+          https://teemeyou.shop
+        `);
+
+      // Send email
+      const response = await this.mailerSend.email.send(emailParams);
+      
+      // Log email with proper response handling and SAST time
+      const emailLogData: InsertEmailLog = {
+        userId: null, // Will be set if available
+        recipientEmail: data.email,
+        emailType: 'order_confirmation',
+        subject: `Order Confirmation - ${data.orderNumber}`,
+        deliveryStatus: response.statusCode === 202 ? 'sent' : 'failed',
+        mailerSendId: response.body?.message_id || null,
+        errorMessage: response.statusCode !== 202 ? `HTTP ${response.statusCode}` : null,
+        sentAt: this.getSASTTime()
+      };
+
+      await storage.logEmail(emailLogData);
+      
+      if (response.statusCode === 202) {
+        logger.info('Order confirmation email sent successfully', { 
+          email: data.email,
+          orderNumber: data.orderNumber,
+          messageId: response.body?.message_id 
+        });
+      } else {
+        throw new Error(`Email send failed with status ${response.statusCode}`);
+      }
+    } catch (error) {
+      logger.error('Error sending order confirmation email', { error, data });
       throw error;
     }
   }

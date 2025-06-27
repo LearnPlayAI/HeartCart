@@ -10,6 +10,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { objectStore } from "./object-store";
+import { databaseEmailService } from "./database-email-service";
 
 // Define the order creation schema that matches the checkout form structure
 const checkoutOrderSchema = z.object({
@@ -314,6 +315,49 @@ router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Respons
       totalAmount: orderData.total,
       itemCount: orderItems.length,
     });
+
+    // Send order confirmation email
+    try {
+      const emailData = {
+        email: orderData.customerInfo.email,
+        customerName: `${orderData.customerInfo.firstName} ${orderData.customerInfo.lastName}`,
+        orderNumber: newOrder.orderNumber,
+        orderItems: orderItems.map(item => ({
+          productName: item.productName,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          totalPrice: item.totalPrice,
+          attributeDisplayText: item.attributeDisplayText
+        })),
+        subtotalAmount: orderData.subtotal,
+        shippingCost: orderData.shippingCost,
+        totalAmount: orderData.total,
+        paymentMethod: orderData.paymentMethod,
+        paymentStatus: finalPaymentStatus,
+        shippingMethod: orderData.shippingMethod,
+        selectedLockerName: orderData.lockerDetails?.name,
+        selectedLockerAddress: orderData.lockerDetails?.address,
+        shippingAddress: orderData.shippingAddress.addressLine1 + (orderData.shippingAddress.addressLine2 ? ', ' + orderData.shippingAddress.addressLine2 : ''),
+        shippingCity: orderData.shippingAddress.city,
+        shippingPostalCode: orderData.shippingAddress.postalCode
+      };
+
+      await databaseEmailService.sendOrderConfirmationEmail(emailData);
+      
+      logger.info("Order confirmation email sent", {
+        orderId: newOrder.id,
+        orderNumber: newOrder.orderNumber,
+        customerEmail: orderData.customerInfo.email
+      });
+    } catch (emailError) {
+      // Log email error but don't fail the order creation
+      logger.error("Failed to send order confirmation email", {
+        error: emailError,
+        orderId: newOrder.id,
+        orderNumber: newOrder.orderNumber,
+        customerEmail: orderData.customerInfo.email
+      });
+    }
 
     // Send standardized success response
     return sendSuccess(res, {
