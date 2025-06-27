@@ -265,6 +265,13 @@ Changelog:
   * Both payment confirmation and order status emails now trigger correctly from admin panel dropdowns
   * Email logs confirm successful delivery with proper hot pink TeeMeYou branding and customer data
   * Complete admin workflow integration: order creation → payment verification → status updates → delivery notifications
+- June 27, 2025. PUDO email Google Maps URL issue resolved:
+  * Fixed MailerSend converting Google Maps URLs into tracking links in order status emails
+  * Updated PUDO locker email template to display location instructions as plain text instead of clickable links
+  * Customers now receive clear instructions to search "PUDO locker near me" in Google Maps manually
+  * Email template maintains all PUDO locker information: tracking URL, operating hours, collection instructions
+  * Comprehensive testing confirms fix resolves URL conversion issue while preserving email functionality
+  * All order status emails with PUDO tracking URLs now display correctly without broken Google Maps links
 ```
 
 ## User Preferences

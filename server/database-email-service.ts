@@ -729,10 +729,9 @@ export class DatabaseEmailService {
                         Use Google Maps to locate your PUDO locker:
                       </p>
                       <p style="margin: 8px 0 0 0;">
-                        <a href="https://www.google.com/maps/search/PUDO+locker+near+me" 
-                           style="background: #10B981; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px; font-size: 12px; font-weight: bold; display: inline-block;">
-                          🗺️ Open Google Maps
-                        </a>
+                        <span style="background: #10B981; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px; font-size: 12px; font-weight: bold; display: inline-block; cursor: pointer;">
+                          🗺️ Search "PUDO locker near me" in Google Maps
+                        </span>
                       </p>
                     </div>
                     
