@@ -459,7 +459,12 @@ export default function AdminOrderDetail() {
 
   // Invoice download function
   const downloadInvoice = async () => {
-    if (!order) return;
+    if (!order) {
+      console.log('Admin download: Order object is null');
+      return;
+    }
+    
+    console.log('Starting admin invoice download for order:', order.id);
     
     try {
       const response = await fetch(`/api/admin/orders/${order.id}/invoice`, {
@@ -467,15 +472,29 @@ export default function AdminOrderDetail() {
         credentials: 'include',
       });
 
+      console.log('Admin download response:', {
+        status: response.status,
+        ok: response.ok,
+        headers: Object.fromEntries(response.headers.entries())
+      });
+
       if (!response.ok) {
-        if (response.status === 404) {
+        if (response.status === 401) {
+          toast({
+            title: "Authentication Error",
+            description: "You don't have permission to download this invoice.",
+            variant: "destructive",
+          });
+        } else if (response.status === 404) {
           toast({
             title: "Invoice Not Available",
             description: "No invoice is available for this order yet.",
             variant: "destructive",
           });
         } else {
-          throw new Error('Failed to download invoice');
+          const errorText = await response.text();
+          console.error('Admin download error:', errorText);
+          throw new Error(`Failed to download invoice: ${response.status}`);
         }
         return;
       }

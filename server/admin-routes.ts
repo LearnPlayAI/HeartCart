@@ -259,6 +259,12 @@ router.get("/orders/:id/invoice", isAuthenticated, asyncHandler(async (req: Requ
   try {
     const orderId = parseInt(req.params.id);
     
+    logger.info("Admin invoice download requested", {
+      orderId,
+      adminUserId: req.user?.id,
+      userRole: req.user?.role
+    });
+    
     if (isNaN(orderId)) {
       return sendError(res, "Invalid order ID", 400);
     }
@@ -266,20 +272,37 @@ router.get("/orders/:id/invoice", isAuthenticated, asyncHandler(async (req: Requ
     const order = await storage.getOrderById(orderId);
     
     if (!order) {
+      logger.warn("Order not found for admin download", { orderId });
       return sendError(res, "Order not found", 404);
     }
 
     if (!order.invoicePath) {
+      logger.warn("No invoice path for order", { orderId, orderNumber: order.orderNumber });
       return sendError(res, "No invoice available for this order", 404);
     }
+
+    logger.info("Attempting to retrieve invoice file", {
+      orderId,
+      invoicePath: order.invoicePath
+    });
 
     try {
       // Get the PDF file from object storage using the correct method
       const { data: fileData, contentType } = await objectStore.getFileAsBuffer(order.invoicePath);
       
       if (!fileData) {
+        logger.error("File data is null from object store", { 
+          orderId, 
+          invoicePath: order.invoicePath 
+        });
         return sendError(res, "Invoice file not found", 404);
       }
+
+      logger.info("Successfully retrieved invoice file", {
+        orderId,
+        fileSize: fileData.length,
+        contentType
+      });
 
       // Set proper headers for PDF download
       res.setHeader('Content-Type', 'application/pdf');
