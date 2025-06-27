@@ -237,6 +237,46 @@ router.post("/forgot-password",
 );
 
 /**
+ * Validate password reset token
+ * GET /api/auth/validate-reset-token/:token
+ */
+router.get("/validate-reset-token/:token",
+  asyncHandler(async (req: Request, res: Response) => {
+    const { token } = req.params;
+
+    try {
+      // Find token
+      const tokenData = passwordResetTokens.get(token);
+      if (!tokenData) {
+        return sendError(res, "Invalid or expired reset token.", 400);
+      }
+
+      // Check if token is expired
+      if (tokenData.expiresAt < new Date()) {
+        passwordResetTokens.delete(token);
+        return sendError(res, "Reset token has expired. Please request a new password reset.", 400);
+      }
+
+      // Find user
+      const user = await storage.getUserByEmail(tokenData.email);
+      if (!user) {
+        passwordResetTokens.delete(token);
+        return sendError(res, "User not found.", 404);
+      }
+
+      return sendSuccess(res, { 
+        email: tokenData.email,
+        valid: true 
+      }, "Reset token is valid.");
+
+    } catch (error) {
+      logger.error('Error validating reset token', { token, error });
+      return sendError(res, "An error occurred during token validation.", 500);
+    }
+  })
+);
+
+/**
  * Reset password with token
  * POST /api/auth/reset-password
  */

@@ -28,6 +28,15 @@ const forgotPasswordSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
 });
 
+// Define the reset password form schema
+const resetPasswordSchema = z.object({
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  confirmPassword: z.string().min(6, "Password must be at least 6 characters"),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords do not match",
+  path: ["confirmPassword"],
+});
+
 // Define the registration form schema
 const registerSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters")
@@ -46,14 +55,21 @@ const registerSchema = z.object({
 type LoginFormData = z.infer<typeof loginSchema>;
 type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
 type RegisterFormData = z.infer<typeof registerSchema>;
+type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
 
 export default function AuthPage() {
-  // Check URL parameters to determine initial tab
+  // Check URL parameters to determine initial tab and reset token
   const urlParams = new URLSearchParams(window.location.search);
   const initialTab = urlParams.get('tab') === 'register' ? 'register' : 'login';
+  const resetToken = urlParams.get('token');
+  const isResetPasswordPage = window.location.pathname === '/reset-password';
   
   const [activeTab, setActiveTab] = useState<string>(initialTab);
   const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
+  const [isEmailSentModalOpen, setIsEmailSentModalOpen] = useState(false);
+  const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
+  const [resetTokenData, setResetTokenData] = useState<{email: string} | null>(null);
+  const [currentResetToken, setCurrentResetToken] = useState<string | null>(resetToken);
   const { toast } = useToast();
   const [location, setLocation] = useLocation();
   const { user, loginMutation, registerMutation } = useAuth();
@@ -71,6 +87,25 @@ export default function AuthPage() {
   const forgotPasswordMutation = useMutation({
     mutationFn: async (data: ForgotPasswordFormData) => {
       return await apiRequest('/api/auth/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+  });
+
+  // Token validation mutation
+  const validateTokenMutation = useMutation({
+    mutationFn: async (token: string) => {
+      return await apiRequest(`/api/auth/validate-reset-token/${token}`, {
+        method: 'GET',
+      });
+    },
+  });
+
+  // Reset password mutation
+  const resetPasswordMutation = useMutation({
+    mutationFn: async (data: { token: string; password: string }) => {
+      return await apiRequest('/api/auth/reset-password', {
         method: 'POST',
         body: JSON.stringify(data),
       });
