@@ -1150,7 +1150,7 @@ export class DatabaseEmailService {
             'We\'ll process your order once payment is confirmed.'
           }
           
-          Track your order: https://teemeyou.shop/order/${data.orderNumber}
+          Track your order: https://teemeyou.shop/order/${data.orderId}
           
           Best regards,
           The TeeMeYou Team

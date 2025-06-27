@@ -3,7 +3,7 @@
  * Verifies that shipped notification emails include Google Maps links for PUDO lockers
  */
 
-import { databaseEmailService } from './server/database-email-service.js';
+import { databaseEmailService } from './server/database-email-service.ts';
 
 async function testPudoGoogleMapsIntegration() {
   console.log('🧪 Testing PUDO Google Maps Integration...\n');
