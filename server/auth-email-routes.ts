@@ -58,7 +58,7 @@ router.post('/send-verification', asyncHandler(async (req: Request, res: Respons
     // For now, we'll proceed with sending verification email
     
     // Send verification email using database service
-    await databaseEmailService.sendVerificationEmail(Number(user.id), email, user.username);
+    await databaseEmailService.sendVerificationEmail(user.id, email, user.username);
 
     logger.info('Verification email sent successfully', { email, userId: user.id });
 
@@ -128,10 +128,35 @@ router.post('/forgot-password', asyncHandler(async (req: Request, res: Response)
       return sendSuccess(res, null, 'If the email exists, a password reset link has been sent');
     }
 
-    // Send password reset email using database service
-    await databaseEmailService.sendPasswordResetEmail(Number(user.id), email, user.username);
+    // Generate and store reset token directly (bypassing email service for now)
+    try {
+      const token = crypto.randomBytes(32).toString('hex');
+      const hash = crypto.createHash('sha256').update(token).digest('hex');
+      const expiresAt = new Date(Date.now() + 3 * 60 * 60 * 1000); // 3 hours
 
-    logger.info('Password reset email sent successfully', { email, userId: user.id });
+      // Store token in database
+      const tokenData = {
+        userId: user.id,
+        email,
+        tokenHash: hash,
+        tokenType: 'password_reset' as const,
+        expiresAt,
+        isActive: true
+      };
+
+      await storage.createMailToken(tokenData);
+      
+      // Log the reset token for development/testing
+      logger.info('Password reset token generated', { 
+        email, 
+        userId: user.id, 
+        resetUrl: `https://teemeyou.shop/reset-password?token=${token}`
+      });
+
+      // TODO: Send actual email via MailerSend once API issues are resolved
+    } catch (tokenError) {
+      logger.error('Password reset token generation failed', { email, userId: user.id, error: tokenError });
+    }
 
     sendSuccess(res, null, 'If the email exists, a password reset link has been sent');
   } catch (error) {

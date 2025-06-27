@@ -340,39 +340,67 @@ export class DatabaseEmailService {
           https://teemeyou.shop
         `);
 
-      // Send email with timeout protection
+      // Send email with timeout protection and enhanced error handling
       logger.info('Attempting to send password reset email', { userId, email });
       
-      const emailSendPromise = this.mailerSend.email.send(emailParams);
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Email send timeout after 30 seconds')), 30000);
-      });
-
-      const response = await Promise.race([emailSendPromise, timeoutPromise]) as any;
-      
-      // Log email with proper response handling and SAST time
-      const emailLogData: InsertEmailLog = {
-        userId,
-        recipientEmail: email,
-        emailType: 'password_reset',
-        subject: 'Reset Your TeeMeYou Password',
-        deliveryStatus: response.statusCode === 202 ? 'sent' : 'failed',
-        mailerSendId: response.body?.message_id || null,
-        errorMessage: response.statusCode !== 202 ? `HTTP ${response.statusCode}` : null,
-        sentAt: this.getSASTTime()
-      };
-
-      await storage.logEmail(emailLogData);
-      
-      if (response.statusCode === 202) {
-        logger.info('Password reset email sent successfully', { 
-          userId, 
-          email,
-          messageId: response.body?.message_id 
+      try {
+        const emailSendPromise = this.mailerSend.email.send(emailParams);
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Email send timeout after 30 seconds')), 30000);
         });
-        return token;
-      } else {
-        throw new Error(`Email send failed with status ${response.statusCode}`);
+
+        const response = await Promise.race([emailSendPromise, timeoutPromise]) as any;
+        
+        // Handle successful response
+        if (response && (response.statusCode === 202 || response.status === 202)) {
+          const emailLogData: InsertEmailLog = {
+            userId,
+            recipientEmail: email,
+            emailType: 'password_reset',
+            subject: 'Reset Your TeeMeYou Password',
+            deliveryStatus: 'sent',
+            mailerSendId: response.body?.message_id || response.messageId || null,
+            errorMessage: null,
+            sentAt: this.getSASTTime()
+          };
+
+          await storage.logEmail(emailLogData);
+          
+          logger.info('Password reset email sent successfully', { 
+            userId, 
+            email,
+            messageId: response.body?.message_id || response.messageId 
+          });
+          
+          return token;
+        } else {
+          throw new Error(`Email send failed with status ${response?.statusCode || response?.status || 'unknown'}`);
+        }
+      } catch (emailError) {
+        // Log failed email attempt with enhanced error details
+        const errorMessage = emailError instanceof Error ? emailError.message : 'Unknown email error';
+        logger.error('Email send failed', { userId, email, error: errorMessage });
+        
+        const failedEmailLogData: InsertEmailLog = {
+          userId,
+          recipientEmail: email,
+          emailType: 'password_reset',
+          subject: 'Reset Your TeeMeYou Password',
+          deliveryStatus: 'failed',
+          mailerSendId: null,
+          errorMessage,
+          sentAt: this.getSASTTime()
+        };
+
+        await storage.logEmail(failedEmailLogData);
+        
+        // For development/testing, return token even if email fails
+        if (process.env.NODE_ENV === 'development') {
+          logger.warn('Development mode: returning token despite email failure', { userId, email });
+          return token;
+        }
+        
+        throw emailError;
       }
     } catch (error) {
       logger.error('Error sending password reset email', { error, userId, email });
