@@ -11,13 +11,21 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useLocation } from "wouter";
-import { AtSign, KeyRound, User, ShoppingBag } from "lucide-react";
+import { AtSign, KeyRound, User, ShoppingBag, Loader2 } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 
 // Define the login form schema
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
+});
+
+// Define the forgot password form schema
+const forgotPasswordSchema = z.object({
+  email: z.string().email("Please enter a valid email address"),
 });
 
 // Define the registration form schema
@@ -36,6 +44,7 @@ const registerSchema = z.object({
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
+type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
 type RegisterFormData = z.infer<typeof registerSchema>;
 
 export default function AuthPage() {
@@ -44,6 +53,7 @@ export default function AuthPage() {
   const initialTab = urlParams.get('tab') === 'register' ? 'register' : 'login';
   
   const [activeTab, setActiveTab] = useState<string>(initialTab);
+  const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
   const { toast } = useToast();
   const [location, setLocation] = useLocation();
   const { user, loginMutation, registerMutation } = useAuth();
@@ -57,12 +67,30 @@ export default function AuthPage() {
     }
   }, [user]);
 
+  // Forgot password mutation
+  const forgotPasswordMutation = useMutation({
+    mutationFn: async (data: ForgotPasswordFormData) => {
+      return await apiRequest('/api/auth/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+  });
+
   // Login form
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
       email: "",
       password: "",
+    },
+  });
+
+  // Forgot password form
+  const forgotPasswordForm = useForm<ForgotPasswordFormData>({
+    resolver: zodResolver(forgotPasswordSchema),
+    defaultValues: {
+      email: "",
     },
   });
 
@@ -89,6 +117,27 @@ export default function AuthPage() {
       onError: (error: Error) => {
         toast({
           title: "Login failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      },
+    });
+  };
+
+  // Handle forgot password submit
+  const onForgotPasswordSubmit = (data: ForgotPasswordFormData) => {
+    forgotPasswordMutation.mutate(data, {
+      onSuccess: () => {
+        toast({
+          title: "Reset email sent",
+          description: "Please check your email for password reset instructions.",
+        });
+        setIsForgotPasswordOpen(false);
+        forgotPasswordForm.reset();
+      },
+      onError: (error: Error) => {
+        toast({
+          title: "Error",
           description: error.message,
           variant: "destructive",
         });
