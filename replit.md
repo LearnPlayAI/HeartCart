@@ -156,6 +156,12 @@ Changelog:
   * Implemented automatic cache clearing and page reload for seamless updates
   * Periodic update checks every 30 seconds and on page visibility changes
   * Eliminates need for manual cache clearing after deployments
+- June 27, 2025. Password reset timezone and security improvements:
+  * Extended server-side token validity to 3 hours (to account for SAST timezone differences)
+  * Maintained user-facing "1 hour" expiration message for clarity
+  * Implemented one-time token usage tracking with usedAt timestamp
+  * Added comprehensive token validation preventing reuse after password change
+  * Fixed timezone-related token expiration issues for South African users
 ```
 
 ## User Preferences

@@ -31,6 +31,7 @@ interface PasswordResetToken {
   token: string;
   createdAt: Date;
   expiresAt: Date;
+  usedAt?: Date; // Track when token was used to prevent reuse
 }
 
 // In-memory storage for tokens (should be replaced with database/Redis in production)
@@ -199,7 +200,7 @@ router.post("/forgot-password",
 
       // Generate reset token
       const token = crypto.randomBytes(32).toString('hex');
-      const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+      const expiresAt = new Date(Date.now() + 3 * 60 * 60 * 1000); // 3 hours to account for timezone differences
 
       // Store token
       passwordResetTokens.set(token, {
@@ -257,6 +258,12 @@ router.get("/validate-reset-token/:token",
         return sendError(res, "Reset token has expired. Please request a new password reset.", 400);
       }
 
+      // Check if token has already been used
+      if (tokenData.usedAt) {
+        passwordResetTokens.delete(token);
+        return sendError(res, "Reset token has already been used. Please request a new password reset.", 400);
+      }
+
       // Find user
       const user = await storage.getUserByEmail(tokenData.email);
       if (!user) {
@@ -297,6 +304,12 @@ router.post("/reset-password",
         return sendError(res, "Reset token has expired. Please request a new password reset.", 400);
       }
 
+      // Check if token has already been used
+      if (tokenData.usedAt) {
+        passwordResetTokens.delete(token);
+        return sendError(res, "Reset token has already been used. Please request a new password reset.", 400);
+      }
+
       // Find user
       const user = await storage.getUserByEmail(tokenData.email);
       if (!user) {
@@ -304,13 +317,17 @@ router.post("/reset-password",
         return sendError(res, "User not found.", 404);
       }
 
+      // Mark token as used before updating password
+      tokenData.usedAt = new Date();
+      passwordResetTokens.set(token, tokenData);
+
       // Hash new password
       const hashedPassword = await hashPassword(password);
 
       // Update user password
       await storage.updateUser(user.id, { password: hashedPassword });
 
-      // Remove used token
+      // Remove used token after successful password update
       passwordResetTokens.delete(token);
 
       logger.info('Password reset successfully', { userId: user.id, email: user.email });
