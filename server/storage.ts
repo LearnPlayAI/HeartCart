@@ -3700,6 +3700,38 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async updateOrderInvoicePath(
+    id: number,
+    invoicePath: string,
+  ): Promise<Order | undefined> {
+    try {
+      const [updatedOrder] = await db
+        .update(orders)
+        .set({
+          invoicePath,
+          updatedAt: new Date().toISOString(),
+        })
+        .where(eq(orders.id, id))
+        .returning();
+
+      if (!updatedOrder) {
+        logger.warn(`Order not found when updating invoice path`, { orderId: id });
+        return undefined;
+      }
+
+      logger.info('Updated order invoice path', {
+        orderId: id,
+        invoicePath,
+        userId: updatedOrder.userId,
+      });
+
+      return updatedOrder;
+    } catch (error) {
+      logger.error('Error updating order invoice path', { error, orderId: id, invoicePath });
+      throw error;
+    }
+  }
+
   async updateOrderPaymentStatus(
     id: number,
     paymentStatus: string,

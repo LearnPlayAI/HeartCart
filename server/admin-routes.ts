@@ -6,6 +6,7 @@ import { sendSuccess, sendError } from "./api-response";
 import { logger } from "./logger";
 import { z } from "zod";
 import { databaseEmailService } from "./database-email-service";
+import { invoiceGenerator } from "./services/invoice-generator";
 
 const router = express.Router();
 
@@ -154,17 +155,20 @@ router.patch("/orders/:id/payment-status", isAuthenticated, asyncHandler(async (
       return sendError(res, "Order not found", 404);
     }
 
-    // Send payment confirmation email when status is changed to "payment_received"
+    // Send payment confirmation email and generate PDF invoice when status is changed to "payment_received"
     if (paymentStatus === "payment_received") {
       try {
-        // Get full order details with items for payment confirmation email
+        // Get full order details with items for payment confirmation email and invoice
         const fullOrder = await storage.getOrderById(orderId);
-        if (fullOrder && fullOrder.orderItems && fullOrder.orderItems.length > 0) {
+        if (fullOrder && fullOrder.items && fullOrder.items.length > 0) {
+          // Send payment confirmation email
           const emailData = {
             email: fullOrder.customerEmail,
             customerName: fullOrder.customerName,
             orderNumber: fullOrder.orderNumber,
-            orderItems: fullOrder.orderItems.map(item => ({
+            amount: fullOrder.totalAmount,
+            currency: 'ZAR',
+            orderItems: fullOrder.items.map(item => ({
               productName: item.productName,
               quantity: item.quantity,
               unitPrice: item.unitPrice,
@@ -185,6 +189,51 @@ router.patch("/orders/:id/payment-status", isAuthenticated, asyncHandler(async (
             customerEmail: fullOrder.customerEmail,
             adminUserId: req.user?.id
           });
+
+          // Generate PDF invoice
+          try {
+            const invoiceData = {
+              orderNumber: fullOrder.orderNumber,
+              customerName: fullOrder.customerName,
+              customerEmail: fullOrder.customerEmail,
+              customerPhone: fullOrder.customerPhone,
+              shippingAddress: fullOrder.shippingAddress,
+              shippingCity: fullOrder.shippingCity,
+              shippingPostalCode: fullOrder.shippingPostalCode,
+              orderItems: fullOrder.items.map(item => ({
+                productName: item.productName,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                totalPrice: item.totalPrice,
+                attributeDisplayText: item.attributeDisplayText
+              })),
+              subtotalAmount: fullOrder.subtotalAmount,
+              shippingCost: fullOrder.shippingCost,
+              totalAmount: fullOrder.totalAmount,
+              paymentMethod: fullOrder.paymentMethod,
+              paymentReceivedDate: new Date().toISOString(),
+              userId: fullOrder.userId
+            };
+
+            const invoicePath = await invoiceGenerator.generateInvoicePDF(invoiceData);
+            
+            // Update order with invoice path
+            await storage.updateOrderInvoicePath(orderId, invoicePath);
+            
+            logger.info("PDF invoice generated and stored", {
+              orderId,
+              invoicePath,
+              customerEmail: fullOrder.customerEmail,
+              adminUserId: req.user?.id
+            });
+          } catch (invoiceError) {
+            // Log invoice error but don't fail the payment status update
+            logger.error("Failed to generate PDF invoice", {
+              error: invoiceError,
+              orderId,
+              customerEmail: fullOrder.customerEmail
+            });
+          }
         }
       } catch (emailError) {
         // Log email error but don't fail the payment status update
