@@ -5,6 +5,7 @@ import { isAuthenticated } from "./auth-middleware";
 import { sendSuccess, sendError } from "./api-response";
 import { logger } from "./logger";
 import { z } from "zod";
+import { databaseEmailService } from "./database-email-service";
 
 const router = express.Router();
 
@@ -66,6 +67,37 @@ router.patch("/orders/:id/status", isAuthenticated, asyncHandler(async (req: Req
       return sendError(res, "Order not found", 404);
     }
 
+    // Send order status update email
+    try {
+      if (status === 'shipped' || status === 'delivered') {
+        const emailData = {
+          email: updatedOrder.customerEmail,
+          customerName: updatedOrder.customerName,
+          orderNumber: updatedOrder.orderNumber,
+          status: status,
+          trackingNumber: updatedOrder.trackingNumber,
+          estimatedDelivery: status === 'shipped' ? '3-5 business days' : 'Delivered'
+        };
+
+        await databaseEmailService.sendOrderStatusEmail(emailData);
+        
+        logger.info("Order status update email sent", {
+          orderId,
+          status,
+          customerEmail: updatedOrder.customerEmail,
+          adminUserId: req.user?.id
+        });
+      }
+    } catch (emailError) {
+      // Log email error but don't fail the status update
+      logger.error("Failed to send order status update email", {
+        error: emailError,
+        orderId,
+        status,
+        customerEmail: updatedOrder.customerEmail
+      });
+    }
+
     logger.info("Order status updated by admin", { orderId, status, adminUserId: req.user?.id });
     return sendSuccess(res, updatedOrder);
   } catch (error) {
@@ -93,6 +125,50 @@ router.patch("/orders/:id/payment-status", isAuthenticated, asyncHandler(async (
     
     if (!updatedOrder) {
       return sendError(res, "Order not found", 404);
+    }
+
+    // Send payment confirmation email when payment is confirmed
+    try {
+      if (paymentStatus === 'paid' || paymentStatus === 'payment_received') {
+        // Get full order details with items for payment confirmation email
+        const fullOrder = await storage.getOrderById(orderId);
+        if (fullOrder && fullOrder.orderItems && fullOrder.orderItems.length > 0) {
+          const emailData = {
+            email: fullOrder.customerEmail,
+            customerName: fullOrder.customerName,
+            orderNumber: fullOrder.orderNumber,
+            orderItems: fullOrder.orderItems.map(item => ({
+              productName: item.productName,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              totalPrice: item.totalPrice,
+              attributeDisplayText: item.attributeDisplayText
+            })),
+            subtotalAmount: fullOrder.subtotalAmount,
+            shippingCost: fullOrder.shippingCost,
+            totalAmount: fullOrder.totalAmount,
+            paymentMethod: fullOrder.paymentMethod,
+            shippingMethod: fullOrder.shippingMethod
+          };
+
+          await databaseEmailService.sendPaymentConfirmationEmail(emailData);
+          
+          logger.info("Payment confirmation email sent", {
+            orderId,
+            paymentStatus,
+            customerEmail: fullOrder.customerEmail,
+            adminUserId: req.user?.id
+          });
+        }
+      }
+    } catch (emailError) {
+      // Log email error but don't fail the payment status update
+      logger.error("Failed to send payment confirmation email", {
+        error: emailError,
+        orderId,
+        paymentStatus,
+        customerEmail: updatedOrder.customerEmail
+      });
     }
 
     logger.info("Order payment status updated by admin", { orderId, paymentStatus, adminUserId: req.user?.id });
@@ -162,6 +238,46 @@ router.post("/orders/:id/payment-received", isAuthenticated, asyncHandler(async 
 
     // Automatically update the order status to "processing" when payment is received
     const finalOrder = await storage.updateOrderStatus(orderId, "processing");
+
+    // Send payment confirmation email
+    try {
+      // Get full order details with items for payment confirmation email
+      const fullOrder = await storage.getOrderById(orderId);
+      if (fullOrder && fullOrder.orderItems && fullOrder.orderItems.length > 0) {
+        const emailData = {
+          email: fullOrder.customerEmail,
+          customerName: fullOrder.customerName,
+          orderNumber: fullOrder.orderNumber,
+          orderItems: fullOrder.orderItems.map(item => ({
+            productName: item.productName,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            totalPrice: item.totalPrice,
+            attributeDisplayText: item.attributeDisplayText
+          })),
+          subtotalAmount: fullOrder.subtotalAmount,
+          shippingCost: fullOrder.shippingCost,
+          totalAmount: fullOrder.totalAmount,
+          paymentMethod: fullOrder.paymentMethod,
+          shippingMethod: fullOrder.shippingMethod
+        };
+
+        await databaseEmailService.sendPaymentConfirmationEmail(emailData);
+        
+        logger.info("Payment received confirmation email sent", {
+          orderId,
+          customerEmail: fullOrder.customerEmail,
+          adminUserId: req.user?.id
+        });
+      }
+    } catch (emailError) {
+      // Log email error but don't fail the payment process
+      logger.error("Failed to send payment received confirmation email", {
+        error: emailError,
+        orderId,
+        customerEmail: order.customerEmail
+      });
+    }
 
     logger.info("Order payment marked as received by admin and status updated to processing", {
       orderId,
