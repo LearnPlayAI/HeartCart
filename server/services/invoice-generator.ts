@@ -1,4 +1,4 @@
-import pdf from 'html-pdf-node';
+import { jsPDF } from 'jspdf';
 import { logger } from '../logger';
 import { objectStore } from '../object-store';
 import path from 'path';
@@ -40,24 +40,17 @@ export class InvoiceGenerator {
     try {
       logger.info('Starting PDF invoice generation', { orderNumber: data.orderNumber });
 
-      // Generate the invoice HTML content
-      const htmlContent = this.generateInvoiceHTML(data);
+      // Create new jsPDF instance
+      const doc = new jsPDF();
+      
+      // Set font for better readability
+      doc.setFont('helvetica');
+      
+      // Generate PDF content using jsPDF
+      this.generatePDFContent(doc, data);
 
-      // Configure PDF options
-      const options = {
-        format: 'A4',
-        printBackground: true,
-        margin: {
-          top: '20mm',
-          right: '15mm',
-          bottom: '20mm',
-          left: '15mm'
-        }
-      };
-
-      // Generate PDF using html-pdf-node
-      const file = { content: htmlContent };
-      const pdfBuffer = await pdf.generatePdf(file, options);
+      // Convert to buffer
+      const pdfBuffer = Buffer.from(doc.output('arraybuffer'));
 
       // Create storage path: /Invoices/{year}/{userId}/{orderNumber}.pdf
       const currentYear = new Date().getFullYear();
@@ -90,6 +83,136 @@ export class InvoiceGenerator {
       });
       throw new Error(`Failed to generate invoice PDF: ${error instanceof Error ? error.message : String(error)}`);
     }
+  }
+
+  private generatePDFContent(doc: any, data: InvoiceData): void {
+    let yPosition = 20;
+    const pageWidth = 210; // A4 width in mm
+    const margin = 20;
+    const contentWidth = pageWidth - (margin * 2);
+
+    // Hot pink color for branding
+    const hotPink = [255, 105, 180];
+
+    // Header with hot pink background
+    doc.setFillColor(...hotPink);
+    doc.rect(0, 0, pageWidth, 35, 'F');
+
+    // Company logo/name in white
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(24);
+    doc.setFont('helvetica', 'bold');
+    doc.text('TeeMeYou', margin, 20);
+    
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Your Style, Your Story', margin, 28);
+
+    // Reset text color to black
+    doc.setTextColor(0, 0, 0);
+    yPosition = 50;
+
+    // Invoice title
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.text('INVOICE', margin, yPosition);
+    yPosition += 15;
+
+    // Invoice details in two columns
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    
+    // Left column - Company details
+    doc.text('TeeMeYou (Pty) Ltd', margin, yPosition);
+    doc.text('Registration: 2025/499123/07', margin, yPosition + 5);
+    doc.text('11 Ebbehout Street, Sharonlea', margin, yPosition + 10);
+    doc.text('Randburg, Gauteng, 2194', margin, yPosition + 15);
+    doc.text('South Africa', margin, yPosition + 20);
+
+    // Right column - Invoice details
+    const rightColumn = margin + (contentWidth / 2);
+    doc.text(`Invoice Number: ${data.orderNumber}`, rightColumn, yPosition);
+    doc.text(`Date: ${data.paymentReceivedDate}`, rightColumn, yPosition + 5);
+    doc.text(`Customer: ${data.customerName}`, rightColumn, yPosition + 10);
+    doc.text(`Email: ${data.customerEmail}`, rightColumn, yPosition + 15);
+    doc.text(`Phone: ${data.customerPhone}`, rightColumn, yPosition + 20);
+
+    yPosition += 35;
+
+    // Shipping address
+    doc.setFont('helvetica', 'bold');
+    doc.text('Shipping Address:', margin, yPosition);
+    yPosition += 7;
+    doc.setFont('helvetica', 'normal');
+    doc.text(data.shippingAddress, margin, yPosition);
+    doc.text(`${data.shippingCity}, ${data.shippingPostalCode}`, margin, yPosition + 5);
+    
+    yPosition += 20;
+
+    // Order items table header
+    doc.setFillColor(240, 240, 240);
+    doc.rect(margin, yPosition - 3, contentWidth, 8, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.text('Product', margin + 2, yPosition + 2);
+    doc.text('Qty', margin + 90, yPosition + 2);
+    doc.text('Unit Price', margin + 110, yPosition + 2);
+    doc.text('Total', margin + 140, yPosition + 2);
+    
+    yPosition += 12;
+
+    // Order items
+    doc.setFont('helvetica', 'normal');
+    data.orderItems.forEach(item => {
+      if (yPosition > 250) { // Add new page if needed
+        doc.addPage();
+        yPosition = 20;
+      }
+      
+      doc.text(item.productName, margin + 2, yPosition);
+      if (item.attributeDisplayText) {
+        doc.setFontSize(8);
+        doc.text(item.attributeDisplayText, margin + 2, yPosition + 4);
+        doc.setFontSize(10);
+        yPosition += 4;
+      }
+      
+      doc.text(item.quantity.toString(), margin + 90, yPosition);
+      doc.text(`R${item.unitPrice.toFixed(2)}`, margin + 110, yPosition);
+      doc.text(`R${item.totalPrice.toFixed(2)}`, margin + 140, yPosition);
+      
+      yPosition += 8;
+    });
+
+    yPosition += 10;
+
+    // Totals
+    const totalsX = margin + 110;
+    doc.setFont('helvetica', 'normal');
+    doc.text('Subtotal:', totalsX, yPosition);
+    doc.text(`R${data.subtotalAmount.toFixed(2)}`, totalsX + 30, yPosition);
+    
+    yPosition += 7;
+    doc.text('Shipping:', totalsX, yPosition);
+    doc.text(`R${data.shippingCost.toFixed(2)}`, totalsX + 30, yPosition);
+    
+    yPosition += 10;
+    doc.setFont('helvetica', 'bold');
+    doc.text('Total:', totalsX, yPosition);
+    doc.text(`R${data.totalAmount.toFixed(2)}`, totalsX + 30, yPosition);
+
+    yPosition += 20;
+
+    // Payment details
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Payment Method: ${data.paymentMethod}`, margin, yPosition);
+    doc.text(`Payment Received: ${data.paymentReceivedDate}`, margin, yPosition + 7);
+
+    // Footer
+    yPosition = 280;
+    doc.setFontSize(8);
+    doc.setTextColor(128, 128, 128);
+    doc.text('Thank you for your business!', margin, yPosition);
+    doc.text('For support, contact us at sales@teemeyou.shop', margin, yPosition + 5);
   }
 
   private generateInvoiceHTML(data: InvoiceData): string {
