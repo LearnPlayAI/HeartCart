@@ -322,6 +322,7 @@ router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Respons
         email: orderData.customerInfo.email,
         customerName: `${orderData.customerInfo.firstName} ${orderData.customerInfo.lastName}`,
         orderNumber: newOrder.orderNumber,
+        orderId: newOrder.id,
         orderItems: orderItems.map(item => ({
           productName: item.productName,
           quantity: item.quantity,
