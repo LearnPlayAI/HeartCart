@@ -6,9 +6,6 @@ import {
   Mail, 
   Phone, 
   MapPin, 
-  Facebook, 
-  Twitter, 
-  Instagram,
   Zap,
   Shield,
   Truck
@@ -139,34 +136,9 @@ const Footer = () => {
             </div>
           </div>
 
-          {/* Social & Features */}
+          {/* Features */}
           <div className="space-y-4">
-            <h4 className="font-semibold text-gray-900">Connect & Features</h4>
-            
-            {/* Social Links */}
-            <div className="flex space-x-3">
-              <a 
-                href="#" 
-                className="text-gray-400 hover:text-[#FF69B4] transition-colors"
-                aria-label="Facebook"
-              >
-                <Facebook className="h-5 w-5" />
-              </a>
-              <a 
-                href="#" 
-                className="text-gray-400 hover:text-[#FF69B4] transition-colors"
-                aria-label="Twitter"
-              >
-                <Twitter className="h-5 w-5" />
-              </a>
-              <a 
-                href="#" 
-                className="text-gray-400 hover:text-[#FF69B4] transition-colors"
-                aria-label="Instagram"
-              >
-                <Instagram className="h-5 w-5" />
-              </a>
-            </div>
+            <h4 className="font-semibold text-gray-900">Why Choose TeeMeYou</h4>
 
             {/* PWA Features Card */}
             <Card className="bg-gradient-to-br from-[#FF69B4]/5 to-purple-500/5 border-[#FF69B4]/20">
