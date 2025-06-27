@@ -661,8 +661,8 @@ export default function AdminOrdersPage() {
   const orders = response?.data || [];
   
   // Handle status update
-  const handleStatusUpdate = (orderId: number, status: string) => {
-    updateStatusMutation.mutate({ orderId, status });
+  const handleStatusUpdate = (orderId: number, status: string, trackingNumber?: string) => {
+    updateStatusMutation.mutate({ orderId, status, trackingNumber });
   };
   
   // Handle payment status update

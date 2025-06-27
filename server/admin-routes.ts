@@ -71,7 +71,7 @@ router.patch("/orders/:id/status", isAuthenticated, asyncHandler(async (req: Req
   try {
     // TODO: Add admin role check here
     const orderId = parseInt(req.params.id);
-    const { status } = req.body;
+    const { status, trackingNumber } = req.body;
     
     if (isNaN(orderId)) {
       return sendError(res, "Invalid order ID", 400);
@@ -81,7 +81,13 @@ router.patch("/orders/:id/status", isAuthenticated, asyncHandler(async (req: Req
       return sendError(res, "Status is required", 400);
     }
 
+    // Update order status
     const updatedOrder = await storage.updateOrderStatus(orderId, status);
+    
+    // If tracking number is provided (for shipped status), update it
+    if (trackingNumber && status === 'shipped') {
+      await storage.updateOrderTrackingNumber(orderId, trackingNumber);
+    }
     
     if (!updatedOrder) {
       return sendError(res, "Order not found", 404);
@@ -89,12 +95,15 @@ router.patch("/orders/:id/status", isAuthenticated, asyncHandler(async (req: Req
 
     // Send order status update email for all status changes
     try {
+      // Get updated order details to ensure we have the latest tracking number
+      const finalOrder = await storage.getOrderById(orderId);
+      
       const emailData = {
-        email: updatedOrder.customerEmail,
-        customerName: updatedOrder.customerName,
-        orderNumber: updatedOrder.orderNumber,
+        email: finalOrder.customerEmail,
+        customerName: finalOrder.customerName,
+        orderNumber: finalOrder.orderNumber,
         status: status,
-        trackingNumber: updatedOrder.trackingNumber || null,
+        trackingNumber: finalOrder.trackingNumber || null,
         estimatedDelivery: getEstimatedDeliveryText(status)
       };
 
