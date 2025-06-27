@@ -287,6 +287,15 @@ Changelog:
   * Frontend UI integration with download buttons in both admin and customer order detail pages
   * Database column invoicePath automatically updated with storage location for tracking
   * Complete end-to-end system ready for production use with existing orders
+- June 27, 2025. PDF invoice email attachment system completed:
+  * Enhanced payment confirmation emails to automatically include PDF invoices as attachments
+  * MailerSend API integration with base64 PDF attachment functionality using Attachment class
+  * Dynamic email templates that adapt based on whether invoice is attached
+  * Comprehensive error handling ensures email delivery even if PDF attachment fails
+  * Updated admin workflow to generate PDF first, then send email with attachment included
+  * Professional email notifications informing customers when invoice is attached
+  * Complete integration: payment status → PDF generation → email with attachment → customer receives invoice
+  * Production-ready system handles all edge cases including missing files and network issues
 ```
 
 ## User Preferences
