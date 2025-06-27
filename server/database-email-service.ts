@@ -916,13 +916,6 @@ export class DatabaseEmailService {
    */
   async sendOrderConfirmationEmail(data: OrderConfirmationEmailData): Promise<void> {
     try {
-      // Debug logging for email data
-      logger.info("Order confirmation email data received", {
-        orderId: data.orderId,
-        orderNumber: data.orderNumber,
-        email: data.email,
-        dataKeys: Object.keys(data)
-      });
       // Generate order items HTML
       const orderItemsHtml = data.orderItems.map(item => `
         <tr>
