@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
+import { useAuth } from '@/hooks/use-auth';
 
 export interface CreditBalance {
   userId: number;
@@ -34,10 +35,15 @@ export interface CreditTransactionsResponse {
 
 export function useCredits() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  // Only make API calls if user is authenticated
+  const isAuthenticated = !!user;
 
   // Get user's credit balance
   const { data: creditBalanceResponse, isLoading: balanceLoading, error: balanceError } = useQuery<CreditBalanceResponse>({
     queryKey: ['/api/credits/balance'],
+    enabled: isAuthenticated, // Only run query if user is authenticated
     staleTime: 0, // No cache - always fetch fresh credit data
     gcTime: 0, // Don't keep in cache when component unmounts
     refetchOnWindowFocus: true, // Refetch when window gains focus
@@ -48,6 +54,7 @@ export function useCredits() {
   // Get user's credit transaction history
   const { data: transactionsResponse, isLoading: transactionsLoading } = useQuery<CreditTransactionsResponse>({
     queryKey: ['/api/credits/transactions'],
+    enabled: isAuthenticated, // Only run query if user is authenticated
     staleTime: 0, // No cache - always fetch fresh transaction data
     gcTime: 0, // Don't keep in cache when component unmounts
     refetchOnWindowFocus: true, // Refetch when window gains focus
