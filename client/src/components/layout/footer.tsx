@@ -16,6 +16,7 @@ import { Separator } from '@/components/ui/separator';
 import Logo from '@/components/ui/logo';
 import InstallButton from '@/components/pwa/InstallButton';
 import MobileInstallButton from '@/components/pwa/MobileInstallButton';
+import MobileAppInstallButton from '@/components/pwa/MobileAppInstallButton';
 import ContextualInstallPrompts from '@/components/pwa/ContextualInstallPrompts';
 
 const Footer = () => {

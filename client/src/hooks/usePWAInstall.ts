@@ -10,7 +10,7 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 export const usePWAInstall = () => {
-  // PWA install functionality disabled per user request
+  // PWA install functionality re-enabled for mobile app installation
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstallable, setIsInstallable] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
@@ -19,7 +19,7 @@ export const usePWAInstall = () => {
   const [isStandalone, setIsStandalone] = useState(false);
 
   useEffect(() => {
-    // Re-enabled PWA functionality for MobileInstallButton only
+    // Enhanced PWA functionality for all mobile devices
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     const isAndroid = /Android/.test(navigator.userAgent);
     const isMobile = isIOS || isAndroid || /Mobile/.test(navigator.userAgent);
@@ -35,9 +35,13 @@ export const usePWAInstall = () => {
     setIsStandalone(isAlreadyInstalled);
     setIsInstalled(isAlreadyInstalled);
     
-    // Only show install button on mobile devices when not already installed
+    // Show install functionality on all mobile devices when not already installed
     if (!isAlreadyInstalled && isMobile) {
       setIsInstallable(true);
+      // Show install prompt for mobile users after a delay
+      setTimeout(() => {
+        setShowInstallPrompt(true);
+      }, 3000);
     }
 
     // Listen for the beforeinstallprompt event

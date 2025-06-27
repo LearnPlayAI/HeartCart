@@ -29,7 +29,7 @@ import NotFound from "@/pages/not-found";
 import CartDrawer from "@/components/cart/cart-drawer";
 import { SessionExpiryWarning } from "@/components/session/session-expiry-warning";
 import { UpdateNotification } from "@/components/layout/UpdateNotification";
-// PWA install components removed per user request
+import MobileAppInstallButton from "@/components/pwa/MobileAppInstallButton";
 import React, { Suspense } from "react";
 
 // Admin Pages
