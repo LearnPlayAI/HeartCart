@@ -21,6 +21,15 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import {
   Table,
   TableBody,
   TableCell,
@@ -197,6 +206,90 @@ function OrderStats({ orders, onFilterChange }: { orders: Order[]; onFilterChang
   );
 }
 
+// PUDO Tracking Modal Component
+function PudoTrackingModal({ 
+  isOpen, 
+  onClose, 
+  onConfirm, 
+  order 
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  onConfirm: (trackingUrl: string) => void;
+  order: Order;
+}) {
+  const [trackingUrl, setTrackingUrl] = useState('');
+
+  const handleSubmit = () => {
+    if (trackingUrl.trim()) {
+      onConfirm(trackingUrl.trim());
+      setTrackingUrl('');
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Package className="h-5 w-5 text-blue-600" />
+            PUDO Tracking URL Required
+          </DialogTitle>
+          <DialogDescription>
+            Order #{order.orderNumber} is being marked as shipped. Please enter the PUDO tracking URL.
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="space-y-4">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <div className="bg-blue-100 p-2 rounded-full">
+                <MapPin className="h-4 w-4 text-blue-600" />
+              </div>
+              <div className="flex-1">
+                <h4 className="font-medium text-blue-900 mb-1">PUDO Locker Delivery</h4>
+                <p className="text-sm text-blue-700">
+                  Customer: <strong>{order.customerName}</strong><br />
+                  Email: {order.customerEmail}<br />
+                  Phone: {order.customerPhone}
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="trackingUrl">PUDO Tracking URL *</Label>
+            <Input
+              id="trackingUrl"
+              placeholder="https://pudo.co.za/track/your-tracking-code"
+              value={trackingUrl}
+              onChange={(e) => setTrackingUrl(e.target.value)}
+              className="w-full"
+            />
+            <p className="text-xs text-muted-foreground">
+              This URL will be included in the customer's shipping notification email along with locker information and Google Maps directions.
+            </p>
+          </div>
+        </div>
+        
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleSubmit} 
+            disabled={!trackingUrl.trim()}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            <Truck className="h-4 w-4 mr-2" />
+            Mark as Shipped
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // Order Card Component
 function OrderCard({ 
   order, 
@@ -204,11 +297,25 @@ function OrderCard({
   onPaymentStatusUpdate 
 }: { 
   order: Order; 
-  onStatusUpdate: (orderId: number, status: string) => void;
+  onStatusUpdate: (orderId: number, status: string, trackingUrl?: string) => void;
   onPaymentStatusUpdate: (orderId: number, paymentStatus: string) => void;
 }) {
+  const [showPudoModal, setShowPudoModal] = useState(false);
   const statusConfig = getStatusConfig(order.status);
   const paymentConfig = getPaymentStatusConfig(order.paymentStatus);
+
+  const handleStatusChange = (newStatus: string) => {
+    if (newStatus === 'shipped') {
+      setShowPudoModal(true);
+    } else {
+      onStatusUpdate(order.id, newStatus);
+    }
+  };
+
+  const handlePudoConfirm = (trackingUrl: string) => {
+    onStatusUpdate(order.id, 'shipped', trackingUrl);
+    setShowPudoModal(false);
+  };
 
   return (
     <Card className="hover:shadow-md transition-shadow">
@@ -305,7 +412,7 @@ function OrderCard({
             <label className="text-sm font-medium mb-2 block">Update Status:</label>
             <Select
               value={order.status}
-              onValueChange={(status) => onStatusUpdate(order.id, status)}
+              onValueChange={handleStatusChange}
             >
               <SelectTrigger className="w-full">
                 <SelectValue />
@@ -348,6 +455,14 @@ function OrderCard({
           </Link>
         </div>
       </CardContent>
+      
+      {/* PUDO Tracking Modal */}
+      <PudoTrackingModal
+        isOpen={showPudoModal}
+        onClose={() => setShowPudoModal(false)}
+        onConfirm={handlePudoConfirm}
+        order={order}
+      />
     </Card>
   );
 }
@@ -494,8 +609,9 @@ export default function AdminOrdersPage() {
 
   // Status update mutation
   const updateStatusMutation = useMutation({
-    mutationFn: async ({ orderId, status }: { orderId: number; status: string }) => {
-      const response = await apiRequest('PATCH', `/api/admin/orders/${orderId}/status`, { status });
+    mutationFn: async ({ orderId, status, trackingNumber }: { orderId: number; status: string; trackingNumber?: string }) => {
+      const body = trackingNumber ? { status, trackingNumber } : { status };
+      const response = await apiRequest('PATCH', `/api/admin/orders/${orderId}/status`, body);
       return await response.json();
     },
     onSuccess: () => {

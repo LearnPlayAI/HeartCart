@@ -700,7 +700,68 @@ export class DatabaseEmailService {
                 </div>
               </div>
               
-              ${data.trackingNumber ? `
+              ${data.trackingNumber && data.status === 'shipped' ? `
+                <div style="background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%); border: 2px solid #3B82F6; padding: 25px; border-radius: 12px; margin: 25px 0; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);">
+                  <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                    <span style="font-size: 24px; margin-right: 12px;">📦</span>
+                    <h3 style="margin: 0; font-weight: bold; color: #1E40AF; font-size: 20px;">PUDO Locker Delivery</h3>
+                  </div>
+                  
+                  <div style="background: #FFFFFF; padding: 20px; border-radius: 8px; border: 1px solid #93C5FD; margin: 15px 0;">
+                    <p style="margin: 0 0 12px 0; font-size: 16px; color: #1E40AF;">
+                      <strong>📍 Your package will be delivered to a PUDO locker near you!</strong>
+                    </p>
+                    
+                    <div style="background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%); padding: 15px; border-radius: 6px; margin: 12px 0; border-left: 4px solid #F59E0B;">
+                      <p style="margin: 0; color: #92400E; font-weight: bold; font-size: 14px;">
+                        🔗 <strong>Track Your Package:</strong>
+                      </p>
+                      <p style="margin: 8px 0 0 0; font-size: 14px;">
+                        <a href="${data.trackingNumber}" style="color: #1E40AF; text-decoration: none; font-weight: bold; word-break: break-all;">${data.trackingNumber}</a>
+                      </p>
+                    </div>
+                    
+                    <div style="background: linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%); padding: 15px; border-radius: 6px; margin: 12px 0; border-left: 4px solid #10B981;">
+                      <p style="margin: 0 0 8px 0; color: #065F46; font-weight: bold; font-size: 14px;">
+                        🗺️ <strong>Find Your Locker:</strong>
+                      </p>
+                      <p style="margin: 0; font-size: 14px; color: #065F46;">
+                        Use Google Maps to locate your PUDO locker:
+                      </p>
+                      <p style="margin: 8px 0 0 0;">
+                        <a href="https://www.google.com/maps/search/PUDO+locker+near+me" 
+                           style="background: #10B981; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px; font-size: 12px; font-weight: bold; display: inline-block;">
+                          🗺️ Open Google Maps
+                        </a>
+                      </p>
+                    </div>
+                    
+                    <div style="background: linear-gradient(135deg, #FDF2F8 0%, #FCE7F3 100%); padding: 15px; border-radius: 6px; margin: 12px 0; border-left: 4px solid #EC4899;">
+                      <p style="margin: 0 0 8px 0; color: #831843; font-weight: bold; font-size: 14px;">
+                        ⏰ <strong>Locker Operating Hours:</strong>
+                      </p>
+                      <ul style="margin: 0; padding-left: 16px; color: #831843; font-size: 13px;">
+                        <li>Monday - Friday: 6:00 AM - 10:00 PM</li>
+                        <li>Saturday: 7:00 AM - 9:00 PM</li>
+                        <li>Sunday: 8:00 AM - 8:00 PM</li>
+                        <li>Public Holidays: 8:00 AM - 6:00 PM</li>
+                      </ul>
+                    </div>
+                    
+                    <div style="background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%); padding: 15px; border-radius: 6px; margin: 12px 0; border-left: 4px solid #3B82F6;">
+                      <p style="margin: 0 0 8px 0; color: #1E3A8A; font-weight: bold; font-size: 14px;">
+                        💡 <strong>Collection Instructions:</strong>
+                      </p>
+                      <ul style="margin: 0; padding-left: 16px; color: #1E3A8A; font-size: 13px;">
+                        <li>You'll receive an SMS with your unique collection code</li>
+                        <li>Bring a valid ID when collecting your package</li>
+                        <li>Packages are held for 7 days before return to sender</li>
+                        <li>Collection is free - no additional charges</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              ` : data.trackingNumber ? `
                 <div style="background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%); border: 2px solid #3B82F6; padding: 25px; border-radius: 12px; margin: 25px 0; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);">
                   <div style="display: flex; align-items: center; margin-bottom: 10px;">
                     <span style="font-size: 20px; margin-right: 10px;">🔍</span>
