@@ -132,6 +132,13 @@ TeeMeYou is a comprehensive e-commerce platform built as a dropshipping solution
 ```
 Changelog:
 - June 27, 2025. Initial setup
+- June 27, 2025. Implemented unified MailerSend email system with 5 email scenarios:
+  * Account verification emails with token-based security
+  * Password reset emails with 1-hour expiration
+  * Payment confirmation emails integrated with payment flow
+  * Order status update emails for shipping notifications
+  * Invoice emails with PDF attachment support
+  * All emails branded with TeeMeYou design and sent from sales@teemeyou.shop
 ```
 
 ## User Preferences

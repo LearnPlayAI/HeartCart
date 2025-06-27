@@ -3,7 +3,7 @@
  * Send test emails for all scenarios to admin@teemeyou.shop
  */
 
-const { MailerSend, EmailParams, Sender, Recipient } = require("mailersend");
+import { MailerSend, EmailParams, Sender, Recipient } from "mailersend";
 
 const MAILERSEND_API_KEY = process.env.MAILERSEND_API_KEY;
 const BASE_URL = "https://teemeyou.shop";
