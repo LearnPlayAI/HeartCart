@@ -352,7 +352,7 @@ Changelog:
   * Production-ready with error handling, caching headers, and proper redirects for social image serving
 - June 30, 2025. Banking details consistency implemented across all payment pages:
   * Updated payment confirmation page to use same banking details as order detail page
-  * Standardized on Capitec bank details: Bank "Capitec", Account Name "Tee Me You", Account Type "Transact", Account Number "1053816278"
+  * Standardized on Capitec Business bank details: Bank "Capitec Business", Account Name "Tee Me You", Account Type "Transact", Account Number "1053816278"
   * Updated email contact from orders@teemeyou.shop to sales@teemeyou.shop for consistency
   * Fixed all copy button functionality to copy correct displayed values instead of outdated information
   * Ensures customers receive consistent and accurate payment information throughout entire checkout and order process

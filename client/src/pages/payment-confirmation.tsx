@@ -191,11 +191,11 @@ export default function PaymentConfirmation() {
               <div>
                 <label className="text-sm font-medium text-gray-600">Bank</label>
                 <div className="flex items-center justify-between mt-1">
-                  <span className="font-mono text-lg">Capitec</span>
+                  <span className="font-mono text-lg">Capitec Business</span>
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => copyToClipboard('Capitec', 'Bank name')}
+                    onClick={() => copyToClipboard('Capitec Business', 'Bank name')}
                   >
                     <Copy className="w-4 h-4" />
                   </Button>

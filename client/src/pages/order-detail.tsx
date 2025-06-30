@@ -743,11 +743,11 @@ const OrderDetail: React.FC = () => {
                       <div>
                         <label className="text-sm font-medium text-gray-600">Bank</label>
                         <div className="flex items-center justify-between">
-                          <p className="font-semibold">Capitec</p>
+                          <p className="font-semibold">Capitec Business</p>
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => copyToClipboard('Capitec', 'Bank name')}
+                            onClick={() => copyToClipboard('Capitec Business', 'Bank name')}
                           >
                             <Copy className="h-3 w-3" />
                           </Button>
