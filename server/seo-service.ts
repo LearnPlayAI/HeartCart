@@ -162,9 +162,17 @@ class SEOService {
           priority
         };
 
-        // Temporarily remove product images from sitemap to resolve Google indexing issue
-        // Images will be re-added once URL structure is confirmed working
-        // Note: Google can still discover product images from the actual product pages
+        // Add product image if available
+        if (product.imageUrl) {
+          // Database stores URLs starting with /api/files/ - just prepend base URL
+          const imageUrl = `${this.baseUrl}${product.imageUrl}`;
+          
+          sitemapUrl.images = [{
+            loc: imageUrl,
+            caption: `${product.name} - R${product.salePrice || product.price}`,
+            title: product.name
+          }];
+        }
 
         return sitemapUrl;
       });
