@@ -84,6 +84,14 @@ export async function publishProductDraft(draftId: number): Promise<PublicationR
         length: seoKeywordsArray.length
       });
 
+      // Additional debugging - log the exact data being passed to database
+      logger.info('CRITICAL DEBUG - Product data before database operation', {
+        seoKeywords: seoKeywordsArray,
+        seoKeywordsType: typeof seoKeywordsArray,
+        seoKeywordsIsArray: Array.isArray(seoKeywordsArray),
+        seoKeywordsStringified: JSON.stringify(seoKeywordsArray)
+      });
+
       const productData = {
         name: draft.name || 'Untitled Product',
         slug: draft.slug || `product-${Date.now()}`,
@@ -106,7 +114,7 @@ export async function publishProductDraft(draftId: number): Promise<PublicationR
         weight: draft.weight ? parseFloat(String(draft.weight)) : null,
         dimensions: draft.dimensions,
         brand: draft.brand,
-        tags: draft.tags || [],
+        tags: Array.isArray(draft.tags) ? draft.tags : [],
         hasBackgroundRemoved: false,
         originalImageObjectKey: null,
         costPrice: parseFloat(String(draft.costPrice || 0)),
@@ -122,12 +130,22 @@ export async function publishProductDraft(draftId: number): Promise<PublicationR
         specialSaleEnd: draft.specialSaleEnd || null,
         requiredAttributeIds: draft.selectedAttributes ? 
           Object.keys(draft.selectedAttributes).map(id => parseInt(id)).filter(id => !isNaN(id)) : [],
-        // SEO fields - properly handle seoKeywords as array
+        // SEO fields - CRITICAL: Ensure seoKeywords is a proper JavaScript array
         metaTitle: draft.metaTitle,
         metaDescription: draft.metaDescription,
-        seoKeywords: seoKeywordsArray,
+        seoKeywords: seoKeywordsArray, // This MUST be a JavaScript array, not a string
         canonicalUrl: draft.canonicalUrl
       };
+
+      // CRITICAL DEBUG: Verify the exact data types before database operation
+      logger.info('FINAL PRODUCT DATA VALIDATION', {
+        seoKeywordsValue: productData.seoKeywords,
+        seoKeywordsType: typeof productData.seoKeywords,
+        seoKeywordsIsArray: Array.isArray(productData.seoKeywords),
+        seoKeywordsLength: Array.isArray(productData.seoKeywords) ? productData.seoKeywords.length : 'NOT_ARRAY',
+        tagsType: typeof productData.tags,
+        tagsIsArray: Array.isArray(productData.tags)
+      });
 
       // 3. Create or update product
       let productResult;
