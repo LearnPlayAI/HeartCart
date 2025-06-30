@@ -103,17 +103,26 @@ function generateProductSocialHTML(product: ProductSocialData): string {
   <meta property="og:description" content="${truncatedDescription}">
   <meta property="og:url" content="${productUrl}">
   <meta property="og:image" content="${socialImageUrl}">
+  <meta property="og:image:secure_url" content="${socialImageUrl}">
+  <meta property="og:image:type" content="image/jpeg">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="${product.name}">
   <meta property="og:site_name" content="TeeMeYou">
   <meta property="og:locale" content="en_ZA">
+  <meta property="fb:app_id" content="your-facebook-app-id">
   
   <!-- Product-specific Open Graph -->
   <meta property="product:price:amount" content="${displayPrice}">
   <meta property="product:price:currency" content="ZAR">
   <meta property="product:availability" content="in stock">
   <meta property="product:condition" content="new">
+  <meta property="product:brand" content="${product.brand || 'TeeMeYou'}">
+  <meta property="product:retailer" content="TeeMeYou">
+  
+  <!-- Additional Facebook-specific tags -->
+  <meta property="og:updated_time" content="${new Date().toISOString()}">
+  <meta property="article:publisher" content="https://facebook.com/teemeyou">
   
   <!-- Twitter Card Meta Tags -->
   <meta name="twitter:card" content="summary_large_image">

@@ -350,6 +350,8 @@ Changelog:
   * Social preview HTML includes proper Open Graph, Twitter Card, and WhatsApp meta tags with product information
   * Image optimization and URL construction ensures proper social media image display
   * Production-ready with error handling, caching headers, and proper redirects for social image serving
+  * Fixed Facebook sharing to use social preview URLs with enhanced Open Graph meta tags for rich product previews
+  * Facebook sharing now displays product details, images, and pricing correctly with proper meta tag structure
 - June 30, 2025. Banking details consistency implemented across all payment pages:
   * Updated payment confirmation page to use same banking details as order detail page
   * Standardized on Capitec Business bank details: Bank "Capitec Business", Account Name "Tee Me You", Account Type "Transact", Account Number "1053816278"
