@@ -20,15 +20,7 @@ interface ProductSocialData {
 async function getProductSocialData(productId: number): Promise<ProductSocialData | null> {
   try {
     const productData = await db
-      .select({
-        id: products.id,
-        name: products.name,
-        description: products.description,
-        price: products.price,
-        salePrice: products.salePrice,
-        imageUrl: products.imageUrl,
-        condition: products.condition,
-      })
+      .select()
       .from(products)
       .where(eq(products.id, productId))
       .limit(1);
@@ -64,9 +56,11 @@ function generateProductSocialHTML(product: ProductSocialData): string {
   // Use sale price if available, otherwise regular price
   const displayPrice = product.salePrice || product.price;
   
-  // Optimize image URL for social sharing
+  // Optimize image URL for social sharing - ensure proper URL construction
   const socialImageUrl = product.imageUrl 
-    ? `${baseUrl}${product.imageUrl}`
+    ? (product.imageUrl.startsWith('http') 
+        ? product.imageUrl 
+        : `${baseUrl}/api/files/${product.imageUrl.replace(/^\/api\/files\//, '')}`)
     : `${baseUrl}/api/social-preview/product-image/${product.id}`;
   
   // Create optimized meta description with TeeMeYou branding
