@@ -260,6 +260,26 @@ const SupplierOrders = () => {
     },
   });
 
+  // Tracking number mutation
+  const updateTrackingMutation = useMutation({
+    mutationFn: async ({ orderId, trackingNumber }: { orderId: number; trackingNumber: string }) => {
+      return await apiRequest('PATCH', `/api/admin/orders/${orderId}/tracking`, { trackingNumber });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/supplier-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
+      toast({
+        description: "Tracking number updated successfully"
+      });
+    },
+    onError: () => {
+      toast({ 
+        variant: "destructive",
+        description: "Failed to update tracking number" 
+      });
+    }
+  });
+
   const supplierOrders = supplierOrdersResponse?.success ? supplierOrdersResponse.data : [];
   
   // Debug logging
@@ -298,6 +318,7 @@ const SupplierOrders = () => {
         supplierOrderNumber: '',
         supplierOrderDate: '',
         adminNotes: '',
+        trackingNumber: '',
         ...prev[orderNumber],
         [field]: value
       }
@@ -310,7 +331,8 @@ const SupplierOrders = () => {
     return {
       supplierOrderNumber: firstOrder?.supplierOrderNumber || '',
       supplierOrderDate: firstOrder?.orderDate || '',
-      adminNotes: firstOrder?.notes || ''
+      adminNotes: firstOrder?.notes || '',
+      trackingNumber: firstOrder?.customerOrder?.trackingNumber || ''
     };
   };
 
@@ -325,6 +347,14 @@ const SupplierOrders = () => {
       ...(formData.supplierOrderDate && { supplierOrderDate: formData.supplierOrderDate }),
       ...(formData.adminNotes && { adminNotes: formData.adminNotes })
     };
+
+    // Handle tracking number separately using the existing tracking API
+    if (formData.trackingNumber && formData.trackingNumber.trim()) {
+      updateTrackingMutation.mutate({ 
+        orderId, 
+        trackingNumber: formData.trackingNumber.trim() 
+      });
+    }
 
     if (Object.keys(updateData).length > 0) {
       updateGroupSupplierOrderMutation.mutate({ orderId, data: updateData });
@@ -660,6 +690,23 @@ const SupplierOrders = () => {
                           onChange={(e) => {
                             e.stopPropagation();
                             updateGroupFormData(orderNumber, 'adminNotes', e.target.value);
+                          }}
+                          className="h-8"
+                        />
+                      </div>
+
+                      {/* Tracking Number */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Tracking Number
+                        </label>
+                        <Input
+                          type="text"
+                          placeholder="Enter tracking number..."
+                          value={groupFormData[orderNumber]?.trackingNumber ?? getGroupSupplierData(orders).trackingNumber}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            updateGroupFormData(orderNumber, 'trackingNumber', e.target.value);
                           }}
                           className="h-8"
                         />
