@@ -406,6 +406,14 @@ Changelog:
   * Prefilled search box with "TMY-" prefix to streamline admin workflow - admins only need to type order number (e.g., "35")
   * Search system supports partial keywords (e.g., "tmy-35" finds "TMY-35-20250627") for efficient order lookup
   * Production-ready search implementation with proper error handling and database filtering
+- June 30, 2025. Featured products randomization system implemented and fully operational:
+  * Complete database-level randomization using PostgreSQL's ORDER BY RANDOM() function for authentic shuffling
+  * Cache-busting headers implemented on /api/featured-products endpoint to prevent stale cached responses
+  * Frontend query cache disabled with staleTime: 0 and gcTime: 0 to ensure fresh data on every page load
+  * Timestamp-based query key invalidation forces new API calls for proper randomization
+  * All 21 featured products now display in random order on each homepage visit
+  * Featured products pagination system maintains randomization across "Load More" button clicks
+  * Production-ready implementation with comprehensive testing confirming different product order on each request
 - June 30, 2025. Complete sales representative commission system implemented and operational:
   * Full database schema with sales_reps, rep_commissions, and rep_payments tables including proper relationships and indexes
   * Added repCode field to user registration form allowing optional sales rep association during account creation
