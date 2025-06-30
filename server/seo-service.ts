@@ -139,11 +139,6 @@ class SEOService {
         .orderBy(desc(products.createdAt));
 
       console.log(`[SEO] Generating sitemap for ${activeProducts.length} active products`);
-      
-      // Debug first product to understand data structure
-      if (activeProducts.length > 0) {
-        console.log(`[SEO] First product data:`, JSON.stringify(activeProducts[0], null, 2));
-      }
 
       const productUrls: SitemapUrl[] = activeProducts.map(product => {
         // Use canonical URL if available, otherwise construct from slug or fallback to ID
@@ -164,9 +159,12 @@ class SEOService {
 
         // Add product image if available
         if (product.imageUrl) {
-          // Database stores URLs starting with /api/files/ - just prepend base URL
-          const imageUrl = `${this.baseUrl}${product.imageUrl}`;
-          console.log(`[SEO] Product ${product.id} imageUrl from DB: "${product.imageUrl}" -> Final URL: "${imageUrl}"`);
+          console.log(`[SEO DEBUG] Original imageUrl: "${product.imageUrl}"`);
+          // Remove /api/files/ prefix if present, then prepend base URL with /api/files/
+          const cleanImagePath = product.imageUrl.replace(/^\/api\/files\//, '');
+          console.log(`[SEO DEBUG] Clean path: "${cleanImagePath}"`);
+          const imageUrl = `${this.baseUrl}/api/files/${cleanImagePath}`;
+          console.log(`[SEO DEBUG] Final URL: "${imageUrl}"`);
           
           sitemapUrl.images = [{
             loc: imageUrl,
@@ -267,7 +265,9 @@ Disallow: /developer/
   generateProductStructuredData(product: Partial<Product>, category?: Partial<Category>): object {
     const baseUrl = this.baseUrl;
     const productUrl = product.canonicalUrl || `${baseUrl}/product/${product.id || 0}`;
-    const imageUrl = product.imageUrl ? `${baseUrl}${product.imageUrl}` : `${baseUrl}/icon-192.png`;
+    // Remove /api/files/ prefix if present, then prepend base URL with /api/files/
+    const cleanImagePath = product.imageUrl ? product.imageUrl.replace(/^\/api\/files\//, '') : '';
+    const imageUrl = product.imageUrl ? `${baseUrl}/api/files/${cleanImagePath}` : `${baseUrl}/icon-192.png`;
     
     // Determine effective price (sale price or regular price)
     const effectivePrice = product.salePrice || product.price || 0;
