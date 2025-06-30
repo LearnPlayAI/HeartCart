@@ -292,6 +292,30 @@ export function setupAuth(app: Express): void {
         ip: req.ip 
       });
 
+      // Send email verification
+      try {
+        const { unifiedEmailService } = await import('./unified-email-service');
+        const { token } = await unifiedEmailService.createEmailVerificationToken(user.id, email);
+        const emailResult = await unifiedEmailService.sendEmailVerificationEmail(email, token, username);
+        
+        if (emailResult.success) {
+          logger.info('Email verification sent successfully', { 
+            userId: user.id, 
+            email: email.substring(0, 3) + '***@' + email.split('@')[1] 
+          });
+        } else {
+          logger.error('Failed to send email verification', { 
+            userId: user.id, 
+            error: emailResult.error 
+          });
+        }
+      } catch (emailError) {
+        logger.error('Error sending email verification', { 
+          userId: user.id, 
+          error: emailError 
+        });
+      }
+
       // Auto-login after registration
       return new Promise((resolve, reject) => {
         req.login(user as Express.User, (err) => {
@@ -313,10 +337,14 @@ export function setupAuth(app: Express): void {
             });
           });
           
-          // Return user data (excluding password)
+          // Return user data (excluding password) with verification info
           const { password, ...userData } = user;
           res.status(201); // Set status code for created
-          resolve(userData);
+          resolve({
+            ...userData,
+            emailVerificationSent: true,
+            message: "Registration successful! Please check your email to verify your account."
+          });
         });
       });
     } catch (error) {

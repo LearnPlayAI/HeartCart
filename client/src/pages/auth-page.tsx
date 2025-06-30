@@ -69,7 +69,9 @@ export default function AuthPage() {
   const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
   const [isEmailSentModalOpen, setIsEmailSentModalOpen] = useState(false);
   const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
+  const [isEmailVerificationModalOpen, setIsEmailVerificationModalOpen] = useState(false);
   const [resetTokenData, setResetTokenData] = useState<{email: string} | null>(null);
+  const [verificationEmailData, setVerificationEmailData] = useState<{email: string, username: string} | null>(null);
   const [currentResetToken, setCurrentResetToken] = useState<string | null>(resetToken);
   const { toast } = useToast();
   const [location, setLocation] = useLocation();
@@ -259,13 +261,21 @@ export default function AuthPage() {
   const onRegisterSubmit = (data: RegisterFormData) => {
     // Send all data including confirmPassword and acceptTerms as expected by backend
     registerMutation.mutate(data, {
-      onSuccess: () => {
-        // Invalidate and refetch user data to update the UI components
-        queryClient.invalidateQueries({ queryKey: ['/api/user'] });
-        queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
-        
-        // Navigate using router instead of forcing page reload
-        navigate('/');
+      onSuccess: (response: any) => {
+        // Check if email verification was sent
+        if (response?.emailVerificationSent) {
+          // Show email verification modal instead of navigating
+          setVerificationEmailData({
+            email: data.email,
+            username: data.username
+          });
+          setIsEmailVerificationModalOpen(true);
+        } else {
+          // Fallback to old behavior if no verification sent
+          queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+          queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
+          navigate('/');
+        }
       },
       onError: (error: Error) => {
         toast({
@@ -753,6 +763,62 @@ export default function AuthPage() {
               </DialogFooter>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Email Verification Modal */}
+      <Dialog open={isEmailVerificationModalOpen} onOpenChange={setIsEmailVerificationModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5 text-primary" />
+              Verify Your Email
+            </DialogTitle>
+            <DialogDescription>
+              We've sent a verification email to <strong>{verificationEmailData?.email}</strong>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 p-4 bg-muted rounded-lg">
+              <CheckCircle className="h-5 w-5 text-green-600 shrink-0" />
+              <div className="text-sm">
+                <p className="font-medium">Registration Successful!</p>
+                <p className="text-muted-foreground">
+                  Welcome to TeeMeYou, {verificationEmailData?.username}! Please check your email to verify your account.
+                </p>
+              </div>
+            </div>
+            <div className="text-sm text-muted-foreground space-y-2">
+              <p>Next steps:</p>
+              <ol className="list-decimal list-inside space-y-1 ml-2">
+                <li>Check your email inbox for a verification link</li>
+                <li>Click the verification link in the email</li>
+                <li>Return to TeeMeYou to start shopping</li>
+              </ol>
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Didn't receive the email? Check your spam folder or contact sales@teemeyou.shop for help.
+            </div>
+          </div>
+          <DialogFooter className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsEmailVerificationModalOpen(false);
+                navigate('/');
+              }}
+            >
+              Continue to Home
+            </Button>
+            <Button
+              onClick={() => {
+                setIsEmailVerificationModalOpen(false);
+                setActiveTab('login');
+              }}
+            >
+              Go to Login
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
