@@ -57,8 +57,8 @@ export default function SalesRepsPage() {
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [selectedRep, setSelectedRep] = useState<SalesRep | null>(null);
   const [commissions, setCommissions] = useState<Commission[]>([]);
-  const [selectedRepPayments, setSelectedRepPayments] = useState<Payment[]>([]);
-  const [showCommissions, setShowCommissions] = useState(false);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  
   const [repForm, setRepForm] = useState({
     firstName: '',
     lastName: '',
@@ -68,6 +68,7 @@ export default function SalesRepsPage() {
     commissionRate: 3,
     notes: ''
   });
+
   const [paymentForm, setPaymentForm] = useState({
     amount: 0,
     paymentMethod: 'bank_transfer',
@@ -183,7 +184,7 @@ export default function SalesRepsPage() {
         description: "Payment recorded successfully"
       });
       // Refresh commissions if showing them
-      if (selectedRep && showCommissions) {
+      if (selectedRep && showCommissionsDialog) {
         loadRepCommissions(selectedRep.id);
         loadRepPayments(selectedRep.id);
       }
@@ -205,8 +206,8 @@ export default function SalesRepsPage() {
 
   const loadRepPayments = async (repId: number) => {
     try {
-      const payments = await apiRequest(`/api/admin/sales-reps/${repId}/payments`);
-      setSelectedRepPayments(payments || []);
+      const paymentsData = await apiRequest(`/api/admin/sales-reps/${repId}/payments`);
+      setPayments(paymentsData || []);
     } catch (error) {
       toast({
         title: "Error",
@@ -218,9 +219,23 @@ export default function SalesRepsPage() {
 
   const handleViewCommissions = async (rep: SalesRep) => {
     setSelectedRep(rep);
-    setShowCommissions(true);
+    setShowCommissionsDialog(true);
     await loadRepCommissions(rep.id);
     await loadRepPayments(rep.id);
+  };
+
+  const handleEditRep = (rep: SalesRep) => {
+    setSelectedRep(rep);
+    setRepForm({
+      firstName: rep.firstName,
+      lastName: rep.lastName,
+      email: rep.email,
+      phoneNumber: rep.phoneNumber || '',
+      repCode: rep.repCode,
+      commissionRate: rep.commissionRate,
+      notes: rep.notes || ''
+    });
+    setShowEditDialog(true);
   };
 
   const handleCreatePayment = () => {
@@ -457,7 +472,7 @@ export default function SalesRepsPage() {
                 </TableBody>
               </Table>
 
-              {selectedRepPayments.length > 0 && (
+              {payments.length > 0 && (
                 <>
                   <h3 className="text-lg font-semibold">Payment History</h3>
                   <Table>
@@ -471,7 +486,7 @@ export default function SalesRepsPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {selectedRepPayments.map((payment) => (
+                      {payments.map((payment) => (
                         <TableRow key={payment.id}>
                           <TableCell>{formatDate(payment.createdAt)}</TableCell>
                           <TableCell>{formatCurrency(payment.amount)}</TableCell>
@@ -490,7 +505,7 @@ export default function SalesRepsPage() {
       )}
 
       {/* Create Rep Dialog */}
-      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Add New Sales Rep</DialogTitle>
