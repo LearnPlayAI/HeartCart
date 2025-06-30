@@ -1896,6 +1896,7 @@ export class DatabaseStorage implements IStorage {
                 eq(categories.isActive, true),
               ),
             )
+            .orderBy(sql`RANDOM()`)
             .limit(limit)
             .offset(offset);
 
@@ -1922,6 +1923,7 @@ export class DatabaseStorage implements IStorage {
                   : eq(products.isActive, true),
               ),
             )
+            .orderBy(sql`RANDOM()`)
             .limit(limit)
             .offset(offset);
         } catch (queryError) {

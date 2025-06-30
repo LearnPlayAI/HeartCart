@@ -1179,6 +1179,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const products = await storage.getFeaturedProducts(Number(limit), options, Number(offset));
         
+        // Add cache-busting headers to ensure randomization works
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+        
         // Return standardized response format
         res.json({
           success: true,

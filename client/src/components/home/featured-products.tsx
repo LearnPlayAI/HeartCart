@@ -14,7 +14,7 @@ const FeaturedProductsSection = () => {
   const { toast } = useToast();
   
   const { data: response, isLoading, isFetching, error, refetch } = useQuery<StandardApiResponse<Product[]>>({
-    queryKey: ['/api/featured-products', page, limit],
+    queryKey: ['/api/featured-products', page, limit, Date.now()], // Add timestamp to force fresh data
     queryFn: async () => {
       const offset = (page - 1) * limit;
       const url = `/api/featured-products?limit=${limit}&offset=${offset}`;
@@ -22,8 +22,8 @@ const FeaturedProductsSection = () => {
       if (!res.ok) throw new Error('Failed to fetch featured products');
       return res.json();
     },
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+    staleTime: 0, // Never use stale data
+    gcTime: 0, // Don't cache at all
     refetchOnWindowFocus: false,
     refetchOnMount: 'always',
   });
