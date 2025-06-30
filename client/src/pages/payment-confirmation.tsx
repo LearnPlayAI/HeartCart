@@ -189,13 +189,13 @@ export default function PaymentConfirmation() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="text-sm font-medium text-gray-600">Bank Name</label>
+                <label className="text-sm font-medium text-gray-600">Bank</label>
                 <div className="flex items-center justify-between mt-1">
-                  <span className="font-mono text-lg">Standard Bank</span>
+                  <span className="font-mono text-lg">Capitec</span>
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => copyToClipboard('Standard Bank', 'Bank name')}
+                    onClick={() => copyToClipboard('Capitec', 'Bank name')}
                   >
                     <Copy className="w-4 h-4" />
                   </Button>
@@ -205,11 +205,25 @@ export default function PaymentConfirmation() {
               <div>
                 <label className="text-sm font-medium text-gray-600">Account Name</label>
                 <div className="flex items-center justify-between mt-1">
-                  <span className="font-mono text-lg">TEE ME YOU (PTY) LTD</span>
+                  <span className="font-mono text-lg">Tee Me You</span>
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => copyToClipboard('TEE ME YOU (PTY) LTD', 'Account name')}
+                    onClick={() => copyToClipboard('Tee Me You', 'Account name')}
+                  >
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-600">Account Type</label>
+                <div className="flex items-center justify-between mt-1">
+                  <span className="font-mono text-lg">Transact</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => copyToClipboard('Transact', 'Account type')}
                   >
                     <Copy className="w-4 h-4" />
                   </Button>
@@ -219,25 +233,11 @@ export default function PaymentConfirmation() {
               <div>
                 <label className="text-sm font-medium text-gray-600">Account Number</label>
                 <div className="flex items-center justify-between mt-1">
-                  <span className="font-mono text-lg">123456789</span>
+                  <span className="font-mono text-lg">1053816278</span>
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => copyToClipboard('123456789', 'Account number')}
-                  >
-                    <Copy className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-gray-600">Branch Code</label>
-                <div className="flex items-center justify-between mt-1">
-                  <span className="font-mono text-lg">051001</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => copyToClipboard('051001', 'Branch code')}
+                    onClick={() => copyToClipboard('1053816278', 'Account number')}
                   >
                     <Copy className="w-4 h-4" />
                   </Button>
@@ -268,7 +268,7 @@ export default function PaymentConfirmation() {
                 <ol className="text-sm text-blue-800 space-y-1">
                   <li>1. Transfer the exact amount: <strong>R{orderData.total.toFixed(2)}</strong></li>
                   <li>2. Use the reference number: <strong>{referenceNumber}</strong></li>
-                  <li>3. Send proof of payment to: <strong>orders@teemeyou.shop</strong></li>
+                  <li>3. Send proof of payment to: <strong>sales@teemeyou.shop</strong></li>
                   <li>4. Click "I've Made Payment" below to create your order</li>
                 </ol>
               </div>
