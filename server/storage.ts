@@ -1870,77 +1870,141 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  // Store randomized featured product IDs in memory (cleared on server restart)
+  private featuredProductsOrder: number[] | null = null;
+  private featuredProductsOrderTimestamp: number = 0;
+  
+  /**
+   * Get all featured product IDs in randomized order (cached for session consistency)
+   * This ensures pagination maintains the same random order throughout the session
+   */
+  private async getFeaturedProductIds(
+    options?: { includeInactive?: boolean; includeCategoryInactive?: boolean }
+  ): Promise<number[]> {
+    // Cache randomized order for 10 minutes to maintain consistency during pagination
+    const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
+    const now = Date.now();
+    
+    if (this.featuredProductsOrder && (now - this.featuredProductsOrderTimestamp) < CACHE_DURATION) {
+      return this.featuredProductsOrder;
+    }
+
+    try {
+      let productIds: number[] = [];
+
+      if (!options?.includeCategoryInactive) {
+        // Get featured product IDs with active categories, randomized once
+        const query = db
+          .select({ id: products.id })
+          .from(products)
+          .innerJoin(categories, eq(products.categoryId, categories.id))
+          .where(
+            and(
+              eq(products.isFeatured, true),
+              options?.includeInactive ? sql`1=1` : eq(products.isActive, true),
+              eq(categories.isActive, true),
+            ),
+          )
+          .orderBy(sql`RANDOM()`);
+
+        const result = await query;
+        productIds = result.map((row) => row.id);
+      } else {
+        // Get featured product IDs without category check, randomized once
+        const result = await db
+          .select({ id: products.id })
+          .from(products)
+          .where(
+            and(
+              eq(products.isFeatured, true),
+              options?.includeInactive ? sql`1=1` : eq(products.isActive, true),
+            ),
+          )
+          .orderBy(sql`RANDOM()`);
+
+        productIds = result.map((row) => row.id);
+      }
+
+      // Cache the randomized order
+      this.featuredProductsOrder = productIds;
+      this.featuredProductsOrderTimestamp = now;
+      
+      return productIds;
+    } catch (error) {
+      console.error("Error getting featured product IDs:", error);
+      return [];
+    }
+  }
+
   async getFeaturedProducts(
     limit = 10,
     options?: { includeInactive?: boolean; includeCategoryInactive?: boolean },
     offset = 0,
   ): Promise<Product[]> {
     try {
+      // Get the consistent randomized order of product IDs
+      const productIds = await this.getFeaturedProductIds(options);
+      
+      if (productIds.length === 0) {
+        return [];
+      }
+
+      // Apply pagination to the randomized ID list
+      const paginatedIds = productIds.slice(offset, offset + limit);
+      
+      if (paginatedIds.length === 0) {
+        return [];
+      }
+
+      // Fetch products in the predetermined order
       let productList: Product[] = [];
 
       if (!options?.includeCategoryInactive) {
-        try {
-          // For featured products, we need to join with categories to check if category is active
-          const query = db
-            .select({
-              product: products,
-            })
-            .from(products)
-            .innerJoin(categories, eq(products.categoryId, categories.id))
-            .where(
-              and(
-                eq(products.isFeatured, true),
-                options?.includeInactive
-                  ? sql`1=1`
-                  : eq(products.isActive, true),
-                eq(categories.isActive, true),
-              ),
-            )
-            .orderBy(sql`RANDOM()`)
-            .limit(limit)
-            .offset(offset);
-
-          const result = await query;
-          productList = result.map((row) => row.product);
-        } catch (joinError) {
-          console.error(
-            "Error fetching featured products with active categories:",
-            joinError,
+        // Fetch products with category join, maintaining the predetermined order
+        const query = db
+          .select({ product: products })
+          .from(products)
+          .innerJoin(categories, eq(products.categoryId, categories.id))
+          .where(
+            and(
+              inArray(products.id, paginatedIds),
+              eq(products.isFeatured, true),
+              options?.includeInactive ? sql`1=1` : eq(products.isActive, true),
+              eq(categories.isActive, true),
+            ),
           );
-          throw joinError; // Rethrow so the route handler can catch it and send a proper error response
-        }
+
+        const result = await query;
+        const productMap = new Map(result.map((row) => [row.product.id, row.product]));
+        
+        // Maintain the predetermined order
+        productList = paginatedIds.map(id => productMap.get(id)).filter(Boolean) as Product[];
       } else {
-        try {
-          // If we don't need to check category visibility, use simpler query
-          productList = await db
-            .select()
-            .from(products)
-            .where(
-              and(
-                eq(products.isFeatured, true),
-                options?.includeInactive
-                  ? sql`1=1`
-                  : eq(products.isActive, true),
-              ),
-            )
-            .orderBy(sql`RANDOM()`)
-            .limit(limit)
-            .offset(offset);
-        } catch (queryError) {
-          console.error("Error fetching featured products:", queryError);
-          throw queryError; // Rethrow so the route handler can catch it and send a proper error response
-        }
+        // Fetch products without category check, maintaining the predetermined order
+        const result = await db
+          .select()
+          .from(products)
+          .where(
+            and(
+              inArray(products.id, paginatedIds),
+              eq(products.isFeatured, true),
+              options?.includeInactive ? sql`1=1` : eq(products.isActive, true),
+            ),
+          );
+
+        const productMap = new Map(result.map((product) => [product.id, product]));
+        
+        // Maintain the predetermined order
+        productList = paginatedIds.map(id => productMap.get(id)).filter(Boolean) as Product[];
       }
 
-      // Enrich products with main image URLs - handle potential null/undefined gracefully
-      if (!productList || productList.length === 0) {
+      if (productList.length === 0) {
         return [];
       }
 
       return await this.enrichProductsWithMainImage(productList);
     } catch (error) {
       console.error("Error in getFeaturedProducts:", error);
-      // Return empty array instead of throwing to prevent site crashes
       return [];
     }
   }
