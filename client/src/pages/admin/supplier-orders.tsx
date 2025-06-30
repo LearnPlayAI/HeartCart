@@ -103,7 +103,7 @@ const SupplierOrders: React.FC = () => {
     mutationFn: (orderId: number) => 
       apiRequest(`/api/admin/supplier-orders/${orderId}/validate-url`, { method: 'POST' }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/supplier-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/supplier-orders', { grouped: true }] });
       toast({
         title: 'URL validation updated',
         description: 'Supplier URL validation status has been updated',
@@ -125,7 +125,7 @@ const SupplierOrders: React.FC = () => {
         data: updates,
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/supplier-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/supplier-orders', { grouped: true }] });
       toast({
         title: 'Order updated',
         description: 'Supplier order has been updated successfully',
@@ -147,7 +147,7 @@ const SupplierOrders: React.FC = () => {
         data: { orderIds, updates },
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/supplier-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/supplier-orders', { grouped: true }] });
       toast({
         title: 'Orders updated',
         description: 'All selected orders have been updated successfully',
@@ -169,7 +169,7 @@ const SupplierOrders: React.FC = () => {
         data: { status, notes },
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/supplier-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/supplier-orders', { grouped: true }] });
       toast({
         title: 'Status updated',
         description: 'Supplier order status has been updated',
