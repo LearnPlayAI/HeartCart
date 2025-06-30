@@ -118,10 +118,6 @@ class SEOService {
    */
   async generateProductsSitemap(): Promise<string> {
     try {
-      // First, check what's in the database raw
-      const rawQuery = await db.execute(`SELECT id, name, image_url FROM products WHERE is_active = true AND "supplierAvailable" = true LIMIT 3`);
-      console.log('[SEO DEBUG] Raw SQL query result:', JSON.stringify(rawQuery.rows, null, 2));
-
       const activeProducts = await db
         .select({
           id: products.id,
@@ -143,19 +139,6 @@ class SEOService {
         .orderBy(desc(products.createdAt));
 
       console.log(`[SEO] Generating sitemap for ${activeProducts.length} active products`);
-      
-      // Debug first few products to see actual data
-      if (activeProducts.length > 0) {
-        console.log(`[SEO DEBUG] Raw DB query result:`, JSON.stringify({
-          id: activeProducts[0].id,
-          name: activeProducts[0].name?.substring(0, 30),
-          imageUrl: activeProducts[0].imageUrl
-        }, null, 2));
-        
-        console.log(`[SEO DEBUG] ImageUrl value: "${activeProducts[0].imageUrl}"`);
-        console.log(`[SEO DEBUG] Contains //api/files/: ${activeProducts[0].imageUrl?.includes('//api/files/')}`);
-        console.log(`[SEO DEBUG] Double prefix check: ${activeProducts[0].imageUrl?.includes('/api/files//api/files/')}`);
-      }
 
       const productUrls: SitemapUrl[] = activeProducts.map(product => {
         // Use canonical URL if available, otherwise construct from slug or fallback to ID
@@ -178,7 +161,6 @@ class SEOService {
         if (product.imageUrl) {
           // Database stores complete paths starting with /api/files/, just prepend domain
           const imageUrl = `${this.baseUrl}${product.imageUrl}`;
-          console.log(`[SEO DEBUG] Processing image: DB="${product.imageUrl}" -> Final="${imageUrl}"`);
           
           sitemapUrl.images = [{
             loc: imageUrl,
