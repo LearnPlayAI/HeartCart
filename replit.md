@@ -406,6 +406,18 @@ Changelog:
   * Prefilled search box with "TMY-" prefix to streamline admin workflow - admins only need to type order number (e.g., "35")
   * Search system supports partial keywords (e.g., "tmy-35" finds "TMY-35-20250627") for efficient order lookup
   * Production-ready search implementation with proper error handling and database filtering
+- June 30, 2025. Complete sales representative commission system implemented and operational:
+  * Full database schema with sales_reps, rep_commissions, and rep_payments tables including proper relationships and indexes
+  * Added repCode field to user registration form allowing optional sales rep association during account creation
+  * Automated commission calculation system that triggers when admin marks orders as "delivered" status
+  * Commission calculated as 3% of profit margin (selling price - cost price) for each order item
+  * Comprehensive admin interface at /admin/sales-reps with rep management, commission tracking, and payment processing
+  * Admin can create, edit, and manage sales reps with customizable commission rates and contact information
+  * Real-time commission tracking with detailed order history and earnings calculations
+  * Payment recording system for tracking commission payments to sales representatives
+  * Complete backend API with proper authentication and admin-only access controls
+  * Database migration applied with sample data and production-ready table structure
+  * Sales rep commission system fully integrated with existing order management and user registration flows
 ```
 
 ## User Preferences
