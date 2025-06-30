@@ -119,7 +119,6 @@ export const products = pgTable("products", {
   // SEO fields - existing database fields
   metaTitle: text("meta_title"),
   metaDescription: text("meta_description"),
-  metaKeywords: text("meta_keywords"),
   canonicalUrl: text("canonical_url"),
   // New SEO fields for advanced optimization (camelCase)
   lastModified: text("lastModified").default(String(new Date().toISOString())),
@@ -1120,7 +1119,7 @@ export const productDrafts = pgTable("product_drafts", {
   // SEO metadata
   metaTitle: text("meta_title"),
   metaDescription: text("meta_description"),
-  metaKeywords: text("meta_keywords"),
+  // metaKeywords removed - now using seoKeywords array instead
   canonicalUrl: text("canonical_url"),
   
   // Publication information

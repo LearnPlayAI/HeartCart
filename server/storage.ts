@@ -7643,7 +7643,7 @@ export class DatabaseStorage implements IStorage {
         meta_title: product.metaTitle || product.name || '',
         meta_description: product.metaDescription || 
           (product.description ? product.description.substring(0, 160) : ''),
-        meta_keywords: product.metaKeywords || (tagsArray.length > 0 ? tagsArray.join(', ') : ''),
+        seoKeywords: product.seoKeywords || (tagsArray.length > 0 ? tagsArray : []),
         canonical_url: product.canonicalUrl || '',
         
         // Tax information - copy ALL tax fields
