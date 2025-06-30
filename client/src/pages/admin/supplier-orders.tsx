@@ -71,6 +71,7 @@ interface SupplierOrder {
     orderNumber: string;
     customerName: string;
     customerEmail: string;
+    trackingNumber?: string;
   };
   product: {
     id: number;
