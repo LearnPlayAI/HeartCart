@@ -309,7 +309,7 @@ const SupplierOrders = () => {
     const firstOrder = orders[0];
     return {
       supplierOrderNumber: firstOrder?.supplierOrderNumber || '',
-      supplierOrderDate: firstOrder?.supplierOrderDate || '',
+      supplierOrderDate: firstOrder?.orderDate || '',
       adminNotes: firstOrder?.notes || ''
     };
   };
@@ -319,17 +319,12 @@ const SupplierOrders = () => {
     const formData = groupFormData[orderNumber];
     if (!formData) return;
 
-    console.log('Save function - Form data:', formData);
-    console.log('Save function - supplierOrderDate:', formData.supplierOrderDate);
-
     const orderId = orders[0].orderId;
     const updateData = {
       ...(formData.supplierOrderNumber && { supplierOrderNumber: formData.supplierOrderNumber }),
       ...(formData.supplierOrderDate && { supplierOrderDate: formData.supplierOrderDate }),
       ...(formData.adminNotes && { adminNotes: formData.adminNotes })
     };
-
-    console.log('Save function - Update data being sent:', updateData);
 
     if (Object.keys(updateData).length > 0) {
       updateGroupSupplierOrderMutation.mutate({ orderId, data: updateData });
@@ -647,9 +642,7 @@ const SupplierOrders = () => {
                           value={groupFormData[orderNumber]?.supplierOrderDate ?? getGroupSupplierData(orders).supplierOrderDate}
                           onChange={(e) => {
                             e.stopPropagation();
-                            console.log('Date picker changed:', e.target.value);
                             updateGroupFormData(orderNumber, 'supplierOrderDate', e.target.value);
-                            console.log('Updated form data after date change:', groupFormData[orderNumber]);
                           }}
                           className="h-8"
                         />
