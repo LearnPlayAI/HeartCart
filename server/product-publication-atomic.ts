@@ -100,10 +100,21 @@ export async function publishProductDraft(draftId: number): Promise<PublicationR
       // 3. Create or update product
       let productResult;
       if (draft.originalProductId) {
-        // UPDATE existing product
+        // UPDATE existing product - handle seoKeywords conversion
+        logger.info('Updating existing product with all fields', { originalProductId: draft.originalProductId });
+        
+        // Prepare update data with explicit seoKeywords handling
+        const updateData = { ...productData };
+        
+        // Ensure seoKeywords is properly formatted for database update
+        if (updateData.seoKeywords && Array.isArray(updateData.seoKeywords)) {
+          // Convert array to JSON string for database storage
+          updateData.seoKeywords = JSON.stringify(updateData.seoKeywords);
+        }
+        
         const [updatedProduct] = await tx
           .update(products)
-          .set(productData)
+          .set(updateData)
           .where(eq(products.id, draft.originalProductId))
           .returning();
 
@@ -112,10 +123,21 @@ export async function publishProductDraft(draftId: number): Promise<PublicationR
         }
         productResult = updatedProduct;
       } else {
-        // CREATE new product
+        // CREATE new product - handle seoKeywords conversion
+        logger.info('Creating new product with all fields');
+        
+        // Prepare insert data with explicit seoKeywords handling
+        const insertData = { ...productData };
+        
+        // Ensure seoKeywords is properly formatted for database storage
+        if (insertData.seoKeywords && Array.isArray(insertData.seoKeywords)) {
+          // Convert array to JSON string for database storage
+          insertData.seoKeywords = JSON.stringify(insertData.seoKeywords);
+        }
+        
         const [newProduct] = await tx
           .insert(products)
-          .values(productData)
+          .values(insertData)
           .returning();
 
         if (!newProduct) {
