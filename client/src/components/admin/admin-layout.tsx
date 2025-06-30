@@ -29,6 +29,7 @@ function AdminLayout({ children, title, subtitle }: AdminLayoutProps) {
     { name: 'Global Attributes', href: '/admin/global-attributes', icon: <List className="h-5 w-5" /> },
     { name: 'Promotions', href: '/admin/promotions', icon: <Gift className="h-5 w-5" /> },
     { name: 'Orders', href: '/admin/orders', icon: <ShoppingCart className="h-5 w-5" /> },
+    { name: 'Supplier Orders', href: '/admin/supplier-orders', icon: <Package className="h-5 w-5" /> },
     { name: 'User Admin', href: '/admin/users', icon: <Users className="h-5 w-5" /> },
     { name: 'Pricing', href: '/admin/pricing', icon: <PieChart className="h-5 w-5" /> },
     { name: 'Batch Upload', href: '/admin/batch-upload', icon: <FileText className="h-5 w-5" /> },
