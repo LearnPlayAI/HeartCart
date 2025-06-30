@@ -1,5 +1,8 @@
 import { Router, Request, Response } from 'express';
 import { seoService } from './seo-service';
+import { db } from './db';
+import { products } from '@shared/schema';
+import { eq, and } from 'drizzle-orm';
 
 const router = Router();
 
@@ -24,15 +27,20 @@ router.get('/sitemap.xml', async (req: Request, res: Response) => {
  */
 router.get('/sitemap-products.xml', async (req: Request, res: Response) => {
   try {
-    console.log('[SEO ROUTE] Generating products sitemap...');
+    console.log('==========================================');
+    console.log('[SEO ROUTE] SITEMAP REQUEST RECEIVED - Starting generation...');
+    console.log('==========================================');
+    
     const productsSitemap = await seoService.generateProductsSitemap();
     
+    console.log('[SEO ROUTE] Sitemap generation completed, sending response...');
+    
     res.setHeader('Content-Type', 'application/xml');
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate'); // Disable caching temporarily for debugging
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('X-Generated-At', new Date().toISOString());
     res.send(productsSitemap);
   } catch (error) {
-    console.error('Error generating products sitemap:', error);
+    console.error('ERROR in sitemap generation:', error);
     res.status(500).send('Error generating products sitemap');
   }
 });
@@ -109,6 +117,47 @@ router.get('/api/seo/product/:id', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error fetching product SEO metadata:', error);
     res.status(500).json({ success: false, error: 'Failed to fetch SEO metadata' });
+  }
+});
+
+/**
+ * GET /api/seo/debug-urls - Debug URL format issue
+ */
+router.get('/api/seo/debug-urls', async (req: Request, res: Response) => {
+  try {
+    console.log('[DEBUG] Starting URL debugging...');
+    
+    // Direct database query
+    const rawResults = await db.execute(`SELECT id, name, image_url FROM products WHERE is_active = true AND "supplierAvailable" = true LIMIT 3`);
+    console.log('[DEBUG] Raw DB results:', JSON.stringify(rawResults.rows, null, 2));
+    
+    // Drizzle query
+    const drizzleResults = await db
+      .select({
+        id: products.id,
+        name: products.name,
+        imageUrl: products.imageUrl
+      })
+      .from(products)
+      .where(and(
+        eq(products.isActive, true),
+        eq(products.supplierAvailable, true)
+      ))
+      .limit(3);
+    
+    console.log('[DEBUG] Drizzle results:', JSON.stringify(drizzleResults, null, 2));
+    
+    res.json({
+      success: true,
+      data: {
+        rawQuery: rawResults.rows,
+        drizzleQuery: drizzleResults,
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    console.error('Error debugging URLs:', error);
+    res.status(500).json({ success: false, error: 'Failed to debug URLs' });
   }
 });
 
