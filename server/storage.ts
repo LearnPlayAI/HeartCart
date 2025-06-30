@@ -92,6 +92,16 @@ import {
   orderItemSupplierStatus,
   type OrderItemSupplierStatus,
   type InsertOrderItemSupplierStatus,
+  // Sales Rep system imports
+  salesReps,
+  type SalesRep,
+  type InsertSalesRep,
+  repCommissions,
+  type RepCommission,
+  type InsertRepCommission,
+  repPayments,
+  type RepPayment,
+  type InsertRepPayment,
 } from "@shared/schema";
 import { db } from "./db";
 import {
@@ -568,6 +578,18 @@ export interface IStorage {
   verifyEmailToken(tokenHash: string, tokenType: string): Promise<MailToken | undefined>;
   markTokenAsUsed(tokenHash: string): Promise<boolean>;
   cleanupExpiredTokens(): Promise<number>;
+
+  // Sales Rep System operations
+  getSalesRepByCode(repCode: string): Promise<SalesRep | undefined>;
+  createSalesRep(repData: InsertSalesRep): Promise<SalesRep>;
+  updateSalesRep(id: number, repData: Partial<InsertSalesRep>): Promise<SalesRep | undefined>;
+  getAllSalesReps(): Promise<SalesRep[]>;
+  getSalesRepCommissions(repId: number, limit?: number, offset?: number): Promise<RepCommission[]>;
+  createRepCommission(commissionData: InsertRepCommission): Promise<RepCommission>;
+  getRepCommissionsByOrder(orderId: number): Promise<RepCommission[]>;
+  calculateRepEarnings(repId: number, startDate?: string, endDate?: string): Promise<{ totalEarnings: number; commissionCount: number }>;
+  createRepPayment(paymentData: InsertRepPayment): Promise<RepPayment>;
+  getRepPayments(repId: number): Promise<RepPayment[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -12745,6 +12767,177 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       logger.error('Error cleaning up expired tokens', { error });
       return 0;
+    }
+  }
+
+  // Sales Rep System Implementation
+  async getSalesRepByCode(repCode: string): Promise<SalesRep | undefined> {
+    try {
+      const [rep] = await db
+        .select()
+        .from(salesReps)
+        .where(eq(salesReps.repCode, repCode));
+      
+      return rep;
+    } catch (error) {
+      logger.error('Error getting sales rep by code', { error, repCode });
+      throw error;
+    }
+  }
+
+  async createSalesRep(repData: InsertSalesRep): Promise<SalesRep> {
+    try {
+      const [newRep] = await db
+        .insert(salesReps)
+        .values(repData)
+        .returning();
+      
+      return newRep;
+    } catch (error) {
+      logger.error('Error creating sales rep', { error, repData });
+      throw error;
+    }
+  }
+
+  async updateSalesRep(id: number, repData: Partial<InsertSalesRep>): Promise<SalesRep | undefined> {
+    try {
+      const [updatedRep] = await db
+        .update(salesReps)
+        .set(repData)
+        .where(eq(salesReps.id, id))
+        .returning();
+      
+      return updatedRep;
+    } catch (error) {
+      logger.error('Error updating sales rep', { error, id, repData });
+      throw error;
+    }
+  }
+
+  async getAllSalesReps(): Promise<SalesRep[]> {
+    try {
+      const reps = await db
+        .select()
+        .from(salesReps)
+        .orderBy(salesReps.name);
+      
+      return reps;
+    } catch (error) {
+      logger.error('Error getting all sales reps', { error });
+      throw error;
+    }
+  }
+
+  async getSalesRepCommissions(repId: number, limit?: number, offset?: number): Promise<RepCommission[]> {
+    try {
+      let query = db
+        .select()
+        .from(repCommissions)
+        .where(eq(repCommissions.repId, repId))
+        .orderBy(desc(repCommissions.createdAt));
+
+      if (limit) {
+        query = query.limit(limit);
+      }
+      if (offset) {
+        query = query.offset(offset);
+      }
+
+      const commissions = await query;
+      return commissions;
+    } catch (error) {
+      logger.error('Error getting sales rep commissions', { error, repId, limit, offset });
+      throw error;
+    }
+  }
+
+  async createRepCommission(commissionData: InsertRepCommission): Promise<RepCommission> {
+    try {
+      const [newCommission] = await db
+        .insert(repCommissions)
+        .values(commissionData)
+        .returning();
+      
+      return newCommission;
+    } catch (error) {
+      logger.error('Error creating rep commission', { error, commissionData });
+      throw error;
+    }
+  }
+
+  async getRepCommissionsByOrder(orderId: number): Promise<RepCommission[]> {
+    try {
+      const commissions = await db
+        .select()
+        .from(repCommissions)
+        .where(eq(repCommissions.orderId, orderId));
+      
+      return commissions;
+    } catch (error) {
+      logger.error('Error getting rep commissions by order', { error, orderId });
+      throw error;
+    }
+  }
+
+  async calculateRepEarnings(repId: number, startDate?: string, endDate?: string): Promise<{ totalEarnings: number; commissionCount: number }> {
+    try {
+      let query = db
+        .select({
+          totalEarnings: sql<number>`COALESCE(SUM(${repCommissions.commissionAmount}), 0)`,
+          commissionCount: sql<number>`COUNT(*)`
+        })
+        .from(repCommissions)
+        .where(eq(repCommissions.repId, repId));
+
+      // Add date range filtering if provided
+      if (startDate && endDate) {
+        query = query.where(
+          and(
+            eq(repCommissions.repId, repId),
+            gte(repCommissions.createdAt, startDate),
+            lte(repCommissions.createdAt, endDate)
+          )
+        );
+      }
+
+      const [result] = await query;
+      
+      return {
+        totalEarnings: Number(result?.totalEarnings) || 0,
+        commissionCount: Number(result?.commissionCount) || 0
+      };
+    } catch (error) {
+      logger.error('Error calculating rep earnings', { error, repId, startDate, endDate });
+      throw error;
+    }
+  }
+
+  async createRepPayment(paymentData: InsertRepPayment): Promise<RepPayment> {
+    try {
+      const [newPayment] = await db
+        .insert(repPayments)
+        .values(paymentData)
+        .returning();
+      
+      return newPayment;
+    } catch (error) {
+      logger.error('Error creating rep payment', { error, paymentData });
+      throw error;
+    }
+  }
+
+  async getRepPayments(repId: number): Promise<RepPayment[]> {
+    try {
+      const payments = await db
+        .select()
+        .from(repPayments)
+        .where(eq(repPayments.repId, repId))
+        .orderBy(desc(repPayments.createdAt));
+      
+      return payments;
+    } catch (error) {
+      logger.error('Error getting rep payments', { error, repId });
+      throw error;
     }
   }
 }
