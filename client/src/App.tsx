@@ -26,6 +26,7 @@ import CreditHistory from "@/pages/credit-history";
 import AuthPage from "@/pages/auth-page";
 import FlashDeals from "@/pages/flash-deals";
 import NotFound from "@/pages/not-found";
+import VerifyEmail from "@/pages/verify-email";
 import CartDrawer from "@/components/cart/cart-drawer";
 import { SessionExpiryWarning } from "@/components/session/session-expiry-warning";
 import { UpdateNotification } from "@/components/layout/UpdateNotification";
@@ -272,6 +273,7 @@ function App() {
                           <ProtectedRoute path="/orders/:id" component={OrderDetail} />
                           <Route path="/auth"><AuthPage /></Route>
                           <Route path="/reset-password"><AuthPage /></Route>
+                          <Route path="/verify-email"><VerifyEmail /></Route>
                           <Route><NotFound /></Route>
                         </Switch>
                       </main>
