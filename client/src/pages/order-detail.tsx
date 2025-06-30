@@ -756,7 +756,7 @@ const OrderDetail: React.FC = () => {
                       <div>
                         <label className="text-sm font-medium text-gray-600">Branch</label>
                         <div className="flex items-center justify-between">
-                          <p className="font-semibold">Northgate</p>
+                          <p className="font-semibold">Global</p>
                           <Button
                             variant="ghost"
                             size="sm"
@@ -769,7 +769,7 @@ const OrderDetail: React.FC = () => {
                       <div>
                         <label className="text-sm font-medium text-gray-600">Account Type</label>
                         <div className="flex items-center justify-between">
-                          <p className="font-semibold">Cheque</p>
+                          <p className="font-semibold">Transact</p>
                           <Button
                             variant="ghost"
                             size="sm"
