@@ -7,12 +7,10 @@ import { useToast } from '@/hooks/use-toast';
 import type { StandardApiResponse } from '@/types/api';
 
 const FeaturedProductsSection = () => {
-  const [page, setPage] = useState(1);
-  const limit = 10;
   const { toast } = useToast();
   
-  const { data: response, isLoading, isFetching, error, refetch } = useQuery<StandardApiResponse<Product[]>>({
-    queryKey: ['/api/featured-products', { limit, offset: (page - 1) * limit }],
+  const { data: response, isLoading, error, refetch } = useQuery<StandardApiResponse<Product[]>>({
+    queryKey: ['/api/featured-products', { limit: 1000 }], // Get all featured products
     staleTime: 0, // Always fetch fresh data to prevent inactive products from showing
     gcTime: 0, // Don't keep in cache when component unmounts
     refetchOnWindowFocus: true, // Refetch when window gains focus
@@ -58,10 +56,6 @@ const FeaturedProductsSection = () => {
       });
     }
   }, [error, toast]);
-  
-  const loadMore = () => {
-    setPage(prev => prev + 1);
-  };
   
   return (
     <section id="featuredProducts" className="mb-4 md:mb-8 bg-white rounded-lg shadow-md overflow-hidden">

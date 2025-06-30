@@ -157,8 +157,8 @@ const FlashDealsSection = () => {
               </button>
             </div>)
           ) : allPromotionProducts.length > 0 ? (
-            // Show promotion products
-            (allPromotionProducts.slice(0, 8).map((product: any) => {
+            // Show ALL promotion products
+            (allPromotionProducts.map((product: any) => {
               const soldPercentage = Math.floor((product.id * 17) % 100);
               
               return (
