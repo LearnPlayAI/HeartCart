@@ -116,11 +116,15 @@ export const products = pgTable("products", {
   displayOrder: integer("display_order").default(999), // Default high number to place new products at the end
   hasBackgroundRemoved: boolean("has_background_removed").default(false),
   originalImageObjectKey: text("original_image_object_key"),
-  // SEO fields - missing from database
+  // SEO fields - existing database fields
   metaTitle: text("meta_title"),
   metaDescription: text("meta_description"),
   metaKeywords: text("meta_keywords"),
   canonicalUrl: text("canonical_url"),
+  // New SEO fields for advanced optimization (camelCase)
+  lastModified: text("lastModified").default(String(new Date().toISOString())),
+  seoSlug: text("seoSlug"), // SEO-optimized URL slug (different from current slug)
+  seoKeywords: text("seoKeywords").array(), // structured keyword array
   // Additional pricing fields
   compareAtPrice: doublePrecision("compare_at_price"),
   taxRatePercentage: doublePrecision("tax_rate_percentage"),
