@@ -222,6 +222,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Mount upload handler routes
   app.use('/api/upload', uploadHandlers);
   
+  // Register SEO routes
+  app.use('/', seoRoutes);
+  
   // Health check endpoint with build version for cache busting
   app.get('/api/health', asyncHandler(async (req: Request, res: Response) => {
     const buildVersion = `${Date.now()}-${process.pid}-${Math.random().toString(36).substr(2, 9)}`;

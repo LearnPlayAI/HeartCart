@@ -268,7 +268,7 @@ Disallow: /developer/
       "description": product.metaDescription || product.description || product.name,
       "image": [imageUrl],
       "url": productUrl,
-      "sku": product.sku || product.id.toString(),
+      "sku": product.sku || (product.id || 0).toString(),
       "brand": {
         "@type": "Brand",
         "name": product.brand || "TeeMeYou"
@@ -281,7 +281,7 @@ Disallow: /developer/
         "price": effectivePrice.toString(),
         "priceValidUntil": new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days from now
         "itemCondition": "https://schema.org/NewCondition",
-        "availability": product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+        "availability": (product.stock || 0) > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
         "seller": {
           "@type": "Organization",
           "name": "TeeMeYou.shop",
@@ -315,7 +315,7 @@ Disallow: /developer/
           }
         }
       },
-      "aggregateRating": product.reviewCount > 0 ? {
+      "aggregateRating": (product.reviewCount || 0) > 0 ? {
         "@type": "AggregateRating",
         "ratingValue": product.rating || 4.5,
         "reviewCount": product.reviewCount || 1,
