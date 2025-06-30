@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import ProductCard from '@/components/product/product-card';
@@ -7,29 +7,59 @@ import { useToast } from '@/hooks/use-toast';
 import type { StandardApiResponse } from '@/types/api';
 
 const FeaturedProductsSection = () => {
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [page, setPage] = useState(1);
-  const limit = 10;
+  const [hasMoreProducts, setHasMoreProducts] = useState(true);
+  const limit = 12;
   const { toast } = useToast();
   
   const { data: response, isLoading, isFetching, error, refetch } = useQuery<StandardApiResponse<Product[]>>({
     queryKey: ['/api/featured-products', { limit, offset: (page - 1) * limit }],
-    staleTime: 0, // Always fetch fresh data to prevent inactive products from showing
-    gcTime: 0, // Don't keep in cache when component unmounts
-    refetchOnWindowFocus: true, // Refetch when window gains focus
-    refetchOnMount: true, // Always refetch on mount
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: 'always',
   });
   
-  // Fetch active promotions to check if featured products are promotional - no cache for real-time pricing
+  // Fetch active promotions to check if featured products are promotional
   const { data: promotionsResponse } = useQuery<StandardApiResponse<any[]>>({
     queryKey: ['/api/promotions/active-with-products'],
-    staleTime: 0, // No cache - always fetch fresh promotional data
-    gcTime: 0, // Don't keep in cache when component unmounts
-    refetchOnWindowFocus: true, // Refetch when window gains focus
-    refetchOnMount: true, // Always refetch on mount
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
   });
   
-  // Extract the featured products from the standardized response
-  const featuredProducts = response?.success ? response.data : [];
+  // Extract current page products and handle pagination
+  const currentPageProducts = response?.success ? response.data : [];
+  
+  // Update products list when new data arrives
+  useEffect(() => {
+    if (currentPageProducts && currentPageProducts.length > 0) {
+      if (page === 1) {
+        // First page: replace all products
+        setAllProducts(currentPageProducts);
+      } else {
+        // Subsequent pages: append new products, avoiding duplicates
+        setAllProducts(prev => {
+          const existingIds = new Set(prev.map(p => p.id));
+          const newProducts = currentPageProducts.filter(p => !existingIds.has(p.id));
+          return [...prev, ...newProducts];
+        });
+      }
+      
+      // Check if we have more products to load
+      setHasMoreProducts(currentPageProducts.length === limit);
+    } else if (page > 1) {
+      // No more products available
+      setHasMoreProducts(false);
+    }
+  }, [currentPageProducts, page, limit]);
+  
+  // Reset pagination when component mounts
+  useEffect(() => {
+    setPage(1);
+    setAllProducts([]);
+    setHasMoreProducts(true);
+  }, []);
   
   // Create a map of product promotions for quick lookup
   const activePromotions = promotionsResponse?.success ? promotionsResponse.data : [];
@@ -59,9 +89,11 @@ const FeaturedProductsSection = () => {
     }
   }, [error, toast]);
   
-  const loadMore = () => {
-    setPage(prev => prev + 1);
-  };
+  const loadMore = useCallback(() => {
+    if (!isFetching && hasMoreProducts) {
+      setPage(prev => prev + 1);
+    }
+  }, [isFetching, hasMoreProducts]);
   
   return (
     <section id="featuredProducts" className="mb-4 md:mb-8 bg-white rounded-lg shadow-md overflow-hidden">
@@ -97,14 +129,14 @@ const FeaturedProductsSection = () => {
                 Retry
               </Button>
             </div>
-          ) : featuredProducts.length === 0 ? (
+          ) : allProducts.length === 0 ? (
             // Show empty state
             <div className="col-span-full py-8 text-center text-gray-500">
               No featured products available at the moment
             </div>
           ) : (
             // Show products
-            featuredProducts.map((product) => (
+            allProducts.map((product) => (
               <ProductCard
                 key={product.id}
                 product={product}
@@ -116,15 +148,15 @@ const FeaturedProductsSection = () => {
           )}
         </div>
       </div>
-      {!isLoading && !error && featuredProducts.length > 0 && (
+      {!isLoading && !error && allProducts.length > 0 && hasMoreProducts && (
         <div className="p-3 border-t border-gray-200 flex justify-center">
           <Button 
             variant="outline"
-            className="border-[#FF69B4] text-[#FF69B4] hover:bg-[#FF69B4] hover:text-white"
+            className="border-[#FF69B4] text-[#FF69B4] hover:bg-[#FF69B4] hover:text-white disabled:opacity-50"
             onClick={loadMore}
-            disabled={isFetching}
+            disabled={isFetching || !hasMoreProducts}
           >
-            {isFetching ? 'Loading...' : 'Load More Products'}
+            {isFetching ? 'Loading...' : hasMoreProducts ? 'Load More Products' : 'No More Products'}
           </Button>
         </div>
       )}
