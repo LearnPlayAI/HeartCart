@@ -75,21 +75,111 @@ export default function SalesRepsPage() {
     notes: ''
   });
   
-  const [repForm, setRepForm] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phoneNumber: '',
-    repCode: '',
-    commissionRate: 3,
-    notes: ''
+  // Load functions
+  const loadRepCommissions = async (repId: number) => {
+    const response = await fetch(`/api/admin/sales-reps/${repId}/commissions`);
+    if (response.ok) {
+      const result = await response.json();
+      const commissionsData = result.data || [];
+      setCommissions(commissionsData);
+      setSelectedRepCommissions(commissionsData);
+    }
+  };
+
+  const loadRepPayments = async (repId: number) => {
+    const response = await fetch(`/api/admin/sales-reps/${repId}/payments`);
+    if (response.ok) {
+      const result = await response.json();
+      setPayments(result.data || []);
+    }
+  };
+
+  // Handler functions
+  const handleViewCommissions = async (rep: SalesRep) => {
+    setSelectedRep(rep);
+    await loadRepCommissions(rep.id);
+    await loadRepPayments(rep.id);
+    setShowCommissionsDialog(true);
+  };
+
+  const handleEditRep = (rep: SalesRep) => {
+    setSelectedRep(rep);
+    setNewRep({
+      firstName: rep.firstName,
+      lastName: rep.lastName,
+      email: rep.email,
+      phoneNumber: rep.phoneNumber || '',
+      repCode: rep.repCode,
+      commissionRate: parseFloat(rep.commissionRate.toString()),
+      notes: rep.notes || ''
+    });
+    setShowEditDialog(true);
+  };
+
+  // Mutations
+  const createRepMutation = useMutation({
+    mutationFn: (repData: any) => apiRequest('/api/admin/sales-reps', {
+      method: 'POST',
+      body: JSON.stringify(repData)
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/sales-reps'] });
+      setShowCreateDialog(false);
+      setNewRep({
+        firstName: '',
+        lastName: '',
+        email: '',
+        phoneNumber: '',
+        repCode: '',
+        commissionRate: 3.0,
+        notes: ''
+      });
+      toast({
+        title: "Success",
+        description: "Sales rep created successfully"
+      });
+    }
   });
 
-  const [paymentForm, setPaymentForm] = useState({
-    amount: 0,
-    paymentMethod: 'bank_transfer',
-    referenceNumber: '',
-    notes: ''
+  const updateRepMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: any }) => 
+      apiRequest(`/api/admin/sales-reps/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data)
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/sales-reps'] });
+      setShowEditDialog(false);
+      toast({
+        title: "Success",
+        description: "Sales rep updated successfully"
+      });
+    }
+  });
+
+  const createPaymentMutation = useMutation({
+    mutationFn: (paymentData: any) => apiRequest(`/api/admin/sales-reps/${selectedRep?.id}/payments`, {
+      method: 'POST',
+      body: JSON.stringify(paymentData)
+    }),
+    onSuccess: () => {
+      setShowPaymentDialog(false);
+      setNewPayment({
+        amount: 0,
+        paymentMethod: 'bank_transfer',
+        referenceNumber: '',
+        notes: ''
+      });
+      toast({
+        title: "Success",
+        description: "Payment recorded successfully"
+      });
+      // Refresh commissions if showing them
+      if (selectedRep && showCommissionsDialog) {
+        loadRepCommissions(selectedRep.id);
+        loadRepPayments(selectedRep.id);
+      }
+    }
   });
 
   const { toast } = useToast();
@@ -130,37 +220,10 @@ export default function SalesRepsPage() {
                     Array.isArray(salesRepsResponse) ? salesRepsResponse : [];
   console.log('Processed sales reps:', salesReps);
 
-  // Create sales rep mutation
-  const createRepMutation = useMutation({
-    mutationFn: (repData: any) => apiRequest('/api/admin/sales-reps', {
-      method: 'POST',
-      body: JSON.stringify(repData)
-    }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/sales-reps'] });
-      setIsCreateDialogOpen(false);
-      setNewRep({
-        firstName: '',
-        lastName: '',
-        email: '',
-        phoneNumber: '',
-        repCode: '',
-        commissionRate: 3,
-        notes: ''
-      });
-      toast({
-        title: "Success",
-        description: "Sales rep created successfully"
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create sales rep",
-        variant: "destructive"
-      });
-    }
-  });
+  // Use correct variable name - salesReps instead of reps
+  const activeReps = salesReps.filter((rep: SalesRep) => rep.isActive).length;
+  const totalEarnings = salesReps.reduce((sum: number, rep: SalesRep) => sum + rep.totalEarnings, 0);
+  const totalCommissions = salesReps.reduce((sum: number, rep: SalesRep) => sum + rep.commissionCount, 0);
 
   // Update sales rep mutation
   const updateRepMutation = useMutation({
