@@ -139,6 +139,11 @@ class SEOService {
         .orderBy(desc(products.createdAt));
 
       console.log(`[SEO] Generating sitemap for ${activeProducts.length} active products`);
+      
+      // Debug: Log first product's imageUrl to understand the data structure
+      if (activeProducts.length > 0) {
+        console.log(`[SEO] Sample product imageUrl:`, activeProducts[0].imageUrl);
+      }
 
       const productUrls: SitemapUrl[] = activeProducts.map(product => {
         // Use canonical URL if available, otherwise construct from slug or fallback to ID
@@ -157,19 +162,9 @@ class SEOService {
           priority
         };
 
-        // Add product image if available
-        if (product.imageUrl) {
-          // Use the full image URL as stored in database, which already includes /api/files/
-          const imageUrl = product.imageUrl.startsWith('/api/files/') 
-            ? `${this.baseUrl}${product.imageUrl}`
-            : `${this.baseUrl}/api/files/${product.imageUrl}`;
-          
-          sitemapUrl.images = [{
-            loc: imageUrl,
-            caption: `${product.name} - R${product.salePrice || product.price}`,
-            title: product.name
-          }];
-        }
+        // Temporarily remove product images from sitemap to resolve Google indexing issue
+        // Images will be re-added once URL structure is confirmed working
+        // Note: Google can still discover product images from the actual product pages
 
         return sitemapUrl;
       });
