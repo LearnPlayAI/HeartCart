@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'wouter';
 import { 
@@ -87,11 +87,21 @@ interface SupplierOrder {
 const SupplierOrders = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [validationFilter, setValidationFilter] = useState<string>('all');
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [groupFormData, setGroupFormData] = useState<Record<string, { supplierOrderNumber: string; supplierOrderDate: string; adminNotes: string }>>({});
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Debounce search term to prevent excessive API calls
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500); // 500ms delay
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   // Mutation for updating group supplier order information
   const updateGroupSupplierOrderMutation = useMutation({
@@ -119,10 +129,10 @@ const SupplierOrders = () => {
   });
 
   const { data: supplierOrdersResponse, isLoading, error } = useQuery({
-    queryKey: ['/api/admin/supplier-orders', statusFilter, validationFilter, searchTerm],
+    queryKey: ['/api/admin/supplier-orders', statusFilter, validationFilter, debouncedSearchTerm],
     queryFn: async () => {
       console.log('Query function executing...');
-      const url = `/api/admin/supplier-orders?status=${statusFilter}&validation=${validationFilter}&search=${encodeURIComponent(searchTerm)}`;
+      const url = `/api/admin/supplier-orders?status=${statusFilter}&validation=${validationFilter}&search=${encodeURIComponent(debouncedSearchTerm)}`;
       console.log('Fetching URL:', url);
       
       const response = await fetch(url, {
@@ -581,6 +591,7 @@ const SupplierOrders = () => {
                   setStatusFilter('all');
                   setValidationFilter('all');
                   setSearchTerm('');
+                  setDebouncedSearchTerm('');
                 }}
                 className="w-full"
               >
