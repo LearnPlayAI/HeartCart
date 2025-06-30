@@ -141,7 +141,9 @@ class SEOService {
       console.log(`[SEO] Generating sitemap for ${activeProducts.length} active products`);
 
       const productUrls: SitemapUrl[] = activeProducts.map(product => {
-        const productUrl = product.canonicalUrl || `${this.baseUrl}/product/${product.id}`;
+        // Use canonical URL if available, otherwise construct from slug or fallback to ID
+        const productUrl = product.canonicalUrl || 
+                          (product.slug ? `${this.baseUrl}/product/${product.slug}` : `${this.baseUrl}/product/id/${product.id}`);
         const lastmod = product.createdAt || new Date().toISOString();
         
         // Calculate priority based on product features
