@@ -11948,7 +11948,7 @@ export class DatabaseStorage implements IStorage {
           (parseFloat(row.product.costPrice.toString()) * row.orderItem.quantity).toFixed(2) : 
           row.orderItem.totalPrice, // Calculate total using costPrice
         status: row.supplierStatus?.supplierStatus || 'pending',
-        supplierOrderNumber: row.supplierStatus?.supplierOrderDate || '',
+        supplierOrderNumber: row.supplierStatus?.supplierOrderNumber || '',
         orderDate: row.supplierStatus?.supplierOrderDate || '',
         expectedDelivery: '',
         notes: row.supplierStatus?.adminNotes || '',
