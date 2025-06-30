@@ -16,7 +16,8 @@ import {
   Eye,
   Truck,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -330,10 +331,23 @@ const SupplierOrders = () => {
     }
   };
 
-  // Initialize all groups as expanded on first load
+  // Initialize all groups as expanded on first load and hydrate form data
   if (supplierOrders.length > 0 && expandedGroups.size === 0) {
     const allOrderNumbers = Object.keys(groupedOrders);
     setExpandedGroups(new Set(allOrderNumbers));
+    
+    // Hydrate form data with existing supplier order information
+    const initialFormData: Record<string, { supplierOrderNumber: string; supplierOrderDate: string; adminNotes: string }> = {};
+    Object.entries(groupedOrders).forEach(([orderNumber, orders]) => {
+      const existingData = getGroupSupplierData(orders);
+      if (existingData.supplierOrderNumber || existingData.supplierOrderDate || existingData.adminNotes) {
+        initialFormData[orderNumber] = existingData;
+      }
+    });
+    
+    if (Object.keys(initialFormData).length > 0) {
+      setGroupFormData(initialFormData);
+    }
   }
 
   const getStatusIcon = (status: string) => {
@@ -609,12 +623,11 @@ const SupplierOrders = () => {
                         <Input
                           type="text"
                           placeholder="Enter supplier order number"
-                          value={groupFormData[orderNumber]?.supplierOrderNumber || getGroupSupplierData(orders).supplierOrderNumber}
+                          value={groupFormData[orderNumber]?.supplierOrderNumber ?? getGroupSupplierData(orders).supplierOrderNumber}
                           onChange={(e) => {
                             e.stopPropagation();
                             updateGroupFormData(orderNumber, 'supplierOrderNumber', e.target.value);
                           }}
-                          onBlur={() => saveGroupSupplierInfo(orderNumber, orders)}
                           className="h-8"
                         />
                       </div>
@@ -626,12 +639,11 @@ const SupplierOrders = () => {
                         </label>
                         <Input
                           type="date"
-                          value={groupFormData[orderNumber]?.supplierOrderDate || getGroupSupplierData(orders).supplierOrderDate}
+                          value={groupFormData[orderNumber]?.supplierOrderDate ?? getGroupSupplierData(orders).supplierOrderDate}
                           onChange={(e) => {
                             e.stopPropagation();
                             updateGroupFormData(orderNumber, 'supplierOrderDate', e.target.value);
                           }}
-                          onBlur={() => saveGroupSupplierInfo(orderNumber, orders)}
                           className="h-8"
                         />
                       </div>
@@ -644,15 +656,36 @@ const SupplierOrders = () => {
                         <Input
                           type="text"
                           placeholder="Add notes..."
-                          value={groupFormData[orderNumber]?.adminNotes || getGroupSupplierData(orders).adminNotes}
+                          value={groupFormData[orderNumber]?.adminNotes ?? getGroupSupplierData(orders).adminNotes}
                           onChange={(e) => {
                             e.stopPropagation();
                             updateGroupFormData(orderNumber, 'adminNotes', e.target.value);
                           }}
-                          onBlur={() => saveGroupSupplierInfo(orderNumber, orders)}
                           className="h-8"
                         />
                       </div>
+                    </div>
+                    
+                    {/* Save Button */}
+                    <div className="mt-4 flex justify-end">
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          saveGroupSupplierInfo(orderNumber, orders);
+                        }}
+                        disabled={updateGroupSupplierOrderMutation.isPending}
+                        className="bg-pink-600 hover:bg-pink-700 text-white"
+                        size="sm"
+                      >
+                        {updateGroupSupplierOrderMutation.isPending ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          'Save Information'
+                        )}
+                      </Button>
                     </div>
                   </div>
                 </CardHeader>
