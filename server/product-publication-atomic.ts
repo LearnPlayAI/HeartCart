@@ -54,15 +54,34 @@ export async function publishProductDraft(draftId: number): Promise<PublicationR
         if (Array.isArray(draft.seoKeywords)) {
           seoKeywordsArray = draft.seoKeywords;
         } else if (typeof draft.seoKeywords === 'string') {
-          // Handle legacy comma-separated string format
-          seoKeywordsArray = draft.seoKeywords.split(',').map(k => k.trim()).filter(k => k);
+          // Handle PostgreSQL array string format like: {"item1","item2","item3"}
+          if (draft.seoKeywords.startsWith('{') && draft.seoKeywords.endsWith('}')) {
+            try {
+              // Remove outer braces and split by comma, then clean quotes
+              const arrayContent = draft.seoKeywords.slice(1, -1);
+              seoKeywordsArray = arrayContent.split('","').map(k => 
+                k.replace(/^"/, '').replace(/"$/, '').trim()
+              ).filter(k => k);
+            } catch (error) {
+              logger.warn('Failed to parse PostgreSQL array format, falling back to comma split', { 
+                originalValue: draft.seoKeywords, 
+                error: error.message 
+              });
+              // Fallback to comma-separated string format
+              seoKeywordsArray = draft.seoKeywords.split(',').map(k => k.trim()).filter(k => k);
+            }
+          } else {
+            // Handle legacy comma-separated string format
+            seoKeywordsArray = draft.seoKeywords.split(',').map(k => k.trim()).filter(k => k);
+          }
         }
       }
       
       logger.info('Processed SEO Keywords', { 
         result: seoKeywordsArray,
         resultType: typeof seoKeywordsArray,
-        resultIsArray: Array.isArray(seoKeywordsArray)
+        resultIsArray: Array.isArray(seoKeywordsArray),
+        length: seoKeywordsArray.length
       });
 
       const productData = {
@@ -119,15 +138,8 @@ export async function publishProductDraft(draftId: number): Promise<PublicationR
         // Prepare update data with explicit seoKeywords handling
         const updateData = { ...productData };
         
-        // Ensure seoKeywords is properly formatted as array for database update
-        if (updateData.seoKeywords && !Array.isArray(updateData.seoKeywords)) {
-          // If it's a string, try to parse it as JSON or split by comma
-          try {
-            updateData.seoKeywords = JSON.parse(updateData.seoKeywords);
-          } catch {
-            updateData.seoKeywords = updateData.seoKeywords.split(',').map(k => k.trim());
-          }
-        }
+        // Force seoKeywords to be an array - this is critical for Drizzle ORM
+        updateData.seoKeywords = seoKeywordsArray;
         
         const [updatedProduct] = await tx
           .update(products)
@@ -146,15 +158,8 @@ export async function publishProductDraft(draftId: number): Promise<PublicationR
         // Prepare insert data with explicit seoKeywords handling
         const insertData = { ...productData };
         
-        // Ensure seoKeywords is properly formatted as array for database storage
-        if (insertData.seoKeywords && !Array.isArray(insertData.seoKeywords)) {
-          // If it's a string, try to parse it as JSON or split by comma
-          try {
-            insertData.seoKeywords = JSON.parse(insertData.seoKeywords);
-          } catch {
-            insertData.seoKeywords = insertData.seoKeywords.split(',').map(k => k.trim());
-          }
-        }
+        // Force seoKeywords to be an array - this is critical for Drizzle ORM
+        insertData.seoKeywords = seoKeywordsArray;
         
         const [newProduct] = await tx
           .insert(products)
