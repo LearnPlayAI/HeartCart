@@ -876,6 +876,29 @@ router.get("/sales-reps", isAdmin, asyncHandler(async (req: Request, res: Respon
   }
 }));
 
+// Get all sales reps with earnings data
+router.get("/sales-reps", isAdmin, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const reps = await storage.getAllSalesReps();
+    
+    // Enrich each rep with earnings data
+    const enrichedReps = await Promise.all(reps.map(async (rep) => {
+      const earnings = await storage.calculateRepEarnings(rep.id);
+      return {
+        ...rep,
+        totalEarnings: earnings.totalEarnings,
+        commissionCount: earnings.commissionCount
+      };
+    }));
+    
+    logger.info("Admin sales reps fetched successfully", { repCount: enrichedReps.length });
+    return sendSuccess(res, enrichedReps);
+  } catch (error) {
+    logger.error("Error fetching admin sales reps", { error });
+    return sendError(res, "Failed to fetch sales reps", 500);
+  }
+}));
+
 router.post("/sales-reps", isAdmin, asyncHandler(async (req: Request, res: Response) => {
   try {
     const repData = req.body;

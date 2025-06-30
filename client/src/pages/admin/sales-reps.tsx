@@ -77,10 +77,14 @@ export default function SalesRepsPage() {
   const queryClient = useQueryClient();
 
   // Fetch sales reps
-  const { data: salesReps, isLoading } = useQuery({
+  const { data: salesRepsResponse, isLoading } = useQuery({
     queryKey: ['/api/admin/sales-reps'],
     queryFn: () => apiRequest('/api/admin/sales-reps')
   });
+
+  // Extract the actual data array from the API response
+  const salesReps = Array.isArray(salesRepsResponse?.data) ? salesRepsResponse.data : 
+                    Array.isArray(salesRepsResponse) ? salesRepsResponse : [];
 
   // Create sales rep mutation
   const createRepMutation = useMutation({
