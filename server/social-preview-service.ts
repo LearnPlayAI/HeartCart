@@ -22,7 +22,7 @@ async function getProductSocialData(productId: number): Promise<ProductSocialDat
     try {
       const result = await client.query(
         'SELECT id, name, description, price, sale_price, image_url, brand FROM products WHERE id = $1 AND is_active = $2 LIMIT 1',
-        [productId, true]
+        [productId, 't']
       );
       
       if (!result.rows.length) {
@@ -60,11 +60,18 @@ function generateProductSocialHTML(product: ProductSocialData): string {
   const displayPrice = product.salePrice || product.price;
   
   // Optimize image URL for social sharing - ensure proper URL construction
-  const socialImageUrl = product.imageUrl 
-    ? (product.imageUrl.startsWith('http') 
-        ? product.imageUrl 
-        : `${baseUrl}/api/files/${product.imageUrl.replace(/^\/api\/files\//, '')}`)
-    : `${baseUrl}/api/social-preview/product-image/${product.id}`;
+  let socialImageUrl = `${baseUrl}/api/social-preview/product-image/${product.id}`;
+  
+  if (product.imageUrl) {
+    if (product.imageUrl.startsWith('http')) {
+      // External URL - use as is
+      socialImageUrl = product.imageUrl;
+    } else {
+      // Internal URL - clean and construct properly
+      const cleanPath = product.imageUrl.replace(/^\/api\/files\//, '').replace(/^api\/files\//, '');
+      socialImageUrl = `${baseUrl}/api/files/${cleanPath}`;
+    }
+  }
   
   // Create optimized meta description with TeeMeYou branding
   const metaDescription = `${product.name} - R${displayPrice.toLocaleString()} | Shop on TeeMeYou - South Africa's trusted online marketplace for quality products with fast delivery.`;
@@ -140,7 +147,7 @@ function generateProductSocialHTML(product: ProductSocialData): string {
       ${product.imageUrl ? `<img src="${socialImageUrl}" alt="${product.name}" style="max-width: 100%; height: auto; border-radius: 8px; margin: 15px 0;">` : ''}
       <p style="margin: 15px 0; line-height: 1.5; color: #555;">${cleanDescription}</p>
       <div style="margin: 15px 0; padding: 10px; background: #f8f9fa; border-radius: 6px;">
-        <strong style="color: #E91E63;">Condition:</strong> ${product.condition}<br>
+        <strong style="color: #E91E63;">Condition:</strong> New<br>
         <strong style="color: #E91E63;">Delivery:</strong> Fast shipping across South Africa<br>
         <strong style="color: #E91E63;">Store:</strong> TeeMeYou - Trusted Online Marketplace
       </div>
