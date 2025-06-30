@@ -62,6 +62,7 @@ import PromotionsPage from "@/pages/admin/promotions";
 import PromotionProductsPage from "@/pages/admin/promotions/[id]/products";
 import CustomerPromotionsPage from "@/pages/promotions";
 import UserAdminPageFixed from "@/pages/admin/users-fixed";
+import SalesRepsPage from "@/pages/admin/sales-reps";
 
 // Developer Pages
 import DeveloperDashboard from "@/pages/developer";
@@ -225,6 +226,7 @@ function App() {
                   <AdminProtectedRoute path="/admin/orders/:id" component={AdminOrderDetail} />
                   <AdminProtectedRoute path="/admin/supplier-orders" component={SupplierOrders} />
                   <AdminProtectedRoute path="/admin/users" component={UserAdminPageFixed} />
+                  <AdminProtectedRoute path="/admin/sales-reps" component={SalesRepsPage} />
                   <AdminProtectedRoute path="/admin/ai-settings" component={AdminAISettings} />
                   <AdminProtectedRoute path="/admin/batch-upload" component={BatchUpload} />
                   <AdminProtectedRoute path="/admin/auth-test" component={AuthTestDashboard} />
