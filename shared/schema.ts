@@ -1120,6 +1120,7 @@ export const productDrafts = pgTable("product_drafts", {
   metaTitle: text("meta_title"),
   metaDescription: text("meta_description"),
   seoKeywords: text("seoKeywords").array(), // SEO keywords array for structured data
+  seoSlug: text("seoSlug"), // SEO-friendly slug
   canonicalUrl: text("canonical_url"),
   
   // Publication information
