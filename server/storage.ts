@@ -11902,6 +11902,7 @@ export class DatabaseStorage implements IStorage {
   async getOrderItemsForSupplierManagement(filters?: { 
     status?: string; 
     orderId?: number;
+    search?: string;
   }): Promise<any[]> {
     try {
       // Get order items from paid orders with their supplier status and draft URLs
@@ -11936,7 +11937,8 @@ export class DatabaseStorage implements IStorage {
 
       const results = await query;
       
-      return results.map(row => ({
+      // Map the raw results to structured objects
+      const mappedResults = results.map(row => ({
         id: row.orderItem.id,
         orderId: row.order.id,
         productId: row.product.id,
@@ -11977,6 +11979,36 @@ export class DatabaseStorage implements IStorage {
         },
         customerUnitPrice: row.orderItem.unitPrice, // Add the actual price customer paid
       }));
+
+      // Apply case-insensitive search filtering across all order information
+      if (filters?.search && filters.search.trim()) {
+        const searchTerm = filters.search.toLowerCase().trim();
+        
+        return mappedResults.filter(item => {
+          // Search across all relevant fields with case-insensitive partial matching
+          const searchableFields = [
+            item.customerOrder.orderNumber,           // Order number (e.g., TMY-35-20250627)
+            item.customerOrder.customerName,          // Customer name
+            item.productName,                         // Product name
+            item.product.name,                        // Product name (alternative)
+            item.product.sku,                        // Product SKU
+            item.supplierOrderNumber,                // Supplier order number
+            item.notes,                              // Admin notes
+            item.status,                             // Order status
+            item.customerOrder.status,               // Customer order status
+            item.customerOrder.trackingNumber,       // Tracking number
+            item.orderDate,                          // Order date
+            item.supplierUrl,                        // Supplier URL
+          ].filter(Boolean); // Remove null/undefined values
+
+          // Check if search term matches any field (partial, case-insensitive)
+          return searchableFields.some(field => 
+            field && field.toString().toLowerCase().includes(searchTerm)
+          );
+        });
+      }
+
+      return mappedResults;
     } catch (error) {
       logger.error('Error getting order items for supplier management', { error, filters });
       throw error;

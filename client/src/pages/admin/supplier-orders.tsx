@@ -98,7 +98,7 @@ const SupplierOrders = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
-    }, 500); // 500ms delay
+    }, 1000); // 1 second delay
 
     return () => clearTimeout(timer);
   }, [searchTerm]);

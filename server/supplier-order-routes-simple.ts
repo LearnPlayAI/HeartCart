@@ -107,6 +107,7 @@ router.get('/', isAuthenticated, isAdmin, asyncHandler(async (req, res) => {
     // Get all order items from paid orders that need supplier management
     const orderItemsWithStatus = await storage.getOrderItemsForSupplierManagement({
       status: status === 'all' ? undefined : status as string,
+      search: search as string,
     });
     
     return sendSuccess(res, orderItemsWithStatus);
