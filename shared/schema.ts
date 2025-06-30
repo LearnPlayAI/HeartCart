@@ -399,11 +399,11 @@ export const salesReps = pgTable("salesReps", {
   lastName: text("lastName").notNull(),
   email: text("email").notNull().unique(),
   phoneNumber: text("phoneNumber"),
-  commissionRate: doublePrecision("commissionRate").notNull().default(0.03), // 3% default commission
+  commissionRate: decimal("commissionRate", { precision: 5, scale: 4 }).notNull().default("0.0300"), // 3% default commission
   isActive: boolean("isActive").default(true).notNull(),
   notes: text("notes"), // Admin notes about the rep
-  createdAt: text("createdAt").default(String(new Date().toISOString())).notNull(),
-  updatedAt: text("updatedAt").default(String(new Date().toISOString())).notNull(),
+  createdAt: timestamp("createdAt").defaultNow(),
+  updatedAt: timestamp("updatedAt").defaultNow(),
 }, (table) => {
   return {
     repCodeIdx: index("salesReps_repCode_idx").on(table.repCode),
@@ -418,15 +418,13 @@ export const repCommissions = pgTable("repCommissions", {
   repId: integer("repId").notNull().references(() => salesReps.id, { onDelete: "cascade" }),
   orderId: integer("orderId").notNull().references(() => orders.id, { onDelete: "cascade" }),
   userId: integer("userId").notNull().references(() => users.id), // Customer who placed the order
-  orderNumber: text("orderNumber").notNull(), // For easy reference
-  orderTotal: doublePrecision("orderTotal").notNull(), // Total order amount
-  orderProfit: doublePrecision("orderProfit").notNull(), // Calculated profit (orderTotal - costPrice)
-  commissionRate: doublePrecision("commissionRate").notNull(), // Commission rate at time of order
-  commissionAmount: doublePrecision("commissionAmount").notNull(), // Calculated commission
-  status: text("status").notNull().default("pending"), // pending, confirmed, paid
-  paidAt: text("paidAt"), // When commission was paid out
-  createdAt: text("createdAt").default(String(new Date().toISOString())).notNull(), // When commission was earned (order delivered)
+  commissionAmount: decimal("commissionAmount", { precision: 10, scale: 2 }).notNull(), // Calculated commission
+  orderAmount: decimal("orderAmount", { precision: 10, scale: 2 }).notNull(), // Total order amount
+  commissionRate: decimal("commissionRate", { precision: 5, scale: 4 }).notNull(), // Commission rate at time of order
+  status: text("status").notNull().default("earned"), // earned, paid, cancelled
   notes: text("notes"), // Admin notes about the commission
+  createdAt: timestamp("createdAt").defaultNow(), // When commission was earned (order delivered)
+  updatedAt: timestamp("updatedAt").defaultNow(), // Last updated
 }, (table) => {
   return {
     repIdIdx: index("repCommissions_repId_idx").on(table.repId),
@@ -440,21 +438,17 @@ export const repCommissions = pgTable("repCommissions", {
 export const repPayments = pgTable("repPayments", {
   id: serial("id").primaryKey(),
   repId: integer("repId").notNull().references(() => salesReps.id, { onDelete: "cascade" }),
-  paymentPeriodStart: text("paymentPeriodStart").notNull(), // Start date of payment period
-  paymentPeriodEnd: text("paymentPeriodEnd").notNull(), // End date of payment period
-  totalCommissions: doublePrecision("totalCommissions").notNull(), // Total commission amount paid
-  commissionCount: integer("commissionCount").notNull(), // Number of commissions included
-  paymentMethod: text("paymentMethod").notNull(), // eft, cash, etc.
-  paymentReference: text("paymentReference"), // Bank reference or payment ID
-  status: text("status").notNull().default("pending"), // pending, paid, failed
-  paidAt: text("paidAt"), // When payment was made
-  createdAt: text("createdAt").default(String(new Date().toISOString())).notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(), // Payment amount
+  paymentMethod: text("paymentMethod").notNull().default("bank_transfer"), // eft, cash, etc.
+  referenceNumber: text("referenceNumber"), // Bank reference or payment ID
   notes: text("notes"), // Admin notes about the payment
+  processedBy: integer("processedBy").references(() => users.id), // Admin who processed payment
+  createdAt: timestamp("createdAt").defaultNow(), // When payment was created
+  updatedAt: timestamp("updatedAt").defaultNow(), // Last updated
 }, (table) => {
   return {
     repIdIdx: index("repPayments_repId_idx").on(table.repId),
-    statusIdx: index("repPayments_status_idx").on(table.status),
-    paidAtIdx: index("repPayments_paidAt_idx").on(table.paidAt),
+    createdAtIdx: index("repPayments_createdAt_idx").on(table.createdAt),
   };
 });
 
