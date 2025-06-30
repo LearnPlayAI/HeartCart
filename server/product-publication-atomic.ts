@@ -40,7 +40,18 @@ export async function publishProductDraft(draftId: number): Promise<PublicationR
         status: draft.draftStatus 
       });
 
-      // 2. Create product data using EXACT schema match
+      // 2. Create product data using EXACT schema match with proper seoKeywords handling
+      // Ensure seoKeywords is properly handled as an array
+      let seoKeywordsArray = [];
+      if (draft.seoKeywords) {
+        if (Array.isArray(draft.seoKeywords)) {
+          seoKeywordsArray = draft.seoKeywords;
+        } else if (typeof draft.seoKeywords === 'string') {
+          // Handle legacy comma-separated string format
+          seoKeywordsArray = draft.seoKeywords.split(',').map(k => k.trim()).filter(k => k);
+        }
+      }
+
       const productData = {
         name: draft.name || 'Untitled Product',
         slug: draft.slug || `product-${Date.now()}`,
@@ -78,7 +89,12 @@ export async function publishProductDraft(draftId: number): Promise<PublicationR
         specialSaleStart: draft.specialSaleStart || null,
         specialSaleEnd: draft.specialSaleEnd || null,
         requiredAttributeIds: draft.selectedAttributes ? 
-          Object.keys(draft.selectedAttributes).map(id => parseInt(id)).filter(id => !isNaN(id)) : []
+          Object.keys(draft.selectedAttributes).map(id => parseInt(id)).filter(id => !isNaN(id)) : [],
+        // SEO fields - properly handle seoKeywords as array
+        metaTitle: draft.metaTitle,
+        metaDescription: draft.metaDescription,
+        seoKeywords: seoKeywordsArray,
+        canonicalUrl: draft.canonicalUrl
       };
 
       // 3. Create or update product
