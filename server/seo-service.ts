@@ -159,8 +159,13 @@ class SEOService {
 
         // Add product image if available
         if (product.imageUrl) {
+          // Use the full image URL as stored in database, which already includes /api/files/
+          const imageUrl = product.imageUrl.startsWith('/api/files/') 
+            ? `${this.baseUrl}${product.imageUrl}`
+            : `${this.baseUrl}/api/files/${product.imageUrl}`;
+          
           sitemapUrl.images = [{
-            loc: `${this.baseUrl}/api/files/${product.imageUrl}`,
+            loc: imageUrl,
             caption: `${product.name} - R${product.salePrice || product.price}`,
             title: product.name
           }];
