@@ -57,7 +57,23 @@ export default function SalesRepsPage() {
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [selectedRep, setSelectedRep] = useState<SalesRep | null>(null);
   const [commissions, setCommissions] = useState<Commission[]>([]);
+  const [selectedRepCommissions, setSelectedRepCommissions] = useState<Commission[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [newRep, setNewRep] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phoneNumber: '',
+    repCode: '',
+    commissionRate: 3.0,
+    notes: ''
+  });
+  const [newPayment, setNewPayment] = useState({
+    amount: 0,
+    paymentMethod: 'bank_transfer',
+    referenceNumber: '',
+    notes: ''
+  });
   
   const [repForm, setRepForm] = useState({
     firstName: '',
@@ -422,8 +438,8 @@ export default function SalesRepsPage() {
       </Card>
 
       {/* Commissions Detail Dialog */}
-      {showCommissions && selectedRep && (
-        <Dialog open={showCommissions} onOpenChange={setShowCommissions}>
+      {showCommissionsDialog && selectedRep && (
+        <Dialog open={showCommissionsDialog} onOpenChange={setShowCommissionsDialog}>
           <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
@@ -603,7 +619,7 @@ export default function SalesRepsPage() {
       </Dialog>
 
       {/* Record Payment Dialog */}
-      <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+      <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Record Payment</DialogTitle>
