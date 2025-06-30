@@ -1,8 +1,5 @@
 import { Request, Response } from 'express';
-import { eq, sql } from 'drizzle-orm';
 import { db } from './db';
-import { products } from '../shared/schema';
-import { storage } from './storage';
 
 interface ProductSocialData {
   id: number;
@@ -20,27 +17,25 @@ interface ProductSocialData {
  */
 async function getProductSocialData(productId: number): Promise<ProductSocialData | null> {
   try {
-    // Use raw SQL query to bypass Drizzle ORM issues
-    const result = await db.execute(sql`
-      SELECT id, name, description, price, "salePrice", "imageUrl", condition
-      FROM products 
-      WHERE id = ${productId} AND "isActive" = true
-      LIMIT 1
-    `);
+    // Use direct PostgreSQL query without Drizzle ORM
+    const result = await db.query(
+      'SELECT id, name, description, price, sale_price, image_url, condition FROM products WHERE id = $1 AND is_active = true LIMIT 1',
+      [productId]
+    );
     
     if (!result.rows.length) {
       return null;
     }
     
-    const product = result.rows[0] as any;
+    const product = result.rows[0];
     
     return {
       id: product.id,
       name: product.name || 'Product',
       description: product.description || '',
       price: product.price || 0,
-      salePrice: product.salePrice || undefined,
-      imageUrl: product.imageUrl || undefined,
+      salePrice: product.sale_price || undefined,
+      imageUrl: product.image_url || undefined,
       condition: product.condition || 'new',
     };
   } catch (error) {
