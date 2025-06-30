@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'wouter';
 import { 
@@ -44,6 +45,7 @@ interface SupplierOrder {
   totalCost: number;
   status: 'pending' | 'ordered' | 'unavailable' | 'received';
   supplierOrderNumber?: string;
+  groupSupplierOrderNumber?: string;
   orderDate?: string;
   expectedDelivery?: string;
   notes?: string;
@@ -70,10 +72,25 @@ interface SupplierOrder {
   };
 }
 
+interface GroupedSupplierOrder {
+  orderId: number;
+  orderNumber: string;
+  customerName: string;
+  orderDate: string;
+  orderStatus: string;
+  items: SupplierOrder[];
+  totalCost: number;
+  hasMixedStatuses: boolean;
+  groupSupplierOrderNumber?: string;
+}
+
 const SupplierOrders = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [validationFilter, setValidationFilter] = useState<string>('all');
+  const [selectedOrderIds, setSelectedOrderIds] = useState<number[]>([]);
+  const [batchSupplierOrderNumber, setBatchSupplierOrderNumber] = useState('');
+  const [showBatchModal, setShowBatchModal] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -109,6 +126,51 @@ const SupplierOrders = () => {
     staleTime: 0, // Force fresh data
     gcTime: 0, // Disable caching (v5 syntax)
   });
+
+  // Remove duplicate declaration
+
+  // Group orders by customer order
+  const groupedOrders: GroupedSupplierOrder[] = React.useMemo(() => {
+    const supplierOrders = supplierOrdersResponse?.success ? supplierOrdersResponse.data : [];
+    if (!supplierOrders || supplierOrders.length === 0) return [];
+    
+    const grouped = supplierOrders.reduce((acc: { [key: number]: GroupedSupplierOrder }, order: SupplierOrder) => {
+      const orderId = order.orderId;
+      
+      if (!acc[orderId]) {
+        acc[orderId] = {
+          orderId,
+          orderNumber: order.customerOrder?.orderNumber || `Order ${orderId}`,
+          customerName: order.customerOrder?.customerName || 'Unknown Customer',
+          orderDate: order.customerOrder?.createdAt || order.createdAt,
+          orderStatus: order.customerOrder?.status || 'pending',
+          items: [],
+          totalCost: 0,
+          hasMixedStatuses: false,
+          groupSupplierOrderNumber: order.groupSupplierOrderNumber
+        };
+      }
+      
+      acc[orderId].items.push(order);
+      acc[orderId].totalCost += parseFloat(order.totalCost.toString());
+      
+      return acc;
+    }, {});
+    
+    // Check for mixed statuses and set group supplier order number
+    Object.values(grouped).forEach(group => {
+      const statuses = [...new Set(group.items.map(item => item.status))];
+      group.hasMixedStatuses = statuses.length > 1;
+      
+      // Use the first non-empty group supplier order number
+      const groupOrderNumber = group.items.find(item => item.groupSupplierOrderNumber)?.groupSupplierOrderNumber;
+      if (groupOrderNumber) {
+        group.groupSupplierOrderNumber = groupOrderNumber;
+      }
+    });
+    
+    return Object.values(grouped).sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
+  }, [supplierOrders]);
 
   const validateUrlMutation = useMutation({
     mutationFn: (orderId: number) => 
