@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { seoService } from './seo-service';
+import { storage } from './storage';
 
 const router = Router();
 
@@ -232,6 +233,75 @@ router.post('/api/seo/regenerate-sitemaps', async (req: Request, res: Response) 
   } catch (error) {
     console.error('[SEO] Error regenerating sitemaps:', error);
     res.status(500).json({ error: 'Failed to regenerate sitemaps' });
+  }
+});
+
+/**
+ * GET /api/seo/product/:id/south-african - Get South African market-optimized SEO data
+ */
+router.get('/api/seo/product/:id/south-african', async (req: Request, res: Response) => {
+  try {
+    const productId = parseInt(req.params.id);
+    const product = await storage.getProductById(productId);
+    
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+
+    let category;
+    if (product.categoryId) {
+      category = await storage.getCategoryById(product.categoryId);
+    }
+
+    const { southAfricanSEOService } = await import('./south-african-seo-service');
+    
+    const saSeoData = southAfricanSEOService.generateSouthAfricanSEO(product, category);
+    
+    res.json({
+      success: true,
+      data: saSeoData
+    });
+  } catch (error) {
+    console.error('[SEO] Error generating South African SEO data:', error);
+    res.status(500).json({ error: 'Failed to generate South African SEO data' });
+  }
+});
+
+/**
+ * GET /api/seo/local-business-schema - Get South African local business schema
+ */
+router.get('/api/seo/local-business-schema', async (req: Request, res: Response) => {
+  try {
+    const { southAfricanSEOService } = await import('./south-african-seo-service');
+    
+    const localBusinessSchema = southAfricanSEOService.generateLocalBusinessSchema();
+    
+    res.json({
+      success: true,
+      data: localBusinessSchema
+    });
+  } catch (error) {
+    console.error('[SEO] Error generating local business schema:', error);
+    res.status(500).json({ error: 'Failed to generate local business schema' });
+  }
+});
+
+/**
+ * GET /api/seo/south-african-faq - Get localized FAQ structured data
+ */
+router.get('/api/seo/south-african-faq', async (req: Request, res: Response) => {
+  try {
+    const { southAfricanSEOService } = await import('./south-african-seo-service');
+    
+    const faqData = southAfricanSEOService.generateLocalizedFAQData();
+    
+    res.json({
+      success: true,
+      data: faqData
+    });
+  } catch (error) {
+    console.error('[SEO] Error generating South African FAQ data:', error);
+    res.status(500).json({ error: 'Failed to generate South African FAQ data' });
   }
 });
 
