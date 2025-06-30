@@ -30,7 +30,7 @@ class SouthAfricanSEOService {
    * Generate South African market-optimized SEO data
    */
   generateSouthAfricanSEO(product: Product, category?: Category): SouthAfricanSEOData {
-    const baseKeywords = product.metaKeywords ? product.metaKeywords.split(',').map(k => k.trim()) : [];
+    const baseKeywords = product.seoKeywords || [];
     
     return {
       localizedKeywords: this.generateLocalizedKeywords(product, baseKeywords),

@@ -1345,7 +1345,7 @@ export class DatabaseStorage implements IStorage {
           like(products.supplier || "", searchTerm),
           like(products.metaTitle || "", searchTerm),
           like(products.metaDescription || "", searchTerm),
-          like(products.metaKeywords || "", searchTerm),
+          sql`${searchTerm} = ANY(${products.seoKeywords})`,
           like(products.dimensions || "", searchTerm),
           like(products.specialSaleText || "", searchTerm),
           like(products.discountLabel || "", searchTerm)
@@ -1472,7 +1472,7 @@ export class DatabaseStorage implements IStorage {
           like(products.supplier || "", searchTerm),
           like(products.metaTitle || "", searchTerm),
           like(products.metaDescription || "", searchTerm),
-          like(products.metaKeywords || "", searchTerm),
+          sql`${searchTerm} = ANY(${products.seoKeywords})`,
           like(products.dimensions || "", searchTerm),
           like(products.specialSaleText || "", searchTerm),
           like(products.discountLabel || "", searchTerm)
@@ -2038,7 +2038,7 @@ export class DatabaseStorage implements IStorage {
               product.sku?.toLowerCase().includes(searchTerm) ||
               product.metaTitle?.toLowerCase().includes(searchTerm) ||
               product.metaDescription?.toLowerCase().includes(searchTerm) ||
-              product.metaKeywords?.toLowerCase().includes(searchTerm) ||
+              product.seoKeywords?.some(keyword => keyword.toLowerCase().includes(searchTerm)) ||
               product.dimensions?.toLowerCase().includes(searchTerm) ||
               product.specialSaleText?.toLowerCase().includes(searchTerm) ||
               product.discountLabel?.toLowerCase().includes(searchTerm) ||

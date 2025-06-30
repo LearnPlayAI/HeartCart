@@ -50,7 +50,7 @@ Sale Price: ${product.salePrice ? `R${product.salePrice}` : 'No sale price'}
 Category: ${category?.name || 'General'}
 Brand: ${product.brand || 'Generic'}
 Tags: ${product.tags?.join(', ') || 'None'}
-Current Keywords: ${product.metaKeywords || 'None'}
+Current Keywords: ${product.seoKeywords?.join(', ') || 'None'}
 `;
 
       const response = await ai.models.generateContent({
@@ -107,7 +107,7 @@ Respond with JSON in this format:
       const seoData = `
 Meta Title: ${product.metaTitle || 'Missing'}
 Meta Description: ${product.metaDescription || 'Missing'}
-Keywords: ${product.metaKeywords || 'Missing'}
+Keywords: ${product.seoKeywords?.join(', ') || 'Missing'}
 Product Name: ${product.name || 'Unknown'}
 Description: ${product.description || 'Missing'}
 Price: R${product.price || 0}
@@ -226,7 +226,6 @@ Return as a simple JSON array of strings.`;
       const updateData = {
         metaTitle: seoEnhancement.metaTitle,
         metaDescription: seoEnhancement.metaDescription,
-        metaKeywords: combinedKeywords.join(', '),
         canonicalUrl: seoEnhancement.canonicalUrl,
         seoSlug: seoEnhancement.seoSlug,
         seoKeywords: combinedKeywords,
