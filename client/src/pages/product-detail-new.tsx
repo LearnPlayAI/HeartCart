@@ -546,10 +546,12 @@ const ProductDetailView = ({
     );
   }
   
-  // Calculate discount percentage
+  // Calculate discount percentage and display price
   const discount = product.salePrice
     ? calculateDiscount(product.price, product.salePrice)
     : 0;
+  
+  const displayPrice = product.salePrice || product.price;
   
   // Log product data for debugging
   console.log('Product data:', product);
