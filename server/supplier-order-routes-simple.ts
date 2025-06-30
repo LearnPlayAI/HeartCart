@@ -79,16 +79,6 @@ const updateStatusSchema = z.object({
   status: z.enum(['pending', 'ordered', 'unavailable', 'received', 'shipped']),
   notes: z.string().optional(),
   supplierOrderNumber: z.string().optional(),
-  groupSupplierOrderNumber: z.string().optional(),
-  expectedDelivery: z.string().optional(),
-});
-
-const batchUpdateSchema = z.object({
-  orderItemIds: z.array(z.number()),
-  status: z.enum(['pending', 'ordered', 'unavailable', 'received', 'shipped']).optional(),
-  notes: z.string().optional(),
-  supplierOrderNumber: z.string().optional(),
-  groupSupplierOrderNumber: z.string().optional(),
   expectedDelivery: z.string().optional(),
 });
 
@@ -111,24 +101,15 @@ router.get('/order/:orderId', isAuthenticated, isAdmin, asyncHandler(async (req,
 
 // GET /api/admin/supplier-orders - Get all order items that need supplier management
 router.get('/', isAuthenticated, isAdmin, asyncHandler(async (req, res) => {
-  const { status = 'all', search = '', grouped = 'false' } = req.query;
+  const { status = 'all', search = '' } = req.query;
   
   try {
-    if (grouped === 'true') {
-      // Get grouped order items for supplier management
-      const groupedOrderItems = await storage.getGroupedOrderItemsForSupplierManagement({
-        status: status === 'all' ? undefined : status as string,
-      });
-      
-      return sendSuccess(res, groupedOrderItems);
-    } else {
-      // Get all order items from paid orders that need supplier management
-      const orderItemsWithStatus = await storage.getOrderItemsForSupplierManagement({
-        status: status === 'all' ? undefined : status as string,
-      });
-      
-      return sendSuccess(res, orderItemsWithStatus);
-    }
+    // Get all order items from paid orders that need supplier management
+    const orderItemsWithStatus = await storage.getOrderItemsForSupplierManagement({
+      status: status === 'all' ? undefined : status as string,
+    });
+    
+    return sendSuccess(res, orderItemsWithStatus);
   } catch (error) {
     console.error('Error fetching supplier order items:', error);
     return sendError(res, 'Failed to fetch supplier order items', 500);
@@ -336,39 +317,6 @@ router.post('/:id/generate-credit', isAuthenticated, isAdmin, asyncHandler(async
   } catch (error) {
     console.error('Error generating credit:', error);
     return sendError(res, 'Failed to generate credit', 500);
-  }
-}));
-
-// PUT /api/admin/supplier-orders/batch - Batch update order item supplier statuses
-router.put('/batch', isAuthenticated, isAdmin, asyncHandler(async (req, res) => {
-  try {
-    const validatedData = batchUpdateSchema.parse(req.body);
-    const { orderItemIds, ...statusData } = validatedData;
-    
-    if (orderItemIds.length === 0) {
-      return sendError(res, 'No order items specified for update', 400);
-    }
-    
-    // Add current timestamp for batch update
-    const updateData = {
-      ...statusData,
-      supplierOrderDate: statusData.status === 'ordered' ? new Date().toISOString() : undefined,
-      updatedAt: new Date().toISOString()
-    };
-    
-    const results = await storage.updateOrderItemsSupplierStatusBatch(orderItemIds, updateData);
-    
-    return sendSuccess(res, {
-      message: `Successfully updated ${results.length} order items`,
-      updatedItems: results
-    });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return sendError(res, 'Invalid batch update data', 400, error.errors);
-    }
-    
-    console.error('Error batch updating order item supplier statuses:', error);
-    return sendError(res, 'Failed to batch update order item supplier statuses', 500);
   }
 }));
 
