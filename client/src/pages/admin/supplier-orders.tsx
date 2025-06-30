@@ -398,17 +398,8 @@ const SupplierOrders = () => {
   }
 
   return (
-    <AdminLayout>
+    <AdminLayout title="Supplier Order Management" subtitle="Manage supplier orders and handle unavailable items with customer credits">
       <div className="container mx-auto px-4 py-8 max-w-7xl">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold">Supplier Order Management</h1>
-            <p className="text-muted-foreground">
-              Manage supplier orders and handle unavailable items with customer credits
-            </p>
-          </div>
-        </div>
 
       {/* Filters */}
       <Card className="mb-6">
@@ -784,6 +775,7 @@ const SupplierOrders = () => {
             </div>
           ))
         )}
+      </div>
       </div>
     </AdminLayout>
   );
