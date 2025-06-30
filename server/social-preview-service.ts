@@ -191,28 +191,45 @@ export async function handleProductSocialPreview(req: Request, res: Response): P
  */
 export async function handleProductSocialImage(req: Request, res: Response): Promise<void> {
   try {
+    console.log('Social image handler called for product:', req.params.id);
     const productId = parseInt(req.params.id);
     
     if (isNaN(productId)) {
+      console.log('Invalid product ID:', req.params.id);
       res.status(400).json({ error: 'Invalid product ID' });
       return;
     }
 
-    // Get product image URL
-    const productData = await db
-      .select({ imageUrl: products.imageUrl })
-      .from(products)
-      .where(eq(products.id, productId))
-      .limit(1);
+    console.log('Querying database for product image:', productId);
+    // Get product image URL using direct PostgreSQL query
+    const result = await pool.query(
+      'SELECT image_url FROM products WHERE id = $1 AND is_active = $2 LIMIT 1',
+      [productId, 't']
+    );
+    
+    console.log('Database query result:', result.rows);
 
-    if (!productData.length || !productData[0].imageUrl) {
-      // Return default TeeMeYou branded image for products without images
-      res.redirect('/teemeyou-social-default.png');
+    if (result.rows.length === 0 || !result.rows[0].image_url) {
+      console.log('No image found for product:', productId);
+      // Return 404 for products without images
+      res.status(404).json({ error: 'Product image not found' });
       return;
     }
 
-    // Redirect to the actual image URL
-    res.redirect(productData[0].imageUrl);
+    const imageUrl = result.rows[0].image_url;
+    console.log('Found image URL:', imageUrl);
+    
+    // If it's already a full URL, redirect directly
+    if (imageUrl.startsWith('http')) {
+      console.log('Redirecting to full URL:', imageUrl);
+      res.redirect(imageUrl);
+      return;
+    }
+    
+    // Otherwise, construct the full URL and redirect
+    const fullImageUrl = `https://teemeyou.shop/api/files/${imageUrl.replace(/^\/api\/files\//, '')}`;
+    console.log('Redirecting to constructed URL:', fullImageUrl);
+    res.redirect(fullImageUrl);
     
   } catch (error) {
     console.error('Error serving product social image:', error);
