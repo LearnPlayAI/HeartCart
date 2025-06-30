@@ -5,6 +5,7 @@ import { setSessionTimezone } from "./db";
 import { SAST_TIMEZONE } from "@shared/date-utils";
 import { errorHandlerMiddleware, notFoundMiddleware } from "./error-handler";
 import { logger } from "./logger";
+import { handleProductSocialPreview, handleProductSocialImage } from "./social-preview-service";
 import crypto from "crypto";
 
 const app = express();
@@ -122,6 +123,10 @@ app.use((req, res, next) => {
 
   next();
 });
+
+// Add social preview routes early in the middleware chain
+app.get('/api/social-preview/product/:id', handleProductSocialPreview);
+app.get('/api/social-preview/product-image/:id', handleProductSocialImage);
 
 (async () => {
   const server = await registerRoutes(app);

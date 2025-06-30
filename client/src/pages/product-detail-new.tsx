@@ -46,11 +46,13 @@ import {
   ChevronDown,
   Clock,
   Shield,
-  Palette
+  Palette,
+  Share2
 } from 'lucide-react';
 import { useCart } from '@/hooks/use-cart';
 import { useToast } from '@/hooks/use-toast';
 import { useAttributeDiscounts } from '@/hooks/use-attribute-discounts';
+import ShareProductDialog from '@/components/ShareProductDialog';
 import { useNavigateBack } from '@/hooks/use-scroll-management';
 import { formatCurrency, calculateDiscount } from '@/lib/utils';
 import { ensureValidImageUrl } from '@/utils/file-manager';
@@ -953,13 +955,34 @@ const ProductDetailView = ({
               </div>
             </div>
             
-            {/* Add to Cart Button */}
-            <Button 
-              onClick={handleAddToCart}
-              className="w-full mt-6 bg-[#FF69B4] hover:bg-[#FF69B4]/90"
-            >
-              <ShoppingCart className="mr-2 h-4 w-4" /> Add to Cart
-            </Button>
+            {/* Action Buttons */}
+            <div className="mt-6 space-y-3">
+              {/* Add to Cart Button */}
+              <Button 
+                onClick={handleAddToCart}
+                className="w-full bg-[#FF69B4] hover:bg-[#FF69B4]/90"
+              >
+                <ShoppingCart className="mr-2 h-4 w-4" /> Add to Cart
+              </Button>
+              
+              {/* Share Button */}
+              <ShareProductDialog
+                productId={product.id}
+                productTitle={product.name}
+                productPrice={product.price}
+                salePrice={product.salePrice || undefined}
+                productImage={product.imageUrl || undefined}
+                trigger={
+                  <Button 
+                    variant="outline" 
+                    className="w-full border-pink-200 text-pink-600 hover:bg-pink-50"
+                  >
+                    <Share2 className="mr-2 h-4 w-4" />
+                    Share Product
+                  </Button>
+                }
+              />
+            </div>
             
             {/* Product Description */}
             <div className="mt-8">
