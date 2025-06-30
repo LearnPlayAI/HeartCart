@@ -136,4 +136,103 @@ router.get('/api/seo/sitemap-status', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * GET /api/seo/product/:id/structured-data - Get structured data for a product
+ */
+router.get('/api/seo/product/:id/structured-data', async (req: Request, res: Response) => {
+  try {
+    const productId = parseInt(req.params.id);
+    const product = await storage.getProductById(productId);
+    
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+
+    let category;
+    if (product.categoryId) {
+      category = await storage.getCategoryById(product.categoryId);
+    }
+
+    const { structuredDataService } = await import('./structured-data-service');
+    
+    const structuredData = structuredDataService.generateProductStructuredData(product, category);
+    
+    res.json({
+      success: true,
+      data: structuredData
+    });
+  } catch (error) {
+    console.error('[SEO] Error generating structured data:', error);
+    res.status(500).json({ error: 'Failed to generate structured data' });
+  }
+});
+
+/**
+ * GET /api/seo/product/:id/meta-tags - Get meta tags for a product
+ */
+router.get('/api/seo/product/:id/meta-tags', async (req: Request, res: Response) => {
+  try {
+    const productId = parseInt(req.params.id);
+    const product = await storage.getProductById(productId);
+    
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+
+    let category;
+    if (product.categoryId) {
+      category = await storage.getCategoryById(product.categoryId);
+    }
+
+    const { structuredDataService } = await import('./structured-data-service');
+    
+    const metaTags = structuredDataService.generateProductMetaTags(product, category);
+    const openGraphTags = structuredDataService.generateOpenGraphTags(product, category);
+    
+    res.json({
+      success: true,
+      data: {
+        metaTags,
+        openGraphTags,
+        breadcrumbs: structuredDataService.generateBreadcrumbStructuredData([
+          { name: 'Home', url: 'https://teemeyou.shop/' },
+          { name: category?.name || 'Products', url: `https://teemeyou.shop/category/${category?.slug || 'all'}` },
+          { name: product.name, url: product.canonicalUrl || `https://teemeyou.shop/product/id/${product.id}` }
+        ])
+      }
+    });
+  } catch (error) {
+    console.error('[SEO] Error generating meta tags:', error);
+    res.status(500).json({ error: 'Failed to generate meta tags' });
+  }
+});
+
+/**
+ * POST /api/seo/regenerate-sitemaps - Manually regenerate all sitemaps
+ */
+router.post('/api/seo/regenerate-sitemaps', async (req: Request, res: Response) => {
+  try {
+    console.log('[SEO] Manual sitemap regeneration triggered');
+    
+    // Trigger sitemap regeneration by generating them
+    await Promise.all([
+      seoService.generateSitemapIndex(),
+      seoService.generateProductsSitemap(),
+      seoService.generatePagesSitemap(),
+      seoService.generateCategoriesSitemap()
+    ]);
+    
+    res.json({
+      success: true,
+      data: {
+        message: 'Sitemaps regenerated successfully',
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    console.error('[SEO] Error regenerating sitemaps:', error);
+    res.status(500).json({ error: 'Failed to regenerate sitemaps' });
+  }
+});
+
 export default router;
