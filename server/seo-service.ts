@@ -139,6 +139,16 @@ class SEOService {
         .orderBy(desc(products.createdAt));
 
       console.log(`[SEO] Generating sitemap for ${activeProducts.length} active products`);
+      
+      // Debug first few products to see actual data
+      if (activeProducts.length > 0) {
+        console.log(`[SEO DEBUG] First product imageUrl from DB: "${activeProducts[0].imageUrl}"`);
+        console.log(`[SEO DEBUG] Product data sample:`, {
+          id: activeProducts[0].id,
+          name: activeProducts[0].name?.substring(0, 30),
+          imageUrl: activeProducts[0].imageUrl
+        });
+      }
 
       const productUrls: SitemapUrl[] = activeProducts.map(product => {
         // Use canonical URL if available, otherwise construct from slug or fallback to ID
@@ -159,12 +169,8 @@ class SEOService {
 
         // Add product image if available
         if (product.imageUrl) {
-          console.log(`[SEO DEBUG] Original imageUrl: "${product.imageUrl}"`);
-          // Remove /api/files/ prefix if present, then prepend base URL with /api/files/
-          const cleanImagePath = product.imageUrl.replace(/^\/api\/files\//, '');
-          console.log(`[SEO DEBUG] Clean path: "${cleanImagePath}"`);
-          const imageUrl = `${this.baseUrl}/api/files/${cleanImagePath}`;
-          console.log(`[SEO DEBUG] Final URL: "${imageUrl}"`);
+          // Database already stores URLs with /api/files/ prefix, just prepend base URL
+          const imageUrl = `${this.baseUrl}${product.imageUrl}`;
           
           sitemapUrl.images = [{
             loc: imageUrl,
