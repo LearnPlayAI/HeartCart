@@ -295,8 +295,7 @@ export function setupAuth(app: Express): void {
       // Send email verification
       try {
         const { unifiedEmailService } = await import('./unified-email-service');
-        const { token } = await unifiedEmailService.createEmailVerificationToken(user.id, email);
-        const emailResult = await unifiedEmailService.sendEmailVerificationEmail(email, token, username);
+        const emailResult = await unifiedEmailService.sendVerificationEmail(user.id, email, username);
         
         if (emailResult.success) {
           logger.info('Email verification sent successfully', { 
