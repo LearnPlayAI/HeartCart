@@ -11963,6 +11963,7 @@ export class DatabaseStorage implements IStorage {
           customerName: row.order.customerName,
           createdAt: row.order.createdAt,
           status: row.order.status,
+          trackingNumber: row.order.trackingNumber,
         },
         product: {
           id: row.product.id,
