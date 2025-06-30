@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { db } from './db';
+import { pool } from './db';
 
 interface ProductSocialData {
   id: number;
@@ -9,7 +9,7 @@ interface ProductSocialData {
   salePrice?: number;
   imageUrl?: string;
   categoryName?: string;
-  condition: string;
+  brand?: string;
 }
 
 /**
@@ -17,27 +17,32 @@ interface ProductSocialData {
  */
 async function getProductSocialData(productId: number): Promise<ProductSocialData | null> {
   try {
-    // Use direct PostgreSQL query without Drizzle ORM
-    const result = await db.query(
-      'SELECT id, name, description, price, sale_price, image_url, condition FROM products WHERE id = $1 AND is_active = true LIMIT 1',
-      [productId]
-    );
-    
-    if (!result.rows.length) {
-      return null;
+    // Use direct PostgreSQL query with the pool
+    const client = await pool.connect();
+    try {
+      const result = await client.query(
+        'SELECT id, name, description, price, sale_price, image_url, brand FROM products WHERE id = $1 AND is_active = true LIMIT 1',
+        [productId]
+      );
+      
+      if (!result.rows.length) {
+        return null;
+      }
+      
+      const product = result.rows[0];
+      
+      return {
+        id: product.id,
+        name: product.name || 'Product',
+        description: product.description || '',
+        price: product.price || 0,
+        salePrice: product.sale_price || undefined,
+        imageUrl: product.image_url || undefined,
+        brand: product.brand || undefined,
+      };
+    } finally {
+      client.release();
     }
-    
-    const product = result.rows[0];
-    
-    return {
-      id: product.id,
-      name: product.name || 'Product',
-      description: product.description || '',
-      price: product.price || 0,
-      salePrice: product.sale_price || undefined,
-      imageUrl: product.image_url || undefined,
-      condition: product.condition || 'new',
-    };
   } catch (error) {
     console.error(`Error fetching social data for product ${productId}:`, error);
     return null;
