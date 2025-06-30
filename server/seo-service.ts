@@ -139,6 +139,11 @@ class SEOService {
         .orderBy(desc(products.createdAt));
 
       console.log(`[SEO] Generating sitemap for ${activeProducts.length} active products`);
+      
+      // Debug first product to understand data structure
+      if (activeProducts.length > 0) {
+        console.log(`[SEO] First product data:`, JSON.stringify(activeProducts[0], null, 2));
+      }
 
       const productUrls: SitemapUrl[] = activeProducts.map(product => {
         // Use canonical URL if available, otherwise construct from slug or fallback to ID
