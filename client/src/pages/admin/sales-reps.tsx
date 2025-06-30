@@ -51,14 +51,15 @@ interface Payment {
 }
 
 export default function SalesRepsPage() {
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showCommissionsDialog, setShowCommissionsDialog] = useState(false);
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [selectedRep, setSelectedRep] = useState<SalesRep | null>(null);
-  const [selectedRepCommissions, setSelectedRepCommissions] = useState<Commission[]>([]);
+  const [commissions, setCommissions] = useState<Commission[]>([]);
   const [selectedRepPayments, setSelectedRepPayments] = useState<Payment[]>([]);
   const [showCommissions, setShowCommissions] = useState(false);
-  const [newRep, setNewRep] = useState({
+  const [repForm, setRepForm] = useState({
     firstName: '',
     lastName: '',
     email: '',
@@ -67,8 +68,8 @@ export default function SalesRepsPage() {
     commissionRate: 3,
     notes: ''
   });
-  const [newPayment, setNewPayment] = useState({
-    amount: '',
+  const [paymentForm, setPaymentForm] = useState({
+    amount: 0,
     paymentMethod: 'bank_transfer',
     referenceNumber: '',
     notes: ''
@@ -191,8 +192,8 @@ export default function SalesRepsPage() {
 
   const loadRepCommissions = async (repId: number) => {
     try {
-      const commissions = await apiRequest(`/api/admin/sales-reps/${repId}/commissions`);
-      setSelectedRepCommissions(commissions.commissions || []);
+      const commissionsData = await apiRequest(`/api/admin/sales-reps/${repId}/commissions`);
+      setCommissions(commissionsData.commissions || []);
     } catch (error) {
       toast({
         title: "Error",
@@ -226,8 +227,8 @@ export default function SalesRepsPage() {
     if (!selectedRep) return;
     
     const paymentData = {
-      ...newPayment,
-      amount: parseFloat(newPayment.amount)
+      ...paymentForm,
+      amount: paymentForm.amount
     };
 
     createPaymentMutation.mutate({ repId: selectedRep.id, paymentData });
@@ -273,7 +274,7 @@ export default function SalesRepsPage() {
           <h1 className="text-3xl font-bold tracking-tight">Sales Representatives</h1>
           <p className="text-muted-foreground">Manage sales reps and track commission earnings</p>
         </div>
-        <Button onClick={() => setIsCreateDialogOpen(true)}>
+        <Button onClick={() => setShowCreateDialog(true)}>
           <Plus className="w-4 h-4 mr-2" />
           Add Sales Rep
         </Button>
@@ -391,7 +392,7 @@ export default function SalesRepsPage() {
                         size="sm"
                         onClick={() => {
                           setSelectedRep(rep);
-                          setIsEditDialogOpen(true);
+                          setShowEditDialog(true);
                         }}
                       >
                         <Edit2 className="w-4 h-4" />
