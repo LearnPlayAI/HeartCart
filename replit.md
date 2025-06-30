@@ -414,6 +414,15 @@ Changelog:
   * All 21 featured products now display in random order on each homepage visit
   * Featured products pagination system maintains randomization across "Load More" button clicks
   * Production-ready implementation with comprehensive testing confirming different product order on each request
+- June 30, 2025. Featured products pagination randomization issue resolved:
+  * Fixed critical issue where "Load More" button was re-randomizing products instead of maintaining consistent order
+  * Implemented server-side caching system that generates randomized product ID list once and maintains it for 10 minutes
+  * Created getFeaturedProductIds() private method that caches randomized order using PostgreSQL ORDER BY RANDOM()
+  * Updated getFeaturedProducts() to use predetermined order with inArray() queries and proper product mapping
+  * Added clearFeaturedProductsCache() method for cache management and testing purposes
+  * Pagination now correctly maintains the same randomized order throughout user session
+  * Users see random products on initial page load but consistent order when clicking "Load More"
+  * Production-ready with 10-minute cache duration balancing randomization with pagination consistency
 - June 30, 2025. Complete sales representative commission system implemented and operational:
   * Full database schema with sales_reps, rep_commissions, and rep_payments tables including proper relationships and indexes
   * Added repCode field to user registration form allowing optional sales rep association during account creation

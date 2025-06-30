@@ -1875,6 +1875,15 @@ export class DatabaseStorage implements IStorage {
   private featuredProductsOrderTimestamp: number = 0;
   
   /**
+   * Clear the cached featured products order to force re-randomization on next request
+   * Useful for testing or when new featured products are added
+   */
+  public clearFeaturedProductsCache(): void {
+    this.featuredProductsOrder = null;
+    this.featuredProductsOrderTimestamp = 0;
+  }
+  
+  /**
    * Get all featured product IDs in randomized order (cached for session consistency)
    * This ensures pagination maintains the same random order throughout the session
    */
