@@ -309,7 +309,7 @@ const SupplierOrders = () => {
     const firstOrder = orders[0];
     return {
       supplierOrderNumber: firstOrder?.supplierOrderNumber || '',
-      supplierOrderDate: firstOrder?.orderDate || '',
+      supplierOrderDate: firstOrder?.supplierOrderDate || '',
       adminNotes: firstOrder?.notes || ''
     };
   };
