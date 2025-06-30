@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Users, DollarSign, TrendingUp, Plus, Edit2, Eye, Calendar } from "lucide-react";
+import { AdminLayout } from "@/components/admin/layout";
 
 interface SalesRep {
   id: number;
@@ -240,7 +241,8 @@ export default function SalesRepsPage() {
   const totalCommissions = reps.reduce((sum: number, rep: SalesRep) => sum + rep.commissionCount, 0);
 
   return (
-    <div className="p-6 space-y-6">
+    <AdminLayout>
+      <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Sales Representatives</h1>
@@ -632,6 +634,7 @@ export default function SalesRepsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </AdminLayout>
   );
 }
