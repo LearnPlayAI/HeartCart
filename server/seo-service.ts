@@ -139,11 +139,6 @@ class SEOService {
         .orderBy(desc(products.createdAt));
 
       console.log(`[SEO] Generating sitemap for ${activeProducts.length} active products`);
-      
-      // Debug: Log first product's imageUrl to understand the data structure
-      if (activeProducts.length > 0) {
-        console.log(`[SEO] Sample product imageUrl:`, activeProducts[0].imageUrl);
-      }
 
       const productUrls: SitemapUrl[] = activeProducts.map(product => {
         // Use canonical URL if available, otherwise construct from slug or fallback to ID
@@ -166,6 +161,7 @@ class SEOService {
         if (product.imageUrl) {
           // Database stores URLs starting with /api/files/ - just prepend base URL
           const imageUrl = `${this.baseUrl}${product.imageUrl}`;
+          console.log(`[SEO] Product ${product.id} imageUrl from DB: "${product.imageUrl}" -> Final URL: "${imageUrl}"`);
           
           sitemapUrl.images = [{
             loc: imageUrl,
@@ -266,7 +262,7 @@ Disallow: /developer/
   generateProductStructuredData(product: Partial<Product>, category?: Partial<Category>): object {
     const baseUrl = this.baseUrl;
     const productUrl = product.canonicalUrl || `${baseUrl}/product/${product.id || 0}`;
-    const imageUrl = product.imageUrl ? `${baseUrl}/api/files/${product.imageUrl}` : `${baseUrl}/icon-192.png`;
+    const imageUrl = product.imageUrl ? `${baseUrl}${product.imageUrl}` : `${baseUrl}/icon-192.png`;
     
     // Determine effective price (sale price or regular price)
     const effectivePrice = product.salePrice || product.price || 0;
