@@ -188,7 +188,7 @@ export const AiSeoSuggestions: React.FC<AiSeoSuggestionsProps> = ({
               </div>
             </div>
             
-            {/* Meta Keywords */}
+            {/* SEO Keywords */}
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <h4 className="text-sm font-medium">SEO Keywords</h4>

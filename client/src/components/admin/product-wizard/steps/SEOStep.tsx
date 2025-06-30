@@ -209,7 +209,7 @@ export const SEOStep: React.FC<SEOStepProps> = ({
               </div>
               
               <div className="space-y-2">
-                <h3 className="text-sm font-medium">Meta Keywords</h3>
+                <h3 className="text-sm font-medium">SEO Keywords</h3>
                 <p className="text-sm p-3 bg-secondary rounded-md">
                   {Array.isArray(aiSuggestions.keywords) 
                     ? aiSuggestions.keywords.join(', ') 
@@ -311,13 +311,13 @@ export const SEOStep: React.FC<SEOStepProps> = ({
                 )}
               />
               
-              {/* Meta Keywords */}
+              {/* SEO Keywords */}
               <FormField
                 control={form.control}
                 name="seoKeywords"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Meta Keywords</FormLabel>
+                    <FormLabel>SEO Keywords</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
