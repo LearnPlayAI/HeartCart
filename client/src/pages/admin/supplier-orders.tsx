@@ -170,7 +170,7 @@ const SupplierOrders = () => {
     });
     
     return Object.values(grouped).sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
-  }, [supplierOrders]);
+  }, [supplierOrdersResponse]);
 
   const validateUrlMutation = useMutation({
     mutationFn: (orderId: number) => 
@@ -277,6 +277,29 @@ const SupplierOrders = () => {
       toast({
         title: 'Credit generation failed',
         description: 'Could not generate customer credit',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Batch update mutation for grouped operations
+  const batchUpdateMutation = useMutation({
+    mutationFn: (data: BatchUpdateData) =>
+      apiRequest('/api/admin/supplier-orders/batch-update', {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/supplier-orders'] });
+      toast({
+        title: 'Group order updated',
+        description: 'All items in the group have been updated successfully',
+      });
+    },
+    onError: () => {
+      toast({
+        title: 'Group update failed',
+        description: 'Could not update the grouped order',
         variant: 'destructive',
       });
     },
@@ -521,45 +544,48 @@ const SupplierOrders = () => {
             </CardContent>
           </Card>
         ) : (
-          supplierOrders.map((order: SupplierOrder) => (
-            <Card key={order.id} className="overflow-hidden">
+          groupedOrders.map((group: GroupedSupplierOrder) => (
+            <Card key={group.orderId} className="overflow-hidden border-l-4 border-l-blue-500">
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex items-start gap-4">
-                    {/* Product Image */}
+                    {/* Order Header Info */}
                     <div className="flex-shrink-0">
-                      <img
-                        src={order.product.imageUrl || '/placeholder-product.jpg'}
-                        alt={order.productName}
-                        className="w-16 h-16 object-cover rounded-md border"
-                        onError={(e) => {
-                          e.currentTarget.src = '/placeholder-product.jpg';
-                        }}
-                      />
+                      <div className="w-16 h-16 bg-blue-100 rounded-md border flex items-center justify-center">
+                        <Package className="h-8 w-8 text-blue-600" />
+                      </div>
                     </div>
                     <div className="space-y-1">
-                      <CardTitle className="text-lg">
-                        {order.productName}
-                      </CardTitle>
-                      <CardDescription className="flex items-center gap-2">
-                        <Link href={`/admin/orders/${order.orderId}`}>
-                          <Button variant="link" size="sm" className="h-auto p-0 text-blue-600 hover:text-blue-800">
-                            Order #{order.customerOrder.orderNumber}
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Link href={`/admin/orders/${group.orderId}`}>
+                          <Button variant="link" size="sm" className="h-auto p-0 text-blue-600 hover:text-blue-800 text-lg font-bold">
+                            {group.orderNumber}
                           </Button>
                         </Link>
-                        • {order.customerOrder.customerName}
+                        {group.hasMixedStatuses && (
+                          <Badge variant="outline" className="text-xs">
+                            Mixed Status
+                          </Badge>
+                        )}
+                      </CardTitle>
+                      <CardDescription className="flex items-center gap-2">
+                        <User className="h-4 w-4" />
+                        {group.customerName} • {group.items.length} item{group.items.length !== 1 ? 's' : ''}
                       </CardDescription>
-                      {order.product.sku && (
-                        <div className="text-xs text-muted-foreground font-mono">
-                          SKU: {order.product.sku}
-                        </div>
-                      )}
+                      <div className="text-sm text-muted-foreground">
+                        Order Date: {formatDate(group.orderDate)} • Total: {formatCurrency(group.totalCost)}
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge variant={getStatusVariant(order.status)} className="flex items-center gap-1">
-                      {getStatusIcon(order.status)}
-                      {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                    {group.groupSupplierOrderNumber && (
+                      <div className="text-sm text-muted-foreground">
+                        Group Order: <span className="font-mono">{group.groupSupplierOrderNumber}</span>
+                      </div>
+                    )}
+                    <Badge variant="secondary" className="flex items-center gap-1">
+                      <Package className="h-3 w-3" />
+                      {group.orderStatus}
                     </Badge>
                   </div>
                 </div>
