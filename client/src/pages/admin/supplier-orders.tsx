@@ -14,7 +14,9 @@ import {
   Calendar,
   CreditCard,
   Eye,
-  Truck
+  Truck,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -31,7 +33,17 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency } from '@/lib/utils';
 import { apiRequest } from '@/lib/queryClient';
-import { AdminLayout } from '@/components/admin/layout';
+import AdminLayout from '@/components/admin/admin-layout';
+
+// Helper function for formatting dates
+const formatDate = (dateString: string) => {
+  if (!dateString) return 'Not set';
+  return new Date(dateString).toLocaleDateString('en-ZA', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+};
 
 interface SupplierOrder {
   id: number;
@@ -74,6 +86,7 @@ const SupplierOrders = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [validationFilter, setValidationFilter] = useState<string>('all');
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -228,6 +241,33 @@ const SupplierOrders = () => {
   console.log('Array length:', supplierOrders?.length);
   console.log('Is loading:', isLoading);
   console.log('Has error:', error);
+
+  // Group supplier orders by customer order number
+  const groupedOrders = supplierOrders.reduce((groups: Record<string, SupplierOrder[]>, order: SupplierOrder) => {
+    const orderNumber = order.customerOrder.orderNumber;
+    if (!groups[orderNumber]) {
+      groups[orderNumber] = [];
+    }
+    groups[orderNumber].push(order);
+    return groups;
+  }, {});
+
+  // Toggle group expansion
+  const toggleGroup = (orderNumber: string) => {
+    const newExpanded = new Set(expandedGroups);
+    if (newExpanded.has(orderNumber)) {
+      newExpanded.delete(orderNumber);
+    } else {
+      newExpanded.add(orderNumber);
+    }
+    setExpandedGroups(newExpanded);
+  };
+
+  // Initialize all groups as expanded on first load
+  if (supplierOrders.length > 0 && expandedGroups.size === 0) {
+    const allOrderNumbers = Object.keys(groupedOrders);
+    setExpandedGroups(new Set(allOrderNumbers));
+  }
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -439,7 +479,7 @@ const SupplierOrders = () => {
         </CardContent>
       </Card>
 
-      {/* Supplier Orders List */}
+      {/* Supplier Orders List - Grouped by Customer Order */}
       <div className="space-y-4">
         {isLoading ? (
           <Card>
@@ -459,7 +499,44 @@ const SupplierOrders = () => {
             </CardContent>
           </Card>
         ) : (
-          supplierOrders.map((order: SupplierOrder) => (
+          Object.entries(groupedOrders).map(([orderNumber, orders]) => (
+            <div key={orderNumber} className="space-y-2">
+              {/* Group Header */}
+              <Card className="bg-gray-50 border-l-4 border-l-pink-500">
+                <CardHeader 
+                  className="pb-3 cursor-pointer hover:bg-gray-100 transition-colors"
+                  onClick={() => toggleGroup(orderNumber)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      {expandedGroups.has(orderNumber) ? (
+                        <ChevronDown className="h-5 w-5 text-gray-600" />
+                      ) : (
+                        <ChevronRight className="h-5 w-5 text-gray-600" />
+                      )}
+                      <div>
+                        <CardTitle className="text-lg font-semibold text-gray-900">
+                          {orderNumber}
+                        </CardTitle>
+                        <CardDescription className="text-sm text-gray-600">
+                          {orders[0].customerOrder.customerName} • {orders.length} item{orders.length > 1 ? 's' : ''}
+                        </CardDescription>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                      <span>Total Cost: {formatCurrency(orders.reduce((sum, order) => sum + order.totalCost, 0))}</span>
+                      <Badge variant="outline" className="ml-2">
+                        {formatDate(orders[0].createdAt)}
+                      </Badge>
+                    </div>
+                  </div>
+                </CardHeader>
+              </Card>
+
+              {/* Group Items - Collapsible */}
+              {expandedGroups.has(orderNumber) && (
+                <div className="ml-4 space-y-4">
+                  {orders.map((order: SupplierOrder) => (
             <Card key={order.id} className="overflow-hidden">
               <CardHeader>
                 <div className="flex items-start justify-between">
@@ -701,9 +778,12 @@ const SupplierOrders = () => {
                 </div>
               </CardContent>
             </Card>
+                  ))}
+                </div>
+              )}
+            </div>
           ))
         )}
-      </div>
       </div>
     </AdminLayout>
   );
