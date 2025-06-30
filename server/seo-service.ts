@@ -118,6 +118,10 @@ class SEOService {
    */
   async generateProductsSitemap(): Promise<string> {
     try {
+      // First, check what's in the database raw
+      const rawQuery = await db.execute(`SELECT id, name, image_url FROM products WHERE is_active = true AND "supplierAvailable" = true LIMIT 3`);
+      console.log('[SEO DEBUG] Raw SQL query result:', JSON.stringify(rawQuery.rows, null, 2));
+
       const activeProducts = await db
         .select({
           id: products.id,
@@ -142,12 +146,15 @@ class SEOService {
       
       // Debug first few products to see actual data
       if (activeProducts.length > 0) {
-        console.log(`[SEO DEBUG] First product imageUrl from DB: "${activeProducts[0].imageUrl}"`);
-        console.log(`[SEO DEBUG] Product data sample:`, {
+        console.log(`[SEO DEBUG] Raw DB query result:`, JSON.stringify({
           id: activeProducts[0].id,
           name: activeProducts[0].name?.substring(0, 30),
           imageUrl: activeProducts[0].imageUrl
-        });
+        }, null, 2));
+        
+        // Check if there's any data transformation happening
+        console.log(`[SEO DEBUG] ImageUrl length: ${activeProducts[0].imageUrl?.length}`);
+        console.log(`[SEO DEBUG] ImageUrl starts with /api/files/: ${activeProducts[0].imageUrl?.startsWith('/api/files/')}`);
       }
 
       const productUrls: SitemapUrl[] = activeProducts.map(product => {
@@ -169,8 +176,9 @@ class SEOService {
 
         // Add product image if available
         if (product.imageUrl) {
-          // Database already stores URLs with /api/files/ prefix, just prepend base URL
+          // Database stores complete paths starting with /api/files/, just prepend domain
           const imageUrl = `${this.baseUrl}${product.imageUrl}`;
+          console.log(`[SEO DEBUG] Processing image: DB="${product.imageUrl}" -> Final="${imageUrl}"`);
           
           sitemapUrl.images = [{
             loc: imageUrl,
