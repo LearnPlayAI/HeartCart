@@ -44,6 +44,7 @@ const registerSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   confirmPassword: z.string().min(6, "Password must be at least 6 characters"),
+  repCode: z.string().trim().optional(), // Optional sales rep code
   acceptTerms: z.boolean().refine(val => val === true, {
     message: "You must accept the terms and conditions"
   })
@@ -168,6 +169,7 @@ export default function AuthPage() {
       email: "",
       password: "",
       confirmPassword: "",
+      repCode: "",
       acceptTerms: false,
     },
   });
@@ -552,6 +554,23 @@ export default function AuthPage() {
                                   {...field}
                                 />
                               </div>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={registerForm.control}
+                        name="repCode"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Sales Rep Code (Optional)</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="Enter sales rep code if you have one"
+                                {...field}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>

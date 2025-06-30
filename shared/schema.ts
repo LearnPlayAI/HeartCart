@@ -27,6 +27,9 @@ export const users = pgTable("users", {
   // Preferred PUDO Locker
   preferredLockerId: integer("preferredLockerId"),
   preferredLockerCode: text("preferredLockerCode"),
+  
+  // Sales Rep System
+  repCode: text("repCode"), // Optional rep code entered during registration
 });
 
 // PUDO Lockers table - stores all available pickup lockers
@@ -382,6 +385,77 @@ export const batchUploadErrors = pgTable("batchUploadErrors", {
   type: varchar("type", { length: 50 }).notNull(),
   severity: varchar("severity", { length: 50 }).notNull(),
   createdAt: text("createdAt").default(String(new Date().toISOString())).notNull(),
+});
+
+// =============================================================================
+// SALES REP COMMISSION SYSTEM TABLES
+// =============================================================================
+
+// Sales Representatives table - stores rep information and commission settings
+export const salesReps = pgTable("salesReps", {
+  id: serial("id").primaryKey(),
+  repCode: text("repCode").notNull().unique(), // Unique code for reps (e.g., "REP001")
+  firstName: text("firstName").notNull(),
+  lastName: text("lastName").notNull(),
+  email: text("email").notNull().unique(),
+  phoneNumber: text("phoneNumber"),
+  commissionRate: doublePrecision("commissionRate").notNull().default(0.03), // 3% default commission
+  isActive: boolean("isActive").default(true).notNull(),
+  notes: text("notes"), // Admin notes about the rep
+  createdAt: text("createdAt").default(String(new Date().toISOString())).notNull(),
+  updatedAt: text("updatedAt").default(String(new Date().toISOString())).notNull(),
+}, (table) => {
+  return {
+    repCodeIdx: index("sales_reps_rep_code_idx").on(table.repCode),
+    emailIdx: index("sales_reps_email_idx").on(table.email),
+    isActiveIdx: index("sales_reps_is_active_idx").on(table.isActive),
+  };
+});
+
+// Rep Commissions table - tracks commissions earned on each delivered order
+export const repCommissions = pgTable("repCommissions", {
+  id: serial("id").primaryKey(),
+  repId: integer("repId").notNull().references(() => salesReps.id, { onDelete: "cascade" }),
+  orderId: integer("orderId").notNull().references(() => orders.id, { onDelete: "cascade" }),
+  userId: integer("userId").notNull().references(() => users.id), // Customer who placed the order
+  orderNumber: text("orderNumber").notNull(), // For easy reference
+  orderTotal: doublePrecision("orderTotal").notNull(), // Total order amount
+  orderProfit: doublePrecision("orderProfit").notNull(), // Calculated profit (orderTotal - costPrice)
+  commissionRate: doublePrecision("commissionRate").notNull(), // Commission rate at time of order
+  commissionAmount: doublePrecision("commissionAmount").notNull(), // Calculated commission
+  status: text("status").notNull().default("pending"), // pending, confirmed, paid
+  paidAt: text("paidAt"), // When commission was paid out
+  createdAt: text("createdAt").default(String(new Date().toISOString())).notNull(), // When commission was earned (order delivered)
+  notes: text("notes"), // Admin notes about the commission
+}, (table) => {
+  return {
+    repIdIdx: index("rep_commissions_rep_id_idx").on(table.repId),
+    orderIdIdx: index("rep_commissions_order_id_idx").on(table.orderId),
+    statusIdx: index("rep_commissions_status_idx").on(table.status),
+    createdAtIdx: index("rep_commissions_created_at_idx").on(table.createdAt),
+  };
+});
+
+// Rep Payments table - tracks payment history to reps
+export const repPayments = pgTable("repPayments", {
+  id: serial("id").primaryKey(),
+  repId: integer("repId").notNull().references(() => salesReps.id, { onDelete: "cascade" }),
+  paymentPeriodStart: text("paymentPeriodStart").notNull(), // Start date of payment period
+  paymentPeriodEnd: text("paymentPeriodEnd").notNull(), // End date of payment period
+  totalCommissions: doublePrecision("totalCommissions").notNull(), // Total commission amount paid
+  commissionCount: integer("commissionCount").notNull(), // Number of commissions included
+  paymentMethod: text("paymentMethod").notNull(), // eft, cash, etc.
+  paymentReference: text("paymentReference"), // Bank reference or payment ID
+  status: text("status").notNull().default("pending"), // pending, paid, failed
+  paidAt: text("paidAt"), // When payment was made
+  createdAt: text("createdAt").default(String(new Date().toISOString())).notNull(),
+  notes: text("notes"), // Admin notes about the payment
+}, (table) => {
+  return {
+    repIdIdx: index("rep_payments_rep_id_idx").on(table.repId),
+    statusIdx: index("rep_payments_status_idx").on(table.status),
+    paidAtIdx: index("rep_payments_paid_at_idx").on(table.paidAt),
+  };
 });
 
 // =============================================================================
@@ -913,6 +987,32 @@ export const insertEmailLogSchema = createInsertSchema(emailLogs).omit({
 export type EmailLog = typeof emailLogs.$inferSelect;
 export type InsertEmailLog = z.infer<typeof insertEmailLogSchema>;
 
+// Sales Rep System schemas and types
+export const insertSalesRepSchema = createInsertSchema(salesReps).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertRepCommissionSchema = createInsertSchema(repCommissions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertRepPaymentSchema = createInsertSchema(repPayments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type SalesRep = typeof salesReps.$inferSelect;
+export type InsertSalesRep = z.infer<typeof insertSalesRepSchema>;
+
+export type RepCommission = typeof repCommissions.$inferSelect;
+export type InsertRepCommission = z.infer<typeof insertRepCommissionSchema>;
+
+export type RepPayment = typeof repPayments.$inferSelect;
+export type InsertRepPayment = z.infer<typeof insertRepPaymentSchema>;
+
 // Define all table relations after all tables and types are defined
 export const categoriesRelations = relations(categories, ({ one, many }) => ({
   parent: one(categories, {
@@ -1419,5 +1519,33 @@ export const orderItemSupplierStatusRelations = relations(orderItemSupplierStatu
   product: one(products, {
     fields: [orderItemSupplierStatus.productId],
     references: [products.id]
+  })
+}));
+
+// Sales Rep relations
+export const salesRepsRelations = relations(salesReps, ({ many }) => ({
+  commissions: many(repCommissions),
+  payments: many(repPayments),
+}));
+
+export const repCommissionsRelations = relations(repCommissions, ({ one }) => ({
+  rep: one(salesReps, {
+    fields: [repCommissions.repId],
+    references: [salesReps.id]
+  }),
+  order: one(orders, {
+    fields: [repCommissions.orderId],
+    references: [orders.id]
+  }),
+  user: one(users, {
+    fields: [repCommissions.userId],
+    references: [users.id]
+  })
+}));
+
+export const repPaymentsRelations = relations(repPayments, ({ one }) => ({
+  rep: one(salesReps, {
+    fields: [repPayments.repId],
+    references: [salesReps.id]
   })
 }));
