@@ -87,8 +87,34 @@ const SupplierOrders = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [validationFilter, setValidationFilter] = useState<string>('all');
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  const [groupFormData, setGroupFormData] = useState<Record<string, { supplierOrderNumber: string; supplierOrderDate: string; adminNotes: string }>>({});
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Mutation for updating group supplier order information
+  const updateGroupSupplierOrderMutation = useMutation({
+    mutationFn: async ({ orderId, data }: { orderId: number; data: { supplierOrderNumber?: string; supplierOrderDate?: string; adminNotes?: string } }) => {
+      return apiRequest(`/api/admin/supplier-orders/order/${orderId}/update-group`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/supplier-orders'] });
+      toast({
+        title: "Success",
+        description: "Supplier order information updated for all items in this order.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update supplier order information.",
+        variant: "destructive",
+      });
+    },
+  });
 
   const { data: supplierOrdersResponse, isLoading, error } = useQuery({
     queryKey: ['/api/admin/supplier-orders', statusFilter, validationFilter, searchTerm],
@@ -261,6 +287,47 @@ const SupplierOrders = () => {
       newExpanded.add(orderNumber);
     }
     setExpandedGroups(newExpanded);
+  };
+
+  // Helper function to update group form data
+  const updateGroupFormData = (orderNumber: string, field: string, value: string) => {
+    setGroupFormData(prev => ({
+      ...prev,
+      [orderNumber]: {
+        supplierOrderNumber: '',
+        supplierOrderDate: '',
+        adminNotes: '',
+        ...prev[orderNumber],
+        [field]: value
+      }
+    }));
+  };
+
+  // Helper function to get existing supplier order data for a group
+  const getGroupSupplierData = (orders: SupplierOrder[]) => {
+    const firstOrder = orders[0];
+    return {
+      supplierOrderNumber: firstOrder?.supplierOrderNumber || '',
+      supplierOrderDate: firstOrder?.orderDate || '',
+      adminNotes: firstOrder?.notes || ''
+    };
+  };
+
+  // Helper function to save group supplier order information
+  const saveGroupSupplierInfo = async (orderNumber: string, orders: SupplierOrder[]) => {
+    const formData = groupFormData[orderNumber];
+    if (!formData) return;
+
+    const orderId = orders[0].orderId;
+    const updateData = {
+      ...(formData.supplierOrderNumber && { supplierOrderNumber: formData.supplierOrderNumber }),
+      ...(formData.supplierOrderDate && { supplierOrderDate: formData.supplierOrderDate }),
+      ...(formData.adminNotes && { adminNotes: formData.adminNotes })
+    };
+
+    if (Object.keys(updateData).length > 0) {
+      updateGroupSupplierOrderMutation.mutate({ orderId, data: updateData });
+    }
   };
 
   // Initialize all groups as expanded on first load
@@ -503,11 +570,11 @@ const SupplierOrders = () => {
             <div key={orderNumber} className="space-y-2">
               {/* Group Header */}
               <Card className="bg-gray-50 border-l-4 border-l-pink-500">
-                <CardHeader 
-                  className="pb-3 cursor-pointer hover:bg-gray-100 transition-colors"
-                  onClick={() => toggleGroup(orderNumber)}
-                >
-                  <div className="flex items-center justify-between">
+                <CardHeader className="pb-3">
+                  <div 
+                    className="flex items-center justify-between cursor-pointer hover:bg-gray-100 transition-colors rounded p-2 -m-2"
+                    onClick={() => toggleGroup(orderNumber)}
+                  >
                     <div className="flex items-center gap-3">
                       {expandedGroups.has(orderNumber) ? (
                         <ChevronDown className="h-5 w-5 text-gray-600" />
@@ -528,6 +595,64 @@ const SupplierOrders = () => {
                       <Badge variant="outline" className="ml-2">
                         {formatDate(orders[0].createdAt)}
                       </Badge>
+                    </div>
+                  </div>
+                  
+                  {/* Supplier Order Information Form */}
+                  <div className="mt-4 pt-4 border-t border-gray-200">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {/* Supplier Order Number */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Supplier Order Number
+                        </label>
+                        <Input
+                          type="text"
+                          placeholder="Enter supplier order number"
+                          value={groupFormData[orderNumber]?.supplierOrderNumber || getGroupSupplierData(orders).supplierOrderNumber}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            updateGroupFormData(orderNumber, 'supplierOrderNumber', e.target.value);
+                          }}
+                          onBlur={() => saveGroupSupplierInfo(orderNumber, orders)}
+                          className="h-8"
+                        />
+                      </div>
+
+                      {/* Order Date */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Order Date
+                        </label>
+                        <Input
+                          type="date"
+                          value={groupFormData[orderNumber]?.supplierOrderDate || getGroupSupplierData(orders).supplierOrderDate}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            updateGroupFormData(orderNumber, 'supplierOrderDate', e.target.value);
+                          }}
+                          onBlur={() => saveGroupSupplierInfo(orderNumber, orders)}
+                          className="h-8"
+                        />
+                      </div>
+
+                      {/* Notes */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Notes
+                        </label>
+                        <Input
+                          type="text"
+                          placeholder="Add notes..."
+                          value={groupFormData[orderNumber]?.adminNotes || getGroupSupplierData(orders).adminNotes}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            updateGroupFormData(orderNumber, 'adminNotes', e.target.value);
+                          }}
+                          onBlur={() => saveGroupSupplierInfo(orderNumber, orders)}
+                          className="h-8"
+                        />
+                      </div>
                     </div>
                   </div>
                 </CardHeader>
