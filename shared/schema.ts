@@ -406,9 +406,9 @@ export const salesReps = pgTable("salesReps", {
   updatedAt: text("updatedAt").default(String(new Date().toISOString())).notNull(),
 }, (table) => {
   return {
-    repCodeIdx: index("sales_reps_rep_code_idx").on(table.repCode),
-    emailIdx: index("sales_reps_email_idx").on(table.email),
-    isActiveIdx: index("sales_reps_is_active_idx").on(table.isActive),
+    repCodeIdx: index("salesReps_repCode_idx").on(table.repCode),
+    emailIdx: index("salesReps_email_idx").on(table.email),
+    isActiveIdx: index("salesReps_isActive_idx").on(table.isActive),
   };
 });
 
@@ -429,10 +429,10 @@ export const repCommissions = pgTable("repCommissions", {
   notes: text("notes"), // Admin notes about the commission
 }, (table) => {
   return {
-    repIdIdx: index("rep_commissions_rep_id_idx").on(table.repId),
-    orderIdIdx: index("rep_commissions_order_id_idx").on(table.orderId),
-    statusIdx: index("rep_commissions_status_idx").on(table.status),
-    createdAtIdx: index("rep_commissions_created_at_idx").on(table.createdAt),
+    repIdIdx: index("repCommissions_repId_idx").on(table.repId),
+    orderIdIdx: index("repCommissions_orderId_idx").on(table.orderId),
+    statusIdx: index("repCommissions_status_idx").on(table.status),
+    createdAtIdx: index("repCommissions_createdAt_idx").on(table.createdAt),
   };
 });
 
@@ -452,9 +452,9 @@ export const repPayments = pgTable("repPayments", {
   notes: text("notes"), // Admin notes about the payment
 }, (table) => {
   return {
-    repIdIdx: index("rep_payments_rep_id_idx").on(table.repId),
-    statusIdx: index("rep_payments_status_idx").on(table.status),
-    paidAtIdx: index("rep_payments_paid_at_idx").on(table.paidAt),
+    repIdIdx: index("repPayments_repId_idx").on(table.repId),
+    statusIdx: index("repPayments_status_idx").on(table.status),
+    paidAtIdx: index("repPayments_paidAt_idx").on(table.paidAt),
   };
 });
 
@@ -765,6 +765,8 @@ export const insertBatchUploadErrorSchema = createInsertSchema(batchUploadErrors
   id: true,
   createdAt: true,
 });
+
+
 
 
 
