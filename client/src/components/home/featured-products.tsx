@@ -14,7 +14,14 @@ const FeaturedProductsSection = () => {
   const { toast } = useToast();
   
   const { data: response, isLoading, isFetching, error, refetch } = useQuery<StandardApiResponse<Product[]>>({
-    queryKey: ['/api/featured-products', { limit, offset: (page - 1) * limit }],
+    queryKey: ['/api/featured-products', page, limit],
+    queryFn: async () => {
+      const offset = (page - 1) * limit;
+      const url = `/api/featured-products?limit=${limit}&offset=${offset}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Failed to fetch featured products');
+      return res.json();
+    },
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
     gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
     refetchOnWindowFocus: false,
@@ -33,23 +40,30 @@ const FeaturedProductsSection = () => {
   
   // Update products list when new data arrives
   useEffect(() => {
+    console.log('Products update effect:', { page, currentPageProducts: currentPageProducts?.length, limit });
+    
     if (currentPageProducts && currentPageProducts.length > 0) {
       if (page === 1) {
         // First page: replace all products
+        console.log('Setting first page products:', currentPageProducts.length);
         setAllProducts(currentPageProducts);
       } else {
         // Subsequent pages: append new products, avoiding duplicates
         setAllProducts(prev => {
           const existingIds = new Set(prev.map(p => p.id));
           const newProducts = currentPageProducts.filter(p => !existingIds.has(p.id));
+          console.log('Appending products:', { existing: prev.length, new: newProducts.length, total: prev.length + newProducts.length });
           return [...prev, ...newProducts];
         });
       }
       
       // Check if we have more products to load
-      setHasMoreProducts(currentPageProducts.length === limit);
+      const hasMore = currentPageProducts.length === limit;
+      console.log('Has more products:', hasMore, 'received:', currentPageProducts.length, 'limit:', limit);
+      setHasMoreProducts(hasMore);
     } else if (page > 1) {
       // No more products available
+      console.log('No more products available for page:', page);
       setHasMoreProducts(false);
     }
   }, [currentPageProducts, page, limit]);
