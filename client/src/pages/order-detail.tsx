@@ -747,7 +747,7 @@ const OrderDetail: React.FC = () => {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => copyToClipboard('Standard Bank', 'Bank name')}
+                            onClick={() => copyToClipboard('Capitec', 'Bank name')}
                           >
                             <Copy className="h-3 w-3" />
                           </Button>
@@ -760,7 +760,7 @@ const OrderDetail: React.FC = () => {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => copyToClipboard('Northgate', 'Branch name')}
+                            onClick={() => copyToClipboard('Tee Me You', 'Account name')}
                           >
                             <Copy className="h-3 w-3" />
                           </Button>
@@ -773,7 +773,7 @@ const OrderDetail: React.FC = () => {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => copyToClipboard('Cheque', 'Account type')}
+                            onClick={() => copyToClipboard('Transact', 'Account type')}
                           >
                             <Copy className="h-3 w-3" />
                           </Button>
@@ -786,7 +786,7 @@ const OrderDetail: React.FC = () => {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => copyToClipboard('4023252158', 'Account number')}
+                            onClick={() => copyToClipboard('1053816278', 'Account number')}
                           >
                             <Copy className="h-3 w-3" />
                           </Button>
