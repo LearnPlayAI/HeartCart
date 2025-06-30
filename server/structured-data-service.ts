@@ -215,7 +215,7 @@ class StructuredDataService {
   generateProductMetaTags(product: any, category?: any): string {
     const title = product.meta_title || product.name;
     const description = product.meta_description || product.description || product.name;
-    const keywords = product.meta_keywords || '';
+    const keywords = product.seoKeywords ? product.seoKeywords.join(', ') : '';
     const canonical = product.canonical_url || `${this.baseUrl}/product/id/${product.id}`;
 
     return `

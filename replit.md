@@ -360,11 +360,19 @@ Changelog:
   * Endpoints: /api/seo/product/:id/south-african, /api/seo/local-business-schema, /api/seo/south-african-faq
   
   **System Integration:**
-  * Works seamlessly with existing populated SEO data (meta_title, meta_description, meta_keywords, canonical_url)
+  * Works seamlessly with existing populated SEO data (meta_title, meta_description, seoKeywords, canonical_url)
   * All 530+ products automatically included in sitemaps with existing SEO metadata
   * Production-ready with proper error handling and database compatibility
   * No manual SEO data generation required - uses existing manual product creation workflow
   * Google Search Console ready with comprehensive product discovery and South African market targeting
+- June 30, 2025. Complete migration from meta_keywords to seoKeywords array format:
+  * Successfully migrated all 535 products and 541 product drafts from meta_keywords string to seoKeywords array
+  * Updated entire codebase: server-side storage, SEO services, AI integration, and all frontend components
+  * Fixed structured data service to properly handle seoKeywords array format for meta tags generation
+  * Updated all UI text references from "Meta Keywords" to "SEO Keywords" for consistent user experience
+  * Comprehensive migration script automatically converted all database queries, TypeScript types, and form validation
+  * Zero remaining references to meta_keywords/metaKeywords throughout the entire application
+  * Enhanced data integrity with proper array handling for SEO keywords instead of comma-separated strings
 ```
 
 ## User Preferences
