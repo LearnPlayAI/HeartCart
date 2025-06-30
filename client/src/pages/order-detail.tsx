@@ -743,7 +743,7 @@ const OrderDetail: React.FC = () => {
                       <div>
                         <label className="text-sm font-medium text-gray-600">Bank</label>
                         <div className="flex items-center justify-between">
-                          <p className="font-semibold">Standard Bank</p>
+                          <p className="font-semibold">Capitec Business</p>
                           <Button
                             variant="ghost"
                             size="sm"
