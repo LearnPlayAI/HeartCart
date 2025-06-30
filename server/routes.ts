@@ -7352,6 +7352,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     })
   );
 
+  // Add SEO API routes directly here to avoid frontend routing conflicts
+  app.get('/api/seo/debug-urls', async (req: Request, res: Response) => {
+    try {
+      console.log('[DEBUG] Starting URL debugging...');
+      
+      // Direct database query
+      const rawResults = await db.select({
+        id: products.id,
+        name: products.name,
+        image_url: sql`${products.imageUrl}`.as('image_url')
+      })
+      .from(products)
+      .where(and(
+        eq(products.isActive, true),
+        eq(products.supplierAvailable, true)
+      ))
+      .limit(3);
+      
+      console.log('[DEBUG] Raw DB results:', JSON.stringify(rawResults, null, 2));
+      
+      // Drizzle query
+      const drizzleResults = await db
+        .select({
+          id: products.id,
+          name: products.name,
+          imageUrl: products.imageUrl
+        })
+        .from(products)
+        .where(and(
+          eq(products.isActive, true),
+          eq(products.supplierAvailable, true)
+        ))
+        .limit(3);
+      
+      console.log('[DEBUG] Drizzle results:', JSON.stringify(drizzleResults, null, 2));
+      
+      res.json({
+        success: true,
+        data: {
+          rawQuery: rawResults,
+          drizzleQuery: drizzleResults,
+          timestamp: new Date().toISOString()
+        }
+      });
+    } catch (error) {
+      console.error('Error debugging URLs:', error);
+      res.status(500).json({ success: false, error: 'Failed to debug URLs' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
