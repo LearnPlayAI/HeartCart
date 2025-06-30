@@ -80,9 +80,9 @@ export async function injectProductMetaTags(req: Request, res: Response, next: N
     // Generate the complete product HTML with only product-specific meta tags
     const productHtml = generateProductHtml(product, displayPrice);
 
-    // Send the modified HTML
+    // Send the product HTML
     res.setHeader('Content-Type', 'text/html');
-    res.send(modifiedHtml);
+    res.send(productHtml);
     
   } catch (error) {
     console.error('Error injecting product meta tags:', error);

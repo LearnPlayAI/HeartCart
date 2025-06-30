@@ -3,7 +3,7 @@
  * Tests the complete server-side Open Graph meta tag injection for Facebook crawlers
  */
 
-const https = require('https');
+import https from 'https';
 
 async function testCompleteFacebookSharing() {
   console.log('🔍 Testing Complete Facebook Sharing System...\n');
