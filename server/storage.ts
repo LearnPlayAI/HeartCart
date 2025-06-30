@@ -11982,6 +11982,99 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async getGroupedOrderItemsForSupplierManagement(filters?: { 
+    status?: string; 
+  }): Promise<any[]> {
+    try {
+      // Get all supplier order items
+      const supplierOrders = await this.getOrderItemsForSupplierManagement(filters);
+      
+      // Group by customer order ID
+      const groupedOrders = new Map();
+      
+      supplierOrders.forEach(item => {
+        const orderId = item.orderId;
+        if (!groupedOrders.has(orderId)) {
+          groupedOrders.set(orderId, {
+            orderId: orderId,
+            orderNumber: item.customerOrder.orderNumber,
+            customerName: item.customerOrder.customerName,
+            customerOrderStatus: item.customerOrder.status,
+            createdAt: item.customerOrder.createdAt,
+            items: [],
+            totalCost: 0,
+            groupSupplierOrderNumber: item.groupSupplierOrderNumber,
+            allItemsOrdered: true,
+            hasUnavailableItems: false,
+            statusCounts: {
+              pending: 0,
+              ordered: 0,
+              unavailable: 0,
+              received: 0,
+              shipped: 0
+            }
+          });
+        }
+        
+        const group = groupedOrders.get(orderId);
+        group.items.push(item);
+        group.totalCost += parseFloat(item.totalCost);
+        group.statusCounts[item.status as keyof typeof group.statusCounts]++;
+        
+        if (item.status !== 'ordered' && item.status !== 'unavailable' && item.status !== 'received' && item.status !== 'shipped') {
+          group.allItemsOrdered = false;
+        }
+        
+        if (item.status === 'unavailable') {
+          group.hasUnavailableItems = true;
+        }
+        
+        // Use the first non-empty group supplier order number found
+        if (!group.groupSupplierOrderNumber && item.groupSupplierOrderNumber) {
+          group.groupSupplierOrderNumber = item.groupSupplierOrderNumber;
+        }
+      });
+      
+      return Array.from(groupedOrders.values())
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    } catch (error) {
+      logger.error('Error getting grouped order items for supplier management', { error, filters });
+      throw error;
+    }
+  }
+
+  async updateOrderItemsSupplierStatusBatch(orderItemIds: number[], statusData: {
+    supplierStatus?: string;
+    supplierOrderNumber?: string;
+    groupSupplierOrderNumber?: string;
+    supplierOrderDate?: string;
+    expectedDelivery?: string;
+    adminNotes?: string;
+  }): Promise<any[]> {
+    try {
+      const results = [];
+      
+      for (const orderItemId of orderItemIds) {
+        const result = await this.updateOrderItemSupplierStatus(orderItemId, {
+          ...statusData,
+          updatedAt: new Date().toISOString()
+        });
+        results.push(result);
+      }
+      
+      logger.info('Batch updated order item supplier statuses', { 
+        orderItemIds, 
+        statusData,
+        updatedCount: results.length 
+      });
+      
+      return results;
+    } catch (error) {
+      logger.error('Error batch updating order item supplier statuses', { error, orderItemIds, statusData });
+      throw error;
+    }
+  }
+
   async updateSupplierOrder(supplierOrderId: number, updates: Partial<InsertSupplierOrder>): Promise<SupplierOrder | undefined> {
     try {
       const [updated] = await db
