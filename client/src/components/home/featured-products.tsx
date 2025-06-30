@@ -105,9 +105,10 @@ const FeaturedProductsSection = () => {
   
   const loadMore = useCallback(() => {
     if (!isFetching && hasMoreProducts) {
+      console.log('Loading more products, current page:', page, 'current products:', allProducts.length);
       setPage(prev => prev + 1);
     }
-  }, [isFetching, hasMoreProducts]);
+  }, [isFetching, hasMoreProducts, page, allProducts.length]);
   
   return (
     <section id="featuredProducts" className="mb-4 md:mb-8 bg-white rounded-lg shadow-md overflow-hidden">
