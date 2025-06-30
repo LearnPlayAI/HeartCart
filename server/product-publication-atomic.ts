@@ -42,6 +42,13 @@ export async function publishProductDraft(draftId: number): Promise<PublicationR
 
       // 2. Create product data using EXACT schema match with proper seoKeywords handling
       // Ensure seoKeywords is properly handled as an array
+      logger.info('SEO Keywords Debug', { 
+        originalValue: draft.seoKeywords,
+        type: typeof draft.seoKeywords,
+        isArray: Array.isArray(draft.seoKeywords),
+        stringified: JSON.stringify(draft.seoKeywords)
+      });
+      
       let seoKeywordsArray = [];
       if (draft.seoKeywords) {
         if (Array.isArray(draft.seoKeywords)) {
@@ -51,6 +58,12 @@ export async function publishProductDraft(draftId: number): Promise<PublicationR
           seoKeywordsArray = draft.seoKeywords.split(',').map(k => k.trim()).filter(k => k);
         }
       }
+      
+      logger.info('Processed SEO Keywords', { 
+        result: seoKeywordsArray,
+        resultType: typeof seoKeywordsArray,
+        resultIsArray: Array.isArray(seoKeywordsArray)
+      });
 
       const productData = {
         name: draft.name || 'Untitled Product',
@@ -106,10 +119,14 @@ export async function publishProductDraft(draftId: number): Promise<PublicationR
         // Prepare update data with explicit seoKeywords handling
         const updateData = { ...productData };
         
-        // Ensure seoKeywords is properly formatted for database update
-        if (updateData.seoKeywords && Array.isArray(updateData.seoKeywords)) {
-          // Convert array to JSON string for database storage
-          updateData.seoKeywords = JSON.stringify(updateData.seoKeywords);
+        // Ensure seoKeywords is properly formatted as array for database update
+        if (updateData.seoKeywords && !Array.isArray(updateData.seoKeywords)) {
+          // If it's a string, try to parse it as JSON or split by comma
+          try {
+            updateData.seoKeywords = JSON.parse(updateData.seoKeywords);
+          } catch {
+            updateData.seoKeywords = updateData.seoKeywords.split(',').map(k => k.trim());
+          }
         }
         
         const [updatedProduct] = await tx
@@ -129,10 +146,14 @@ export async function publishProductDraft(draftId: number): Promise<PublicationR
         // Prepare insert data with explicit seoKeywords handling
         const insertData = { ...productData };
         
-        // Ensure seoKeywords is properly formatted for database storage
-        if (insertData.seoKeywords && Array.isArray(insertData.seoKeywords)) {
-          // Convert array to JSON string for database storage
-          insertData.seoKeywords = JSON.stringify(insertData.seoKeywords);
+        // Ensure seoKeywords is properly formatted as array for database storage
+        if (insertData.seoKeywords && !Array.isArray(insertData.seoKeywords)) {
+          // If it's a string, try to parse it as JSON or split by comma
+          try {
+            insertData.seoKeywords = JSON.parse(insertData.seoKeywords);
+          } catch {
+            insertData.seoKeywords = insertData.seoKeywords.split(',').map(k => k.trim());
+          }
         }
         
         const [newProduct] = await tx
