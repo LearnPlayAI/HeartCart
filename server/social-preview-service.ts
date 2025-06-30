@@ -21,8 +21,8 @@ async function getProductSocialData(productId: number): Promise<ProductSocialDat
     const client = await pool.connect();
     try {
       const result = await client.query(
-        'SELECT id, name, description, price, sale_price, image_url, brand FROM products WHERE id = $1 AND is_active = true LIMIT 1',
-        [productId]
+        'SELECT id, name, description, price, sale_price, image_url, brand FROM products WHERE id = $1 AND is_active = $2 LIMIT 1',
+        [productId, true]
       );
       
       if (!result.rows.length) {
@@ -67,7 +67,7 @@ function generateProductSocialHTML(product: ProductSocialData): string {
     : `${baseUrl}/api/social-preview/product-image/${product.id}`;
   
   // Create optimized meta description with TeeMeYou branding
-  const metaDescription = `${product.name} - R${displayPrice.toLocaleString()} | ${product.condition} condition | Shop on TeeMeYou - South Africa's trusted online marketplace for quality products with fast delivery.`;
+  const metaDescription = `${product.name} - R${displayPrice.toLocaleString()} | Shop on TeeMeYou - South Africa's trusted online marketplace for quality products with fast delivery.`;
   
   // Truncate description to Facebook's 300 character limit
   const truncatedDescription = metaDescription.length > 300 
@@ -106,7 +106,7 @@ function generateProductSocialHTML(product: ProductSocialData): string {
   <meta property="product:price:amount" content="${displayPrice}">
   <meta property="product:price:currency" content="ZAR">
   <meta property="product:availability" content="in stock">
-  <meta property="product:condition" content="${product.condition.toLowerCase()}">
+  <meta property="product:condition" content="new">
   
   <!-- Twitter Card Meta Tags -->
   <meta name="twitter:card" content="summary_large_image">
