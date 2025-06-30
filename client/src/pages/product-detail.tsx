@@ -8,6 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Star, StarHalf, Truck, Package, ShieldCheck, Heart, Share2, Minus, Plus, ChevronDown, ChevronRight, Clock, Shield, Palette } from 'lucide-react';
 import ProductCard from '@/components/product/product-card';
+import ShareProductDialog from '@/components/ShareProductDialog';
 import { useCart } from '@/hooks/use-cart';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency, calculateDiscount } from '@/lib/utils';
@@ -687,9 +688,18 @@ const ProductDetailContent = ({
               <Button variant="outline" size="icon" className="text-gray-500">
                 <Heart className="h-5 w-5" />
               </Button>
-              <Button variant="outline" size="icon" className="text-gray-500">
-                <Share2 className="h-5 w-5" />
-              </Button>
+              <ShareProductDialog
+                productId={product.id}
+                productTitle={product.name}
+                productPrice={product.price}
+                salePrice={product.salePrice || undefined}
+                productImage={product.imageUrl || undefined}
+                trigger={
+                  <Button variant="outline" size="icon" className="text-pink-600 border-pink-200 hover:bg-pink-50">
+                    <Share2 className="h-5 w-5" />
+                  </Button>
+                }
+              />
             </div>
             
             {/* Shipping Info */}
