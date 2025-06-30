@@ -754,7 +754,7 @@ const OrderDetail: React.FC = () => {
                         </div>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-gray-600">Branch</label>
+                        <label className="text-sm font-medium text-gray-600">Account Name</label>
                         <div className="flex items-center justify-between">
                           <p className="font-semibold">Global</p>
                           <Button
