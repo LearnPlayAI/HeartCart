@@ -7492,7 +7492,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const rep = await storage.getSalesRepByCode(repCode);
       
       if (rep) {
-        return sendSuccess(res, { valid: true, repName: rep.name });
+        return sendSuccess(res, { valid: true, repName: `${rep.firstName} ${rep.lastName}` });
       } else {
         return sendSuccess(res, { valid: false });
       }
