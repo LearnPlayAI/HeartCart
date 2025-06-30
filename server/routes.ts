@@ -7402,6 +7402,105 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Sales Rep Commission System Routes
+  app.get('/api/sales-reps', asyncHandler(async (req, res) => {
+    try {
+      const reps = await storage.getAllSalesReps();
+      return sendSuccess(res, reps);
+    } catch (error) {
+      return sendError(res, error instanceof Error ? error.message : 'Failed to get sales reps', 500);
+    }
+  }));
+
+  app.post('/api/sales-reps', asyncHandler(async (req, res) => {
+    try {
+      const repData = req.body;
+      const newRep = await storage.createSalesRep(repData);
+      return sendSuccess(res, newRep, 201);
+    } catch (error) {
+      return sendError(res, error instanceof Error ? error.message : 'Failed to create sales rep', 500);
+    }
+  }));
+
+  app.put('/api/sales-reps/:id', asyncHandler(async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const repData = req.body;
+      const updatedRep = await storage.updateSalesRep(id, repData);
+      
+      if (!updatedRep) {
+        return sendError(res, 'Sales rep not found', 404);
+      }
+      
+      return sendSuccess(res, updatedRep);
+    } catch (error) {
+      return sendError(res, error instanceof Error ? error.message : 'Failed to update sales rep', 500);
+    }
+  }));
+
+  app.get('/api/sales-reps/:id/commissions', asyncHandler(async (req, res) => {
+    try {
+      const repId = parseInt(req.params.id);
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+      const offset = req.query.offset ? parseInt(req.query.offset as string) : undefined;
+      
+      const commissions = await storage.getSalesRepCommissions(repId, limit, offset);
+      return sendSuccess(res, commissions);
+    } catch (error) {
+      return sendError(res, error instanceof Error ? error.message : 'Failed to get rep commissions', 500);
+    }
+  }));
+
+  app.get('/api/sales-reps/:id/earnings', asyncHandler(async (req, res) => {
+    try {
+      const repId = parseInt(req.params.id);
+      const startDate = req.query.startDate as string;
+      const endDate = req.query.endDate as string;
+      
+      const earnings = await storage.calculateRepEarnings(repId, startDate, endDate);
+      return sendSuccess(res, earnings);
+    } catch (error) {
+      return sendError(res, error instanceof Error ? error.message : 'Failed to calculate rep earnings', 500);
+    }
+  }));
+
+  app.get('/api/sales-reps/:id/payments', asyncHandler(async (req, res) => {
+    try {
+      const repId = parseInt(req.params.id);
+      const payments = await storage.getRepPayments(repId);
+      return sendSuccess(res, payments);
+    } catch (error) {
+      return sendError(res, error instanceof Error ? error.message : 'Failed to get rep payments', 500);
+    }
+  }));
+
+  app.post('/api/sales-reps/:id/payments', asyncHandler(async (req, res) => {
+    try {
+      const repId = parseInt(req.params.id);
+      const paymentData = { ...req.body, repId };
+      const newPayment = await storage.createRepPayment(paymentData);
+      return sendSuccess(res, newPayment, 201);
+    } catch (error) {
+      return sendError(res, error instanceof Error ? error.message : 'Failed to create rep payment', 500);
+    }
+  }));
+
+  // Validate rep code during registration
+  app.get('/api/validate-rep-code/:code', asyncHandler(async (req, res) => {
+    try {
+      const repCode = req.params.code;
+      const rep = await storage.getSalesRepByCode(repCode);
+      
+      if (rep) {
+        return sendSuccess(res, { valid: true, repName: rep.name });
+      } else {
+        return sendSuccess(res, { valid: false });
+      }
+    } catch (error) {
+      return sendError(res, error instanceof Error ? error.message : 'Failed to validate rep code', 500);
+    }
+  }));
+
   const httpServer = createServer(app);
   return httpServer;
 }

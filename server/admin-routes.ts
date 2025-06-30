@@ -133,6 +133,63 @@ router.patch("/orders/:id/status", isAuthenticated, asyncHandler(async (req: Req
       }
     }
 
+    // Calculate and create commission when order is delivered
+    if (status === 'delivered') {
+      try {
+        const order = await storage.getOrderById(orderId);
+        if (order && order.userId) {
+          const user = await storage.getUserById(order.userId);
+          if (user && user.repCode) {
+            const rep = await storage.getSalesRepByCode(user.repCode);
+            if (rep) {
+              // Calculate commission: 3% of profit margin (selling price - cost price)
+              const orderItems = await storage.getOrderItems(orderId);
+              let totalCommission = 0;
+
+              for (const item of orderItems) {
+                const product = await storage.getProductById(item.productId);
+                if (product && product.costPrice && product.price) {
+                  const profitMargin = (product.price - product.costPrice) * item.quantity;
+                  const itemCommission = profitMargin * 0.03; // 3% commission
+                  totalCommission += itemCommission;
+                }
+              }
+
+              if (totalCommission > 0) {
+                const commissionData = {
+                  repId: rep.id,
+                  orderId: orderId,
+                  userId: order.userId,
+                  commissionAmount: totalCommission,
+                  orderAmount: order.totalAmount,
+                  commissionRate: 0.03,
+                  status: 'earned' as const,
+                  notes: `Commission for delivered order ${order.orderNumber}`
+                };
+
+                await storage.createRepCommission(commissionData);
+                
+                logger.info("Commission created for delivered order", {
+                  orderId,
+                  repId: rep.id,
+                  repCode: user.repCode,
+                  commissionAmount: totalCommission,
+                  orderAmount: order.totalAmount
+                });
+              }
+            }
+          }
+        }
+      } catch (commissionError) {
+        // Log commission error but don't fail the status update
+        logger.error("Failed to create commission for delivered order", {
+          error: commissionError,
+          orderId,
+          status
+        });
+      }
+    }
+
     logger.info("Order status updated by admin", { orderId, status, adminUserId: req.user?.id });
     return sendSuccess(res, updatedOrder);
   } catch (error) {
@@ -791,6 +848,137 @@ router.patch("/settings/:key", isAuthenticated, asyncHandler(async (req: Request
   } catch (error) {
     logger.error("Error updating system setting", { error, key: req.params.key });
     return sendError(res, "Failed to update system setting", 500);
+  }
+}));
+
+// Sales Rep Commission System Admin Routes
+router.get("/sales-reps", isAdmin, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const reps = await storage.getAllSalesReps();
+    
+    // Get earnings for each rep
+    const repsWithEarnings = await Promise.all(
+      reps.map(async (rep) => {
+        const earnings = await storage.calculateRepEarnings(rep.id);
+        return {
+          ...rep,
+          totalEarnings: earnings.totalEarnings,
+          commissionCount: earnings.commissionCount
+        };
+      })
+    );
+    
+    logger.info("Admin sales reps fetched successfully", { repCount: reps.length });
+    return sendSuccess(res, repsWithEarnings);
+  } catch (error) {
+    logger.error("Error fetching admin sales reps", { error });
+    return sendError(res, "Failed to fetch sales reps", 500);
+  }
+}));
+
+router.post("/sales-reps", isAdmin, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const repData = req.body;
+    const newRep = await storage.createSalesRep(repData);
+    
+    logger.info("Sales rep created by admin", { repId: newRep.id, adminUserId: req.user?.id });
+    return sendSuccess(res, newRep, 201);
+  } catch (error) {
+    logger.error("Error creating sales rep", { error });
+    return sendError(res, "Failed to create sales rep", 500);
+  }
+}));
+
+router.put("/sales-reps/:id", isAdmin, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    const repData = req.body;
+    const updatedRep = await storage.updateSalesRep(id, repData);
+    
+    if (!updatedRep) {
+      return sendError(res, "Sales rep not found", 404);
+    }
+    
+    logger.info("Sales rep updated by admin", { repId: id, adminUserId: req.user?.id });
+    return sendSuccess(res, updatedRep);
+  } catch (error) {
+    logger.error("Error updating sales rep", { error });
+    return sendError(res, "Failed to update sales rep", 500);
+  }
+}));
+
+router.get("/sales-reps/:id/commissions", isAdmin, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const repId = parseInt(req.params.id);
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const offset = (page - 1) * limit;
+    
+    const commissions = await storage.getSalesRepCommissions(repId, limit, offset);
+    
+    return sendSuccess(res, {
+      commissions,
+      pagination: {
+        page,
+        limit,
+        hasMore: commissions.length === limit
+      }
+    });
+  } catch (error) {
+    logger.error("Error fetching rep commissions", { error });
+    return sendError(res, "Failed to fetch commissions", 500);
+  }
+}));
+
+router.get("/sales-reps/:id/earnings", isAdmin, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const repId = parseInt(req.params.id);
+    const startDate = req.query.startDate as string;
+    const endDate = req.query.endDate as string;
+    
+    const earnings = await storage.calculateRepEarnings(repId, startDate, endDate);
+    
+    return sendSuccess(res, earnings);
+  } catch (error) {
+    logger.error("Error calculating rep earnings", { error });
+    return sendError(res, "Failed to calculate earnings", 500);
+  }
+}));
+
+router.post("/sales-reps/:id/payments", isAdmin, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const repId = parseInt(req.params.id);
+    const paymentData = { 
+      ...req.body, 
+      repId,
+      processedBy: req.user?.id 
+    };
+    
+    const newPayment = await storage.createRepPayment(paymentData);
+    
+    logger.info("Rep payment created by admin", { 
+      repId, 
+      paymentId: newPayment.id,
+      amount: newPayment.amount,
+      adminUserId: req.user?.id 
+    });
+    
+    return sendSuccess(res, newPayment, 201);
+  } catch (error) {
+    logger.error("Error creating rep payment", { error });
+    return sendError(res, "Failed to create payment", 500);
+  }
+}));
+
+router.get("/sales-reps/:id/payments", isAdmin, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const repId = parseInt(req.params.id);
+    const payments = await storage.getRepPayments(repId);
+    
+    return sendSuccess(res, payments);
+  } catch (error) {
+    logger.error("Error fetching rep payments", { error });
+    return sendError(res, "Failed to fetch payments", 500);
   }
 }));
 
