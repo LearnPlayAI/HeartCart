@@ -515,7 +515,7 @@ const SupplierOrders = () => {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-gray-500">
-                      <span>Total Cost: {formatCurrency(orders.reduce((sum, order) => sum + order.totalCost, 0))}</span>
+                      <span>Total Cost: {formatCurrency(orders.reduce((sum, order) => sum + parseFloat(order.totalCost || '0'), 0))}</span>
                       <Badge variant="outline" className="ml-2">
                         {formatDate(orders[0].createdAt)}
                       </Badge>
