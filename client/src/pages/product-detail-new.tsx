@@ -558,8 +558,41 @@ const ProductDetailView = ({
   return (
     <>
       <Helmet>
-        <title>{product.name} - TEE ME YOU</title>
-        <meta name="description" content={product.description || `Buy ${product.name} from local South African suppliers at TEE ME YOU.`} />
+        <title>{product.name} - R{displayPrice.toLocaleString()} | TeeMeYou</title>
+        <meta name="description" content={product.description || `${product.name} - R${displayPrice.toLocaleString()} | Shop on TeeMeYou - South Africa's trusted online marketplace for quality products with fast delivery.`} />
+        
+        {/* Open Graph Meta Tags for Facebook */}
+        <meta property="og:type" content="product" />
+        <meta property="og:title" content={`${product.name} - R${displayPrice.toLocaleString()}`} />
+        <meta property="og:description" content={product.description || `${product.name} - R${displayPrice.toLocaleString()} | Shop on TeeMeYou - South Africa's trusted online marketplace for quality products with fast delivery.`} />
+        <meta property="og:url" content={`https://teemeyou.shop/product/id/${product.id}`} />
+        <meta property="og:image" content={product.imageUrl ? `https://teemeyou.shop${product.imageUrl}` : `https://teemeyou.shop/api/files/default-product-image.jpg`} />
+        <meta property="og:image:secure_url" content={product.imageUrl ? `https://teemeyou.shop${product.imageUrl}` : `https://teemeyou.shop/api/files/default-product-image.jpg`} />
+        <meta property="og:image:type" content="image/jpeg" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:image:alt" content={product.name} />
+        <meta property="og:site_name" content="TeeMeYou" />
+        <meta property="og:locale" content="en_ZA" />
+        
+        {/* Product-specific Open Graph */}
+        <meta property="product:price:amount" content={displayPrice.toString()} />
+        <meta property="product:price:currency" content="ZAR" />
+        <meta property="product:availability" content="in stock" />
+        <meta property="product:condition" content="new" />
+        <meta property="product:brand" content={product.brand || 'TeeMeYou'} />
+        <meta property="product:retailer" content="TeeMeYou" />
+        
+        {/* Twitter Card Meta Tags */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={`${product.name} - R${displayPrice.toLocaleString()}`} />
+        <meta name="twitter:description" content={product.description || `${product.name} - R${displayPrice.toLocaleString()} | Shop on TeeMeYou - South Africa's trusted online marketplace for quality products with fast delivery.`} />
+        <meta name="twitter:image" content={product.imageUrl ? `https://teemeyou.shop${product.imageUrl}` : `https://teemeyou.shop/api/files/default-product-image.jpg`} />
+        <meta name="twitter:image:alt" content={product.name} />
+        
+        {/* Additional Facebook-specific tags */}
+        <meta property="og:updated_time" content={new Date().toISOString()} />
+        <meta property="article:publisher" content="https://facebook.com/teemeyou" />
       </Helmet>
       
       <div className="container mx-auto px-4 py-6">

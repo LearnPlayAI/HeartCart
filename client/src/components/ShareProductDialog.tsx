@@ -113,8 +113,8 @@ ${salePrice && productPrice !== salePrice ? `~~R${productPrice.toLocaleString()}
   };
 
   const handleFacebookShare = () => {
-    // Use social preview URL for Facebook - contains proper Open Graph meta tags
-    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(socialPreviewUrl)}`;
+    // Use regular product URL - Facebook will crawl for Open Graph tags on the actual product page
+    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(productUrl)}`;
     window.open(facebookUrl, '_blank', 'width=600,height=400');
     setOpen(false);
   };
