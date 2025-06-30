@@ -130,8 +130,8 @@ app.get('/api/social-preview/product/:id', handleProductSocialPreview);
 app.get('/api/social-preview/product-image/:id', handleProductSocialImage);
 
 (async () => {
-  // Temporarily disable meta injection middleware to fix user access issue
-  // app.use(injectProductMetaTags);
+  // Add product meta tag injection middleware for Facebook sharing BEFORE other routes
+  app.use(injectProductMetaTags);
   
   const server = await registerRoutes(app);
 

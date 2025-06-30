@@ -31,12 +31,12 @@ export async function injectProductMetaTags(req: Request, res: Response, next: N
     return next();
   }
 
-  // Only serve static HTML to specific crawlers, let everyone else access the React app
+  // Only serve static HTML to Facebook crawler specifically
   const userAgent = req.get('User-Agent') || '';
-  const isSpecificCrawler = /facebookexternalhit|WhatsApp|Twitterbot|LinkedInBot/i.test(userAgent);
+  const isFacebookCrawler = /facebookexternalhit/i.test(userAgent);
   
-  // For regular browsers and non-specific crawlers, pass through to React app
-  if (!isSpecificCrawler) {
+  // For everyone else (including regular browsers), pass through to React app
+  if (!isFacebookCrawler) {
     return next();
   }
 
