@@ -846,7 +846,7 @@ Thank you for your assistance.
 Best regards,
 ${order.customerName}`;
                               
-                              const mailtoLink = `mailto:orders@teemeyou.shop?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                              const mailtoLink = `mailto:sales@teemeyou.shop?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
                               window.open(mailtoLink, '_blank');
                             }}
                             className="font-mono text-sm font-medium text-blue-900 bg-blue-100 px-2 py-1 rounded hover:bg-blue-200 transition-colors cursor-pointer"
