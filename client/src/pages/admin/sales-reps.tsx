@@ -84,8 +84,10 @@ export default function SalesRepsPage() {
   });
 
   // Extract the actual data array from the API response
+  console.log('Sales reps response:', salesRepsResponse);
   const salesReps = Array.isArray(salesRepsResponse?.data) ? salesRepsResponse.data : 
                     Array.isArray(salesRepsResponse) ? salesRepsResponse : [];
+  console.log('Processed sales reps:', salesReps);
 
   // Create sales rep mutation
   const createRepMutation = useMutation({
