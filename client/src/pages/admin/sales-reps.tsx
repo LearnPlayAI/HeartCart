@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -77,10 +77,33 @@ export default function SalesRepsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Force clear cache on mount
+  useEffect(() => {
+    queryClient.removeQueries({ queryKey: ['/api/admin/sales-reps'] });
+  }, [queryClient]);
+
   // Fetch sales reps
-  const { data: salesRepsResponse, isLoading } = useQuery({
+  const { data: salesRepsResponse, isLoading, refetch } = useQuery({
     queryKey: ['/api/admin/sales-reps'],
-    queryFn: () => apiRequest('/api/admin/sales-reps')
+    queryFn: async () => {
+      console.log('Making fresh API request...');
+      const response = await fetch('/api/admin/sales-reps', {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
+      const data = await response.json();
+      console.log('Direct fetch response:', data);
+      return data;
+    },
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true
   });
 
   // Extract the actual data array from the API response
