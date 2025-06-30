@@ -77,47 +77,8 @@ export async function injectProductMetaTags(req: Request, res: Response, next: N
       return next();
     }
 
-    // Generate product-specific Open Graph meta tags
-    const productMetaTags = `
-    <!-- Product-specific Open Graph Meta Tags for Facebook -->
-    <meta property="og:type" content="product" />
-    <meta property="og:title" content="${escapeHtml(product.name)} - R${displayPrice.toLocaleString()}" />
-    <meta property="og:description" content="${escapeHtml(product.description || `${product.name} - R${displayPrice.toLocaleString()} | Shop on TeeMeYou - South Africa's trusted online marketplace for quality products with fast delivery.`)}" />
-    <meta property="og:url" content="https://teemeyou.shop/product/id/${product.id}" />
-    <meta property="og:image" content="${product.imageUrl ? `https://teemeyou.shop${product.imageUrl}` : `https://teemeyou.shop/api/files/default-product-image.jpg`}" />
-    <meta property="og:image:secure_url" content="${product.imageUrl ? `https://teemeyou.shop${product.imageUrl}` : `https://teemeyou.shop/api/files/default-product-image.jpg`}" />
-    <meta property="og:image:type" content="image/jpeg" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="${escapeHtml(product.name)}" />
-    <meta property="og:site_name" content="TeeMeYou" />
-    <meta property="og:locale" content="en_ZA" />
-    
-    <!-- Product-specific Open Graph -->
-    <meta property="product:price:amount" content="${displayPrice.toString()}" />
-    <meta property="product:price:currency" content="ZAR" />
-    <meta property="product:availability" content="in stock" />
-    <meta property="product:condition" content="new" />
-    <meta property="product:brand" content="TeeMeYou" />
-    <meta property="product:retailer" content="TeeMeYou" />
-    
-    <!-- Twitter Card Meta Tags -->
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="${escapeHtml(product.name)} - R${displayPrice.toLocaleString()}" />
-    <meta name="twitter:description" content="${escapeHtml(product.description || `${product.name} - R${displayPrice.toLocaleString()} | Shop on TeeMeYou - South Africa's trusted online marketplace for quality products with fast delivery.`)}" />
-    <meta name="twitter:image" content="${product.imageUrl ? `https://teemeyou.shop${product.imageUrl}` : `https://teemeyou.shop/api/files/default-product-image.jpg`}" />
-    <meta name="twitter:image:alt" content="${escapeHtml(product.name)}" />
-    
-    <!-- Page Title Override -->
-    <title>${escapeHtml(product.name)} - R${displayPrice.toLocaleString()} | TeeMeYou</title>
-    <meta name="description" content="${escapeHtml(product.description || `${product.name} - R${displayPrice.toLocaleString()} | Shop on TeeMeYou - South Africa's trusted online marketplace for quality products with fast delivery.`)}" />`;
-
-    // Replace the existing Open Graph tags with product-specific ones
-    // Look for the closing </head> tag and insert our meta tags before it
-    const modifiedHtml = html.replace(
-      /<\/head>/i,
-      `${productMetaTags}\n</head>`
-    );
+    // Generate the complete product HTML with only product-specific meta tags
+    const productHtml = generateProductHtml(product, displayPrice);
 
     // Send the modified HTML
     res.setHeader('Content-Type', 'text/html');
