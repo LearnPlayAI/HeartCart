@@ -66,19 +66,19 @@ class StructuredDataService {
   /**
    * Generate Product structured data using existing SEO fields
    */
-  generateProductStructuredData(product: Product, category?: Category): ProductStructuredData {
+  generateProductStructuredData(product: any, category?: any): ProductStructuredData {
     const structuredData: ProductStructuredData = {
       "@context": "https://schema.org",
       "@type": "Product",
-      name: product.metaTitle || product.name,
-      description: product.metaDescription || product.description || product.name,
+      name: product.meta_title || product.name,
+      description: product.meta_description || product.description || product.name,
       image: this.getProductImages(product),
       category: category?.name,
       offers: {
         "@type": "Offer",
-        url: product.canonicalUrl || `${this.baseUrl}/product/id/${product.id}`,
+        url: product.canonical_url || `${this.baseUrl}/product/id/${product.id}`,
         priceCurrency: "ZAR",
-        price: (product.salePrice || product.price).toString(),
+        price: (product.sale_price || product.price).toString(),
         availability: product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
         seller: {
           "@type": "Organization",
@@ -102,17 +102,8 @@ class StructuredDataService {
     }
 
     // Add sale price validity
-    if (product.salePrice && product.specialSaleEnd) {
-      structuredData.offers.priceValidUntil = product.specialSaleEnd;
-    }
-
-    // Add rating if available
-    if (product.rating && product.reviewCount && product.reviewCount > 0) {
-      structuredData.aggregateRating = {
-        "@type": "AggregateRating",
-        ratingValue: product.rating.toString(),
-        reviewCount: product.reviewCount.toString()
-      };
+    if (product.sale_price && product.flash_deal_end) {
+      structuredData.offers.priceValidUntil = product.flash_deal_end;
     }
 
     return structuredData;
@@ -184,12 +175,12 @@ class StructuredDataService {
   /**
    * Generate Open Graph meta tags
    */
-  generateOpenGraphTags(product: Product, category?: Category): string {
-    const title = product.metaTitle || product.name;
-    const description = product.metaDescription || product.description || product.name;
+  generateOpenGraphTags(product: any, category?: any): string {
+    const title = product.meta_title || product.name;
+    const description = product.meta_description || product.description || product.name;
     const image = this.getMainProductImage(product);
-    const url = product.canonicalUrl || `${this.baseUrl}/product/id/${product.id}`;
-    const price = product.salePrice || product.price;
+    const url = product.canonical_url || `${this.baseUrl}/product/id/${product.id}`;
+    const price = product.sale_price || product.price;
 
     return `
     <!-- Open Graph / Facebook -->
@@ -221,11 +212,11 @@ class StructuredDataService {
   /**
    * Generate complete meta tags for a product page
    */
-  generateProductMetaTags(product: Product, category?: Category): string {
-    const title = product.metaTitle || product.name;
-    const description = product.metaDescription || product.description || product.name;
-    const keywords = product.metaKeywords || '';
-    const canonical = product.canonicalUrl || `${this.baseUrl}/product/id/${product.id}`;
+  generateProductMetaTags(product: any, category?: any): string {
+    const title = product.meta_title || product.name;
+    const description = product.meta_description || product.description || product.name;
+    const keywords = product.meta_keywords || '';
+    const canonical = product.canonical_url || `${this.baseUrl}/product/id/${product.id}`;
 
     return `
     <!-- SEO Meta Tags -->
@@ -241,18 +232,18 @@ class StructuredDataService {
   /**
    * Get product images for structured data
    */
-  private getProductImages(product: Product): string[] {
+  private getProductImages(product: any): string[] {
     const images: string[] = [];
     
-    if (product.imageUrl) {
-      const imageUrl = product.imageUrl.startsWith('http') 
-        ? product.imageUrl 
-        : `${this.baseUrl}${product.imageUrl}`;
+    if (product.image_url) {
+      const imageUrl = product.image_url.startsWith('http') 
+        ? product.image_url 
+        : `${this.baseUrl}${product.image_url}`;
       images.push(imageUrl);
     }
 
-    if (product.additionalImages) {
-      product.additionalImages.forEach(img => {
+    if (product.additional_images) {
+      product.additional_images.forEach((img: string) => {
         if (img) {
           const imageUrl = img.startsWith('http') ? img : `${this.baseUrl}${img}`;
           images.push(imageUrl);
@@ -266,11 +257,11 @@ class StructuredDataService {
   /**
    * Get main product image
    */
-  private getMainProductImage(product: Product): string {
-    if (product.imageUrl) {
-      return product.imageUrl.startsWith('http') 
-        ? product.imageUrl 
-        : `${this.baseUrl}${product.imageUrl}`;
+  private getMainProductImage(product: any): string {
+    if (product.image_url) {
+      return product.image_url.startsWith('http') 
+        ? product.image_url 
+        : `${this.baseUrl}${product.image_url}`;
     }
     
     return `${this.baseUrl}/assets/default-product.jpg`;
