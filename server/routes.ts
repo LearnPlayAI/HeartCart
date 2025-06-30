@@ -136,6 +136,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication with our new auth module
   setupAuth(app);
   
+  // Register SEO routes VERY EARLY to prevent frontend routing from intercepting
+  app.use('/', seoRoutes);
+  
   // Register simple auth routes early
   app.use("/api/auth", simpleAuthRoutes);
   
@@ -222,8 +225,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Mount upload handler routes
   app.use('/api/upload', uploadHandlers);
   
-  // Register SEO routes
-  app.use('/', seoRoutes);
+
   
   // Health check endpoint with build version for cache busting
   app.get('/api/health', asyncHandler(async (req: Request, res: Response) => {
