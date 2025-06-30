@@ -71,7 +71,7 @@ export interface ProductDraft {
   // SEO
   metaTitle?: string | null;
   metaDescription?: string | null;
-  metaKeywords?: string | null;
+  seoKeywords?: string | null;
   canonicalUrl?: string | null;
   
   // Wizard progress

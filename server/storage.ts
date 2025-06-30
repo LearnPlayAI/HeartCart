@@ -7357,7 +7357,7 @@ export class DatabaseStorage implements IStorage {
           taxClass: productDrafts.taxClass,
           metaTitle: productDrafts.metaTitle,
           metaDescription: productDrafts.metaDescription,
-          metaKeywords: productDrafts.metaKeywords,
+          seoKeywords: productDrafts.seoKeywords,
           canonicalUrl: productDrafts.canonicalUrl,
           publishedAt: productDrafts.publishedAt,
           publishedVersion: productDrafts.publishedVersion,
@@ -7764,7 +7764,7 @@ export class DatabaseStorage implements IStorage {
             ilike(productDrafts.brand, searchTerm),
             ilike(productDrafts.metaTitle, searchTerm),
             ilike(productDrafts.metaDescription, searchTerm),
-            ilike(productDrafts.metaKeywords, searchTerm),
+            ilike(productDrafts.seoKeywords, searchTerm),
             ilike(productDrafts.supplierUrl, searchTerm),
             ilike(productDrafts.discountLabel, searchTerm),
             ilike(productDrafts.specialSaleText, searchTerm),
@@ -8124,10 +8124,10 @@ export class DatabaseStorage implements IStorage {
               draftData.metaDescription !== undefined
                 ? draftData.metaDescription
                 : existingDraft.metaDescription,
-            metaKeywords:
-              draftData.metaKeywords !== undefined
-                ? draftData.metaKeywords
-                : existingDraft.metaKeywords,
+            seoKeywords:
+              draftData.seoKeywords !== undefined
+                ? draftData.seoKeywords
+                : existingDraft.seoKeywords,
             canonicalUrl:
               draftData.canonicalUrl !== undefined
                 ? draftData.canonicalUrl
@@ -8759,7 +8759,7 @@ export class DatabaseStorage implements IStorage {
         // SEO and metadata
         metaTitle: draft.metaTitle,
         metaDescription: draft.metaDescription,
-        metaKeywords: draft.metaKeywords,
+        seoKeywords: draft.seoKeywords,
         canonicalUrl:
           draft.canonicalUrl ||
           `https://www.teemeyou.shop/product/id/${draft.originalProductId || "new"}`,
@@ -8813,8 +8813,8 @@ export class DatabaseStorage implements IStorage {
         // hasDynamicPricing: draft.hasDynamicPricing || false,
 
         // Categorization and grouping
-        tags: draft.metaKeywords
-          ? draft.metaKeywords.split(",").map((tag) => tag.trim())
+        tags: draft.seoKeywords
+          ? draft.seoKeywords.split(",").map((tag) => tag.trim())
           : [],
 
         // Timestamps - convert to ISO strings for database storage

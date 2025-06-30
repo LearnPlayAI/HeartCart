@@ -594,7 +594,7 @@ export const ReviewAndSaveStep: React.FC<ReviewAndSaveStepProps> = ({
                       </div>
                       <div>
                         <h4 className="text-sm font-medium text-muted-foreground">Meta Keywords</h4>
-                        <p className="text-base">{draft.metaKeywords || 'Not set'}</p>
+                        <p className="text-base">{draft.seoKeywords || 'Not set'}</p>
                       </div>
                       {draft.canonicalUrl && (
                         <div>

@@ -74,7 +74,7 @@ interface ProductWizardState {
   // SEO
   metaTitle: string;
   metaDescription: string;
-  metaKeywords: string;
+  seoKeywords: string;
   
   // Wizard state
   currentStep: WizardStep;
@@ -146,7 +146,7 @@ const defaultInitialState: ProductWizardState = {
   // SEO
   metaTitle: '',
   metaDescription: '',
-  metaKeywords: '',
+  seoKeywords: '',
   
   // Wizard state
   currentStep: 'basic-info',
@@ -562,7 +562,7 @@ export const ProductWizardProvider: React.FC<ProductWizardProviderProps> = ({
               // SEO
               dispatch({ type: 'SET_FIELD', field: 'metaTitle', value: product.metaTitle || '' });
               dispatch({ type: 'SET_FIELD', field: 'metaDescription', value: product.metaDescription || '' });
-              dispatch({ type: 'SET_FIELD', field: 'metaKeywords', value: product.metaKeywords || '' });
+              dispatch({ type: 'SET_FIELD', field: 'seoKeywords', value: product.seoKeywords || '' });
               
               // Mark basic info step as valid
               dispatch({ type: 'MARK_STEP_VALID', step: 'basic-info', isValid: true });
@@ -742,7 +742,7 @@ export const ProductWizardProvider: React.FC<ProductWizardProviderProps> = ({
           isValid,
           metaTitle: state.metaTitle,
           metaDescription: state.metaDescription,
-          metaKeywords: state.metaKeywords
+          seoKeywords: state.seoKeywords
         });
         
         dispatch({ type: 'MARK_STEP_VALID', step: 'seo', isValid });

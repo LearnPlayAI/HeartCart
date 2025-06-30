@@ -84,7 +84,7 @@ export function SeoOptimizer({ className }: SeoOptimizerProps) {
       const updates = {
         metaTitle: seoResult.metaTitle,
         metaDescription: seoResult.metaDescription,
-        keywords: seoResult.keywords.join(', ')
+        seoKeywords: seoResult.keywords
       };
       
       updateDraft(updates);

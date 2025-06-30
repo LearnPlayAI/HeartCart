@@ -105,7 +105,7 @@ export const updateProductDraftSchema = z.object({
   // SEO metadata
   metaTitle: z.string().optional(),
   metaDescription: z.string().optional(),
-  metaKeywords: z.string().optional(),
+  seoKeywords: z.string().optional(),
   
   // Wizard progress tracking
   wizardProgress: z.any().optional(),
@@ -146,7 +146,7 @@ export const updateProductDraftWizardStepSchema = z.object({
     // SEO fields
     metaTitle: z.string().nullable().optional(),
     metaDescription: z.string().nullable().optional(),
-    metaKeywords: z.string().nullable().optional(),
+    seoKeywords: z.string().nullable().optional(),
     canonicalUrl: z.string().nullable().optional(),
     tags: z.array(z.string()).optional(),
     

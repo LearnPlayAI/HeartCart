@@ -224,7 +224,7 @@ export async function publishProductDraftComplete(draftId: number): Promise<Publ
         // SEO Fields - Complete Mapping with auto-generated canonical URL
         metaTitle: safeString(draft.metaTitle),
         metaDescription: safeString(draft.metaDescription),
-        metaKeywords: safeString(draft.metaKeywords),
+        seoKeywords: safeString(draft.seoKeywords),
         canonicalUrl: generateCanonicalUrl(draft.slug, draft.originalProductId),
         
         // Tags and Categories - use defaults for missing fields

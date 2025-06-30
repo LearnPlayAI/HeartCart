@@ -23,7 +23,7 @@ interface AiSeoSuggestionsProps {
   onApplySuggestions: (suggestions: {
     metaTitle: string;
     metaDescription: string;
-    metaKeywords: string;
+    seoKeywords: string[];
   }) => void;
 }
 
@@ -34,7 +34,7 @@ export const AiSeoSuggestions: React.FC<AiSeoSuggestionsProps> = ({
   const [suggestions, setSuggestions] = useState<{
     metaTitle: string;
     metaDescription: string;
-    metaKeywords: string;
+    seoKeywords: string[];
   } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,7 +65,7 @@ export const AiSeoSuggestions: React.FC<AiSeoSuggestionsProps> = ({
         category
       );
       
-      if (!seoSuggestions.metaTitle && !seoSuggestions.metaDescription && !seoSuggestions.metaKeywords) {
+      if (!seoSuggestions.metaTitle && !seoSuggestions.metaDescription && !seoSuggestions.seoKeywords?.length) {
         setError('No SEO suggestions could be generated. Please try again.');
       } else {
         setSuggestions(seoSuggestions);
@@ -196,7 +196,7 @@ export const AiSeoSuggestions: React.FC<AiSeoSuggestionsProps> = ({
                   variant="ghost"
                   size="sm"
                   className="h-8"
-                  onClick={() => handleCopy(suggestions.metaKeywords, 'keywords')}
+                  onClick={() => handleCopy(suggestions.seoKeywords.join(', '), 'keywords')}
                 >
                   {copied === 'keywords' ? (
                     <>
@@ -212,7 +212,7 @@ export const AiSeoSuggestions: React.FC<AiSeoSuggestionsProps> = ({
                 </Button>
               </div>
               <div className="p-2 border rounded-md text-sm bg-muted/50">
-                {suggestions.metaKeywords}
+                {suggestions.seoKeywords.join(', ')}
               </div>
             </div>
             

@@ -1119,7 +1119,7 @@ export const productDrafts = pgTable("product_drafts", {
   // SEO metadata
   metaTitle: text("meta_title"),
   metaDescription: text("meta_description"),
-  // metaKeywords removed - now using seoKeywords array instead
+  // seoKeywords removed - now using seoKeywords array instead
   canonicalUrl: text("canonical_url"),
   
   // Publication information

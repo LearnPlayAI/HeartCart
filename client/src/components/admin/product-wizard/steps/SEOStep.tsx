@@ -18,7 +18,7 @@ import type { ProductDraft } from '../ProductWizard';
 const seoSchema = z.object({
   metaTitle: z.string().max(70, 'Meta title should be less than 70 characters').nullable().optional(),
   metaDescription: z.string().max(160, 'Meta description should be less than 160 characters').nullable().optional(),
-  metaKeywords: z.string().max(255, 'Meta keywords should be less than 255 characters').nullable().optional(),
+  seoKeywords: z.string().max(255, 'Meta keywords should be less than 255 characters').nullable().optional(),
   canonicalUrl: z.union([
     z.string().url('Invalid URL format'),
     z.string().max(0) // Empty string allowed
@@ -89,7 +89,7 @@ export const SEOStep: React.FC<SEOStepProps> = ({
     defaultValues: {
       metaTitle: draft.metaTitle || draft.name || '',
       metaDescription: draft.metaDescription || '',
-      metaKeywords: draft.metaKeywords || '',
+      seoKeywords: draft.seoKeywords || '',
       canonicalUrl: draft.canonicalUrl || ''
     }
   });
@@ -128,7 +128,7 @@ export const SEOStep: React.FC<SEOStepProps> = ({
         categoryName,
         currentTitle: currentValues.metaTitle || '',
         currentDescription: currentValues.metaDescription || '',
-        currentKeywords: currentValues.metaKeywords || ''
+        currentKeywords: currentValues.seoKeywords || ''
       });
       
       const data = await response.json();
@@ -162,7 +162,7 @@ export const SEOStep: React.FC<SEOStepProps> = ({
     const keywordsString = Array.isArray(aiSuggestions.keywords) 
       ? aiSuggestions.keywords.join(', ') 
       : aiSuggestions.keywords;
-    form.setValue('metaKeywords', keywordsString);
+    form.setValue('seoKeywords', keywordsString);
     
     setShowAiDialog(false);
   };
@@ -314,7 +314,7 @@ export const SEOStep: React.FC<SEOStepProps> = ({
               {/* Meta Keywords */}
               <FormField
                 control={form.control}
-                name="metaKeywords"
+                name="seoKeywords"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Meta Keywords</FormLabel>

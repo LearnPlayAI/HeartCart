@@ -163,7 +163,7 @@ export default function registerProductDraftRoutes(router: Router) {
           taxClass: result.tax_class,
           metaTitle: result.meta_title,
           metaDescription: result.meta_description,
-          metaKeywords: result.meta_keywords,
+          seoKeywords: result.seoKeywords,
           wizardProgress: result.wizard_progress,
           completedSteps: result.completed_steps || []
         };

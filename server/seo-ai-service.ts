@@ -147,7 +147,7 @@ Price: R${product.price || 0}
       return {
         currentScore: 50,
         recommendations: ["Add meta title", "Improve meta description", "Add relevant keywords"],
-        missingElements: ["meta_title", "meta_description", "meta_keywords"],
+        missingElements: ["meta_title", "meta_description", "seoKeywords"],
         competitorKeywords: []
       };
     }
