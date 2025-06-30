@@ -24,10 +24,12 @@ router.get('/sitemap.xml', async (req: Request, res: Response) => {
  */
 router.get('/sitemap-products.xml', async (req: Request, res: Response) => {
   try {
+    console.log('[SEO ROUTE] Generating products sitemap...');
     const productsSitemap = await seoService.generateProductsSitemap();
     
     res.setHeader('Content-Type', 'application/xml');
-    res.setHeader('Cache-Control', 'public, max-age=1800'); // Cache for 30 minutes
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate'); // Disable caching temporarily for debugging
+    res.setHeader('X-Generated-At', new Date().toISOString());
     res.send(productsSitemap);
   } catch (error) {
     console.error('Error generating products sitemap:', error);
