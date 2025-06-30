@@ -14,13 +14,16 @@ const FeaturedProductsSection = () => {
   const { toast } = useToast();
   
   const { data: response, isLoading, isFetching, error, refetch } = useQuery<StandardApiResponse<Product[]>>({
-    queryKey: ['/api/featured-products', page, limit, Date.now()], // Add timestamp to force fresh data
+    queryKey: ['/api/featured-products', page, limit],
     queryFn: async () => {
       const offset = (page - 1) * limit;
       const url = `/api/featured-products?limit=${limit}&offset=${offset}`;
+      console.log('Fetching featured products:', url);
       const res = await fetch(url);
       if (!res.ok) throw new Error('Failed to fetch featured products');
-      return res.json();
+      const data = await res.json();
+      console.log('Featured products API response:', data);
+      return data;
     },
     staleTime: 0, // Never use stale data
     gcTime: 0, // Don't cache at all
@@ -40,9 +43,9 @@ const FeaturedProductsSection = () => {
   
   // Update products list when new data arrives
   useEffect(() => {
-    console.log('Products update effect:', { page, currentPageProducts: currentPageProducts?.length, limit });
+    console.log('Products update effect:', { page, currentPageProducts: currentPageProducts?.length, limit, response });
     
-    if (currentPageProducts && currentPageProducts.length > 0) {
+    if (response?.success && currentPageProducts && currentPageProducts.length > 0) {
       if (page === 1) {
         // First page: replace all products
         console.log('Setting first page products:', currentPageProducts.length);
@@ -66,14 +69,16 @@ const FeaturedProductsSection = () => {
       console.log('No more products available for page:', page);
       setHasMoreProducts(false);
     }
-  }, [currentPageProducts, page, limit]);
+  }, [response, currentPageProducts, page, limit]);
   
-  // Reset pagination when component mounts
+  // Reset pagination and force refetch when component mounts
   useEffect(() => {
     setPage(1);
     setAllProducts([]);
     setHasMoreProducts(true);
-  }, []);
+    // Force refetch on mount
+    refetch();
+  }, [refetch]);
   
   // Create a map of product promotions for quick lookup
   const activePromotions = promotionsResponse?.success ? promotionsResponse.data : [];
