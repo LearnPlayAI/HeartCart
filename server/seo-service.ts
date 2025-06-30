@@ -152,9 +152,9 @@ class SEOService {
           imageUrl: activeProducts[0].imageUrl
         }, null, 2));
         
-        // Check if there's any data transformation happening
-        console.log(`[SEO DEBUG] ImageUrl length: ${activeProducts[0].imageUrl?.length}`);
-        console.log(`[SEO DEBUG] ImageUrl starts with /api/files/: ${activeProducts[0].imageUrl?.startsWith('/api/files/')}`);
+        console.log(`[SEO DEBUG] ImageUrl value: "${activeProducts[0].imageUrl}"`);
+        console.log(`[SEO DEBUG] Contains //api/files/: ${activeProducts[0].imageUrl?.includes('//api/files/')}`);
+        console.log(`[SEO DEBUG] Double prefix check: ${activeProducts[0].imageUrl?.includes('/api/files//api/files/')}`);
       }
 
       const productUrls: SitemapUrl[] = activeProducts.map(product => {
