@@ -398,6 +398,14 @@ Changelog:
   * Refined user agent detection to serve static HTML only to Facebook crawlers, ensuring optimal user experience
   * System verified with comprehensive testing showing all required Open Graph tags present for Facebook sharing
   * Ready for deployment with complete Facebook sharing functionality maintaining user accessibility to React application
+- June 30, 2025. Enhanced supplier orders search functionality with admin efficiency improvements:
+  * Implemented comprehensive case-insensitive search across ALL order information with partial keyword matching
+  * Search works across order numbers, customer names, product names, SKUs, supplier order numbers, admin notes, and tracking numbers
+  * Enhanced search debounce delay to 1 second for improved performance and reduced server requests
+  * Added search parameter support in backend route handler and storage method with proper filtering
+  * Prefilled search box with "TMY-" prefix to streamline admin workflow - admins only need to type order number (e.g., "35")
+  * Search system supports partial keywords (e.g., "tmy-35" finds "TMY-35-20250627") for efficient order lookup
+  * Production-ready search implementation with proper error handling and database filtering
 ```
 
 ## User Preferences

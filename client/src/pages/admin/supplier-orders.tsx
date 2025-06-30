@@ -86,8 +86,8 @@ interface SupplierOrder {
 
 const SupplierOrders = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState('TMY-');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('TMY-');
   const [validationFilter, setValidationFilter] = useState<string>('all');
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [groupFormData, setGroupFormData] = useState<Record<string, { supplierOrderNumber: string; supplierOrderDate: string; adminNotes: string }>>({});
