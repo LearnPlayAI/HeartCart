@@ -129,10 +129,10 @@ app.use((req, res, next) => {
 app.get('/api/social-preview/product/:id', handleProductSocialPreview);
 app.get('/api/social-preview/product-image/:id', handleProductSocialImage);
 
-// Add product meta tag injection middleware for Facebook sharing
-app.use(injectProductMetaTags);
-
 (async () => {
+  // Add product meta tag injection middleware for Facebook sharing BEFORE other routes
+  app.use(injectProductMetaTags);
+  
   const server = await registerRoutes(app);
 
   // importantly only setup vite in development and after
