@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { db } from './db';
 import { products } from '../shared/schema';
+import { storage } from './storage';
 
 interface ProductSocialData {
   id: number;
@@ -19,17 +20,19 @@ interface ProductSocialData {
  */
 async function getProductSocialData(productId: number): Promise<ProductSocialData | null> {
   try {
-    const productData = await db
-      .select()
-      .from(products)
-      .where(eq(products.id, productId))
-      .limit(1);
-
-    if (!productData.length) {
+    // Use raw SQL query to bypass Drizzle ORM issues
+    const result = await db.execute(sql`
+      SELECT id, name, description, price, "salePrice", "imageUrl", condition
+      FROM products 
+      WHERE id = ${productId} AND "isActive" = true
+      LIMIT 1
+    `);
+    
+    if (!result.rows.length) {
       return null;
     }
-
-    const product = productData[0];
+    
+    const product = result.rows[0] as any;
     
     return {
       id: product.id,
