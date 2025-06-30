@@ -6,6 +6,7 @@ import { SAST_TIMEZONE } from "@shared/date-utils";
 import { errorHandlerMiddleware, notFoundMiddleware } from "./error-handler";
 import { logger } from "./logger";
 import { handleProductSocialPreview, handleProductSocialImage } from "./social-preview-service";
+import { injectProductMetaTags } from "./product-meta-injection";
 import crypto from "crypto";
 
 const app = express();
@@ -127,6 +128,9 @@ app.use((req, res, next) => {
 // Add social preview routes early in the middleware chain
 app.get('/api/social-preview/product/:id', handleProductSocialPreview);
 app.get('/api/social-preview/product-image/:id', handleProductSocialImage);
+
+// Add product meta tag injection middleware for Facebook sharing
+app.use(injectProductMetaTags);
 
 (async () => {
   const server = await registerRoutes(app);
