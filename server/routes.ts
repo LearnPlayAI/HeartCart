@@ -63,6 +63,7 @@ import { registerStorageTestRoutes } from "./storage-test-routes";
 import { registerFileManagerTestRoutes } from "./file-manager-test-routes";
 import authEmailRoutes from "./auth-email-routes";
 import simpleAuthRoutes from "./simple-auth-routes";
+import seoRoutes from "./seo-routes";
 import { validateRequest, idSchema } from './validation-middleware';
 import { trackProductInteraction, trackCartActivity } from './interaction-middleware';
 import { 
