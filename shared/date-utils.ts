@@ -101,35 +101,6 @@ export function toSASTTimezone(date: Date): Date {
 }
 
 /**
- * Create a SAST timestamp string for database storage
- * This function ensures all database timestamps are in South African time
- */
-export function createSASTTimestampString(date?: Date): string {
-  const now = date || new Date();
-  
-  // Calculate SAST (UTC+2) manually
-  const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
-  const sastTime = new Date(utcTime + (2 * 3600000)); // Add 2 hours for SAST
-  
-  return sastTime.toISOString();
-}
-
-/**
- * Convert any date to SAST timezone string for database storage
- */
-export function toSASTTimestampString(date: Date | string): string {
-  const dateObj = typeof date === 'string' ? new Date(date) : date;
-  return createSASTTimestampString(dateObj);
-}
-
-/**
- * Get current SAST timestamp as string (for database storage)
- */
-export function nowSAST(): string {
-  return createSASTTimestampString();
-}
-
-/**
  * Check if a date is valid
  */
 export function isValidDate(date: any): boolean {

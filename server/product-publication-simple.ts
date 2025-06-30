@@ -19,12 +19,11 @@ export async function publishProductDraft(draftId: number): Promise<PublicationR
   try {
     logger.info('Starting SIMPLE product publication', { draftId });
 
-    // Get the draft with all needed fields including SEO fields
+    // Get the draft with all needed fields
     const draftRows = await db.execute(sql`
       SELECT name, slug, description, category_id, regular_price, cost_price, 
              sale_price, supplier_id, catalog_id, image_urls, image_object_keys,
-             main_image_index, is_active, weight, dimensions, brand, tags,
-             meta_title, meta_description, seo_keywords, canonical_url
+             main_image_index, is_active, weight, dimensions, brand, tags
       FROM product_drafts 
       WHERE id = ${draftId}
     `);
@@ -36,24 +35,12 @@ export async function publishProductDraft(draftId: number): Promise<PublicationR
     const draft = draftRows.rows[0] as any;
     logger.info('Draft found, inserting product', { draftId, name: draft.name });
 
-    // Prepare seoKeywords array properly
-    let seoKeywordsArray = [];
-    if (draft.seo_keywords) {
-      if (Array.isArray(draft.seo_keywords)) {
-        seoKeywordsArray = draft.seo_keywords;
-      } else if (typeof draft.seo_keywords === 'string') {
-        // Handle legacy comma-separated string format
-        seoKeywordsArray = draft.seo_keywords.split(',').map(k => k.trim()).filter(k => k);
-      }
-    }
-
-    // Insert product with all the fields including SEO fields
+    // Insert product with all the fields including the missing ones
     const productRows = await db.execute(sql`
       INSERT INTO products (
         name, slug, description, category_id, price, cost_price, sale_price, 
         supplier, catalog_id, image_url, additional_images, is_active, stock, 
-        rating, review_count, sold_count, weight, dimensions, brand, tags, 
-        meta_title, meta_description, seo_keywords, canonical_url, created_at
+        rating, review_count, sold_count, weight, dimensions, brand, tags, created_at
       )
       VALUES (
         ${draft.name || 'New Product'},
@@ -76,10 +63,6 @@ export async function publishProductDraft(draftId: number): Promise<PublicationR
         ${draft.dimensions || null},
         ${draft.brand || null},
         ${draft.tags ? JSON.stringify(draft.tags) : '[]'},
-        ${draft.meta_title || null},
-        ${draft.meta_description || null},
-        ${JSON.stringify(seoKeywordsArray)},
-        ${draft.canonical_url || null},
         ${new Date().toISOString()}
       )
       RETURNING id

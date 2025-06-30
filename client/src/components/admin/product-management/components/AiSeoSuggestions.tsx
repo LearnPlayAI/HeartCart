@@ -23,7 +23,7 @@ interface AiSeoSuggestionsProps {
   onApplySuggestions: (suggestions: {
     metaTitle: string;
     metaDescription: string;
-    seoKeywords: string[];
+    metaKeywords: string;
   }) => void;
 }
 
@@ -34,7 +34,7 @@ export const AiSeoSuggestions: React.FC<AiSeoSuggestionsProps> = ({
   const [suggestions, setSuggestions] = useState<{
     metaTitle: string;
     metaDescription: string;
-    seoKeywords: string[];
+    metaKeywords: string;
   } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,7 +65,7 @@ export const AiSeoSuggestions: React.FC<AiSeoSuggestionsProps> = ({
         category
       );
       
-      if (!seoSuggestions.metaTitle && !seoSuggestions.metaDescription && !seoSuggestions.seoKeywords?.length) {
+      if (!seoSuggestions.metaTitle && !seoSuggestions.metaDescription && !seoSuggestions.metaKeywords) {
         setError('No SEO suggestions could be generated. Please try again.');
       } else {
         setSuggestions(seoSuggestions);
@@ -188,15 +188,15 @@ export const AiSeoSuggestions: React.FC<AiSeoSuggestionsProps> = ({
               </div>
             </div>
             
-            {/* SEO Keywords */}
+            {/* Meta Keywords */}
             <div className="space-y-2">
               <div className="flex justify-between items-center">
-                <h4 className="text-sm font-medium">SEO Keywords</h4>
+                <h4 className="text-sm font-medium">Meta Keywords</h4>
                 <Button
                   variant="ghost"
                   size="sm"
                   className="h-8"
-                  onClick={() => handleCopy(suggestions.seoKeywords.join(', '), 'keywords')}
+                  onClick={() => handleCopy(suggestions.metaKeywords, 'keywords')}
                 >
                   {copied === 'keywords' ? (
                     <>
@@ -212,7 +212,7 @@ export const AiSeoSuggestions: React.FC<AiSeoSuggestionsProps> = ({
                 </Button>
               </div>
               <div className="p-2 border rounded-md text-sm bg-muted/50">
-                {suggestions.seoKeywords.join(', ')}
+                {suggestions.metaKeywords}
               </div>
             </div>
             

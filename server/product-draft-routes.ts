@@ -5,7 +5,7 @@ import { isAdmin, isAuthenticated } from "./auth-middleware";
 import { validateRequest } from "./validation-middleware";
 import { logger } from "./logger";
 import { sendSuccess } from "./api-response";
-import { publishProductDraft } from "./product-publication-atomic";
+import { publishProductDraft } from "./product-publication-simple";
 import multer from "multer";
 import { 
   createProductDraftSchema, 
@@ -163,7 +163,7 @@ export default function registerProductDraftRoutes(router: Router) {
           taxClass: result.tax_class,
           metaTitle: result.meta_title,
           metaDescription: result.meta_description,
-          seoKeywords: result.seoKeywords,
+          metaKeywords: result.meta_keywords,
           wizardProgress: result.wizard_progress,
           completedSteps: result.completed_steps || []
         };

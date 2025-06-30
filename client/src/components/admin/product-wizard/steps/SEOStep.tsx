@@ -18,7 +18,7 @@ import type { ProductDraft } from '../ProductWizard';
 const seoSchema = z.object({
   metaTitle: z.string().max(70, 'Meta title should be less than 70 characters').nullable().optional(),
   metaDescription: z.string().max(160, 'Meta description should be less than 160 characters').nullable().optional(),
-  seoKeywords: z.string().max(255, 'Meta keywords should be less than 255 characters').nullable().optional(),
+  metaKeywords: z.string().max(255, 'Meta keywords should be less than 255 characters').nullable().optional(),
   canonicalUrl: z.union([
     z.string().url('Invalid URL format'),
     z.string().max(0) // Empty string allowed
@@ -89,7 +89,7 @@ export const SEOStep: React.FC<SEOStepProps> = ({
     defaultValues: {
       metaTitle: draft.metaTitle || draft.name || '',
       metaDescription: draft.metaDescription || '',
-      seoKeywords: draft.seoKeywords || '',
+      metaKeywords: draft.metaKeywords || '',
       canonicalUrl: draft.canonicalUrl || ''
     }
   });
@@ -128,7 +128,7 @@ export const SEOStep: React.FC<SEOStepProps> = ({
         categoryName,
         currentTitle: currentValues.metaTitle || '',
         currentDescription: currentValues.metaDescription || '',
-        currentKeywords: currentValues.seoKeywords || ''
+        currentKeywords: currentValues.metaKeywords || ''
       });
       
       const data = await response.json();
@@ -162,7 +162,7 @@ export const SEOStep: React.FC<SEOStepProps> = ({
     const keywordsString = Array.isArray(aiSuggestions.keywords) 
       ? aiSuggestions.keywords.join(', ') 
       : aiSuggestions.keywords;
-    form.setValue('seoKeywords', keywordsString);
+    form.setValue('metaKeywords', keywordsString);
     
     setShowAiDialog(false);
   };
@@ -209,7 +209,7 @@ export const SEOStep: React.FC<SEOStepProps> = ({
               </div>
               
               <div className="space-y-2">
-                <h3 className="text-sm font-medium">SEO Keywords</h3>
+                <h3 className="text-sm font-medium">Meta Keywords</h3>
                 <p className="text-sm p-3 bg-secondary rounded-md">
                   {Array.isArray(aiSuggestions.keywords) 
                     ? aiSuggestions.keywords.join(', ') 
@@ -311,13 +311,13 @@ export const SEOStep: React.FC<SEOStepProps> = ({
                 )}
               />
               
-              {/* SEO Keywords */}
+              {/* Meta Keywords */}
               <FormField
                 control={form.control}
-                name="seoKeywords"
+                name="metaKeywords"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>SEO Keywords</FormLabel>
+                    <FormLabel>Meta Keywords</FormLabel>
                     <FormControl>
                       <Input
                         {...field}

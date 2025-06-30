@@ -583,7 +583,7 @@ export async function generateSEO(
         Generate the following SEO elements tailored for the South African market:
         1. Meta Title (50-60 characters including the product name and main keywords)
         2. Meta Description (EXACTLY 150-160 characters maximum, no more! Include a compelling reason to click and a call to action)
-        3. SEO Keywords (10-12 relevant keyword phrases, comma-separated)
+        3. Meta Keywords (10-12 relevant keyword phrases, comma-separated)
         
         Format your response as a single JSON object with the fields: title, description, and keywords.
         Example:
@@ -601,7 +601,7 @@ export async function generateSEO(
       Generate the following SEO elements tailored for the South African market:
       1. Meta Title (50-60 characters including the product name and main keywords)
       2. Meta Description (EXACTLY 150-160 characters maximum, no more! Include a compelling reason to click and a call to action)
-      3. SEO Keywords (10-12 relevant keyword phrases, comma-separated)
+      3. Meta Keywords (10-12 relevant keyword phrases, comma-separated)
       
       Format your response as a single JSON object with the fields: title, description, and keywords.
       Example:
@@ -695,7 +695,7 @@ export async function optimizeSEO(
     Please improve these elements with the following guidelines:
     1. Meta Title (50-60 characters, include product name and main keywords)
     2. Meta Description (EXACTLY 150-160 characters maximum, include a compelling reason to click and call to action)
-    3. SEO Keywords (10-12 relevant keyword phrases, comma-separated)
+    3. Meta Keywords (10-12 relevant keyword phrases, comma-separated)
     
     Format your response as a single JSON object with the fields: title, description, and keywords.
     For example:

@@ -115,7 +115,6 @@ import {
 } from "drizzle-orm";
 import { objectStore, STORAGE_FOLDERS } from "./object-store";
 import { logger } from "./logger";
-import { nowSAST, createSASTTimestampString } from "@shared/date-utils";
 
 export interface IStorage {
   // User operations
@@ -1345,7 +1344,7 @@ export class DatabaseStorage implements IStorage {
           like(products.supplier || "", searchTerm),
           like(products.metaTitle || "", searchTerm),
           like(products.metaDescription || "", searchTerm),
-          sql`${searchTerm} = ANY(${products.seoKeywords})`,
+          like(products.metaKeywords || "", searchTerm),
           like(products.dimensions || "", searchTerm),
           like(products.specialSaleText || "", searchTerm),
           like(products.discountLabel || "", searchTerm)
@@ -1472,7 +1471,7 @@ export class DatabaseStorage implements IStorage {
           like(products.supplier || "", searchTerm),
           like(products.metaTitle || "", searchTerm),
           like(products.metaDescription || "", searchTerm),
-          sql`${searchTerm} = ANY(${products.seoKeywords})`,
+          like(products.metaKeywords || "", searchTerm),
           like(products.dimensions || "", searchTerm),
           like(products.specialSaleText || "", searchTerm),
           like(products.discountLabel || "", searchTerm)
@@ -2038,7 +2037,7 @@ export class DatabaseStorage implements IStorage {
               product.sku?.toLowerCase().includes(searchTerm) ||
               product.metaTitle?.toLowerCase().includes(searchTerm) ||
               product.metaDescription?.toLowerCase().includes(searchTerm) ||
-              product.seoKeywords?.some(keyword => keyword.toLowerCase().includes(searchTerm)) ||
+              product.metaKeywords?.toLowerCase().includes(searchTerm) ||
               product.dimensions?.toLowerCase().includes(searchTerm) ||
               product.specialSaleText?.toLowerCase().includes(searchTerm) ||
               product.discountLabel?.toLowerCase().includes(searchTerm) ||
@@ -7357,7 +7356,7 @@ export class DatabaseStorage implements IStorage {
           taxClass: productDrafts.taxClass,
           metaTitle: productDrafts.metaTitle,
           metaDescription: productDrafts.metaDescription,
-          seoKeywords: productDrafts.seoKeywords,
+          metaKeywords: productDrafts.metaKeywords,
           canonicalUrl: productDrafts.canonicalUrl,
           publishedAt: productDrafts.publishedAt,
           publishedVersion: productDrafts.publishedVersion,
@@ -7643,7 +7642,7 @@ export class DatabaseStorage implements IStorage {
         meta_title: product.metaTitle || product.name || '',
         meta_description: product.metaDescription || 
           (product.description ? product.description.substring(0, 160) : ''),
-        seoKeywords: product.seoKeywords || (tagsArray.length > 0 ? tagsArray : []),
+        meta_keywords: product.metaKeywords || (tagsArray.length > 0 ? tagsArray.join(', ') : ''),
         canonical_url: product.canonicalUrl || '',
         
         // Tax information - copy ALL tax fields
@@ -7764,7 +7763,7 @@ export class DatabaseStorage implements IStorage {
             ilike(productDrafts.brand, searchTerm),
             ilike(productDrafts.metaTitle, searchTerm),
             ilike(productDrafts.metaDescription, searchTerm),
-            ilike(productDrafts.seoKeywords, searchTerm),
+            ilike(productDrafts.metaKeywords, searchTerm),
             ilike(productDrafts.supplierUrl, searchTerm),
             ilike(productDrafts.discountLabel, searchTerm),
             ilike(productDrafts.specialSaleText, searchTerm),
@@ -8124,10 +8123,10 @@ export class DatabaseStorage implements IStorage {
               draftData.metaDescription !== undefined
                 ? draftData.metaDescription
                 : existingDraft.metaDescription,
-            seoKeywords:
-              draftData.seoKeywords !== undefined
-                ? draftData.seoKeywords
-                : existingDraft.seoKeywords,
+            metaKeywords:
+              draftData.metaKeywords !== undefined
+                ? draftData.metaKeywords
+                : existingDraft.metaKeywords,
             canonicalUrl:
               draftData.canonicalUrl !== undefined
                 ? draftData.canonicalUrl
@@ -8759,7 +8758,7 @@ export class DatabaseStorage implements IStorage {
         // SEO and metadata
         metaTitle: draft.metaTitle,
         metaDescription: draft.metaDescription,
-        seoKeywords: draft.seoKeywords,
+        metaKeywords: draft.metaKeywords,
         canonicalUrl:
           draft.canonicalUrl ||
           `https://www.teemeyou.shop/product/id/${draft.originalProductId || "new"}`,
@@ -8813,8 +8812,8 @@ export class DatabaseStorage implements IStorage {
         // hasDynamicPricing: draft.hasDynamicPricing || false,
 
         // Categorization and grouping
-        tags: draft.seoKeywords
-          ? draft.seoKeywords.split(",").map((tag) => tag.trim())
+        tags: draft.metaKeywords
+          ? draft.metaKeywords.split(",").map((tag) => tag.trim())
           : [],
 
         // Timestamps - convert to ISO strings for database storage

@@ -40,58 +40,7 @@ export async function publishProductDraft(draftId: number): Promise<PublicationR
         status: draft.draftStatus 
       });
 
-      // 2. Create product data using EXACT schema match with proper seoKeywords handling
-      // Ensure seoKeywords is properly handled as an array
-      logger.info('SEO Keywords Debug', { 
-        originalValue: draft.seoKeywords,
-        type: typeof draft.seoKeywords,
-        isArray: Array.isArray(draft.seoKeywords),
-        stringified: JSON.stringify(draft.seoKeywords)
-      });
-      
-      let seoKeywordsArray = [];
-      if (draft.seoKeywords) {
-        if (Array.isArray(draft.seoKeywords)) {
-          seoKeywordsArray = draft.seoKeywords;
-        } else if (typeof draft.seoKeywords === 'string') {
-          // Handle PostgreSQL array string format like: {"item1","item2","item3"}
-          if (draft.seoKeywords.startsWith('{') && draft.seoKeywords.endsWith('}')) {
-            try {
-              // Remove outer braces and split by comma, then clean quotes
-              const arrayContent = draft.seoKeywords.slice(1, -1);
-              seoKeywordsArray = arrayContent.split('","').map(k => 
-                k.replace(/^"/, '').replace(/"$/, '').trim()
-              ).filter(k => k);
-            } catch (error) {
-              logger.warn('Failed to parse PostgreSQL array format, falling back to comma split', { 
-                originalValue: draft.seoKeywords, 
-                error: error.message 
-              });
-              // Fallback to comma-separated string format
-              seoKeywordsArray = draft.seoKeywords.split(',').map(k => k.trim()).filter(k => k);
-            }
-          } else {
-            // Handle legacy comma-separated string format
-            seoKeywordsArray = draft.seoKeywords.split(',').map(k => k.trim()).filter(k => k);
-          }
-        }
-      }
-      
-      logger.info('Processed SEO Keywords', { 
-        result: seoKeywordsArray,
-        resultType: typeof seoKeywordsArray,
-        resultIsArray: Array.isArray(seoKeywordsArray),
-        length: seoKeywordsArray.length
-      });
-
-      // Additional debugging - log the exact data being passed to database
-      logger.info('CRITICAL DEBUG - Product data before database operation', {
-        seoKeywords: seoKeywordsArray,
-        seoKeywordsType: typeof seoKeywordsArray,
-        seoKeywordsIsArray: Array.isArray(seoKeywordsArray),
-        seoKeywordsStringified: JSON.stringify(seoKeywordsArray)
-      });
-
+      // 2. Create product data using EXACT schema match
       const productData = {
         name: draft.name || 'Untitled Product',
         slug: draft.slug || `product-${Date.now()}`,
@@ -114,7 +63,7 @@ export async function publishProductDraft(draftId: number): Promise<PublicationR
         weight: draft.weight ? parseFloat(String(draft.weight)) : null,
         dimensions: draft.dimensions,
         brand: draft.brand,
-        tags: Array.isArray(draft.tags) ? draft.tags : [],
+        tags: draft.tags || [],
         hasBackgroundRemoved: false,
         originalImageObjectKey: null,
         costPrice: parseFloat(String(draft.costPrice || 0)),
@@ -129,39 +78,16 @@ export async function publishProductDraft(draftId: number): Promise<PublicationR
         specialSaleStart: draft.specialSaleStart || null,
         specialSaleEnd: draft.specialSaleEnd || null,
         requiredAttributeIds: draft.selectedAttributes ? 
-          Object.keys(draft.selectedAttributes).map(id => parseInt(id)).filter(id => !isNaN(id)) : [],
-        // SEO fields - CRITICAL: Ensure seoKeywords is a proper JavaScript array
-        metaTitle: draft.metaTitle,
-        metaDescription: draft.metaDescription,
-        seoKeywords: seoKeywordsArray, // This MUST be a JavaScript array, not a string
-        canonicalUrl: draft.canonicalUrl
+          Object.keys(draft.selectedAttributes).map(id => parseInt(id)).filter(id => !isNaN(id)) : []
       };
-
-      // CRITICAL DEBUG: Verify the exact data types before database operation
-      logger.info('FINAL PRODUCT DATA VALIDATION', {
-        seoKeywordsValue: productData.seoKeywords,
-        seoKeywordsType: typeof productData.seoKeywords,
-        seoKeywordsIsArray: Array.isArray(productData.seoKeywords),
-        seoKeywordsLength: Array.isArray(productData.seoKeywords) ? productData.seoKeywords.length : 'NOT_ARRAY',
-        tagsType: typeof productData.tags,
-        tagsIsArray: Array.isArray(productData.tags)
-      });
 
       // 3. Create or update product
       let productResult;
       if (draft.originalProductId) {
-        // UPDATE existing product - handle seoKeywords conversion
-        logger.info('Updating existing product with all fields', { originalProductId: draft.originalProductId });
-        
-        // Prepare update data with explicit seoKeywords handling
-        const updateData = { ...productData };
-        
-        // Force seoKeywords to be an array - this is critical for Drizzle ORM
-        updateData.seoKeywords = seoKeywordsArray;
-        
+        // UPDATE existing product
         const [updatedProduct] = await tx
           .update(products)
-          .set(updateData)
+          .set(productData)
           .where(eq(products.id, draft.originalProductId))
           .returning();
 
@@ -170,18 +96,10 @@ export async function publishProductDraft(draftId: number): Promise<PublicationR
         }
         productResult = updatedProduct;
       } else {
-        // CREATE new product - handle seoKeywords conversion
-        logger.info('Creating new product with all fields');
-        
-        // Prepare insert data with explicit seoKeywords handling
-        const insertData = { ...productData };
-        
-        // Force seoKeywords to be an array - this is critical for Drizzle ORM
-        insertData.seoKeywords = seoKeywordsArray;
-        
+        // CREATE new product
         const [newProduct] = await tx
           .insert(products)
-          .values(insertData)
+          .values(productData)
           .returning();
 
         if (!newProduct) {

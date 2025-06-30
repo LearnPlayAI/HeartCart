@@ -67,7 +67,7 @@ const additionalInfoSchema = z.object({
   // SEO
   metaTitle: z.string().optional(),
   metaDescription: z.string().optional(),
-  seoKeywords: z.array(z.string()).optional(),
+  metaKeywords: z.string().optional(),
 });
 
 type AdditionalInfoFormValues = z.infer<typeof additionalInfoSchema>;
@@ -300,7 +300,7 @@ export function AdditionalInfoStep() {
       // SEO
       metaTitle: state.metaTitle || state.name,
       metaDescription: state.metaDescription || state.description,
-      seoKeywords: state.seoKeywords,
+      metaKeywords: state.metaKeywords,
     },
   });
   
@@ -326,7 +326,7 @@ export function AdditionalInfoStep() {
       // SEO
       form.setValue('metaTitle', state.metaTitle || state.name || '');
       form.setValue('metaDescription', state.metaDescription || state.description || '');
-      form.setValue('seoKeywords', state.seoKeywords || []);
+      form.setValue('metaKeywords', state.metaKeywords || '');
     }
   }, [state.productId, form, state]);
   
@@ -348,7 +348,7 @@ export function AdditionalInfoStep() {
     // SEO fields
     setField('metaTitle', values.metaTitle);
     setField('metaDescription', values.metaDescription);
-    setField('seoKeywords', values.seoKeywords);
+    setField('metaKeywords', values.metaKeywords);
     
     // Mark step as complete and valid
     markStepComplete('additional-info');
@@ -1007,10 +1007,10 @@ export function AdditionalInfoStep() {
                         
                         <FormField
                           control={form.control}
-                          name="seoKeywords"
+                          name="metaKeywords"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>SEO Keywords</FormLabel>
+                              <FormLabel>Meta Keywords</FormLabel>
                               <FormControl>
                                 <Input
                                   {...field}

@@ -123,7 +123,7 @@ export interface ProductDraft {
   // SEO metadata
   metaTitle: string | null;
   metaDescription: string | null;
-  seoKeywords: string | null;
+  metaKeywords: string | null;
   canonicalUrl: string | null;
   tags?: string[];
   
