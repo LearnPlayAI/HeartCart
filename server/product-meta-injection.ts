@@ -31,18 +31,14 @@ export async function injectProductMetaTags(req: Request, res: Response, next: N
     return next();
   }
 
-  // Only serve static HTML to crawlers/bots, let regular users access the React app
+  // Only serve static HTML to specific crawlers, let everyone else access the React app
   const userAgent = req.get('User-Agent') || '';
-  const isCrawler = /facebookexternalhit|WhatsApp|Twitterbot|LinkedInBot|bot|crawler|spider|googlebot/i.test(userAgent);
+  const isSpecificCrawler = /facebookexternalhit|WhatsApp|Twitterbot|LinkedInBot/i.test(userAgent);
   
-  console.log(`[META] Product page request: ${req.path}, User-Agent: ${userAgent}, isCrawler: ${isCrawler}`);
-  
-  if (!isCrawler) {
-    console.log(`[META] Regular user detected, passing to React app`);
+  // For regular browsers and non-specific crawlers, pass through to React app
+  if (!isSpecificCrawler) {
     return next();
   }
-  
-  console.log(`[META] Crawler detected, serving static HTML`);
 
   const productId = parseInt(productIdMatch[1]);
   
