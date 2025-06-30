@@ -2,7 +2,7 @@ import React from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
-import AdminLayout from '@/components/admin/admin-layout';
+import { AdminLayout } from '@/components/admin/layout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -74,53 +74,29 @@ const SupplierOrders: React.FC = () => {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState('all');
 
-  // Query supplier orders
+  // Query supplier orders with grouped view
   const { data: supplierOrdersResponse, isLoading, error } = useQuery({
-    queryKey: ['/api/admin/supplier-orders'],
-    queryFn: () => apiRequest('/api/admin/supplier-orders'),
+    queryKey: ['/api/admin/supplier-orders', { grouped: true }],
+    queryFn: () => apiRequest('/api/admin/supplier-orders?grouped=true'),
   });
 
-  // Group orders by customer order ID
+  // Use grouped data directly from backend
   const groupedOrders: GroupedSupplierOrder[] = React.useMemo(() => {
-    const supplierOrders = supplierOrdersResponse?.success ? supplierOrdersResponse.data : [];
-    if (!supplierOrders || supplierOrders.length === 0) return [];
+    const groupedData = supplierOrdersResponse?.success ? supplierOrdersResponse.data : [];
+    if (!groupedData || groupedData.length === 0) return [];
     
-    const grouped = supplierOrders.reduce((acc: { [key: number]: GroupedSupplierOrder }, order: SupplierOrder) => {
-      const orderId = order.orderId;
-      
-      if (!acc[orderId]) {
-        acc[orderId] = {
-          orderId,
-          orderNumber: order.customerOrder?.orderNumber || `Order ${orderId}`,
-          customerName: order.customerOrder?.customerName || 'Unknown Customer',
-          orderDate: order.customerOrder?.createdAt || order.createdAt,
-          orderStatus: order.customerOrder?.status || 'pending',
-          items: [],
-          totalCost: 0,
-          hasMixedStatuses: false,
-          groupSupplierOrderNumber: order.groupSupplierOrderNumber
-        };
-      }
-      
-      acc[orderId].items.push(order);
-      acc[orderId].totalCost += parseFloat(order.totalCost.toString());
-      
-      return acc;
-    }, {});
-    
-    // Check for mixed statuses and set group supplier order number
-    Object.values(grouped).forEach(group => {
-      const statuses = [...new Set(group.items.map(item => item.status))];
-      group.hasMixedStatuses = statuses.length > 1;
-      
-      // Use the first non-empty group supplier order number
-      const groupOrderNumber = group.items.find(item => item.groupSupplierOrderNumber)?.groupSupplierOrderNumber;
-      if (groupOrderNumber) {
-        group.groupSupplierOrderNumber = groupOrderNumber;
-      }
-    });
-    
-    return Object.values(grouped).sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
+    // Map the backend grouped data to our frontend interface
+    return groupedData.map((group: any) => ({
+      orderId: group.orderId,
+      orderNumber: group.orderNumber,
+      customerName: group.customerName,
+      orderDate: group.createdAt,
+      orderStatus: group.customerOrderStatus,
+      items: group.items,
+      totalCost: group.totalCost,
+      hasMixedStatuses: Object.keys(group.statusCounts).filter(status => group.statusCounts[status] > 0).length > 1,
+      groupSupplierOrderNumber: group.groupSupplierOrderNumber,
+    }));
   }, [supplierOrdersResponse]);
 
   const validateUrlMutation = useMutation({
