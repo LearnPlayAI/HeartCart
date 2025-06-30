@@ -423,4 +423,5 @@ Changelog:
 ## User Preferences
 ```
 Preferred communication style: Simple, everyday language.
+Database naming convention: ALL new tables and table columns MUST use camelCase naming (never snake_case).
 ```
