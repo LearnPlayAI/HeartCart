@@ -276,6 +276,59 @@ router.get('/:id', isAuthenticated, isAdmin, asyncHandler(async (req, res) => {
   }
 }));
 
+// POST /api/admin/supplier-orders/order/:orderId/update-group - Update supplier info for all items in a customer order
+router.post('/order/:orderId/update-group', isAuthenticated, isAdmin, asyncHandler(async (req, res) => {
+  const orderId = parseInt(req.params.orderId);
+  
+  if (isNaN(orderId)) {
+    return sendError(res, 'Invalid order ID', 400);
+  }
+
+  const validation = z.object({
+    supplierOrderNumber: z.string().optional(),
+    supplierOrderDate: z.string().optional(),
+    adminNotes: z.string().optional(),
+  }).safeParse(req.body);
+
+  if (!validation.success) {
+    return sendError(res, 'Invalid input data', 400, validation.error.errors);
+  }
+
+  try {
+    // Get all supplier order items for this customer order
+    const supplierOrders = await storage.getSupplierOrdersByOrderId(orderId);
+    if (supplierOrders.length === 0) {
+      return sendError(res, 'No supplier orders found for this order', 404);
+    }
+
+    // Update all supplier order items with the provided information
+    const updatePromises = supplierOrders.map(async (supplierOrder) => {
+      const updateData = {
+        ...(validation.data.supplierOrderNumber && { supplierOrderNumber: validation.data.supplierOrderNumber }),
+        ...(validation.data.supplierOrderDate && { supplierOrderDate: validation.data.supplierOrderDate }),
+        ...(validation.data.adminNotes && { adminNotes: validation.data.adminNotes }),
+        updatedAt: new Date().toISOString()
+      };
+
+      return storage.updateOrderItemSupplierStatus(supplierOrder.id, updateData);
+    });
+
+    await Promise.all(updatePromises);
+
+    // Get updated supplier orders to return
+    const updatedSupplierOrders = await storage.getSupplierOrdersByOrderId(orderId);
+    
+    return sendSuccess(res, {
+      message: `Updated ${supplierOrders.length} supplier order items`,
+      updatedItems: updatedSupplierOrders.length,
+      data: updatedSupplierOrders
+    });
+  } catch (error) {
+    console.error('Error updating supplier order group:', error);
+    return sendError(res, 'Failed to update supplier order group', 500);
+  }
+}));
+
 // POST /api/admin/supplier-orders/:id/generate-credit - Generate credit for unavailable item
 router.post('/:id/generate-credit', isAuthenticated, isAdmin, asyncHandler(async (req, res) => {
   const orderId = parseInt(req.params.id);
