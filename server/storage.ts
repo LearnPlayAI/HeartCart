@@ -12819,7 +12819,7 @@ export class DatabaseStorage implements IStorage {
       const reps = await db
         .select()
         .from(salesReps)
-        .orderBy(salesReps.name);
+        .orderBy(salesReps.firstName);
       
       return reps;
     } catch (error) {
