@@ -15,7 +15,9 @@ import {
   Calendar,
   CreditCard,
   Eye,
-  Truck
+  Truck,
+  User,
+  ShoppingCart
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -191,6 +193,50 @@ const SupplierOrders = () => {
     },
   });
 
+  const updateOrderMutation = useMutation({
+    mutationFn: ({ id, updates }: { id: number; updates: Partial<SupplierOrder> }) =>
+      apiRequest(`/api/admin/supplier-orders/${id}`, {
+        method: 'PATCH',
+        data: updates,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/supplier-orders'] });
+      toast({
+        title: 'Order updated',
+        description: 'Supplier order has been updated successfully',
+      });
+    },
+    onError: () => {
+      toast({
+        title: 'Update failed',
+        description: 'Could not update supplier order',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const batchUpdateMutation = useMutation({
+    mutationFn: ({ orderIds, updates }: { orderIds: number[]; updates: Partial<SupplierOrder> }) =>
+      apiRequest('/api/admin/supplier-orders/batch-update', {
+        method: 'PATCH',
+        data: { orderIds, updates },
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/supplier-orders'] });
+      toast({
+        title: 'Orders updated',
+        description: 'All selected orders have been updated successfully',
+      });
+    },
+    onError: () => {
+      toast({
+        title: 'Batch update failed',
+        description: 'Could not update the selected orders',
+        variant: 'destructive',
+      });
+    },
+  });
+
   const updateStatusMutation = useMutation({
     mutationFn: ({ orderId, status, notes }: { orderId: number; status: string; notes?: string }) =>
       apiRequest(`/api/admin/supplier-orders/${orderId}/status`, {
@@ -282,28 +328,7 @@ const SupplierOrders = () => {
     },
   });
 
-  // Batch update mutation for grouped operations
-  const batchUpdateMutation = useMutation({
-    mutationFn: (data: BatchUpdateData) =>
-      apiRequest('/api/admin/supplier-orders/batch-update', {
-        method: 'PATCH',
-        body: JSON.stringify(data),
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/supplier-orders'] });
-      toast({
-        title: 'Group order updated',
-        description: 'All items in the group have been updated successfully',
-      });
-    },
-    onError: () => {
-      toast({
-        title: 'Group update failed',
-        description: 'Could not update the grouped order',
-        variant: 'destructive',
-      });
-    },
-  });
+
 
   const supplierOrders = supplierOrdersResponse?.success ? supplierOrdersResponse.data : [];
   
@@ -591,175 +616,244 @@ const SupplierOrders = () => {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  {/* Order Details */}
-                  <div className="space-y-4">
-                    <div>
-                      <h4 className="font-medium mb-2">Order Details</h4>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Quantity:</span>
-                          <span>{order.quantity}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Unit Cost (TMY):</span>
-                          <span>{formatCurrency(order.unitCost)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Customer Price:</span>
-                          <span>{formatCurrency(order.customerUnitPrice)}</span>
-                        </div>
-                        <div className="flex justify-between font-medium">
-                          <span>Total Cost (TMY):</span>
-                          <span>{formatCurrency(order.totalCost)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Created:</span>
-                          <span>{formatDate(order.createdAt)}</span>
-                        </div>
+                {/* Group Supplier Order Number Input */}
+                {group.items.length > 1 && (
+                  <div className="mb-6 p-4 bg-blue-50 rounded-lg border">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <label className="text-sm font-medium mb-2 block">
+                          Group Supplier Order Number (for ordering all items together)
+                        </label>
+                        <Input
+                          placeholder="Enter supplier order number..."
+                          value={group.groupSupplierOrderNumber || ''}
+                          onChange={(e) => {
+                            const orderIds = group.items.map(item => item.id);
+                            batchUpdateMutation.mutate({
+                              orderIds,
+                              updates: { groupSupplierOrderNumber: e.target.value }
+                            });
+                          }}
+                          className="max-w-md"
+                        />
                       </div>
-                    </div>
-
-                    {/* Customer Information */}
-                    <div>
-                      <h4 className="font-medium mb-2">Customer</h4>
-                      <div className="space-y-1 text-sm">
-                        <div>{order.customerOrder.customerName}</div>
-                        <div className="text-muted-foreground">{order.customerOrder.customerEmail}</div>
-                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const orderIds = group.items.map(item => item.id);
+                          batchUpdateMutation.mutate({
+                            orderIds,
+                            updates: { 
+                              status: 'ordered',
+                              orderDate: new Date().toISOString()
+                            }
+                          });
+                        }}
+                        disabled={!group.groupSupplierOrderNumber || batchUpdateMutation.isPending}
+                        className="flex items-center gap-2 ml-4"
+                      >
+                        <ShoppingCart className="h-4 w-4" />
+                        Mark All as Ordered
+                      </Button>
                     </div>
                   </div>
+                )}
 
-                  {/* Supplier Details */}
-                  <div className="space-y-4">
-                    <div>
-                      <h4 className="font-medium mb-2">Supplier Information</h4>
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-muted-foreground">URL Validation:</span>
-                          {getValidationIcon(order.urlValidationStatus)}
-                          <span className="text-sm capitalize">{order.urlValidationStatus}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => window.open(getProductUrl(order), '_blank')}
-                            className="flex items-center gap-1"
-                          >
-                            <ExternalLink className="h-3 w-3" />
-                            View Product
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => validateUrlMutation.mutate(order.id)}
-                            disabled={validateUrlMutation.isPending}
-                            className="flex items-center gap-1"
-                          >
-                            <RefreshCw className={`h-3 w-3 ${validateUrlMutation.isPending ? 'animate-spin' : ''}`} />
-                            Validate URL
-                          </Button>
-                        </div>
-                        {order.supplierOrderNumber && (
-                          <div className="text-sm">
-                            <span className="text-muted-foreground">Supplier Order #:</span>
-                            <span className="ml-1">{order.supplierOrderNumber}</span>
+                {/* Items in this group */}
+                <div className="space-y-4">
+                  <h4 className="font-medium flex items-center gap-2">
+                    <Package className="h-4 w-4" />
+                    Items in this Order ({group.items.length})
+                  </h4>
+                  
+                  {group.items.map((item, index) => (
+                    <div key={item.id} className="border rounded-lg p-4 bg-gray-50">
+                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        {/* Product Details */}
+                        <div className="space-y-4">
+                          <div className="flex items-start gap-4">
+                            <div className="flex-shrink-0">
+                              <img
+                                src={item.product.imageUrl || '/placeholder-product.jpg'}
+                                alt={item.productName}
+                                className="w-16 h-16 object-cover rounded-md border"
+                                onError={(e) => {
+                                  e.currentTarget.src = '/placeholder-product.jpg';
+                                }}
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <h5 className="font-medium">{item.productName}</h5>
+                              {item.product.sku && (
+                                <div className="text-xs text-muted-foreground font-mono">
+                                  SKU: {item.product.sku}
+                                </div>
+                              )}
+                              <Badge variant={getStatusVariant(item.status)} className="flex items-center gap-1 w-fit">
+                                {getStatusIcon(item.status)}
+                                {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+                              </Badge>
+                            </div>
                           </div>
-                        )}
-                      </div>
-                    </div>
+                          
+                          <div className="space-y-2 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Quantity:</span>
+                              <span>{item.quantity}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Unit Cost:</span>
+                              <span>{formatCurrency(item.unitCost)}</span>
+                            </div>
+                            <div className="flex justify-between font-medium">
+                              <span>Total Cost:</span>
+                              <span>{formatCurrency(item.totalCost)}</span>
+                            </div>
+                          </div>
+                        </div>
 
-                    {order.notes && (
-                      <div>
-                        <h4 className="font-medium mb-2">Notes</h4>
-                        <p className="text-sm text-muted-foreground">{order.notes}</p>
+                        {/* Supplier Details */}
+                        <div className="space-y-4">
+                          <div>
+                            <h5 className="font-medium mb-2 text-sm">Supplier Information</h5>
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-muted-foreground">URL Validation:</span>
+                                {getValidationIcon(item.urlValidationStatus)}
+                                <span className="text-xs capitalize">{item.urlValidationStatus}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => window.open(getProductUrl(item), '_blank')}
+                                  className="flex items-center gap-1 text-xs h-7"
+                                >
+                                  <ExternalLink className="h-3 w-3" />
+                                  View Product
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => validateUrlMutation.mutate(item.id)}
+                                  disabled={validateUrlMutation.isPending}
+                                  className="flex items-center gap-1 text-xs h-7"
+                                >
+                                  <RefreshCw className={`h-3 w-3 ${validateUrlMutation.isPending ? 'animate-spin' : ''}`} />
+                                  Validate URL
+                                </Button>
+                              </div>
+                              {item.supplierOrderNumber && (
+                                <div className="text-xs">
+                                  <span className="text-muted-foreground">Supplier Order #:</span>
+                                  <span className="ml-1 font-mono">{item.supplierOrderNumber}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {item.notes && (
+                            <div>
+                              <h5 className="font-medium mb-2 text-sm">Notes</h5>
+                              <p className="text-xs text-muted-foreground">{item.notes}</p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Individual Item Actions */}
+                        <div className="space-y-2">
+                          <h5 className="font-medium mb-2 text-sm">Individual Actions</h5>
+                          <div className="space-y-2">
+                            <Input
+                              placeholder="Individual supplier order number..."
+                              value={item.supplierOrderNumber || ''}
+                              onChange={(e) => {
+                                updateOrderMutation.mutate({
+                                  id: item.id,
+                                  updates: { supplierOrderNumber: e.target.value }
+                                });
+                              }}
+                              className="text-xs h-8"
+                            />
+                            
+                            <Select 
+                              value={item.status} 
+                              onValueChange={(value) => {
+                                updateOrderMutation.mutate({
+                                  id: item.id,
+                                  updates: { status: value as any }
+                                });
+                              }}
+                            >
+                              <SelectTrigger className="text-xs h-8">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="pending">Pending</SelectItem>
+                                <SelectItem value="ordered">Ordered</SelectItem>
+                                <SelectItem value="unavailable">Unavailable</SelectItem>
+                                <SelectItem value="received">Received</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
                       </div>
-                    )}
+                    ))}
                   </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
+    </AdminLayout>
+  );
+};
 
-                  {/* Actions */}
-                  <div className="space-y-4">
-                    <div>
-                      <h4 className="font-medium mb-2">Actions</h4>
-                      <div className="space-y-2">
-                        {/* View Order Button */}
-                        <Link href={`/admin/orders/${order.orderId}`}>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="w-full flex items-center gap-1"
-                          >
-                            <Eye className="h-3 w-3" />
-                            View Order Details
-                          </Button>
-                        </Link>
-                        {order.status === 'pending' && (
-                          <>
-                            <Button
-                              variant="default"
-                              size="sm"
-                              onClick={() => updateStatusMutation.mutate({ 
-                                orderId: order.id, 
-                                status: 'ordered',
-                                notes: 'Order placed with supplier'
-                              })}
-                              disabled={updateStatusMutation.isPending}
-                              className="w-full flex items-center gap-1"
-                            >
-                              <Package className="h-3 w-3" />
-                              Mark as Ordered
-                            </Button>
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => updateStatusMutation.mutate({ 
-                                orderId: order.id, 
-                                status: 'unavailable',
-                                notes: 'Item unavailable from supplier'
-                              })}
-                              disabled={updateStatusMutation.isPending}
-                              className="w-full flex items-center gap-1"
-                            >
-                              <XCircle className="h-3 w-3" />
-                              Mark Unavailable
-                            </Button>
-                          </>
-                        )}
+// Helper functions that were referenced but need to be defined
+const formatDate = (dateString: string) => {
+  return new Date(dateString).toLocaleDateString('en-ZA', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  });
+};
 
-                        {order.status === 'ordered' && (
-                          <Button
-                            variant="default"
-                            size="sm"
-                            onClick={() => updateStatusMutation.mutate({ 
-                              orderId: order.id, 
-                              status: 'received',
-                              notes: 'Item received from supplier'
-                            })}
-                            disabled={updateStatusMutation.isPending}
-                            className="w-full flex items-center gap-1"
-                          >
-                            <CheckCircle className="h-3 w-3" />
-                            Mark as Received
-                          </Button>
-                        )}
+const getStatusVariant = (status: string): "default" | "secondary" | "destructive" | "outline" => {
+  switch (status) {
+    case 'pending': return 'outline';
+    case 'ordered': return 'default';
+    case 'unavailable': return 'destructive';
+    case 'received': return 'secondary';
+    default: return 'outline';
+  }
+};
 
-                        {order.status === 'received' && (
-                          <Button
-                            variant="default"
-                            size="sm"
-                            onClick={() => updateStatusMutation.mutate({ 
-                              orderId: order.id, 
-                              status: 'shipped',
-                              notes: 'Item shipped to customer'
-                            })}
-                            disabled={updateStatusMutation.isPending}
-                            className="w-full flex items-center gap-1"
-                          >
-                            <Truck className="h-3 w-3" />
-                            Mark as Shipped
-                          </Button>
-                        )}
+const getStatusIcon = (status: string) => {
+  switch (status) {
+    case 'pending': return <Clock className="h-3 w-3" />;
+    case 'ordered': return <Package className="h-3 w-3" />;
+    case 'unavailable': return <XCircle className="h-3 w-3" />;
+    case 'received': return <CheckCircle className="h-3 w-3" />;
+    default: return <Clock className="h-3 w-3" />;
+  }
+};
+
+const getValidationIcon = (status: string) => {
+  switch (status) {
+    case 'valid': return <CheckCircle className="h-3 w-3 text-green-500" />;
+    case 'invalid': return <XCircle className="h-3 w-3 text-red-500" />;
+    case 'pending': return <Clock className="h-3 w-3 text-yellow-500" />;
+    default: return <AlertTriangle className="h-3 w-3 text-gray-500" />;
+  }
+};
+
+const getProductUrl = (order: SupplierOrder) => {
+  return order.product.actualSupplierUrl || order.supplierUrl || '#';
+};
+
+export default SupplierOrders;
 
                         {order.status === 'unavailable' && (
                           <Button
