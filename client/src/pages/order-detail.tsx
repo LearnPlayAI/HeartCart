@@ -850,9 +850,7 @@ ${order.customerName}`;
                               window.open(mailtoLink, '_blank');
                             }}
                             className="font-mono text-sm font-medium text-blue-900 bg-blue-100 px-2 py-1 rounded hover:bg-blue-200 transition-colors cursor-pointer"
-                          >
-                            orders@teemeyou.shop
-                          </button>
+                          >sales@teemeyou.shop</button>
                           <p className="text-xs text-blue-700 mt-2">
                             Click the email address above to open your email client with pre-filled order details. Attach your proof of payment and send.
                           </p>
