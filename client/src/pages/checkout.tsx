@@ -196,12 +196,6 @@ export default function CheckoutPage() {
     refetchCart();
   }, [refetchCart]);
 
-  // Watch form values for real-time saving
-  const selectedShippingMethod = form.watch("shippingMethod");
-  const selectedPaymentMethod = form.watch("paymentMethod");
-  const watchedProvince = form.watch("province");
-  const watchedCity = form.watch("city");
-
   // Pre-populate form with user data if available
   useEffect(() => {
     if (user?.data) {
@@ -230,6 +224,9 @@ export default function CheckoutPage() {
     }
   }, [user, form]);
 
+  const selectedShippingMethod = form.watch("shippingMethod");
+  const selectedPaymentMethod = form.watch("paymentMethod");
+  
   // Calculate automatic credit application
   const availableCredit = creditBalance?.availableCredits ? parseFloat(creditBalance.availableCredits) : 0;
   
@@ -343,34 +340,6 @@ export default function CheckoutPage() {
     }
   });
 
-  // Auto-save province and city when user selects them (for better UX)
-  const [lastSavedProvince, setLastSavedProvince] = useState<string | null>(null);
-  const [lastSavedCity, setLastSavedCity] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (user?.data && watchedProvince && 
-        watchedProvince !== user.data.province && 
-        watchedProvince !== lastSavedProvince &&
-        !updateProfileMutation.isPending) {
-      setLastSavedProvince(watchedProvince);
-      updateProfileMutation.mutate({
-        province: watchedProvince
-      });
-    }
-  }, [watchedProvince, user?.data?.province, lastSavedProvince, updateProfileMutation]);
-
-  useEffect(() => {
-    if (user?.data && watchedCity && 
-        watchedCity !== user.data.city && 
-        watchedCity !== lastSavedCity &&
-        !updateProfileMutation.isPending) {
-      setLastSavedCity(watchedCity);
-      updateProfileMutation.mutate({
-        city: watchedCity
-      });
-    }
-  }, [watchedCity, user?.data?.city, lastSavedCity, updateProfileMutation]);
-
   const onSubmit = async (data: CheckoutFormData) => {
     if (!cartItems || !Array.isArray(cartItems) || cartItems.length === 0) {
       toast({
@@ -394,20 +363,14 @@ export default function CheckoutPage() {
     setIsProcessing(true);
 
     try {
-      // Always save province and city when user fills them out (for better UX)
-      if (user && (data.province !== user.data?.province || data.city !== user.data?.city)) {
-        await updateProfileMutation.mutateAsync({
-          province: data.province,
-          city: data.city
-        });
-      }
-
-      // Save additional user details if requested
+      // Save user details if requested
       if (data.saveDetails && user) {
         await updateProfileMutation.mutateAsync({
-          fullName: `${data.firstName} ${data.lastName}`.trim(),
-          phoneNumber: data.phone,
-          address: data.addressLine1,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          phone: data.phone,
+          addressLine1: data.addressLine1,
+          addressLine2: data.addressLine2,
           city: data.city,
           province: data.province,
           postalCode: data.postalCode

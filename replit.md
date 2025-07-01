@@ -484,15 +484,6 @@ Changelog:
   * Complete end-to-end system: user registration with repCode → order placement → order delivery → automatic commission calculation
   * Enhanced commission tracking includes detailed profit breakdowns and customer payment information
   * Sales rep commission system fully integrated with existing order management and ready for production use with accurate rate calculations
-- July 1, 2025. Commission duplication bug fixed and admin validation implemented:
-  * CRITICAL FIX: Resolved duplicate commission creation bug where same order could generate multiple commission entries
-  * Added duplicate prevention logic in createRepCommission() method to check for existing commissions before creating new ones
-  * Fixed commission entries for order TMY-40-20250701: removed duplicate R0.87 commission and corrected payment records
-  * Cleaned up duplicate credit transactions that resulted from the commission duplication bug
-  * Implemented admin validation for "Record Payment" functionality - shows message when no outstanding amount is owed
-  * Validation message: "[Rep Name] has no outstanding commissions to pay. All earnings have been paid."
-  * Enhanced credit payment system fully operational with proper duplicate prevention and audit logging
-  * Database-driven commission system now uses single source of truth preventing future duplication issues
 ```
 
 ## User Preferences
