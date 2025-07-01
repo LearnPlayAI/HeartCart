@@ -725,6 +725,19 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async getUserById(id: number): Promise<User | undefined> {
+    try {
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, id));
+      return user;
+    } catch (error) {
+      console.error(`Error fetching user by id "${id}":`, error);
+      throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
+  }
+
   async createUser(user: InsertUser): Promise<User> {
     try {
       const [newUser] = await db.insert(users).values(user).returning();
