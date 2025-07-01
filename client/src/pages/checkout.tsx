@@ -187,7 +187,7 @@ export default function CheckoutPage() {
       shippingMethod: "pudo",
       paymentMethod: "eft",
       specialInstructions: "",
-      saveDetails: false
+      saveDetails: true
     }
   });
 
@@ -219,7 +219,7 @@ export default function CheckoutPage() {
         shippingMethod: "pudo",
         paymentMethod: "eft",
         specialInstructions: "",
-        saveDetails: false
+        saveDetails: true
       });
     }
   }, [user, form]);
