@@ -257,9 +257,12 @@ Register now and start shopping! 🛍️`;
 
   const loadRepCommissions = async (repId: number) => {
     try {
-      const commissions = await apiRequest(`/api/admin/sales-reps/${repId}/commissions`);
-      setSelectedRepCommissions(commissions.commissions || []);
+      const response = await apiRequest('GET', `/api/admin/sales-reps/${repId}/commissions`);
+      console.log('Commission response:', response);
+      // The response structure includes pagination and commissions array
+      setSelectedRepCommissions(response.commissions || []);
     } catch (error) {
+      console.error('Error loading commissions:', error);
       toast({
         title: "Error",
         description: "Failed to load commissions",
@@ -270,9 +273,11 @@ Register now and start shopping! 🛍️`;
 
   const loadRepPayments = async (repId: number) => {
     try {
-      const payments = await apiRequest(`/api/admin/sales-reps/${repId}/payments`);
-      setSelectedRepPayments(payments || []);
+      const response = await apiRequest('GET', `/api/admin/sales-reps/${repId}/payments`);
+      console.log('Payments response:', response);
+      setSelectedRepPayments(response || []);
     } catch (error) {
+      console.error('Error loading payments:', error);
       toast({
         title: "Error",
         description: "Failed to load payments",
