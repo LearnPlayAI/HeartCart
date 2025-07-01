@@ -181,10 +181,7 @@ Register now and start shopping! 🛍️`;
 
   // Create sales rep mutation
   const createRepMutation = useMutation({
-    mutationFn: (repData: any) => apiRequest('/api/admin/sales-reps', {
-      method: 'POST',
-      body: JSON.stringify(repData)
-    }),
+    mutationFn: (repData: any) => apiRequest('POST', '/api/admin/sales-reps', repData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/sales-reps'] });
       setIsCreateDialogOpen(false);
@@ -214,10 +211,7 @@ Register now and start shopping! 🛍️`;
   // Update sales rep mutation
   const updateRepMutation = useMutation({
     mutationFn: ({ id, data }: { id: number, data: any }) => 
-      apiRequest(`/api/admin/sales-reps/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify(data)
-      }),
+      apiRequest('PUT', `/api/admin/sales-reps/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/sales-reps'] });
       setIsEditDialogOpen(false);
@@ -240,10 +234,7 @@ Register now and start shopping! 🛍️`;
   // Create payment mutation
   const createPaymentMutation = useMutation({
     mutationFn: ({ repId, paymentData }: { repId: number, paymentData: any }) =>
-      apiRequest(`/api/admin/sales-reps/${repId}/payments`, {
-        method: 'POST',
-        body: JSON.stringify(paymentData)
-      }),
+      apiRequest('POST', `/api/admin/sales-reps/${repId}/payments`, paymentData),
     onSuccess: () => {
       setIsPaymentDialogOpen(false);
       setNewPayment({
