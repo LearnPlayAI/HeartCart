@@ -97,6 +97,11 @@ const SupplierOrders = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Force cache invalidation on component mount to ensure fresh data
+  useEffect(() => {
+    queryClient.removeQueries({ queryKey: ['/api/admin/supplier-orders'] });
+  }, [queryClient]);
+
   // Debounce search term to prevent excessive API calls
   useEffect(() => {
     const timer = setTimeout(() => {

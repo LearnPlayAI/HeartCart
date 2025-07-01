@@ -236,6 +236,11 @@ Register now and start shopping! 🛍️`;
     mutationFn: ({ repId, paymentData }: { repId: number, paymentData: any }) =>
       apiRequest('POST', `/api/admin/sales-reps/${repId}/payments`, paymentData),
     onSuccess: () => {
+      // Invalidate all related queries to force fresh data
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/sales-reps'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/sales-reps/${selectedRep?.id}/commissions`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/sales-reps/${selectedRep?.id}/payments`] });
+      
       setIsPaymentDialogOpen(false);
       setNewPayment({
         amount: '',
@@ -247,7 +252,12 @@ Register now and start shopping! 🛍️`;
         title: "Success",
         description: "Payment recorded successfully"
       });
-      // Refresh commissions if showing them
+      
+      // Reload data to update UI with fresh information
+      if (selectedRep) {
+        loadRepCommissions(selectedRep.id);
+        loadRepPayments(selectedRep.id);
+      }
       if (selectedRep && showCommissions) {
         loadRepCommissions(selectedRep.id);
         loadRepPayments(selectedRep.id);
@@ -257,7 +267,18 @@ Register now and start shopping! 🛍️`;
 
   const loadRepCommissions = async (repId: number) => {
     try {
-      const response = await apiRequest('GET', `/api/admin/sales-reps/${repId}/commissions`);
+      // Force fresh data by clearing cache first
+      queryClient.removeQueries({ queryKey: [`/api/admin/sales-reps/${repId}/commissions`] });
+      
+      const response = await fetch(`/api/admin/sales-reps/${repId}/commissions`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
       const data = await response.json();
       console.log('Commission response:', data);
       // The response structure includes pagination and commissions array
@@ -274,7 +295,18 @@ Register now and start shopping! 🛍️`;
 
   const loadRepPayments = async (repId: number) => {
     try {
-      const response = await apiRequest('GET', `/api/admin/sales-reps/${repId}/payments`);
+      // Force fresh data by clearing cache first
+      queryClient.removeQueries({ queryKey: [`/api/admin/sales-reps/${repId}/payments`] });
+      
+      const response = await fetch(`/api/admin/sales-reps/${repId}/payments`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
       const data = await response.json();
       console.log('Payments response:', data);
       setSelectedRepPayments(data.data || []);
@@ -289,6 +321,11 @@ Register now and start shopping! 🛍️`;
   };
 
   const handleViewCommissions = async (rep: SalesRep) => {
+    // Clear all related cache first
+    queryClient.removeQueries({ queryKey: ['/api/admin/sales-reps'] });
+    queryClient.removeQueries({ queryKey: [`/api/admin/sales-reps/${rep.id}/commissions`] });
+    queryClient.removeQueries({ queryKey: [`/api/admin/sales-reps/${rep.id}/payments`] });
+    
     setSelectedRep(rep);
     setShowCommissions(true);
     await loadRepCommissions(rep.id);
