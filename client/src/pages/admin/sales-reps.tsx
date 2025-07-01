@@ -335,14 +335,8 @@ Register now and start shopping! 🛍️`;
   const handleRecordPayment = () => {
     if (!selectedRep) return;
     
-    // Calculate amount owed by subtracting already paid amounts from total earnings
-    const totalEarnings = selectedRep.totalEarnings || 0;
-    
-    // Calculate total payments already made
-    const totalPaid = selectedRepPayments.reduce((sum, payment) => sum + payment.amount, 0);
-    
-    // Calculate amount owed (unpaid balance)
-    const amountOwed = Math.max(0, totalEarnings - totalPaid);
+    // Use server-calculated amount owed from the database
+    const amountOwed = selectedRep.amountOwed || 0;
     
     // Check if there's no outstanding amount
     if (amountOwed <= 0) {
@@ -354,7 +348,7 @@ Register now and start shopping! 🛍️`;
       return;
     }
     
-    // Pre-fill the payment form with the amount owed
+    // Pre-fill the payment form with the server-calculated amount owed
     setNewPayment({
       amount: amountOwed.toFixed(2),
       paymentMethod: 'bank_transfer',

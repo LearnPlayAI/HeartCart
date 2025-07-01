@@ -913,13 +913,23 @@ router.get("/sales-reps", isAdmin, asyncHandler(async (req: Request, res: Respon
   try {
     const reps = await storage.getAllSalesReps();
     
-    // Enrich each rep with earnings data
+    // Enrich each rep with earnings and payment data
     const enrichedReps = await Promise.all(reps.map(async (rep) => {
       const earnings = await storage.calculateRepEarnings(rep.id);
+      const payments = await storage.getRepPayments(rep.id);
+      
+      // Calculate total payments made
+      const totalPaid = payments.reduce((sum, payment) => sum + parseFloat(payment.amount), 0);
+      
+      // Calculate amount owed (total earnings - total paid)
+      const amountOwed = Math.max(0, earnings.totalEarnings - totalPaid);
+      
       return {
         ...rep,
         totalEarnings: earnings.totalEarnings,
-        commissionCount: earnings.commissionCount
+        commissionCount: earnings.commissionCount,
+        totalPaid: totalPaid,
+        amountOwed: amountOwed
       };
     }));
     
