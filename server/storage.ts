@@ -12034,8 +12034,23 @@ export class DatabaseStorage implements IStorage {
 
       const results = await query;
       
+      // Remove duplicates by order item ID - this handles cases where there might be 
+      // multiple product_drafts entries for the same SKU
+      const uniqueResults = results.reduce((acc, row) => {
+        const existingIndex = acc.findIndex(item => item.orderItem.id === row.orderItem.id);
+        if (existingIndex === -1) {
+          acc.push(row);
+        } else {
+          // If duplicate found, keep the one with the most recent product_draft
+          if (row.productDraft && row.productDraft.created_at > acc[existingIndex].productDraft?.created_at) {
+            acc[existingIndex] = row;
+          }
+        }
+        return acc;
+      }, [] as typeof results);
+      
       // Map the raw results to structured objects
-      const mappedResults = results.map(row => ({
+      const mappedResults = uniqueResults.map(row => ({
         id: row.orderItem.id,
         orderId: row.order.id,
         productId: row.product.id,
