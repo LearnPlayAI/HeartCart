@@ -1,7 +1,7 @@
 {
   "name": "TEE ME YOU - South African Online Shopping",
   "short_name": "TEE ME YOU",
-  "description": "Shop unique products from local South African suppliers at unbeatable prices",
+  "description": "Shop unique products from local South African suppliers at unbeatable prices. Quality products with fast delivery.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#FFFFFF",
