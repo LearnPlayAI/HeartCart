@@ -295,6 +295,29 @@ Register now and start shopping! 🛍️`;
     await loadRepPayments(rep.id);
   };
 
+  const handleRecordPayment = () => {
+    if (!selectedRep) return;
+    
+    // Calculate amount owed by subtracting already paid amounts from total earnings
+    const totalEarnings = selectedRep.totalEarnings || 0;
+    
+    // Calculate total payments already made
+    const totalPaid = selectedRepPayments.reduce((sum, payment) => sum + payment.amount, 0);
+    
+    // Calculate amount owed (unpaid balance)
+    const amountOwed = Math.max(0, totalEarnings - totalPaid);
+    
+    // Pre-fill the payment form with the amount owed
+    setNewPayment({
+      amount: amountOwed.toFixed(2),
+      paymentMethod: 'bank_transfer',
+      referenceNumber: '',
+      notes: ''
+    });
+    
+    setIsPaymentDialogOpen(true);
+  };
+
   const handleCreatePayment = () => {
     if (!selectedRep) return;
     
@@ -536,7 +559,7 @@ Register now and start shopping! 🛍️`;
             <div className="space-y-6">
               <div className="flex justify-between items-center">
                 <h3 className="text-lg font-semibold">Commission History</h3>
-                <Button onClick={() => setIsPaymentDialogOpen(true)}>
+                <Button onClick={() => handleRecordPayment()}>
                   <DollarSign className="w-4 h-4 mr-2" />
                   Record Payment
                 </Button>
