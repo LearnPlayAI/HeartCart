@@ -143,7 +143,7 @@ export const registrationSchema = z.object({
     }),
   confirmPassword: z.string().min(1, "Confirm password is required"),
   fullName: z.string().optional(),
-  repCode: z.string().trim().optional(), // Optional sales rep code
+  repCode: z.string().trim().optional().transform(val => val === "" ? null : val), // Optional sales rep code, convert empty string to null
   acceptTerms: z.boolean().refine(val => val === true, {
     message: "You must accept the terms and conditions"
   })

@@ -44,7 +44,7 @@ const registerSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   confirmPassword: z.string().min(6, "Password must be at least 6 characters"),
-  repCode: z.string().trim().optional(), // Optional sales rep code
+  repCode: z.string().trim().optional().transform(val => val === "" ? null : val), // Optional sales rep code, convert empty string to null
   acceptTerms: z.boolean().refine(val => val === true, {
     message: "You must accept the terms and conditions"
   })
@@ -195,7 +195,7 @@ export default function AuthPage() {
       email: "",
       password: "",
       confirmPassword: "",
-      repCode: repCodeFromUrl, // Pre-fill repCode from URL parameter
+      repCode: repCodeFromUrl || "", // Pre-fill repCode from URL parameter, default to empty string
       acceptTerms: false,
     },
   });
@@ -611,6 +611,7 @@ export default function AuthPage() {
                               <Input
                                 placeholder="Enter sales rep code if you have one"
                                 {...field}
+                                value={field.value || ""}
                                 onChange={(e) => {
                                   field.onChange(e);
                                   // Validate rep code on change with debounce

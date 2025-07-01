@@ -462,6 +462,9 @@ Changelog:
   * Clean URL structure using standard query parameters for better maintainability
   * Updated WhatsApp sharing URLs in admin panel to use new query parameter format
   * Removed unnecessary route duplication while preserving all sales rep functionality
+  * Enhanced repCode field handling to properly support NULL values for users without rep codes
+  * Frontend and backend schemas now convert empty strings to null for proper database storage
+  * Ensures optional repCode field works correctly for both rep-based and regular registrations
 ```
 
 ## User Preferences
