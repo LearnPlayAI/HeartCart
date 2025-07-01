@@ -245,6 +245,17 @@ export default function CheckoutPage() {
   const autoCreditAmount = Math.min(availableCredit, orderTotal);
   const finalTotal = Math.max(0, orderTotal - autoCreditAmount);
 
+  // Update user profile mutation
+  const updateProfileMutation = useMutation({
+    mutationFn: async (profileData: any) => {
+      const response = await apiRequest("PATCH", "/api/user/profile", profileData);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+    }
+  });
+
   // Create payment session mutation (step 1)
   const createPaymentSessionMutation = useMutation({
     mutationFn: async (orderData: any) => {
@@ -326,17 +337,6 @@ export default function CheckoutPage() {
         variant: "destructive"
       });
       setIsProcessing(false);
-    }
-  });
-
-  // Update user profile mutation
-  const updateProfileMutation = useMutation({
-    mutationFn: async (profileData: any) => {
-      const response = await apiRequest("PATCH", "/api/user/profile", profileData);
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
     }
   });
 

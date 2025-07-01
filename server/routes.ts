@@ -3758,6 +3758,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (profileData.phone) updateData.phoneNumber = profileData.phone;
         if (profileData.addressLine1) updateData.address = profileData.addressLine1;
         if (profileData.city) updateData.city = profileData.city;
+        if (profileData.province) updateData.province = profileData.province;
         if (profileData.postalCode) updateData.postalCode = profileData.postalCode;
         
         // Update the user profile
