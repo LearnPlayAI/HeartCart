@@ -1036,13 +1036,11 @@ router.post("/sales-reps/:id/payments", isAdmin, asyncHandler(async (req: Reques
           // Create credit transaction for the sales rep
           const creditTransaction = await storage.createCreditTransaction({
             userId: user.id,
-            type: 'earned',
-            amount: parseFloat(req.body.amount),
-            reason: 'commission_payment',
-            description: `Commission payment converted to store credit - Payment #${newPayment.id}`,
-            relatedOrderId: null,
-            expiryDate: null, // No expiry for commission credits
-            isRedeemed: false
+            orderId: null,
+            supplierOrderId: null,
+            transactionType: 'earned',
+            amount: parseFloat(req.body.amount).toFixed(2),
+            description: `Commission payment converted to store credit - Payment #${newPayment.id}`
           });
           
           logger.info("Credit awarded to sales rep", { 
