@@ -423,6 +423,15 @@ Changelog:
   * Pagination now correctly maintains the same randomized order throughout user session
   * Users see random products on initial page load but consistent order when clicking "Load More"
   * Production-ready with 10-minute cache duration balancing randomization with pagination consistency
+- July 1, 2025. Complete transactional data cleanup for fresh testing environment:
+  * Cleared ALL order-related data: orders (15), orderItems (25), orderStatusHistory (99)
+  * Removed all shopping cart data: cart_items, abandonedCarts, userFavourites, productInteractions
+  * Cleared email system data: emailLogs (18), mailTokens for clean notification testing
+  * Removed sales commission tracking: repCommissions (1), repPayments for fresh commission calculations
+  * Cleared customer credit system and AI recommendations for clean user experience testing
+  * Preserved ALL core system data: users (4), products (551), categories (201), suppliers, attributes, pricing
+  * Reset sequence counters to start new records from ID 1 for organized testing
+  * System ready for comprehensive testing with clean transactional slate while maintaining full product catalog and user accounts
 - June 30, 2025. Complete sales representative commission system implemented and operational:
   * Full database schema with sales_reps, rep_commissions, and rep_payments tables including proper relationships and indexes
   * Added repCode field to user registration form allowing optional sales rep association during account creation
