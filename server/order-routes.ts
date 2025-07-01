@@ -186,7 +186,7 @@ router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Respons
     }
 
     // Validate credit balance if specified, but don't deduct yet
-    let finalPaymentStatus = orderData.paymentStatus || "pending"; // Use client-provided status first
+    let finalPaymentStatus = orderData.paymentStatus || "verifying_payment"; // Default to verifying_payment for admin verification
     let remainingBalance = orderData.total;
     let shippingExemption = false;
     
