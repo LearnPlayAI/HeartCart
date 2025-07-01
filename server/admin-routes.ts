@@ -969,7 +969,20 @@ router.get("/sales-reps/:id/commissions", isAdmin, asyncHandler(async (req: Requ
     const limit = parseInt(req.query.limit as string) || 20;
     const offset = (page - 1) * limit;
     
+    logger.info("Fetching commissions for rep", { repId, page, limit, offset });
+    
     const commissions = await storage.getSalesRepCommissions(repId, limit, offset);
+    
+    logger.info("Commissions fetched successfully", { 
+      repId, 
+      commissionCount: commissions.length,
+      commissions: commissions.map(c => ({ 
+        id: c.id, 
+        orderId: c.orderId, 
+        commissionAmount: c.commissionAmount,
+        status: c.status 
+      }))
+    });
     
     return sendSuccess(res, {
       commissions,
@@ -980,7 +993,7 @@ router.get("/sales-reps/:id/commissions", isAdmin, asyncHandler(async (req: Requ
       }
     });
   } catch (error) {
-    logger.error("Error fetching rep commissions", { error });
+    logger.error("Error fetching rep commissions", { error, repId: req.params.id });
     return sendError(res, "Failed to fetch commissions", 500);
   }
 }));
