@@ -145,6 +145,9 @@ router.patch("/orders/:id/status", isAuthenticated, asyncHandler(async (req: Req
               // Calculate commission: 3% of profit margin (actual customer price - cost price)
               const orderItems = await storage.getOrderItems(orderId);
               let totalCommission = 0;
+              let totalProfitAmount = 0;
+              let totalCustomerPaidAmount = 0;
+              let totalCostAmount = 0;
 
               for (const item of orderItems) {
                 const product = await storage.getProductById(item.productId);
@@ -153,11 +156,17 @@ router.patch("/orders/:id/status", isAuthenticated, asyncHandler(async (req: Req
                   // This accounts for sale prices, discounts, and any promotional pricing
                   const customerPaidPrice = item.unitPrice;
                   const costPrice = parseFloat(product.costPrice.toString());
+                  const itemTotalCustomerPaid = customerPaidPrice * item.quantity;
+                  const itemTotalCost = costPrice * item.quantity;
+                  
+                  totalCustomerPaidAmount += itemTotalCustomerPaid;
+                  totalCostAmount += itemTotalCost;
                   
                   if (customerPaidPrice > costPrice) {
                     const profitMargin = (customerPaidPrice - costPrice) * item.quantity;
                     const itemCommission = profitMargin * 0.03; // 3% commission
                     totalCommission += itemCommission;
+                    totalProfitAmount += profitMargin;
                     
                     logger.info("Commission calculated for order item", {
                       orderId,
@@ -177,9 +186,12 @@ router.patch("/orders/:id/status", isAuthenticated, asyncHandler(async (req: Req
                   repId: rep.id,
                   orderId: orderId,
                   userId: order.userId,
-                  commissionAmount: totalCommission,
-                  orderAmount: order.totalAmount,
-                  commissionRate: 0.03,
+                  commissionAmount: totalCommission.toString(),
+                  orderAmount: order.totalAmount.toString(),
+                  commissionRate: "0.03",
+                  totalProfitAmount: totalProfitAmount.toString(),
+                  totalCustomerPaidAmount: totalCustomerPaidAmount.toString(),
+                  totalCostAmount: totalCostAmount.toString(),
                   status: 'earned' as const,
                   notes: `Commission for delivered order ${order.orderNumber}`
                 };

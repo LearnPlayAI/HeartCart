@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { useLocation } from "wouter";
+import { useLocation, useParams } from "wouter";
 import { AtSign, KeyRound, User, ShoppingBag, Loader2, Mail, CheckCircle, Lock as LockIcon } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -59,9 +59,11 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
 
 export default function AuthPage() {
-  // Check URL parameters to determine initial tab and reset token
+  // Extract URL parameters for repCode, tab, and reset token
+  const params = useParams();
+  const repCodeFromUrl = params.repCode || '';
   const urlParams = new URLSearchParams(window.location.search);
-  const initialTab = urlParams.get('tab') === 'register' ? 'register' : 'login';
+  const initialTab = urlParams.get('tab') === 'register' || repCodeFromUrl ? 'register' : 'login';
   const resetToken = urlParams.get('token');
   const isResetPasswordPage = window.location.pathname === '/reset-password';
   
@@ -76,6 +78,22 @@ export default function AuthPage() {
   const { toast } = useToast();
   const [location, setLocation] = useLocation();
   const { user, loginMutation, registerMutation } = useAuth();
+  const [repCodeValidation, setRepCodeValidation] = useState<{valid: boolean; repName?: string} | null>(null);
+  
+  // Rep code validation mutation
+  const validateRepCodeMutation = useMutation({
+    mutationFn: async (repCode: string) => {
+      if (!repCode.trim()) return { valid: false };
+      const response = await apiRequest(`/api/validate-rep-code/${encodeURIComponent(repCode.trim())}`);
+      return response;
+    },
+    onSuccess: (data) => {
+      setRepCodeValidation(data);
+    },
+    onError: () => {
+      setRepCodeValidation({ valid: false });
+    }
+  });
   
   const navigate = (path: string) => setLocation(path);
 
@@ -171,7 +189,7 @@ export default function AuthPage() {
       email: "",
       password: "",
       confirmPassword: "",
-      repCode: "",
+      repCode: repCodeFromUrl, // Pre-fill repCode from URL parameter
       acceptTerms: false,
     },
   });
