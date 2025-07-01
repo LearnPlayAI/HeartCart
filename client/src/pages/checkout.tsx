@@ -202,23 +202,6 @@ export default function CheckoutPage() {
   const watchedProvince = form.watch("province");
   const watchedCity = form.watch("city");
 
-  // Auto-save province and city when user selects them (for better UX)
-  useEffect(() => {
-    if (user?.data && watchedProvince && watchedProvince !== user.data.province) {
-      updateProfileMutation.mutate({
-        province: watchedProvince
-      });
-    }
-  }, [watchedProvince, user?.data?.province, updateProfileMutation]);
-
-  useEffect(() => {
-    if (user?.data && watchedCity && watchedCity !== user.data.city) {
-      updateProfileMutation.mutate({
-        city: watchedCity
-      });
-    }
-  }, [watchedCity, user?.data?.city, updateProfileMutation]);
-
   // Pre-populate form with user data if available
   useEffect(() => {
     if (user?.data) {
@@ -359,6 +342,23 @@ export default function CheckoutPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
     }
   });
+
+  // Auto-save province and city when user selects them (for better UX)
+  useEffect(() => {
+    if (user?.data && watchedProvince && watchedProvince !== user.data.province) {
+      updateProfileMutation.mutate({
+        province: watchedProvince
+      });
+    }
+  }, [watchedProvince, user?.data?.province, updateProfileMutation]);
+
+  useEffect(() => {
+    if (user?.data && watchedCity && watchedCity !== user.data.city) {
+      updateProfileMutation.mutate({
+        city: watchedCity
+      });
+    }
+  }, [watchedCity, user?.data?.city, updateProfileMutation]);
 
   const onSubmit = async (data: CheckoutFormData) => {
     if (!cartItems || !Array.isArray(cartItems) || cartItems.length === 0) {
