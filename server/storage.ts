@@ -13176,6 +13176,61 @@ export class DatabaseStorage implements IStorage {
       throw error;
     }
   }
+
+  async markCommissionsAsPaid(repId: number, paymentAmount: number): Promise<void> {
+    try {
+      // Get unpaid commissions for this rep, ordered by creation date (oldest first)
+      const unpaidCommissions = await db
+        .select()
+        .from(repCommissions)
+        .where(and(
+          eq(repCommissions.repId, repId),
+          eq(repCommissions.status, 'earned')
+        ))
+        .orderBy(asc(repCommissions.createdAt));
+
+      let remainingPayment = paymentAmount;
+      const commissionsToUpdate: number[] = [];
+
+      // Allocate payment to commissions starting with the oldest
+      for (const commission of unpaidCommissions) {
+        const commissionAmount = Number(commission.commissionAmount);
+        
+        if (remainingPayment >= commissionAmount) {
+          // This commission can be fully paid
+          commissionsToUpdate.push(commission.id);
+          remainingPayment -= commissionAmount;
+        } else if (remainingPayment > 0) {
+          // Partial payment scenario - for simplicity, we'll only mark as paid if fully covered
+          // In a more complex system, we could handle partial payments
+          break;
+        } else {
+          break;
+        }
+      }
+
+      // Mark the selected commissions as paid
+      if (commissionsToUpdate.length > 0) {
+        await db
+          .update(repCommissions)
+          .set({ 
+            status: 'paid',
+            updatedAt: new Date().toISOString()
+          })
+          .where(inArray(repCommissions.id, commissionsToUpdate));
+
+        logger.info('Marked commissions as paid', { 
+          repId, 
+          paymentAmount, 
+          commissionsMarkedAsPaid: commissionsToUpdate.length,
+          commissionIds: commissionsToUpdate 
+        });
+      }
+    } catch (error) {
+      logger.error('Error marking commissions as paid', { error, repId, paymentAmount });
+      throw error;
+    }
+  }
 }
 
 export const storage = new DatabaseStorage();
