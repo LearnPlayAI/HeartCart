@@ -496,6 +496,8 @@ Changelog:
   * Added payment reference number display to admin orders page (/admin/orders) in both card and table views
   * Payment reference numbers now appear in hot pink styling on order card headings and table rows for quick bank verification reference
   * Complete integration across all admin order management interfaces for consistent payment tracking workflow
+  * Added payment reference number search functionality - admins can now search orders by payment reference numbers (e.g., "TMY-8123-01072025")
+  * Enhanced search covers all order fields: order numbers, customer details, payment references, tracking numbers, product names, and notes
 ```
 
 ## User Preferences

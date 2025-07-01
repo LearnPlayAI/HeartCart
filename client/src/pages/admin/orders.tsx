@@ -696,6 +696,7 @@ export default function AdminOrdersPage() {
         (order.trackingNumber && order.trackingNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (order.customerNotes && order.customerNotes.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (order.adminNotes && order.adminNotes.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (order.paymentReferenceNumber && order.paymentReferenceNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
         // Search in order items
         order.orderItems.some((item: any) => 
           item.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
