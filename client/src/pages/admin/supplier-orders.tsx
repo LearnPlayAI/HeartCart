@@ -66,6 +66,8 @@ interface SupplierOrder {
   updatedAt?: string;
   customerUnitPrice: number;
   hasCreditGenerated?: boolean; // Track if credit has been generated
+  selectedAttributes: Record<string, any>; // Customer attribute selections
+  attributeDisplayText?: string; // Formatted attribute display text
   customerOrder: {
     id: number;
     orderNumber: string;
@@ -807,6 +809,27 @@ const SupplierOrders = () => {
                           <span className="text-muted-foreground">Quantity:</span>
                           <span>{order.quantity}</span>
                         </div>
+                        {/* Customer Attribute Selections */}
+                        {order.attributeDisplayText && (
+                          <div className="flex flex-col gap-1 py-2 px-3 bg-pink-50 rounded-md border-l-2 border-pink-500">
+                            <span className="text-xs font-medium text-pink-700">Customer Selected:</span>
+                            <span className="text-sm text-pink-800 font-medium">{order.attributeDisplayText}</span>
+                          </div>
+                        )}
+                        {/* Show individual attributes if no display text available */}
+                        {!order.attributeDisplayText && order.selectedAttributes && Object.keys(order.selectedAttributes).length > 0 && (
+                          <div className="flex flex-col gap-1 py-2 px-3 bg-pink-50 rounded-md border-l-2 border-pink-500">
+                            <span className="text-xs font-medium text-pink-700">Customer Selected:</span>
+                            <div className="text-sm text-pink-800">
+                              {Object.entries(order.selectedAttributes).map(([key, value]) => (
+                                <div key={key} className="flex justify-between">
+                                  <span className="capitalize">{key}:</span>
+                                  <span className="font-medium">{value}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Unit Cost (TMY):</span>
                           <span>{formatCurrency(order.unitCost)}</span>
