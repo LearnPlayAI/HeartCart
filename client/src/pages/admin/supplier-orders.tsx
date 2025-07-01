@@ -85,7 +85,7 @@ interface SupplierOrder {
 }
 
 const SupplierOrders = () => {
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('pending');
   const [searchTerm, setSearchTerm] = useState('TMY-');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('TMY-');
   const [validationFilter, setValidationFilter] = useState<string>('all');
