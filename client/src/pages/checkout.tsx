@@ -196,6 +196,29 @@ export default function CheckoutPage() {
     refetchCart();
   }, [refetchCart]);
 
+  // Watch form values for real-time saving
+  const selectedShippingMethod = form.watch("shippingMethod");
+  const selectedPaymentMethod = form.watch("paymentMethod");
+  const watchedProvince = form.watch("province");
+  const watchedCity = form.watch("city");
+
+  // Auto-save province and city when user selects them (for better UX)
+  useEffect(() => {
+    if (user?.data && watchedProvince && watchedProvince !== user.data.province) {
+      updateProfileMutation.mutate({
+        province: watchedProvince
+      });
+    }
+  }, [watchedProvince, user?.data?.province, updateProfileMutation]);
+
+  useEffect(() => {
+    if (user?.data && watchedCity && watchedCity !== user.data.city) {
+      updateProfileMutation.mutate({
+        city: watchedCity
+      });
+    }
+  }, [watchedCity, user?.data?.city, updateProfileMutation]);
+
   // Pre-populate form with user data if available
   useEffect(() => {
     if (user?.data) {
@@ -224,9 +247,6 @@ export default function CheckoutPage() {
     }
   }, [user, form]);
 
-  const selectedShippingMethod = form.watch("shippingMethod");
-  const selectedPaymentMethod = form.watch("paymentMethod");
-  
   // Calculate automatic credit application
   const availableCredit = creditBalance?.availableCredits ? parseFloat(creditBalance.availableCredits) : 0;
   
@@ -363,14 +383,20 @@ export default function CheckoutPage() {
     setIsProcessing(true);
 
     try {
-      // Save user details if requested
+      // Always save province and city when user fills them out (for better UX)
+      if (user && (data.province !== user.data?.province || data.city !== user.data?.city)) {
+        await updateProfileMutation.mutateAsync({
+          province: data.province,
+          city: data.city
+        });
+      }
+
+      // Save additional user details if requested
       if (data.saveDetails && user) {
         await updateProfileMutation.mutateAsync({
-          firstName: data.firstName,
-          lastName: data.lastName,
-          phone: data.phone,
-          addressLine1: data.addressLine1,
-          addressLine2: data.addressLine2,
+          fullName: `${data.firstName} ${data.lastName}`.trim(),
+          phoneNumber: data.phone,
+          address: data.addressLine1,
           city: data.city,
           province: data.province,
           postalCode: data.postalCode
