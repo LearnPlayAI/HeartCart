@@ -13177,6 +13177,49 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async getCommissionsForPayment(repId: number, paymentAmount: number): Promise<Array<{id: number, orderNumber: string, commissionAmount: string}>> {
+    try {
+      // Get unpaid commissions for this rep with order details, ordered by creation date (oldest first)
+      const unpaidCommissions = await db
+        .select({
+          id: repCommissions.id,
+          commissionAmount: repCommissions.commissionAmount,
+          orderNumber: orders.orderNumber
+        })
+        .from(repCommissions)
+        .innerJoin(orders, eq(repCommissions.orderId, orders.id))
+        .where(and(
+          eq(repCommissions.repId, repId),
+          eq(repCommissions.status, 'earned')
+        ))
+        .orderBy(asc(repCommissions.createdAt));
+
+      let remainingPayment = paymentAmount;
+      const commissionsForPayment: Array<{id: number, orderNumber: string, commissionAmount: string}> = [];
+
+      // Select commissions that will be paid starting with the oldest
+      for (const commission of unpaidCommissions) {
+        const commissionAmount = Number(commission.commissionAmount);
+        
+        if (remainingPayment >= commissionAmount) {
+          // This commission can be fully paid
+          commissionsForPayment.push(commission);
+          remainingPayment -= commissionAmount;
+        } else if (remainingPayment > 0) {
+          // Partial payment scenario - for simplicity, we'll only mark as paid if fully covered
+          break;
+        } else {
+          break;
+        }
+      }
+
+      return commissionsForPayment;
+    } catch (error) {
+      logger.error('Error getting commissions for payment', { error, repId, paymentAmount });
+      throw error;
+    }
+  }
+
   async markCommissionsAsPaid(repId: number, paymentAmount: number): Promise<void> {
     try {
       // Get unpaid commissions for this rep, ordered by creation date (oldest first)

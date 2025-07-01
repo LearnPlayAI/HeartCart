@@ -1026,10 +1026,25 @@ router.get("/sales-reps/:id/earnings", isAdmin, asyncHandler(async (req: Request
 router.post("/sales-reps/:id/payments", isAdmin, asyncHandler(async (req: Request, res: Response) => {
   try {
     const repId = parseInt(req.params.id);
+    
+    // Get the commissions that will be paid and their order details
+    const commissionsForPayment = await storage.getCommissionsForPayment(repId, parseFloat(req.body.amount));
+    
+    // Auto-generate reference number if not provided
+    const timestamp = Date.now().toString().slice(-8);
+    const autoReferenceNumber = `REP-${repId}-${timestamp}`;
+    
+    // Create auto-notes with order numbers
+    const orderNumbers = commissionsForPayment.map(c => c.orderNumber).join(', ');
+    const autoNotes = `Commission payment for orders: ${orderNumbers}`;
+    const finalNotes = req.body.notes ? `${autoNotes}\n\nAdmin notes: ${req.body.notes}` : autoNotes;
+    
     const paymentData = { 
       ...req.body, 
       repId,
-      processedBy: req.user?.id 
+      processedBy: req.user?.id,
+      referenceNumber: req.body.referenceNumber || autoReferenceNumber,
+      notes: finalNotes
     };
     
     // Create the payment record

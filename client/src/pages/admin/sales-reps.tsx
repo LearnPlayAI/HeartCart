@@ -351,11 +351,15 @@ Register now and start shopping! 🛍️`;
       return;
     }
     
-    // Pre-fill the payment form with the calculated amount owed
+    // Auto-generate reference number
+    const timestamp = Date.now().toString().slice(-8);
+    const autoReferenceNumber = `REP-${selectedRep.id}-${timestamp}`;
+    
+    // Pre-fill the payment form with the calculated amount owed and auto-generated reference
     setNewPayment({
       amount: amountOwed.toFixed(2),
       paymentMethod: 'bank_transfer',
-      referenceNumber: '',
+      referenceNumber: autoReferenceNumber,
       notes: ''
     });
     
@@ -936,9 +940,6 @@ Register now and start shopping! 🛍️`;
               >
                 <option value="bank_transfer">Bank Transfer</option>
                 <option value="credit">Store Credit</option>
-                <option value="cash">Cash</option>
-                <option value="cheque">Cheque</option>
-                <option value="other">Other</option>
               </select>
             </div>
 
