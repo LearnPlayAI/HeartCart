@@ -1033,15 +1033,15 @@ router.post("/sales-reps/:id/payments", isAdmin, asyncHandler(async (req: Reques
     // Auto-generate reference number if not provided
     const rep = await storage.getSalesRepById(repId);
     const today = new Date();
-    const ddmmyyyy = today.toLocaleDateString('en-GB', { 
+    const ddmmyy = today.toLocaleDateString('en-GB', { 
       day: '2-digit', 
       month: '2-digit', 
-      year: 'numeric' 
+      year: '2-digit' 
     }).replace(/\//g, '');
     
     // Get next sequential number for this rep and date
-    const sequentialNumber = await storage.getNextPaymentSequentialNumber(repId, ddmmyyyy);
-    const autoReferenceNumber = `${rep?.repCode || `REP${repId}`}-${sequentialNumber.toString().padStart(3, '0')}-${ddmmyyyy}`;
+    const sequentialNumber = await storage.getNextPaymentSequentialNumber(repId, ddmmyy);
+    const autoReferenceNumber = `${rep?.repCode || `REP${repId}`}-${sequentialNumber.toString().padStart(2, '0')}-${ddmmyy}`;
     
     // Create auto-notes with order IDs
     const orderIds = commissionsForPayment.map(c => `#${c.orderId}`).join(', ');
