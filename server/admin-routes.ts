@@ -1031,8 +1031,9 @@ router.post("/sales-reps/:id/payments", isAdmin, asyncHandler(async (req: Reques
     const commissionsForPayment = await storage.getCommissionsForPayment(repId, parseFloat(req.body.amount));
     
     // Auto-generate reference number if not provided
-    const timestamp = Date.now().toString().slice(-8);
-    const autoReferenceNumber = `REP-${repId}-${timestamp}`;
+    const rep = await storage.getSalesRepById(repId);
+    const currentDate = new Date().toISOString().split('T')[0].replace(/-/g, ''); // YYYYMMDD format
+    const autoReferenceNumber = `${rep?.repCode || `REP${repId}`}-${currentDate}`;
     
     // Create auto-notes with order numbers
     const orderNumbers = commissionsForPayment.map(c => c.orderNumber).join(', ');

@@ -484,6 +484,15 @@ Changelog:
   * Complete end-to-end system: user registration with repCode → order placement → order delivery → automatic commission calculation
   * Enhanced commission tracking includes detailed profit breakdowns and customer payment information
   * Sales rep commission system fully integrated with existing order management and ready for production use with accurate rate calculations
+- July 1, 2025. Enhanced commission payment system with auto-generated reference numbers and detailed notes:
+  * Streamlined payment method options to only Bank Transfer and Store Credit (removed Cash, Cheque, Other)
+  * Implemented auto-generated reference numbers using format {REPCODE}-{PaymentDate} (e.g., JAN777-20250701)
+  * Enhanced backend with getCommissionsForPayment method to fetch commission details with order numbers
+  * Automatic payment notes generation including specific order numbers for which commissions are being paid
+  * Frontend pre-fills payment dialog with auto-generated reference number and calculated amount owed
+  * Complete audit trail system: auto-reference numbers + detailed notes with order numbers + commission status tracking
+  * Enhanced payment processing maintains all existing functionality (commission marking, credit conversion, etc.)
+  * Production-ready with improved tracking and accountability for commission payment management
 - July 1, 2025. Enhanced EFT Payment Management card for improved admin banking verification:
   * Completely redesigned EFT Payment Management card on admin order detail page (/admin/orders/{id})
   * Replaced outdated proof of payment upload system with comprehensive customer payment information display

@@ -352,8 +352,8 @@ Register now and start shopping! 🛍️`;
     }
     
     // Auto-generate reference number
-    const timestamp = Date.now().toString().slice(-8);
-    const autoReferenceNumber = `REP-${selectedRep.id}-${timestamp}`;
+    const currentDate = new Date().toISOString().split('T')[0].replace(/-/g, ''); // YYYYMMDD format
+    const autoReferenceNumber = `${selectedRep.repCode}-${currentDate}`;
     
     // Pre-fill the payment form with the calculated amount owed and auto-generated reference
     setNewPayment({
