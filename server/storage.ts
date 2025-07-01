@@ -581,6 +581,7 @@ export interface IStorage {
 
   // Sales Rep System operations
   getSalesRepByCode(repCode: string): Promise<SalesRep | undefined>;
+  getSalesRepById(id: number): Promise<SalesRep | undefined>;
   createSalesRep(repData: InsertSalesRep): Promise<SalesRep>;
   updateSalesRep(id: number, repData: Partial<InsertSalesRep>): Promise<SalesRep | undefined>;
   getAllSalesReps(): Promise<SalesRep[]>;
@@ -12970,6 +12971,20 @@ export class DatabaseStorage implements IStorage {
       return rep;
     } catch (error) {
       logger.error('Error getting sales rep by code', { error, repCode });
+      throw error;
+    }
+  }
+
+  async getSalesRepById(id: number): Promise<SalesRep | undefined> {
+    try {
+      const [rep] = await db
+        .select()
+        .from(salesReps)
+        .where(eq(salesReps.id, id));
+      
+      return rep;
+    } catch (error) {
+      logger.error('Error getting sales rep by id', { error, id });
       throw error;
     }
   }

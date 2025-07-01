@@ -1022,12 +1022,52 @@ router.post("/sales-reps/:id/payments", isAdmin, asyncHandler(async (req: Reques
       processedBy: req.user?.id 
     };
     
+    // Create the payment record
     const newPayment = await storage.createRepPayment(paymentData);
+    
+    // If payment method is credit, award store credit to the sales rep
+    if (req.body.paymentMethod === 'credit') {
+      // Get the sales rep information
+      const rep = await storage.getSalesRepById(repId);
+      if (rep) {
+        // Find user account with matching email
+        const user = await storage.getUserByEmail(rep.email);
+        if (user) {
+          // Create credit transaction for the sales rep
+          const creditTransaction = await storage.createCreditTransaction({
+            userId: user.id,
+            type: 'earned',
+            amount: parseFloat(req.body.amount),
+            reason: 'commission_payment',
+            description: `Commission payment converted to store credit - Payment #${newPayment.id}`,
+            relatedOrderId: null,
+            expiryDate: null, // No expiry for commission credits
+            isRedeemed: false
+          });
+          
+          logger.info("Credit awarded to sales rep", { 
+            repId, 
+            userId: user.id,
+            creditAmount: parseFloat(req.body.amount),
+            creditTransactionId: creditTransaction.id,
+            paymentId: newPayment.id
+          });
+        } else {
+          logger.warn("Sales rep user account not found for credit payment", { 
+            repId, 
+            repEmail: rep.email 
+          });
+        }
+      } else {
+        logger.warn("Sales rep not found for credit payment", { repId });
+      }
+    }
     
     logger.info("Rep payment created by admin", { 
       repId, 
       paymentId: newPayment.id,
       amount: newPayment.amount,
+      paymentMethod: req.body.paymentMethod,
       adminUserId: req.user?.id 
     });
     

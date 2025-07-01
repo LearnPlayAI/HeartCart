@@ -881,6 +881,7 @@ Register now and start shopping! 🛍️`;
                 onChange={(e) => setNewPayment({...newPayment, paymentMethod: e.target.value})}
               >
                 <option value="bank_transfer">Bank Transfer</option>
+                <option value="credit">Store Credit</option>
                 <option value="cash">Cash</option>
                 <option value="cheque">Cheque</option>
                 <option value="other">Other</option>
