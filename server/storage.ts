@@ -12178,6 +12178,7 @@ export class DatabaseStorage implements IStorage {
           orderNumber: row.order.orderNumber,
           customerName: row.order.customerName,
           customerEmail: row.order.customerEmail, // Add customer email for admin reference
+          customerNotes: row.order.customerNotes, // Add customer checkout notes
           createdAt: row.order.createdAt,
           status: row.order.status,
           trackingNumber: row.order.trackingNumber,
