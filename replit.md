@@ -476,12 +476,14 @@ Changelog:
   * Successfully resolved commission calculation bug caused by missing database columns (totalProfitAmount, totalCustomerPaidAmount, totalCostAmount)
   * Added missing enhanced tracking columns to repCommissions table to match schema definition
   * Commission calculation system now working automatically when orders are marked as "delivered" status
-  * Verified commission calculation: 3% of profit margin (customer paid price - cost price) per order item
-  * Test case confirmed: Customer paid R99, cost R71.20, profit R27.80, commission R0.83 (3% of R27.80)
+  * CRITICAL FIX: Corrected hardcoded 3% commission rate to use actual sales rep commission rates from database
+  * Fixed commission calculation logic in both server/storage.ts and server/admin-routes.ts to use rep.commissionRate instead of hardcoded 0.03
+  * Database commission rate interpretation: 1.0000 = 1% (rate divided by 100 for calculation)
+  * Test case verified: Customer paid R99, cost R71.20, profit R27.80, rep rate 1%, commission R0.28 (was incorrectly R0.83 with hardcoded 3%)
   * Automatic commission creation triggered through storage.updateOrderStatus() method in normal admin workflow
   * Complete end-to-end system: user registration with repCode → order placement → order delivery → automatic commission calculation
   * Enhanced commission tracking includes detailed profit breakdowns and customer payment information
-  * Sales rep commission system fully integrated with existing order management and ready for production use
+  * Sales rep commission system fully integrated with existing order management and ready for production use with accurate rate calculations
 ```
 
 ## User Preferences
