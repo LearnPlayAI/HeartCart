@@ -755,6 +755,51 @@ export default function AdminOrderDetail() {
                   )}
                 </div>
 
+                {/* Customer & Payment Information */}
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    Customer Payment Information
+                  </h4>
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium text-gray-600">Customer Name</label>
+                        <p className="text-sm font-semibold text-gray-800">
+                          {order.customerName || 'Not provided'}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-600">Email Address</label>
+                        <p className="text-sm font-semibold text-gray-800">
+                          {order.customerEmail || 'Not provided'}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-600">Phone Number</label>
+                        <p className="text-sm font-semibold text-gray-800">
+                          {order.customerPhone || 'Not provided'}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-600">Payment Amount</label>
+                        <p className="text-sm font-semibold text-gray-800">
+                          R {order.totalAmount ? Number(order.totalAmount).toFixed(2) : '0.00'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="pt-2 border-t border-gray-200">
+                      <label className="text-sm font-medium text-gray-600">Payment Reference Number</label>
+                      <p className="text-lg font-bold text-[#FF69B4] bg-white px-3 py-2 rounded border mt-1">
+                        {order.paymentReferenceNumber || 'Not generated'}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Use this reference to check your bank account for payment verification
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
                 {order.paymentReceivedDate && (
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                     <p className="text-sm font-medium text-blue-800">Payment Received On:</p>
@@ -765,79 +810,6 @@ export default function AdminOrderDetail() {
                         day: 'numeric'
                       })}
                     </p>
-                  </div>
-                )}
-
-                {order.eftPop ? (
-                  <div className="space-y-3">
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                      <div className="flex items-center">
-                        <FileText className="h-5 w-5 text-green-600 mr-2" />
-                        <div>
-                          <p className="font-medium text-green-800">
-                            Proof of Payment Uploaded
-                          </p>
-                          <p className="text-sm text-green-600">
-                            Customer has uploaded their payment proof
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {order.paymentStatus === 'paid' && (
-                      <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-                        <div className="space-y-3">
-                          <div className="flex items-center">
-                            <AlertCircle className="h-5 w-5 text-orange-600 mr-2" />
-                            <p className="font-medium text-orange-800">
-                              Action Required: Mark Payment as Received
-                            </p>
-                          </div>
-                          <p className="text-sm text-orange-600">
-                            After reviewing the proof of payment, set the date payment was received to move order to processing.
-                          </p>
-                          <div className="flex items-center space-x-3">
-                            <Input
-                              type="date"
-                              value={paymentReceivedDate}
-                              onChange={(e) => setPaymentReceivedDate(e.target.value)}
-                              className="flex-1"
-                            />
-                            <Button
-                              onClick={() => markPaymentReceivedMutation.mutate({ 
-                                orderId: order.id, 
-                                paymentReceivedDate 
-                              })}
-                              disabled={markPaymentReceivedMutation.isPending}
-                              className="bg-green-600 hover:bg-green-700"
-                            >
-                              <CheckCircle className="h-4 w-4 mr-2" />
-                              Mark as Received
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* PDF Viewer */}
-                    <div className="border rounded-lg p-4">
-                      <h4 className="text-lg font-semibold mb-4">Payment Proof Document</h4>
-                      <PDFViewer orderId={order.id} />
-                    </div>
-                  </div>
-                ) : (
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                    <div className="flex items-center">
-                      <Upload className="h-5 w-5 text-yellow-600 mr-2" />
-                      <div>
-                        <p className="font-medium text-yellow-800">
-                          No Proof of Payment
-                        </p>
-                        <p className="text-sm text-yellow-600">
-                          Customer has not yet uploaded payment proof
-                        </p>
-                      </div>
-                    </div>
                   </div>
                 )}
               </CardContent>

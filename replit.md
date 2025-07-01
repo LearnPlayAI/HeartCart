@@ -484,6 +484,15 @@ Changelog:
   * Complete end-to-end system: user registration with repCode → order placement → order delivery → automatic commission calculation
   * Enhanced commission tracking includes detailed profit breakdowns and customer payment information
   * Sales rep commission system fully integrated with existing order management and ready for production use with accurate rate calculations
+- July 1, 2025. Enhanced EFT Payment Management card for improved admin banking verification:
+  * Completely redesigned EFT Payment Management card on admin order detail page (/admin/orders/{id})
+  * Replaced outdated proof of payment upload system with comprehensive customer payment information display
+  * Card now shows: customer full name, email address, phone number, payment reference number, and payment amount
+  * Payment reference number prominently displayed in TeeMeYou hot pink styling for easy bank account verification
+  * Uses actual paymentReferenceNumber field from orders database table for accurate payment tracking
+  * Streamlined admin workflow: admins can quickly cross-reference bank account using displayed payment reference
+  * Maintains existing payment status tracking and invoice download functionality
+  * Enhanced UI with clear labels and organized grid layout for optimal admin user experience
 ```
 
 ## User Preferences
