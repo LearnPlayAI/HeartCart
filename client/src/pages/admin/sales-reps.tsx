@@ -77,6 +77,26 @@ export default function SalesRepsPage() {
     notes: ''
   });
 
+  const [editRep, setEditRep] = useState<{
+    firstName: string;
+    lastName: string;
+    email: string;
+    phoneNumber: string;
+    repCode: string;
+    commissionRate: number;
+    notes: string;
+    isActive: boolean;
+  }>({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phoneNumber: '',
+    repCode: '',
+    commissionRate: 3,
+    notes: '',
+    isActive: true
+  });
+
   const { toast } = useToast();
 
   // Generate registration URL for a rep
@@ -280,6 +300,30 @@ Register now and start shopping! 🛍️`;
     createPaymentMutation.mutate({ repId: selectedRep.id, paymentData });
   };
 
+  const handleEditRep = (rep: SalesRep) => {
+    setSelectedRep(rep);
+    setEditRep({
+      firstName: rep.firstName,
+      lastName: rep.lastName,
+      email: rep.email,
+      phoneNumber: rep.phoneNumber,
+      repCode: rep.repCode,
+      commissionRate: parseFloat(rep.commissionRate.toString()),
+      notes: rep.notes || '',
+      isActive: rep.isActive
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdateRep = () => {
+    if (!selectedRep) return;
+    
+    updateRepMutation.mutate({
+      id: selectedRep.id,
+      data: editRep
+    });
+  };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-ZA', {
       style: 'currency',
@@ -436,10 +480,7 @@ Register now and start shopping! 🛍️`;
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => {
-                          setSelectedRep(rep);
-                          setIsEditDialogOpen(true);
-                        }}
+                        onClick={() => handleEditRep(rep)}
                       >
                         <Edit2 className="w-4 h-4" />
                       </Button>
@@ -656,6 +697,118 @@ Register now and start shopping! 🛍️`;
               disabled={createRepMutation.isPending}
             >
               {createRepMutation.isPending ? "Creating..." : "Create Rep"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Rep Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Sales Rep</DialogTitle>
+            <DialogDescription>
+              Update sales representative information
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="editFirstName">First Name</Label>
+                <Input
+                  id="editFirstName"
+                  value={editRep.firstName}
+                  onChange={(e) => setEditRep({...editRep, firstName: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editLastName">Last Name</Label>
+                <Input
+                  id="editLastName"
+                  value={editRep.lastName}
+                  onChange={(e) => setEditRep({...editRep, lastName: e.target.value})}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="editEmail">Email</Label>
+              <Input
+                id="editEmail"
+                type="email"
+                value={editRep.email}
+                onChange={(e) => setEditRep({...editRep, email: e.target.value})}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="editPhoneNumber">Phone Number</Label>
+                <Input
+                  id="editPhoneNumber"
+                  value={editRep.phoneNumber}
+                  onChange={(e) => setEditRep({...editRep, phoneNumber: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editRepCode">Rep Code</Label>
+                <Input
+                  id="editRepCode"
+                  value={editRep.repCode}
+                  onChange={(e) => setEditRep({...editRep, repCode: e.target.value.toUpperCase()})}
+                  placeholder="e.g. REP001"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="editCommissionRate">Commission Rate (%)</Label>
+                <Input
+                  id="editCommissionRate"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  value={editRep.commissionRate}
+                  onChange={(e) => setEditRep({...editRep, commissionRate: parseFloat(e.target.value) || 0})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editIsActive">Status</Label>
+                <select
+                  id="editIsActive"
+                  className="w-full p-2 border rounded-md"
+                  value={editRep.isActive.toString()}
+                  onChange={(e) => setEditRep({...editRep, isActive: e.target.value === 'true'})}
+                >
+                  <option value="true">Active</option>
+                  <option value="false">Inactive</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="editNotes">Notes</Label>
+              <Textarea
+                id="editNotes"
+                value={editRep.notes}
+                onChange={(e) => setEditRep({...editRep, notes: e.target.value})}
+                placeholder="Optional notes about this sales rep"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleUpdateRep}
+              disabled={updateRepMutation.isPending}
+            >
+              {updateRepMutation.isPending ? "Updating..." : "Update Rep"}
             </Button>
           </DialogFooter>
         </DialogContent>
