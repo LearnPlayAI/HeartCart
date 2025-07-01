@@ -13057,10 +13057,38 @@ export class DatabaseStorage implements IStorage {
 
   async createRepCommission(commissionData: InsertRepCommission): Promise<RepCommission> {
     try {
+      // Check if commission already exists for this rep and order
+      const existingCommission = await db
+        .select()
+        .from(repCommissions)
+        .where(
+          and(
+            eq(repCommissions.repId, commissionData.repId),
+            eq(repCommissions.orderId, commissionData.orderId)
+          )
+        )
+        .limit(1);
+
+      if (existingCommission.length > 0) {
+        logger.warn('Commission already exists for this rep and order', {
+          repId: commissionData.repId,
+          orderId: commissionData.orderId,
+          existingCommissionId: existingCommission[0].id
+        });
+        return existingCommission[0];
+      }
+
       const [newCommission] = await db
         .insert(repCommissions)
         .values(commissionData)
         .returning();
+      
+      logger.info('New commission created', {
+        commissionId: newCommission.id,
+        repId: commissionData.repId,
+        orderId: commissionData.orderId,
+        amount: commissionData.commissionAmount
+      });
       
       return newCommission;
     } catch (error) {
