@@ -465,6 +465,13 @@ Changelog:
   * Enhanced repCode field handling to properly support NULL values for users without rep codes
   * Frontend and backend schemas now convert empty strings to null for proper database storage
   * Ensures optional repCode field works correctly for both rep-based and regular registrations
+- July 1, 2025. Sales rep edit functionality database trigger fix completed:
+  * Fixed critical database trigger function that was preventing sales rep updates from working
+  * Root cause: update_updated_at_column() trigger function was using snake_case column name "updated_at" but actual schema uses camelCase "updatedAt"
+  * Updated trigger function to use correct camelCase column name: NEW."updatedAt" = NOW()
+  * Fixed API request format in frontend mutations to use correct apiRequest(method, url, data) pattern instead of apiRequest(url, {method, body})
+  * All sales rep CRUD operations (create, read, update, delete) now fully functional with proper error handling
+  * Sales rep edit functionality verified working with database updates properly tracking timestamps
 ```
 
 ## User Preferences
