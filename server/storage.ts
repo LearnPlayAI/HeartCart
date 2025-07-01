@@ -13177,17 +13177,16 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getCommissionsForPayment(repId: number, paymentAmount: number): Promise<Array<{id: number, orderNumber: string, commissionAmount: string}>> {
+  async getCommissionsForPayment(repId: number, paymentAmount: number): Promise<Array<{id: number, orderId: number, commissionAmount: string}>> {
     try {
       // Get unpaid commissions for this rep with order details, ordered by creation date (oldest first)
       const unpaidCommissions = await db
         .select({
           id: repCommissions.id,
           commissionAmount: repCommissions.commissionAmount,
-          orderNumber: orders.orderNumber
+          orderId: repCommissions.orderId
         })
         .from(repCommissions)
-        .innerJoin(orders, eq(repCommissions.orderId, orders.id))
         .where(and(
           eq(repCommissions.repId, repId),
           eq(repCommissions.status, 'earned')
@@ -13195,7 +13194,7 @@ export class DatabaseStorage implements IStorage {
         .orderBy(asc(repCommissions.createdAt));
 
       let remainingPayment = paymentAmount;
-      const commissionsForPayment: Array<{id: number, orderNumber: string, commissionAmount: string}> = [];
+      const commissionsForPayment: Array<{id: number, orderId: number, commissionAmount: string}> = [];
 
       // Select commissions that will be paid starting with the oldest
       for (const commission of unpaidCommissions) {

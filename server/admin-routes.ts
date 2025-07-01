@@ -1035,9 +1035,9 @@ router.post("/sales-reps/:id/payments", isAdmin, asyncHandler(async (req: Reques
     const currentDate = new Date().toISOString().split('T')[0].replace(/-/g, ''); // YYYYMMDD format
     const autoReferenceNumber = `${rep?.repCode || `REP${repId}`}-${currentDate}`;
     
-    // Create auto-notes with order numbers
-    const orderNumbers = commissionsForPayment.map(c => c.orderNumber).join(', ');
-    const autoNotes = `Commission payment for orders: ${orderNumbers}`;
+    // Create auto-notes with order IDs
+    const orderIds = commissionsForPayment.map(c => `#${c.orderId}`).join(', ');
+    const autoNotes = `Commission payment for Order IDs: ${orderIds}`;
     const finalNotes = req.body.notes ? `${autoNotes}\n\nAdmin notes: ${req.body.notes}` : autoNotes;
     
     const paymentData = { 
