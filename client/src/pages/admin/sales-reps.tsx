@@ -26,6 +26,8 @@ interface SalesRep {
   createdAt: string;
   totalEarnings: number;
   commissionCount: number;
+  totalPaid?: number;
+  amountOwed?: number;
 }
 
 interface Commission {
@@ -335,8 +337,9 @@ Register now and start shopping! 🛍️`;
   const handleRecordPayment = () => {
     if (!selectedRep) return;
     
-    // Use server-calculated amount owed from the database
-    const amountOwed = selectedRep.amountOwed || 0;
+    // Calculate outstanding amount from unpaid commissions
+    const unpaidCommissions = selectedRepCommissions.filter(c => c.status === 'earned');
+    const amountOwed = unpaidCommissions.reduce((sum, comm) => sum + Number(comm.commissionAmount), 0);
     
     // Check if there's no outstanding amount
     if (amountOwed <= 0) {
@@ -348,7 +351,7 @@ Register now and start shopping! 🛍️`;
       return;
     }
     
-    // Pre-fill the payment form with the server-calculated amount owed
+    // Pre-fill the payment form with the calculated amount owed
     setNewPayment({
       amount: amountOwed.toFixed(2),
       paymentMethod: 'bank_transfer',

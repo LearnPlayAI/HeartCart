@@ -919,7 +919,7 @@ router.get("/sales-reps", isAdmin, asyncHandler(async (req: Request, res: Respon
       const payments = await storage.getRepPayments(rep.id);
       
       // Calculate total payments made
-      const totalPaid = payments.reduce((sum, payment) => sum + parseFloat(payment.amount), 0);
+      const totalPaid = payments.reduce((sum, payment) => sum + Number(payment.amount), 0);
       
       // Calculate amount owed (total earnings - total paid)
       const amountOwed = Math.max(0, earnings.totalEarnings - totalPaid);
