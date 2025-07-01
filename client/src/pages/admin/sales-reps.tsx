@@ -101,7 +101,7 @@ export default function SalesRepsPage() {
 
   // Generate registration URL for a rep
   const generateRegistrationUrl = (repCode: string) => {
-    const baseUrl = 'https://veritrade.shop';
+    const baseUrl = 'https://teemeyou.shop';
     return `${baseUrl}/auth?tab=register&repCode=${encodeURIComponent(repCode)}`;
   };
 
@@ -226,6 +226,14 @@ Register now and start shopping! 🛍️`;
         title: "Success",
         description: "Sales rep updated successfully"
       });
+    },
+    onError: (error: any) => {
+      console.error('Update rep error:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update sales rep",
+        variant: "destructive"
+      });
     }
   });
 
@@ -317,6 +325,11 @@ Register now and start shopping! 🛍️`;
 
   const handleUpdateRep = () => {
     if (!selectedRep) return;
+    
+    console.log('Updating rep with data:', {
+      id: selectedRep.id,
+      data: editRep
+    });
     
     updateRepMutation.mutate({
       id: selectedRep.id,

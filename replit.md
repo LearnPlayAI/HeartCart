@@ -454,7 +454,7 @@ Changelog:
   * Implemented copy-to-clipboard functionality for registration URLs with user feedback
   * Commission system now accurately calculates per-item profits handling partial shipments and sale pricing
   * Registration URLs prevent user errors by pre-filling rep codes and validating them in real-time
-  * Registration URLs use production domain https://veritrade.shop for consistent branding and functionality
+  * Registration URLs use production domain https://teemeyou.shop for consistent branding and functionality
 - July 1, 2025. Registration URL system optimized to reuse existing authentication page:
   * Migrated from separate route (/register/:repCode) to query parameter approach (/auth?tab=register&repCode=CODE)
   * Leverages existing /auth page functionality without duplicating registration form logic
