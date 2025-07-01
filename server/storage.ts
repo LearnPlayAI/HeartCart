@@ -3788,12 +3788,15 @@ export class DatabaseStorage implements IStorage {
               if (user && user.repCode) {
                 const rep = await this.getSalesRepByCode(user.repCode);
                 if (rep) {
-                  // Calculate commission: 3% of profit margin (actual customer price - cost price)
+                  // Calculate commission using the rep's actual commission rate from database
                   const orderItems = await this.getOrderItems(id);
                   let totalCommission = 0;
                   let totalProfitAmount = 0;
                   let totalCustomerPaidAmount = 0;
                   let totalCostAmount = 0;
+                  
+                  // Convert rep commission rate to decimal (1.0000 = 1%)
+                  const commissionRate = parseFloat(rep.commissionRate.toString()) / 100;
 
                   for (const item of orderItems) {
                     const product = await this.getProductById(item.productId);
@@ -3810,7 +3813,7 @@ export class DatabaseStorage implements IStorage {
                       
                       if (customerPaidPrice > costPrice) {
                         const profitMargin = (customerPaidPrice - costPrice) * item.quantity;
-                        const itemCommission = profitMargin * 0.03; // 3% commission
+                        const itemCommission = profitMargin * commissionRate; // Use actual rep commission rate
                         totalCommission += itemCommission;
                         totalProfitAmount += profitMargin;
                         
@@ -3834,7 +3837,7 @@ export class DatabaseStorage implements IStorage {
                       userId: updatedOrder.userId,
                       commissionAmount: totalCommission.toString(),
                       orderAmount: updatedOrder.totalAmount.toString(),
-                      commissionRate: "0.03",
+                      commissionRate: commissionRate.toString(),
                       totalProfitAmount: totalProfitAmount.toString(),
                       totalCustomerPaidAmount: totalCustomerPaidAmount.toString(),
                       totalCostAmount: totalCostAmount.toString(),
