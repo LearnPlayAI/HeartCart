@@ -13221,16 +13221,16 @@ export class DatabaseStorage implements IStorage {
 
   async getNextPaymentSequentialNumber(repId: number, dateString: string): Promise<number> {
     try {
-      // Count existing payments for this rep on this date
+      // Count existing payments for this rep on this date that match the new format
       const existingPayments = await db
         .select({ count: sql<number>`count(*)` })
         .from(repPayments)
         .where(and(
           eq(repPayments.repId, repId),
-          sql`${repPayments.referenceNumber} LIKE ${`%-${dateString}`}`
+          sql`${repPayments.referenceNumber} LIKE ${'%' + dateString}`
         ));
 
-      const count = existingPayments[0]?.count || 0;
+      const count = Number(existingPayments[0]?.count) || 0;
       return count + 1;
     } catch (error) {
       logger.error('Error getting next payment sequential number', { error, repId, dateString });
