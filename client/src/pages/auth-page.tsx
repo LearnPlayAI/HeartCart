@@ -610,8 +610,11 @@ export default function AuthPage() {
                             <FormControl>
                               <Input
                                 placeholder="Enter sales rep code if you have one"
-                                {...field}
+                                name={field.name}
+                                ref={field.ref}
                                 value={field.value || ""}
+                                onBlur={field.onBlur}
+                                disabled={field.disabled}
                                 onChange={(e) => {
                                   field.onChange(e);
                                   // Validate rep code on change with debounce
