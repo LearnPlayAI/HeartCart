@@ -83,14 +83,18 @@ export default function AuthPage() {
   const validateRepCodeMutation = useMutation({
     mutationFn: async (repCode: string) => {
       if (!repCode.trim()) return { valid: false };
+      console.log('Validating rep code:', repCode);
       const response = await apiRequest('GET', `/api/validate-rep-code/${encodeURIComponent(repCode.trim())}`);
       const data = await response.json();
+      console.log('Validation response:', data);
       return data.data; // Extract the data from the success response wrapper
     },
     onSuccess: (data) => {
+      console.log('Validation success:', data);
       setRepCodeValidation(data);
     },
-    onError: () => {
+    onError: (error) => {
+      console.log('Validation error:', error);
       setRepCodeValidation({ valid: false });
     }
   });
@@ -615,7 +619,7 @@ export default function AuthPage() {
                                 ref={field.ref}
                                 value={field.value || ""}
                                 onBlur={field.onBlur}
-                                disabled={field.disabled}
+                                disabled={field.disabled || Boolean(repCodeFromUrl)} // Disable if pre-filled from URL or field is disabled
                                 onChange={(e) => {
                                   field.onChange(e);
                                   // Validate rep code on change with debounce
@@ -630,7 +634,6 @@ export default function AuthPage() {
                                     setRepCodeValidation(null);
                                   }
                                 }}
-                                disabled={Boolean(repCodeFromUrl)} // Disable if pre-filled from URL
                               />
                             </FormControl>
                             {repCodeValidation && (
