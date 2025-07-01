@@ -323,6 +323,11 @@ function OrderCard({
         <div className="flex justify-between items-start">
           <div>
             <CardTitle className="text-lg">Order #{order.orderNumber}</CardTitle>
+            {order.paymentReferenceNumber && (
+              <p className="text-sm font-medium text-[#FF69B4]">
+                Payment Ref: {order.paymentReferenceNumber}
+              </p>
+            )}
             <p className="text-sm text-muted-foreground">
               {formatDate(order.createdAt)}
             </p>
@@ -501,6 +506,11 @@ function OrderTable({
                 <TableCell>
                   <div>
                     <div className="font-medium">#{order.orderNumber}</div>
+                    {order.paymentReferenceNumber && (
+                      <div className="text-xs font-medium text-[#FF69B4]">
+                        Ref: {order.paymentReferenceNumber}
+                      </div>
+                    )}
                     {order.trackingNumber && (
                       <div className="text-xs text-muted-foreground">
                         Track: {order.trackingNumber}

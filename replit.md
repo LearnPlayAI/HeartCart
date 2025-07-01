@@ -493,6 +493,9 @@ Changelog:
   * Streamlined admin workflow: admins can quickly cross-reference bank account using displayed payment reference
   * Maintains existing payment status tracking and invoice download functionality
   * Enhanced UI with clear labels and organized grid layout for optimal admin user experience
+  * Added payment reference number display to admin orders page (/admin/orders) in both card and table views
+  * Payment reference numbers now appear in hot pink styling on order card headings and table rows for quick bank verification reference
+  * Complete integration across all admin order management interfaces for consistent payment tracking workflow
 ```
 
 ## User Preferences
