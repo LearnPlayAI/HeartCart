@@ -83,8 +83,9 @@ export default function AuthPage() {
   const validateRepCodeMutation = useMutation({
     mutationFn: async (repCode: string) => {
       if (!repCode.trim()) return { valid: false };
-      const response = await apiRequest(`/api/validate-rep-code/${encodeURIComponent(repCode.trim())}`);
-      return response;
+      const response = await apiRequest('GET', `/api/validate-rep-code/${encodeURIComponent(repCode.trim())}`);
+      const data = await response.json();
+      return data.data; // Extract the data from the success response wrapper
     },
     onSuccess: (data) => {
       setRepCodeValidation(data);
