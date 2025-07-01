@@ -142,16 +142,33 @@ router.patch("/orders/:id/status", isAuthenticated, asyncHandler(async (req: Req
           if (user && user.repCode) {
             const rep = await storage.getSalesRepByCode(user.repCode);
             if (rep) {
-              // Calculate commission: 3% of profit margin (selling price - cost price)
+              // Calculate commission: 3% of profit margin (actual customer price - cost price)
               const orderItems = await storage.getOrderItems(orderId);
               let totalCommission = 0;
 
               for (const item of orderItems) {
                 const product = await storage.getProductById(item.productId);
-                if (product && product.costPrice && product.price) {
-                  const profitMargin = (product.price - product.costPrice) * item.quantity;
-                  const itemCommission = profitMargin * 0.03; // 3% commission
-                  totalCommission += itemCommission;
+                if (product && product.costPrice) {
+                  // Use the actual price the customer paid (unitPrice from order item)
+                  // This accounts for sale prices, discounts, and any promotional pricing
+                  const customerPaidPrice = item.unitPrice;
+                  const costPrice = parseFloat(product.costPrice.toString());
+                  
+                  if (customerPaidPrice > costPrice) {
+                    const profitMargin = (customerPaidPrice - costPrice) * item.quantity;
+                    const itemCommission = profitMargin * 0.03; // 3% commission
+                    totalCommission += itemCommission;
+                    
+                    logger.info("Commission calculated for order item", {
+                      orderId,
+                      productId: item.productId,
+                      customerPaidPrice,
+                      costPrice,
+                      quantity: item.quantity,
+                      profitMargin,
+                      itemCommission
+                    });
+                  }
                 }
               }
 

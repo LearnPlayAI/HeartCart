@@ -421,6 +421,9 @@ export const repCommissions = pgTable("repCommissions", {
   commissionAmount: decimal("commissionAmount", { precision: 10, scale: 2 }).notNull(), // Calculated commission
   orderAmount: decimal("orderAmount", { precision: 10, scale: 2 }).notNull(), // Total order amount
   commissionRate: decimal("commissionRate", { precision: 5, scale: 4 }).notNull(), // Commission rate at time of order
+  totalProfitAmount: decimal("totalProfitAmount", { precision: 10, scale: 2 }), // Total profit from all order items
+  totalCustomerPaidAmount: decimal("totalCustomerPaidAmount", { precision: 10, scale: 2 }), // Total amount customer actually paid
+  totalCostAmount: decimal("totalCostAmount", { precision: 10, scale: 2 }), // Total cost of all order items
   status: text("status").notNull().default("earned"), // earned, paid, cancelled
   notes: text("notes"), // Admin notes about the commission
   createdAt: timestamp("createdAt").defaultNow(), // When commission was earned (order delivered)
