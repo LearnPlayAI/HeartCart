@@ -3781,6 +3781,89 @@ export class DatabaseStorage implements IStorage {
             // Don't throw here as the order update was successful
           }
 
+          // Calculate and create commission when order is delivered
+          if (status === 'delivered') {
+            try {
+              const user = await this.getUserById(updatedOrder.userId);
+              if (user && user.repCode) {
+                const rep = await this.getSalesRepByCode(user.repCode);
+                if (rep) {
+                  // Calculate commission: 3% of profit margin (actual customer price - cost price)
+                  const orderItems = await this.getOrderItems(id);
+                  let totalCommission = 0;
+                  let totalProfitAmount = 0;
+                  let totalCustomerPaidAmount = 0;
+                  let totalCostAmount = 0;
+
+                  for (const item of orderItems) {
+                    const product = await this.getProductById(item.productId);
+                    if (product && product.costPrice) {
+                      // Use the actual price the customer paid (unitPrice from order item)
+                      // This accounts for sale prices, discounts, and any promotional pricing
+                      const customerPaidPrice = item.unitPrice;
+                      const costPrice = parseFloat(product.costPrice.toString());
+                      const itemTotalCustomerPaid = customerPaidPrice * item.quantity;
+                      const itemTotalCost = costPrice * item.quantity;
+                      
+                      totalCustomerPaidAmount += itemTotalCustomerPaid;
+                      totalCostAmount += itemTotalCost;
+                      
+                      if (customerPaidPrice > costPrice) {
+                        const profitMargin = (customerPaidPrice - costPrice) * item.quantity;
+                        const itemCommission = profitMargin * 0.03; // 3% commission
+                        totalCommission += itemCommission;
+                        totalProfitAmount += profitMargin;
+                        
+                        logger.info("Commission calculated for order item", {
+                          orderId: id,
+                          productId: item.productId,
+                          customerPaidPrice,
+                          costPrice,
+                          quantity: item.quantity,
+                          profitMargin,
+                          itemCommission
+                        });
+                      }
+                    }
+                  }
+
+                  if (totalCommission > 0) {
+                    const commissionData = {
+                      repId: rep.id,
+                      orderId: id,
+                      userId: updatedOrder.userId,
+                      commissionAmount: totalCommission.toString(),
+                      orderAmount: updatedOrder.totalAmount.toString(),
+                      commissionRate: "0.03",
+                      totalProfitAmount: totalProfitAmount.toString(),
+                      totalCustomerPaidAmount: totalCustomerPaidAmount.toString(),
+                      totalCostAmount: totalCostAmount.toString(),
+                      status: 'earned' as const,
+                      notes: `Commission for delivered order ${updatedOrder.orderNumber}`
+                    };
+
+                    await this.createRepCommission(commissionData);
+                    
+                    logger.info("Commission created for delivered order", {
+                      orderId: id,
+                      repId: rep.id,
+                      repCode: user.repCode,
+                      commissionAmount: totalCommission,
+                      orderAmount: updatedOrder.totalAmount
+                    });
+                  }
+                }
+              }
+            } catch (commissionError) {
+              // Log commission error but don't fail the status update
+              logger.error("Failed to create commission for delivered order", {
+                error: commissionError,
+                orderId: id,
+                status
+              });
+            }
+          }
+
           return updatedOrder;
         } catch (updateError) {
           logger.error(`Error updating order status`, {
