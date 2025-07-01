@@ -12171,10 +12171,13 @@ export class DatabaseStorage implements IStorage {
         createdAt: row.order.createdAt,
         updatedAt: row.supplierStatus?.createdAt || row.order.createdAt,
         hasCreditGenerated: !!row.creditTransaction, // Check if credit transaction exists
+        selectedAttributes: row.orderItem.selectedAttributes || {}, // Include customer attribute selections
+        attributeDisplayText: row.orderItem.attributeDisplayText || '', // Include attribute display text
         customerOrder: {
           id: row.order.id,
           orderNumber: row.order.orderNumber,
           customerName: row.order.customerName,
+          customerEmail: row.order.customerEmail, // Add customer email for admin reference
           createdAt: row.order.createdAt,
           status: row.order.status,
           trackingNumber: row.order.trackingNumber,

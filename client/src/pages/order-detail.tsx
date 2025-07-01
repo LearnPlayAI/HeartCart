@@ -1012,7 +1012,7 @@ ${order.customerName}`;
                 <Button 
                   variant="outline" 
                   className="w-full"
-                  onClick={() => window.open('mailto:support@teemeyou.com?subject=Order%20Support&body=Order%20Number:%20' + order.orderNumber, '_blank')}
+                  onClick={() => window.open('mailto:sales@teemeyou.shop?subject=Order%20Support&body=Order%20Number:%20' + order.orderNumber, '_blank')}
                 >
                   <Mail className="h-4 w-4 mr-2" />
                   Contact Support
