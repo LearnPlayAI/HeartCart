@@ -13276,7 +13276,7 @@ export class DatabaseStorage implements IStorage {
           .update(repCommissions)
           .set({ 
             status: 'paid',
-            updatedAt: new Date().toISOString()
+            updatedAt: new Date()
           })
           .where(inArray(repCommissions.id, commissionsToUpdate));
 
