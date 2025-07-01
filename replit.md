@@ -454,6 +454,7 @@ Changelog:
   * Implemented copy-to-clipboard functionality for registration URLs with user feedback
   * Commission system now accurately calculates per-item profits handling partial shipments and sale pricing
   * Registration URLs prevent user errors by pre-filling rep codes and validating them in real-time
+  * Registration URLs use production domain https://veritrade.shop for consistent branding and functionality
 ```
 
 ## User Preferences
