@@ -307,6 +307,16 @@ Register now and start shopping! 🛍️`;
     // Calculate amount owed (unpaid balance)
     const amountOwed = Math.max(0, totalEarnings - totalPaid);
     
+    // Check if there's no outstanding amount
+    if (amountOwed <= 0) {
+      toast({
+        title: "No Outstanding Amount",
+        description: `${selectedRep.firstName} ${selectedRep.lastName} has no outstanding commissions to pay. All earnings have been paid.`,
+        variant: "default"
+      });
+      return;
+    }
+    
     // Pre-fill the payment form with the amount owed
     setNewPayment({
       amount: amountOwed.toFixed(2),
