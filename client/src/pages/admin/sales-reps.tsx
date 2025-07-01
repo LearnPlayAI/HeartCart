@@ -35,6 +35,9 @@ interface Commission {
   commissionAmount: number;
   orderAmount: number;
   commissionRate: number;
+  totalProfitAmount?: number; // Enhanced tracking
+  totalCustomerPaidAmount?: number; // Enhanced tracking
+  totalCostAmount?: number; // Enhanced tracking
   status: 'earned' | 'paid' | 'cancelled';
   notes: string | null;
   createdAt: string;
@@ -432,7 +435,9 @@ export default function SalesRepsPage() {
                   <TableRow>
                     <TableHead>Date</TableHead>
                     <TableHead>Order ID</TableHead>
-                    <TableHead>Order Amount</TableHead>
+                    <TableHead>Customer Paid</TableHead>
+                    <TableHead>Cost Amount</TableHead>
+                    <TableHead>Profit Amount</TableHead>
                     <TableHead>Commission</TableHead>
                     <TableHead>Rate</TableHead>
                     <TableHead>Status</TableHead>
@@ -443,8 +448,18 @@ export default function SalesRepsPage() {
                     <TableRow key={commission.id}>
                       <TableCell>{formatDate(commission.createdAt)}</TableCell>
                       <TableCell>#{commission.orderId}</TableCell>
-                      <TableCell>{formatCurrency(commission.orderAmount)}</TableCell>
-                      <TableCell>{formatCurrency(commission.commissionAmount)}</TableCell>
+                      <TableCell>{formatCurrency(commission.totalCustomerPaidAmount || commission.orderAmount)}</TableCell>
+                      <TableCell>{formatCurrency(commission.totalCostAmount || 0)}</TableCell>
+                      <TableCell>
+                        <span className="font-medium text-green-600">
+                          {formatCurrency(commission.totalProfitAmount || 0)}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-medium">
+                          {formatCurrency(commission.commissionAmount)}
+                        </span>
+                      </TableCell>
                       <TableCell>{commission.commissionRate * 100}%</TableCell>
                       <TableCell>
                         <Badge variant={commission.status === 'earned' ? 'default' : commission.status === 'paid' ? 'secondary' : 'destructive'}>

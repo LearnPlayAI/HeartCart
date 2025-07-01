@@ -103,6 +103,13 @@ export default function AuthPage() {
       navigate("/");
     }
   }, [user]);
+  
+  // Validate rep code on initial load if provided via URL
+  React.useEffect(() => {
+    if (repCodeFromUrl) {
+      validateRepCodeMutation.mutate(repCodeFromUrl);
+    }
+  }, [repCodeFromUrl]);
 
   // Handle reset password page with token validation
   React.useEffect(() => {
@@ -593,13 +600,48 @@ export default function AuthPage() {
                         name="repCode"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Sales Rep Code (Optional)</FormLabel>
+                            <FormLabel>
+                              Sales Rep Code (Optional)
+                              {repCodeFromUrl && (
+                                <span className="text-sm text-green-600 ml-2">
+                                  ✓ Pre-filled from invitation link
+                                </span>
+                              )}
+                            </FormLabel>
                             <FormControl>
                               <Input
                                 placeholder="Enter sales rep code if you have one"
                                 {...field}
+                                onChange={(e) => {
+                                  field.onChange(e);
+                                  // Validate rep code on change with debounce
+                                  const repCode = e.target.value.trim();
+                                  if (repCode) {
+                                    setTimeout(() => {
+                                      if (registerForm.getValues('repCode') === repCode) {
+                                        validateRepCodeMutation.mutate(repCode);
+                                      }
+                                    }, 500);
+                                  } else {
+                                    setRepCodeValidation(null);
+                                  }
+                                }}
+                                disabled={Boolean(repCodeFromUrl)} // Disable if pre-filled from URL
                               />
                             </FormControl>
+                            {repCodeValidation && (
+                              <div className={`text-sm mt-1 ${repCodeValidation.valid ? 'text-green-600' : 'text-red-600'}`}>
+                                {repCodeValidation.valid 
+                                  ? `✓ Valid rep code - Representative: ${repCodeValidation.repName}` 
+                                  : '✗ Invalid sales rep code'
+                                }
+                              </div>
+                            )}
+                            {validateRepCodeMutation.isPending && (
+                              <div className="text-sm text-gray-500 mt-1">
+                                Validating rep code...
+                              </div>
+                            )}
                             <FormMessage />
                           </FormItem>
                         )}
