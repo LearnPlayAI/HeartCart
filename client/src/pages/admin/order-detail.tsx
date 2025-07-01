@@ -327,6 +327,14 @@ export default function AdminOrderDetail() {
   const [trackingInput, setTrackingInput] = useState("");
   const [paymentReceivedDate, setPaymentReceivedDate] = useState(new Date().toISOString().split('T')[0]);
 
+  // Force cache invalidation on component mount to ensure fresh data
+  useEffect(() => {
+    if (orderId) {
+      queryClient.removeQueries({ queryKey: ['/api/admin/orders', orderId] });
+      queryClient.removeQueries({ queryKey: ['/api/admin/supplier-orders', orderId] });
+    }
+  }, [queryClient, orderId]);
+
   const { data: response, isLoading, error } = useQuery({
     queryKey: ['/api/admin/orders', orderId],
     queryFn: async () => {
