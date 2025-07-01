@@ -644,9 +644,19 @@ Register now and start shopping! 🛍️`;
                       </TableCell>
                       <TableCell>{commission.commissionRate * 100}%</TableCell>
                       <TableCell>
-                        <Badge variant={commission.status === 'earned' ? 'default' : commission.status === 'paid' ? 'secondary' : 'destructive'}>
-                          {commission.status}
-                        </Badge>
+                        {commission.status === 'paid' ? (
+                          <Badge className="bg-green-600 text-white hover:bg-green-700">
+                            Paid
+                          </Badge>
+                        ) : commission.status === 'earned' ? (
+                          <Badge className="bg-pink-500 text-white hover:bg-pink-600">
+                            earned
+                          </Badge>
+                        ) : (
+                          <Badge variant="destructive">
+                            {commission.status}
+                          </Badge>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
