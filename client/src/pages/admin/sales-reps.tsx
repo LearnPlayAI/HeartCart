@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Users, DollarSign, TrendingUp, Plus, Edit2, Eye, Calendar } from "lucide-react";
+import { Users, DollarSign, TrendingUp, Plus, Edit2, Eye, Calendar, Share2, Copy, MessageCircle } from "lucide-react";
 import { AdminLayout } from "@/components/admin/layout";
 
 interface SalesRep {
@@ -78,6 +78,50 @@ export default function SalesRepsPage() {
   });
 
   const { toast } = useToast();
+
+  // Generate registration URL for a rep
+  const generateRegistrationUrl = (repCode: string) => {
+    const baseUrl = window.location.origin;
+    return `${baseUrl}/register/${encodeURIComponent(repCode)}?tab=register`;
+  };
+
+  // Share registration URL via WhatsApp
+  const shareToWhatsApp = (rep: SalesRep) => {
+    const registrationUrl = generateRegistrationUrl(rep.repCode);
+    const message = `🎯 Join TeeMeYou with my sales rep code!
+    
+👋 Hi! I'm ${rep.firstName} ${rep.lastName}, your TeeMeYou sales representative.
+
+📝 Use this special link to register and I'll be your dedicated contact:
+${registrationUrl}
+
+✅ Your rep code "${rep.repCode}" will be automatically filled in
+💰 Get the best deals and personalized service
+📞 Direct support from me for all your orders
+
+Register now and start shopping! 🛍️`;
+
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+  };
+
+  // Copy registration URL to clipboard
+  const copyRegistrationUrl = async (rep: SalesRep) => {
+    const registrationUrl = generateRegistrationUrl(rep.repCode);
+    try {
+      await navigator.clipboard.writeText(registrationUrl);
+      toast({
+        title: "URL Copied!",
+        description: `Registration URL for ${rep.firstName} ${rep.lastName} copied to clipboard`,
+      });
+    } catch (error) {
+      toast({
+        title: "Copy Failed",
+        description: "Could not copy URL to clipboard",
+        variant: "destructive"
+      });
+    }
+  };
   const queryClient = useQueryClient();
 
   // Force clear cache on mount
@@ -380,7 +424,7 @@ export default function SalesRepsPage() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <div className="flex space-x-2">
+                    <div className="flex space-x-1">
                       <Button
                         variant="outline"
                         size="sm"
@@ -398,6 +442,22 @@ export default function SalesRepsPage() {
                         }}
                       >
                         <Edit2 className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => shareToWhatsApp(rep)}
+                        title="Share registration URL to WhatsApp"
+                      >
+                        <MessageCircle className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => copyRegistrationUrl(rep)}
+                        title="Copy registration URL to clipboard"
+                      >
+                        <Copy className="w-4 h-4" />
                       </Button>
                     </div>
                   </TableCell>

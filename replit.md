@@ -444,6 +444,16 @@ Changelog:
   * Complete backend API with proper authentication and admin-only access controls
   * Database migration applied with sample data and production-ready table structure
   * Sales rep commission system fully integrated with existing order management and user registration flows
+- July 1, 2025. Enhanced sales representative commission system with registration URL sharing:
+  * Enhanced commission calculation to use actual customer-paid prices (salePrice) instead of base product prices for accurate profit margins
+  * Enhanced repCommissions database schema with detailed tracking fields (totalProfitAmount, totalCustomerPaidAmount, totalCostAmount) using camelCase convention
+  * Implemented pre-filled registration URL system (/register/:repCode) that automatically populates rep codes during user registration
+  * Added real-time rep code validation with user feedback during the registration process
+  * Enhanced admin interface to display detailed commission breakdowns and profit tracking information
+  * Added WhatsApp sharing functionality in admin sales reps page with branded message templates
+  * Implemented copy-to-clipboard functionality for registration URLs with user feedback
+  * Commission system now accurately calculates per-item profits handling partial shipments and sale pricing
+  * Registration URLs prevent user errors by pre-filling rep codes and validating them in real-time
 ```
 
 ## User Preferences
