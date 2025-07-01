@@ -486,7 +486,7 @@ Changelog:
   * Sales rep commission system fully integrated with existing order management and ready for production use with accurate rate calculations
 - July 1, 2025. Enhanced commission payment system with auto-generated reference numbers and detailed notes:
   * Streamlined payment method options to only Bank Transfer and Store Credit (removed Cash, Cheque, Other)
-  * Implemented auto-generated reference numbers using format {REPCODE}-{PaymentDate} (e.g., JAN777-20250701)
+  * Implemented auto-generated reference numbers using format {REPCODE}-{##}-{ddmmyy} (e.g., JAN777-01-010725)
   * Enhanced backend with getCommissionsForPayment method to fetch commission details with order numbers
   * Automatic payment notes generation including specific order numbers for which commissions are being paid
   * Frontend pre-fills payment dialog with auto-generated reference number and calculated amount owed

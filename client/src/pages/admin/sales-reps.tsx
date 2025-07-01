@@ -351,9 +351,17 @@ Register now and start shopping! 🛍️`;
       return;
     }
     
-    // Auto-generate reference number
-    const currentDate = new Date().toISOString().split('T')[0].replace(/-/g, ''); // YYYYMMDD format
-    const autoReferenceNumber = `${selectedRep.repCode}-${currentDate}`;
+    // Auto-generate reference number in format {repCode}-{##}-{ddmmyy}
+    const today = new Date();
+    const ddmmyy = today.toLocaleDateString('en-GB', { 
+      day: '2-digit', 
+      month: '2-digit', 
+      year: '2-digit' 
+    }).replace(/\//g, '');
+    
+    // Since this is frontend-generated, we'll use 01 as placeholder sequential number
+    // The backend will generate the correct sequential number when the payment is created
+    const autoReferenceNumber = `${selectedRep.repCode}-01-${ddmmyy}`;
     
     // Pre-fill the payment form with the calculated amount owed and auto-generated reference
     setNewPayment({
