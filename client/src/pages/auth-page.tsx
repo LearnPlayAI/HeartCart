@@ -60,9 +60,8 @@ type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
 
 export default function AuthPage() {
   // Extract URL parameters for repCode, tab, and reset token
-  const params = useParams();
-  const repCodeFromUrl = params.repCode || '';
   const urlParams = new URLSearchParams(window.location.search);
+  const repCodeFromUrl = urlParams.get('repCode') || '';
   const initialTab = urlParams.get('tab') === 'register' || repCodeFromUrl ? 'register' : 'login';
   const resetToken = urlParams.get('token');
   const isResetPasswordPage = window.location.pathname === '/reset-password';

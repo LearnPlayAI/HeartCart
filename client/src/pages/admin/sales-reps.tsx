@@ -102,7 +102,7 @@ export default function SalesRepsPage() {
   // Generate registration URL for a rep
   const generateRegistrationUrl = (repCode: string) => {
     const baseUrl = 'https://veritrade.shop';
-    return `${baseUrl}/register/${encodeURIComponent(repCode)}?tab=register`;
+    return `${baseUrl}/auth?tab=register&repCode=${encodeURIComponent(repCode)}`;
   };
 
   // Share registration URL via WhatsApp

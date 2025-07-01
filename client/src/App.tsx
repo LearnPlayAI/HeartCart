@@ -272,7 +272,6 @@ function App() {
                           <ProtectedRoute path="/order/:id" component={OrderDetail} />
                           <ProtectedRoute path="/orders/:id" component={OrderDetail} />
                           <Route path="/auth"><AuthPage /></Route>
-                          <Route path="/register/:repCode"><AuthPage /></Route>
                           <Route path="/reset-password"><AuthPage /></Route>
                           <Route path="/verify-email"><VerifyEmail /></Route>
                           <Route><NotFound /></Route>

@@ -447,7 +447,7 @@ Changelog:
 - July 1, 2025. Enhanced sales representative commission system with registration URL sharing:
   * Enhanced commission calculation to use actual customer-paid prices (salePrice) instead of base product prices for accurate profit margins
   * Enhanced repCommissions database schema with detailed tracking fields (totalProfitAmount, totalCustomerPaidAmount, totalCostAmount) using camelCase convention
-  * Implemented pre-filled registration URL system (/register/:repCode) that automatically populates rep codes during user registration
+  * Implemented pre-filled registration URL system using query parameters (/auth?tab=register&repCode=CODE) that automatically populates rep codes during user registration
   * Added real-time rep code validation with user feedback during the registration process
   * Enhanced admin interface to display detailed commission breakdowns and profit tracking information
   * Added WhatsApp sharing functionality in admin sales reps page with branded message templates
@@ -455,6 +455,13 @@ Changelog:
   * Commission system now accurately calculates per-item profits handling partial shipments and sale pricing
   * Registration URLs prevent user errors by pre-filling rep codes and validating them in real-time
   * Registration URLs use production domain https://veritrade.shop for consistent branding and functionality
+- July 1, 2025. Registration URL system optimized to reuse existing authentication page:
+  * Migrated from separate route (/register/:repCode) to query parameter approach (/auth?tab=register&repCode=CODE)
+  * Leverages existing /auth page functionality without duplicating registration form logic
+  * Maintains all existing validation, error handling, and user experience features
+  * Clean URL structure using standard query parameters for better maintainability
+  * Updated WhatsApp sharing URLs in admin panel to use new query parameter format
+  * Removed unnecessary route duplication while preserving all sales rep functionality
 ```
 
 ## User Preferences
