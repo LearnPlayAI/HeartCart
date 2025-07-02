@@ -186,7 +186,11 @@ export function UserAssignmentDialog({ open, onOpenChange, salesRep, allSalesRep
   };
 
   const handleReassignUser = (userId: number, newRepCode: string) => {
-    reassignUserMutation.mutate({ userId, newRepCode });
+    if (newRepCode === "REMOVE_ASSIGNMENT") {
+      removeAssignmentMutation.mutate(userId);
+    } else {
+      reassignUserMutation.mutate({ userId, newRepCode });
+    }
   };
 
   const UserRow = ({ user, showAssignButton = false, showRemoveButton = false, showReassignSelect = false }: {
@@ -253,7 +257,7 @@ export function UserAssignmentDialog({ open, onOpenChange, salesRep, allSalesRep
                     {rep.repCode}
                   </SelectItem>
                 ))}
-                <SelectItem value="">Remove</SelectItem>
+                <SelectItem value="REMOVE_ASSIGNMENT">Remove</SelectItem>
               </SelectContent>
             </Select>
           )}
