@@ -81,10 +81,10 @@ export default function ManageUsersPage() {
 
   const searchUsers = searchUsersResponse?.data || [];
 
-  // Assign user mutation
+  // Assign user mutation (using existing working endpoint)
   const assignUserMutation = useMutation({
     mutationFn: ({ userId }: { userId: number }) => 
-      apiRequest('POST', `/api/admin/sales-reps/${repId}/assign-user`, { userId }),
+      apiRequest('PUT', `/api/admin/users/${userId}/rep-assignment`, { repCode: selectedRep?.repCode }),
     onSuccess: () => {
       // Invalidate all related queries
       queryClient.invalidateQueries({ queryKey: ['/api/admin/sales-reps'] });
@@ -110,10 +110,10 @@ export default function ManageUsersPage() {
     }
   });
 
-  // Remove user mutation
+  // Remove user mutation (using existing working endpoint)
   const removeUserMutation = useMutation({
     mutationFn: ({ userId }: { userId: number }) => 
-      apiRequest('POST', `/api/admin/sales-reps/${repId}/remove-user`, { userId }),
+      apiRequest('PUT', `/api/admin/users/${userId}/rep-assignment`, { repCode: null }),
     onSuccess: () => {
       // Invalidate all related queries
       queryClient.invalidateQueries({ queryKey: ['/api/admin/sales-reps'] });
@@ -139,10 +139,10 @@ export default function ManageUsersPage() {
     }
   });
 
-  // Reassign user mutation
+  // Reassign user mutation (using existing working endpoint)
   const reassignUserMutation = useMutation({
-    mutationFn: ({ userId, newRepId }: { userId: number, newRepId: number }) => 
-      apiRequest('POST', `/api/admin/users/${userId}/reassign`, { newRepId }),
+    mutationFn: ({ userId, newRepCode }: { userId: number, newRepCode: string }) => 
+      apiRequest('PUT', `/api/admin/users/${userId}/rep-assignment`, { repCode: newRepCode }),
     onSuccess: () => {
       // Invalidate all related queries
       queryClient.invalidateQueries({ queryKey: ['/api/admin/sales-reps'] });
@@ -194,7 +194,17 @@ export default function ManageUsersPage() {
       });
       return;
     }
-    reassignUserMutation.mutate({ userId, newRepId: parseInt(selectedNewRepId) });
+    const newRepIdNum = parseInt(selectedNewRepId);
+    const newRep = salesReps.find((rep: SalesRep) => rep.id === newRepIdNum);
+    if (!newRep) {
+      toast({
+        title: "Error",
+        description: "Selected sales rep not found",
+        variant: "destructive"
+      });
+      return;
+    }
+    reassignUserMutation.mutate({ userId, newRepCode: newRep.repCode });
   };
 
   if (repsLoading) {
