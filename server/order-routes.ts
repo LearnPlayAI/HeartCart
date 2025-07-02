@@ -706,13 +706,35 @@ router.get("/:id/status-history", isAuthenticated, asyncHandler(async (req: Requ
       return sendError(res, "Invalid order ID", 400);
     }
 
-    // First check if the order belongs to the user
+    // First check if the order exists
     const order = await storage.getOrderById(orderId);
     if (!order) {
       return sendError(res, "Order not found", 404);
     }
 
-    if (order.userId !== userId) {
+    // Check if user has access to this order (either owns it or is admin)
+    const user = await storage.getUser(userId);
+    if (!user) {
+      return sendError(res, "User not found", 401);
+    }
+
+    // Allow access if user owns the order OR if user is admin
+    logger.debug("Authorization check for order status history", {
+      orderId,
+      userId,
+      orderUserId: order.userId,
+      userRole: user.role,
+      ownsOrder: order.userId === userId,
+      isAdmin: user.role === 'admin'
+    });
+
+    if (order.userId !== userId && user.role !== 'admin') {
+      logger.warn("Access denied to order status history", {
+        orderId,
+        userId,
+        orderUserId: order.userId,
+        userRole: user.role
+      });
       return sendError(res, "Unauthorized", 403);
     }
 
