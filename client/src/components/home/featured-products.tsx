@@ -169,7 +169,7 @@ const FeaturedProductsSection = () => {
         </div>
       </div>
       {!isLoading && !error && allProducts.length > 0 && hasMoreProducts && (
-        <div className="p-3 border-t border-gray-200 flex justify-center">
+        <div className="p-3 border-t border-gray-200 flex justify-center gap-3">
           <Button 
             variant="outline"
             className="border-[#FF69B4] text-[#FF69B4] hover:bg-[#FF69B4] hover:text-white disabled:opacity-50"
@@ -178,6 +178,14 @@ const FeaturedProductsSection = () => {
           >
             {isFetching ? 'Loading...' : hasMoreProducts ? 'Load More Products' : 'No More Products'}
           </Button>
+          <Link href="/featured">
+            <Button 
+              variant="default"
+              className="bg-[#FF69B4] text-white hover:bg-[#FF1493]"
+            >
+              View All Featured Products
+            </Button>
+          </Link>
         </div>
       )}
     </section>

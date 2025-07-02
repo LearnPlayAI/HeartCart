@@ -521,6 +521,13 @@ Changelog:
   * Fixed navigation runtime errors by using setLocation method instead of router.navigate for promotional redirects
   * Updated flash deals component branding consistency: changed "Special Deals" text to "Promotions" throughout interface
   * Maintained all existing filter functionality while leveraging existing promotional system architecture
+- July 2, 2025. Complete featured products system with redirect-based navigation:
+  * Created new /featured page displaying ALL featured products without pagination limitations
+  * Added /api/featured-products/all endpoint for fetching complete featured product catalog
+  * Updated "Featured Products" filter to redirect to dedicated page using setLocation method
+  * Applied consistent design structure matching promotions page with TeeMeYou branding
+  * Enhanced homepage featured products section with "View All Featured Products" button next to load more
+  * Both promotional and featured content now use redirect-based navigation to dedicated pages for optimal user experience
 - July 1, 2025. Enhanced EFT Payment Management card for improved admin banking verification:
   * Completely redesigned EFT Payment Management card on admin order detail page (/admin/orders/{id})
   * Replaced outdated proof of payment upload system with comprehensive customer payment information display
