@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation, Link } from 'wouter';
+import { useLocation, Link, useRouter } from 'wouter';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet';
 
@@ -106,6 +106,7 @@ const getAttributeDisplayName = (attribute: Attribute | CategoryAttribute): stri
 
 const ProductListing = () => {
   const [location, setLocation] = useLocation();
+  const router = useRouter();
   
   // Initialize searchParams with saved state restoration
   const initializeSearchParams = () => {
@@ -625,6 +626,12 @@ const ProductListing = () => {
   };
   
   const handleFilterChange = (key: keyof typeof filters, value: boolean) => {
+    // Special handling for "On Promotion" filter - redirect to promotions page
+    if (key === 'onPromotion' && value) {
+      router.navigate('/promotions');
+      return;
+    }
+    
     setFilters(prev => ({ ...prev, [key]: value }));
     setPage(1);
   };
