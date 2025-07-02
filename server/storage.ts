@@ -48,6 +48,13 @@ import {
   attributeOptions,
   type AttributeOption,
   type InsertAttributeOption,
+  // Promotion system imports
+  promotions,
+  type Promotion,
+  type InsertPromotion,
+  productPromotions,
+  type ProductPromotion,
+  type InsertProductPromotion,
   // Email and token management
   mailTokens,
   type MailToken,
@@ -1414,6 +1421,9 @@ export class DatabaseStorage implements IStorage {
       statusFilter?: string;
       sortField?: string;
       sortOrder?: 'asc' | 'desc';
+      onPromotion?: boolean;
+      featuredProducts?: boolean;
+      newArrivals?: boolean;
     },
   ): Promise<{ products: Product[]; total: number }> {
     try {
@@ -1538,15 +1548,200 @@ export class DatabaseStorage implements IStorage {
         }
       }
 
+      // Add featured products filter
+      if (options?.featuredProducts) {
+        allConditions.push(eq(products.isFeatured, true));
+      }
+
+      // Add new arrivals filter (products created within last 30 days)
+      if (options?.newArrivals) {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const thirtyDaysAgoString = thirtyDaysAgo.toISOString();
+        allConditions.push(sql`${products.createdAt} >= ${thirtyDaysAgoString}`);
+      }
+
+      // Add on promotion filter (products with active promotions)
+      if (options?.onPromotion) {
+        // This will be handled specially in the query construction below
+        // as it requires a join with productPromotions and promotions tables
+      }
+
       // Handle category filtering and product_drafts joins
       const needsCategoryJoin = !categoryId && !options?.includeCategoryInactive;
       const sortField = options?.sortField || 'displayOrder';
       const needsDraftsJoin = sortField === 'publishedAt';
+      const needsPromotionJoin = options?.onPromotion;
 
       let countQuery: any;
       let dataQuery: any;
 
-      if (needsCategoryJoin && needsDraftsJoin) {
+      if (needsPromotionJoin) {
+        // Add promotion filter conditions
+        const currentTime = new Date().toISOString();
+        
+        if (needsCategoryJoin && needsDraftsJoin) {
+          // Join with categories, product_drafts, and promotions tables
+          const joinConditions = [...allConditions, eq(categories.isActive, true)];
+          
+          countQuery = db
+            .select({ count: count() })
+            .from(products)
+            .innerJoin(categories, eq(products.categoryId, categories.id))
+            .leftJoin(productDrafts, eq(products.id, productDrafts.originalProductId))
+            .innerJoin(productPromotions, eq(products.id, productPromotions.productId))
+            .innerJoin(promotions, eq(productPromotions.promotionId, promotions.id))
+            .where(and(
+              ...joinConditions,
+              eq(promotions.isActive, true),
+              sql`${promotions.startDate} <= ${currentTime}`,
+              sql`${promotions.endDate} >= ${currentTime}`
+            ));
+
+          dataQuery = db
+            .select({ 
+              product: products,
+              publishedAt: productDrafts.publishedAt,
+              createdAt: productDrafts.createdAt
+            })
+            .from(products)
+            .innerJoin(categories, eq(products.categoryId, categories.id))
+            .leftJoin(productDrafts, eq(products.id, productDrafts.originalProductId))
+            .innerJoin(productPromotions, eq(products.id, productPromotions.productId))
+            .innerJoin(promotions, eq(productPromotions.promotionId, promotions.id))
+            .where(and(
+              ...joinConditions,
+              eq(promotions.isActive, true),
+              sql`${promotions.startDate} <= ${currentTime}`,
+              sql`${promotions.endDate} >= ${currentTime}`
+            ));
+        } else if (needsCategoryJoin) {
+          // Join with categories and promotions tables
+          const joinConditions = [...allConditions, eq(categories.isActive, true)];
+          
+          countQuery = db
+            .select({ count: count() })
+            .from(products)
+            .innerJoin(categories, eq(products.categoryId, categories.id))
+            .innerJoin(productPromotions, eq(products.id, productPromotions.productId))
+            .innerJoin(promotions, eq(productPromotions.promotionId, promotions.id))
+            .where(and(
+              ...joinConditions,
+              eq(promotions.isActive, true),
+              sql`${promotions.startDate} <= ${currentTime}`,
+              sql`${promotions.endDate} >= ${currentTime}`
+            ));
+
+          dataQuery = db
+            .select({ product: products })
+            .from(products)
+            .innerJoin(categories, eq(products.categoryId, categories.id))
+            .innerJoin(productPromotions, eq(products.id, productPromotions.productId))
+            .innerJoin(promotions, eq(productPromotions.promotionId, promotions.id))
+            .where(and(
+              ...joinConditions,
+              eq(promotions.isActive, true),
+              sql`${promotions.startDate} <= ${currentTime}`,
+              sql`${promotions.endDate} >= ${currentTime}`
+            ));
+        } else if (needsDraftsJoin) {
+          // Join with product_drafts and promotions tables
+          const whereCondition = allConditions.length > 0 ? and(...allConditions) : undefined;
+          
+          countQuery = db
+            .select({ count: count() })
+            .from(products)
+            .leftJoin(productDrafts, eq(products.id, productDrafts.originalProductId))
+            .innerJoin(productPromotions, eq(products.id, productPromotions.productId))
+            .innerJoin(promotions, eq(productPromotions.promotionId, promotions.id));
+          
+          if (whereCondition) {
+            countQuery = countQuery.where(and(
+              whereCondition,
+              eq(promotions.isActive, true),
+              sql`${promotions.startDate} <= ${currentTime}`,
+              sql`${promotions.endDate} >= ${currentTime}`
+            ));
+          } else {
+            countQuery = countQuery.where(and(
+              eq(promotions.isActive, true),
+              sql`${promotions.startDate} <= ${currentTime}`,
+              sql`${promotions.endDate} >= ${currentTime}`
+            ));
+          }
+
+          dataQuery = db
+            .select({ 
+              product: products,
+              publishedAt: productDrafts.publishedAt,
+              createdAt: productDrafts.createdAt
+            })
+            .from(products)
+            .leftJoin(productDrafts, eq(products.id, productDrafts.originalProductId))
+            .innerJoin(productPromotions, eq(products.id, productPromotions.productId))
+            .innerJoin(promotions, eq(productPromotions.promotionId, promotions.id));
+          
+          if (whereCondition) {
+            dataQuery = dataQuery.where(and(
+              whereCondition,
+              eq(promotions.isActive, true),
+              sql`${promotions.startDate} <= ${currentTime}`,
+              sql`${promotions.endDate} >= ${currentTime}`
+            ));
+          } else {
+            dataQuery = dataQuery.where(and(
+              eq(promotions.isActive, true),
+              sql`${promotions.startDate} <= ${currentTime}`,
+              sql`${promotions.endDate} >= ${currentTime}`
+            ));
+          }
+        } else {
+          // Only join with promotions tables
+          const whereCondition = allConditions.length > 0 ? and(...allConditions) : undefined;
+          
+          countQuery = db
+            .select({ count: count() })
+            .from(products)
+            .innerJoin(productPromotions, eq(products.id, productPromotions.productId))
+            .innerJoin(promotions, eq(productPromotions.promotionId, promotions.id));
+          
+          if (whereCondition) {
+            countQuery = countQuery.where(and(
+              whereCondition,
+              eq(promotions.isActive, true),
+              sql`${promotions.startDate} <= ${currentTime}`,
+              sql`${promotions.endDate} >= ${currentTime}`
+            ));
+          } else {
+            countQuery = countQuery.where(and(
+              eq(promotions.isActive, true),
+              sql`${promotions.startDate} <= ${currentTime}`,
+              sql`${promotions.endDate} >= ${currentTime}`
+            ));
+          }
+
+          dataQuery = db
+            .select({ product: products })
+            .from(products)
+            .innerJoin(productPromotions, eq(products.id, productPromotions.productId))
+            .innerJoin(promotions, eq(productPromotions.promotionId, promotions.id));
+          
+          if (whereCondition) {
+            dataQuery = dataQuery.where(and(
+              whereCondition,
+              eq(promotions.isActive, true),
+              sql`${promotions.startDate} <= ${currentTime}`,
+              sql`${promotions.endDate} >= ${currentTime}`
+            ));
+          } else {
+            dataQuery = dataQuery.where(and(
+              eq(promotions.isActive, true),
+              sql`${promotions.startDate} <= ${currentTime}`,
+              sql`${promotions.endDate} >= ${currentTime}`
+            ));
+          }
+        }
+      } else if (needsCategoryJoin && needsDraftsJoin) {
         // Join with both categories and product_drafts tables
         const joinConditions = [...allConditions, eq(categories.isActive, true)];
         
