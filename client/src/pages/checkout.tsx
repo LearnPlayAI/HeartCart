@@ -98,6 +98,7 @@ export default function CheckoutPage() {
   const queryClient = useQueryClient();
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedLocker, setSelectedLocker] = useState(null);
+  const [savePreferredTrigger, setSavePreferredTrigger] = useState(false);
   const { creditBalance, formattedBalance, balanceLoading, transactions } = useCredits();
 
   // Fetch current user details
@@ -363,6 +364,15 @@ export default function CheckoutPage() {
     setIsProcessing(true);
 
     try {
+      // Save preferred locker selection during checkout
+      if (selectedLocker) {
+        console.log("Triggering save preferred locker during checkout");
+        setSavePreferredTrigger(true);
+        // Small delay to allow the save to complete
+        await new Promise(resolve => setTimeout(resolve, 100));
+        setSavePreferredTrigger(false);
+      }
+
       // Save user details if requested
       if (data.saveDetails && user) {
         await updateProfileMutation.mutateAsync({
@@ -696,6 +706,7 @@ export default function CheckoutPage() {
                 onLockerSelect={setSelectedLocker}
                 customerProvince={user?.province || form.watch("province")}
                 customerCity={user?.city || form.watch("city")}
+                savePreferredTrigger={savePreferredTrigger}
               />
             )}
 
