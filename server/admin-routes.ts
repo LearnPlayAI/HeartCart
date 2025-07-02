@@ -1270,11 +1270,11 @@ router.get("/sales-reps/:id/summary", isAdmin, asyncHandler(async (req: Request,
     logger.info("Fetching commission summary for rep", { repId });
 
     // Get all commissions and payments for calculations
-    const commissions = await storage.getRepCommissions(repId);
+    const commissions = await storage.getSalesRepCommissions(repId); // Get all commissions without limit
     const payments = await storage.getRepPayments(repId);
 
     // Calculate server-side totals
-    const totalEarned = commissions.data
+    const totalEarned = commissions
       .filter(c => c.status === 'earned')
       .reduce((sum, c) => sum + Number(c.commissionAmount), 0);
     
@@ -1287,23 +1287,58 @@ router.get("/sales-reps/:id/summary", isAdmin, asyncHandler(async (req: Request,
       totalEarned,
       totalPaid,
       amountOwed,
-      earnedCount: commissions.data.filter(c => c.status === 'earned').length,
-      paidCount: commissions.data.filter(c => c.status === 'paid').length,
-      totalCommissions: commissions.data.length,
+      earnedCount: commissions.filter(c => c.status === 'earned').length,
+      paidCount: commissions.filter(c => c.status === 'paid').length,
+      totalCommissions: commissions.length,
       totalPayments: payments.length
     };
 
     logger.info("Commission summary calculated", { 
       repId, 
       summary,
-      totalCommissions: commissions.data.length,
+      totalCommissions: commissions.length,
       totalPayments: payments.length 
     });
 
     return sendSuccess(res, summary);
   } catch (error) {
-    logger.error("Error fetching commission summary", { error });
+    logger.error("Error fetching commission summary", { 
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      repId 
+    });
     return sendError(res, "Failed to fetch commission summary", 500);
+  }
+}));
+
+// Generate auto reference number for payment
+router.get("/sales-reps/:id/payment-reference", isAdmin, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const repId = parseInt(req.params.id);
+    if (isNaN(repId)) {
+      return sendError(res, "Invalid sales rep ID", 400);
+    }
+
+    // Get sales rep data
+    const rep = await storage.getSalesRepById(repId);
+    if (!rep) {
+      return sendError(res, "Sales rep not found", 404);
+    }
+
+    // Generate date string in ddmmyy format
+    const today = new Date();
+    const ddmmyy = today.toLocaleDateString('en-GB').split('/').map(part => part.padStart(2, '0')).join('').slice(0, 6);
+    
+    // Get next sequential number for this rep and date
+    const sequentialNumber = await storage.getNextPaymentSequentialNumber(repId, ddmmyy);
+    
+    // Generate reference number in format: REPCODE-##-ddmmyy
+    const referenceNumber = `${rep.repCode}-${sequentialNumber.toString().padStart(2, '0')}-${ddmmyy}`;
+    
+    return sendSuccess(res, { referenceNumber });
+  } catch (error) {
+    logger.error("Error generating payment reference number", { error, repId: req.params.id });
+    return sendError(res, "Failed to generate reference number", 500);
   }
 }));
 

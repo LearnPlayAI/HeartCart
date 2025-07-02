@@ -75,23 +75,22 @@ export default function RecordPaymentPage() {
   const commissionsForPayment = commissionsForPaymentResponse?.data || {};
   const { commissions = [], totalAmountOwed = 0, orderNumbers = [] } = commissionsForPayment;
 
-  // Auto-generate reference number when rep data is loaded
+  // Fetch auto-generated reference number from backend
+  const { data: referenceResponse } = useQuery({
+    queryKey: [`/api/admin/sales-reps/${repId}/payment-reference`],
+    enabled: !!repId && !!selectedRep && !paymentData.referenceNumber
+  });
+
+  // Auto-populate form data when rep data and reference are loaded
   useEffect(() => {
-    if (selectedRep && !paymentData.referenceNumber) {
-      const today = new Date();
-      const ddmmyy = today.toLocaleDateString('en-GB').split('/').map(part => part.padStart(2, '0')).join('').slice(0, 6);
-      
-      // Generate payment count (this would ideally come from backend)
-      const paymentCount = 1; // Simplified for now
-      const referenceNumber = `${selectedRep.repCode}-${paymentCount.toString().padStart(2, '0')}-${ddmmyy}`;
-      
+    if (selectedRep && referenceResponse?.data?.referenceNumber && !paymentData.referenceNumber) {
       setPaymentData(prev => ({
         ...prev,
-        referenceNumber,
+        referenceNumber: referenceResponse.data.referenceNumber,
         notes: orderNumbers.length > 0 ? `Commission payment for orders: ${orderNumbers.join(', ')}` : ''
       }));
     }
-  }, [selectedRep, totalAmountOwed, orderNumbers]);
+  }, [selectedRep, referenceResponse, totalAmountOwed, orderNumbers]);
 
   // Record payment mutation
   const recordPaymentMutation = useMutation({

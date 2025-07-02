@@ -203,7 +203,7 @@ export default function SalesRepCommissionsPage() {
                 <Calendar className="w-5 h-5 text-purple-500" />
                 <div>
                   <p className="text-sm font-medium text-gray-600">Commission Rate</p>
-                  <p className="text-2xl font-bold text-purple-600">{selectedRep.commissionRate}%</p>
+                  <p className="text-2xl font-bold text-purple-600">{Number(selectedRep.commissionRate).toFixed(1)}%</p>
                 </div>
               </div>
             </CardContent>
@@ -278,7 +278,7 @@ export default function SalesRepCommissionsPage() {
                         <div className="space-y-2">
                           <div>
                             <p className="text-sm font-medium text-gray-600">Rate</p>
-                            <p className="text-sm font-medium">{commission.commissionRate}%</p>
+                            <p className="text-sm font-medium">{Number(commission.commissionRate).toFixed(1)}%</p>
                           </div>
                           <div>
                             <p className="text-sm font-medium text-gray-600">Status</p>
