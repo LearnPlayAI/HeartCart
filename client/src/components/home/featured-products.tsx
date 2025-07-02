@@ -170,19 +170,19 @@ const FeaturedProductsSection = () => {
         </div>
       </div>
       {!isLoading && !error && allProducts.length > 0 && hasMoreProducts && (
-        <div className="p-3 border-t border-gray-200 flex justify-center gap-3">
+        <div className="p-3 border-t border-gray-200 flex flex-col sm:flex-row justify-center gap-3">
           <Button 
             variant="outline"
-            className="border-[#FF69B4] text-[#FF69B4] hover:bg-[#FF69B4] hover:text-white disabled:opacity-50"
+            className="border-[#FF69B4] text-[#FF69B4] hover:bg-[#FF69B4] hover:text-white disabled:opacity-50 w-full sm:w-auto"
             onClick={loadMore}
             disabled={isFetching || !hasMoreProducts}
           >
             {isFetching ? 'Loading...' : hasMoreProducts ? 'Load More Products' : 'No More Products'}
           </Button>
-          <Link href="/featured">
+          <Link href="/featured" className="w-full sm:w-auto">
             <Button 
               variant="default"
-              className="bg-[#FF69B4] text-white hover:bg-[#FF1493]"
+              className="bg-[#FF69B4] text-white hover:bg-[#FF1493] w-full"
             >
               View All Featured Products
             </Button>
