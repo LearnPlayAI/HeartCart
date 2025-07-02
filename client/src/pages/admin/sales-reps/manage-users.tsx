@@ -73,6 +73,9 @@ export default function ManageUsersPage() {
   // Search users
   const { data: searchUsersResponse, isLoading: searchLoading } = useQuery({
     queryKey: ['/api/admin/users/search', searchTerm],
+    queryFn: () => fetch(`/api/admin/users/search?q=${encodeURIComponent(searchTerm)}`, {
+      credentials: 'include'
+    }).then(res => res.json()),
     enabled: searchTerm.length >= 2
   });
 
