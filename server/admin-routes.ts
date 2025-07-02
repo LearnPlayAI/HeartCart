@@ -1001,6 +1001,71 @@ router.get("/sales-reps", isAdmin, asyncHandler(async (req: Request, res: Respon
   }
 }));
 
+// Get sales reps overview with server-side calculated statistics
+router.get("/sales-reps/overview", isAdmin, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    logger.info("Fetching sales reps overview with server-side calculations");
+
+    // Get all sales reps with earnings data
+    const reps = await storage.getAllSalesReps();
+    
+    // Enrich each rep with earnings and payment data
+    const enrichedReps = await Promise.all(reps.map(async (rep) => {
+      const earnings = await storage.calculateRepEarnings(rep.id);
+      const payments = await storage.getRepPayments(rep.id);
+      
+      // Calculate total payments made
+      const totalPaid = payments.reduce((sum, payment) => sum + Number(payment.amount), 0);
+      
+      // Calculate amount owed (total earnings - total paid)
+      const amountOwed = Math.max(0, earnings.totalEarnings - totalPaid);
+      
+      return {
+        ...rep,
+        totalEarnings: earnings.totalEarnings,
+        commissionCount: earnings.commissionCount,
+        totalPaid: totalPaid,
+        amountOwed: amountOwed
+      };
+    }));
+
+    // Calculate server-side statistics
+    const totalEarnings = enrichedReps.reduce((sum, rep) => sum + Number(rep.totalEarnings || 0), 0);
+    const totalCommissions = enrichedReps.reduce((sum, rep) => sum + Number(rep.commissionCount || 0), 0);
+    const activeRepsCount = enrichedReps.filter(rep => rep.isActive).length;
+    const totalOutstandingPayments = enrichedReps.reduce((sum, rep) => sum + Number(rep.amountOwed || 0), 0);
+    const avgCommissionRate = enrichedReps.length > 0 
+      ? enrichedReps.reduce((sum, rep) => sum + Number(rep.commissionRate), 0) / enrichedReps.length 
+      : 0;
+
+    const overview = {
+      salesReps: enrichedReps,
+      statistics: {
+        totalEarnings,
+        totalCommissions,
+        avgCommissionRate,
+        activeRepsCount,
+        totalReps: enrichedReps.length,
+        totalOutstandingPayments
+      }
+    };
+
+    logger.info("Sales reps overview calculated", { 
+      totalReps: enrichedReps.length,
+      activeReps: activeRepsCount,
+      totalEarnings,
+      totalCommissions,
+      totalOutstandingPayments,
+      avgCommissionRate: avgCommissionRate.toFixed(2)
+    });
+
+    return sendSuccess(res, overview);
+  } catch (error) {
+    logger.error("Error fetching sales reps overview", { error });
+    return sendError(res, "Failed to fetch sales reps overview", 500);
+  }
+}));
+
 // Get all sales reps with earnings data
 router.get("/sales-reps", isAdmin, asyncHandler(async (req: Request, res: Response) => {
   try {

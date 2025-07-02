@@ -27,13 +27,20 @@ interface SalesRep {
 export default function SalesRepsPage() {
   const [, setLocation] = useLocation();
 
-  // Fetch sales reps
-  const { data: salesRepsResponse, isLoading } = useQuery({
-    queryKey: ['/api/admin/sales-reps']
+  // Fetch sales reps overview with server-side calculations
+  const { data: overviewResponse, isLoading } = useQuery({
+    queryKey: ['/api/admin/sales-reps/overview']
   });
 
-  const salesReps = Array.isArray(salesRepsResponse?.data) ? salesRepsResponse.data : 
-                    Array.isArray(salesRepsResponse) ? salesRepsResponse : [];
+  const salesReps = Array.isArray(overviewResponse?.data?.salesReps) ? overviewResponse.data.salesReps : [];
+  const statistics = overviewResponse?.data?.statistics || {
+    totalEarnings: 0,
+    totalCommissions: 0,
+    avgCommissionRate: 0,
+    activeRepsCount: 0,
+    totalReps: 0,
+    totalOutstandingPayments: 0
+  };
 
   // Generate registration URL for a rep
   const generateRegistrationUrl = (repCode: string) => {
@@ -87,10 +94,7 @@ Register now and start shopping! 🛍️`;
     });
   };
 
-  // Calculate total earnings across all reps
-  const totalEarnings = salesReps.reduce((sum: number, rep: SalesRep) => sum + (rep.totalEarnings || 0), 0);
-  const totalCommissions = salesReps.reduce((sum: number, rep: SalesRep) => sum + (rep.commissionCount || 0), 0);
-  const activeRepsCount = salesReps.filter((rep: SalesRep) => rep.isActive).length;
+
 
   if (isLoading) {
     return (
@@ -123,16 +127,16 @@ Register now and start shopping! 🛍️`;
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <Card className="border-t-4 border-t-pink-500">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Active Reps</CardTitle>
               <Users className="h-4 w-4 text-pink-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{activeRepsCount}</div>
+              <div className="text-2xl font-bold">{statistics.activeRepsCount}</div>
               <p className="text-xs text-muted-foreground">
-                of {salesReps.length} total
+                of {statistics.totalReps} total
               </p>
             </CardContent>
           </Card>
@@ -143,7 +147,7 @@ Register now and start shopping! 🛍️`;
               <Calendar className="h-4 w-4 text-blue-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{totalCommissions}</div>
+              <div className="text-2xl font-bold">{statistics.totalCommissions}</div>
               <p className="text-xs text-muted-foreground">
                 commission entries
               </p>
@@ -156,7 +160,7 @@ Register now and start shopping! 🛍️`;
               <DollarSign className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatCurrency(totalEarnings)}</div>
+              <div className="text-2xl font-bold">{formatCurrency(statistics.totalEarnings)}</div>
               <p className="text-xs text-muted-foreground">
                 across all reps
               </p>
@@ -170,12 +174,23 @@ Register now and start shopping! 🛍️`;
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {salesReps.length > 0 
-                  ? (salesReps.reduce((sum: number, rep: SalesRep) => sum + Number(rep.commissionRate), 0) / salesReps.length).toFixed(1)
-                  : 0}%
+                {statistics.avgCommissionRate.toFixed(1)}%
               </div>
               <p className="text-xs text-muted-foreground">
                 average rate
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-t-4 border-t-red-500">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Outstanding Payments</CardTitle>
+              <DollarSign className="h-4 w-4 text-red-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{formatCurrency(statistics.totalOutstandingPayments)}</div>
+              <p className="text-xs text-muted-foreground">
+                amount owed
               </p>
             </CardContent>
           </Card>
