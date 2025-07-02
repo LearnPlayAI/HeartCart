@@ -1259,6 +1259,54 @@ router.get("/sales-reps/:id/payments", isAdmin, asyncHandler(async (req: Request
   }
 }));
 
+// Get commission summary statistics for a sales rep
+router.get("/sales-reps/:id/summary", isAdmin, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const repId = parseInt(req.params.id);
+    if (isNaN(repId)) {
+      return sendError(res, "Invalid sales rep ID", 400);
+    }
+
+    logger.info("Fetching commission summary for rep", { repId });
+
+    // Get all commissions and payments for calculations
+    const commissions = await storage.getRepCommissions(repId);
+    const payments = await storage.getRepPayments(repId);
+
+    // Calculate server-side totals
+    const totalEarned = commissions.data
+      .filter(c => c.status === 'earned')
+      .reduce((sum, c) => sum + Number(c.commissionAmount), 0);
+    
+    const totalPaid = payments
+      .reduce((sum, p) => sum + Number(p.amount), 0);
+    
+    const amountOwed = Math.max(0, totalEarned - totalPaid);
+
+    const summary = {
+      totalEarned,
+      totalPaid,
+      amountOwed,
+      earnedCount: commissions.data.filter(c => c.status === 'earned').length,
+      paidCount: commissions.data.filter(c => c.status === 'paid').length,
+      totalCommissions: commissions.data.length,
+      totalPayments: payments.length
+    };
+
+    logger.info("Commission summary calculated", { 
+      repId, 
+      summary,
+      totalCommissions: commissions.data.length,
+      totalPayments: payments.length 
+    });
+
+    return sendSuccess(res, summary);
+  } catch (error) {
+    logger.error("Error fetching commission summary", { error });
+    return sendError(res, "Failed to fetch commission summary", 500);
+  }
+}));
+
 // ===============================================================
 // SALES REP USER ASSIGNMENT MANAGEMENT ROUTES
 // ===============================================================

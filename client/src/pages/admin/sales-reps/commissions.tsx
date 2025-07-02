@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useParams } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, DollarSign, TrendingUp, Users, Calendar } from "lucide-react";
@@ -81,7 +81,13 @@ export default function SalesRepCommissionsPage() {
     enabled: !!repId
   });
 
+  const { data: summaryResponse, isLoading: summaryLoading } = useQuery({
+    queryKey: [`/api/admin/sales-reps/${repId}/summary`],
+    enabled: !!repId
+  });
+
   const payments = paymentsResponse?.data || [];
+  const summary = summaryResponse?.data || null;
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-ZA', {
@@ -98,12 +104,7 @@ export default function SalesRepCommissionsPage() {
     });
   };
 
-  // Calculate summary stats
-  const totalEarned = commissions.filter((c: Commission) => c.status === 'earned').reduce((sum: number, c: Commission) => sum + Number(c.commissionAmount), 0);
-  const totalPaid = payments.reduce((sum: number, p: Payment) => sum + Number(p.amount), 0);
-  const amountOwed = Math.max(0, totalEarned - totalPaid);
-
-  if (repsLoading || commissionsLoading || paymentsLoading) {
+  if (repsLoading || commissionsLoading || paymentsLoading || summaryLoading) {
     return (
       <AdminLayout>
         <div className="flex items-center justify-center h-64">
@@ -166,7 +167,7 @@ export default function SalesRepCommissionsPage() {
                 <TrendingUp className="w-5 h-5 text-green-500" />
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total Earned</p>
-                  <p className="text-2xl font-bold text-green-600">{formatCurrency(totalEarned)}</p>
+                  <p className="text-2xl font-bold text-green-600">{formatCurrency(summary?.totalEarned || 0)}</p>
                 </div>
               </div>
             </CardContent>
@@ -178,7 +179,7 @@ export default function SalesRepCommissionsPage() {
                 <DollarSign className="w-5 h-5 text-blue-500" />
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total Paid</p>
-                  <p className="text-2xl font-bold text-blue-600">{formatCurrency(totalPaid)}</p>
+                  <p className="text-2xl font-bold text-blue-600">{formatCurrency(summary?.totalPaid || 0)}</p>
                 </div>
               </div>
             </CardContent>
@@ -190,7 +191,7 @@ export default function SalesRepCommissionsPage() {
                 <Users className="w-5 h-5 text-pink-500" />
                 <div>
                   <p className="text-sm font-medium text-gray-600">Amount Owed</p>
-                  <p className="text-2xl font-bold text-pink-600">{formatCurrency(amountOwed)}</p>
+                  <p className="text-2xl font-bold text-pink-600">{formatCurrency(summary?.amountOwed || 0)}</p>
                 </div>
               </div>
             </CardContent>
