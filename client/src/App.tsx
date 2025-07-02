@@ -62,6 +62,7 @@ import AuthTestDashboard from "@/pages/admin/auth-test-dashboard";
 import PromotionsPage from "@/pages/admin/promotions";
 import PromotionProductsPage from "@/pages/admin/promotions/[id]/products";
 import CustomerPromotionsPage from "@/pages/promotions";
+import FeaturedPage from "@/pages/featured";
 import UserAdminPageFixed from "@/pages/admin/users-fixed";
 import SalesRepsPage from "@/pages/admin/sales-reps";
 
@@ -258,6 +259,7 @@ function App() {
                           <Route path="/category/:slug"><Category /></Route>
                           <Route path="/flash-deals"><FlashDeals /></Route>
                           <Route path="/promotions"><CustomerPromotionsPage /></Route>
+                          <Route path="/featured"><FeaturedPage /></Route>
                           <Route path="/products"><ProductListing /></Route>
                           <Route path="/products-example"><ProductsExample /></Route>
                           <ProtectedRoute path="/checkout" component={Checkout} />

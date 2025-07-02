@@ -514,6 +514,13 @@ Changelog:
   * Changed dropdown trigger text from authenticated username to "Menu" for cleaner interface
   * Preserved all user information display within the dropdown content (username, credit balance, menu options)
   * Maintains existing functionality while providing more generic menu appearance
+- July 2, 2025. Product filtering system enhancements with promotional redirect functionality:
+  * Updated product listing filters: replaced "Free Shipping" and "On Sale" with "On Promotion", "Featured Products", and "New Arrivals"
+  * Implemented redirect-based navigation: "On Promotion" filter navigates users to existing /promotions page instead of complex server-side filtering
+  * Enhanced category sidebar with modern TeeMeYou pink gradient styling, improved hover states, and visual hierarchy
+  * Fixed navigation runtime errors by using setLocation method instead of router.navigate for promotional redirects
+  * Updated flash deals component branding consistency: changed "Special Deals" text to "Promotions" throughout interface
+  * Maintained all existing filter functionality while leveraging existing promotional system architecture
 - July 1, 2025. Enhanced EFT Payment Management card for improved admin banking verification:
   * Completely redesigned EFT Payment Management card on admin order detail page (/admin/orders/{id})
   * Replaced outdated proof of payment upload system with comprehensive customer payment information display

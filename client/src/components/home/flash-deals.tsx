@@ -96,7 +96,7 @@ const FlashDealsSection = () => {
       <div className="bg-gradient-to-r from-[#FF69B4] to-[#FF1493] p-4">
         <div className="flex items-center justify-between">
           <h2 className="text-white text-xl font-bold flex items-center">
-            <Zap className="mr-2" /> Special Deals
+            <Zap className="mr-2" /> Promotions
             {activePromotions.length > 0 && (
               <Badge variant="secondary" className="ml-2 bg-white/20 text-white">
                 {activePromotions.length} active promotion{activePromotions.length !== 1 ? 's' : ''}
