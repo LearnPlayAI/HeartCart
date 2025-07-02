@@ -510,6 +510,10 @@ Changelog:
   * Mobile users can now browse all products through "All Categories" link in sidebar
   * Updated all hover states from dull gray to hot pink (bg-pink-50, border-pink-200/300) for better user visibility
   * ALL existing functionality preserved: filter mode, navigation mode, expand/collapse, callbacks, routing
+- July 2, 2025. Header user dropdown menu text update:
+  * Changed dropdown trigger text from authenticated username to "Menu" for cleaner interface
+  * Preserved all user information display within the dropdown content (username, credit balance, menu options)
+  * Maintains existing functionality while providing more generic menu appearance
 - July 1, 2025. Enhanced EFT Payment Management card for improved admin banking verification:
   * Completely redesigned EFT Payment Management card on admin order detail page (/admin/orders/{id})
   * Replaced outdated proof of payment upload system with comprehensive customer payment information display
