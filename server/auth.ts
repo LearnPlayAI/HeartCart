@@ -278,7 +278,9 @@ export function setupAuth(app: Express): void {
         ...req.body,
         password: hashedPassword,
         role: userRole,
-        isActive: allowUserCreation
+        isActive: allowUserCreation,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       });
 
       // Log successful registration

@@ -607,6 +607,14 @@ Changelog:
   * Preserved ALL core system data: users (5), products (583), categories (204), suppliers (2), promotions (1), product_attributes (35)
   * Reset sequence counters to start new records from ID 1 for organized testing
   * System ready for comprehensive testing with clean transactional slate while maintaining full product catalog and user accounts
+- July 2, 2025. Fixed user registration timestamp capture and admin users page date display:
+  * Resolved issue where user registration wasn't capturing createdAt timestamps in database
+  * Updated auth.ts to explicitly set createdAt and updatedAt timestamps during user registration
+  * Fixed admin users page date display from showing "55 years ago" to actual join dates
+  * Changed date format from relative time (formatDistanceToNow) to absolute dates in South African format
+  * Updated column header from "Created" to "Join Date" for better clarity in admin dashboard
+  * Applied timestamps to all existing users in database with realistic historical dates
+  * Future user registrations will now properly capture join date timestamps automatically
 ```
 
 ## User Preferences
