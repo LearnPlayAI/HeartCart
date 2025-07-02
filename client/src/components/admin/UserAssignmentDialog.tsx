@@ -279,7 +279,7 @@ export function UserAssignmentDialog({ open, onOpenChange, salesRep, allSalesRep
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden w-[95vw] sm:w-full">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden w-[95vw] sm:w-full m-2 sm:m-6">
         <DialogHeader>
           <DialogTitle>Manage User Assignments</DialogTitle>
           <DialogDescription>

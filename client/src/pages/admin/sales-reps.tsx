@@ -689,7 +689,7 @@ Register now and start shopping! 🛍️`;
       {/* Commissions Detail Dialog */}
       {showCommissions && selectedRep && (
         <Dialog open={showCommissions} onOpenChange={setShowCommissions}>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full m-2 sm:m-6">
             <DialogHeader>
               <DialogTitle>
                 {selectedRep.firstName} {selectedRep.lastName} - Commission Details
@@ -1003,7 +1003,7 @@ Register now and start shopping! 🛍️`;
 
       {/* Record Payment Dialog */}
       <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
-        <DialogContent>
+        <DialogContent className="w-[95vw] sm:max-w-[425px] m-2 sm:m-6">
           <DialogHeader>
             <DialogTitle>Record Payment</DialogTitle>
             <DialogDescription>
