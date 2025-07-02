@@ -170,6 +170,11 @@ export default function PudoLockerPicker({
     }
   }, [selectedLockerId]);
 
+  // Reset auto-selection flag when preferred locker changes (allows new preferred locker to auto-select)
+  useEffect(() => {
+    setHasInitialAutoSelection(false);
+  }, [preferredLocker?.id]);
+
   // Auto-select preferred locker when it loads and lockers are available (only if no manual change)
   useEffect(() => {
     console.log("Auto-selection check:", {
