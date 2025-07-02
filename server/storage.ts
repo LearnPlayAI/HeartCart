@@ -7553,6 +7553,169 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  // ===============================================================
+  // SALES REP USER ASSIGNMENT METHODS
+  // ===============================================================
+
+  /**
+   * Get all users assigned to a specific sales rep by repCode
+   */
+  async getUsersByRepCode(repCode: string): Promise<User[]> {
+    try {
+      const assignedUsers = await db
+        .select()
+        .from(users)
+        .where(eq(users.repCode, repCode))
+        .orderBy(users.fullName, users.username);
+      
+      logger.info('Retrieved users for sales rep', { repCode, userCount: assignedUsers.length });
+      return assignedUsers;
+    } catch (error) {
+      logger.error('Error getting users by rep code', { error, repCode });
+      throw error;
+    }
+  }
+
+  /**
+   * Get all users that are not assigned to any sales rep (repCode is null)
+   */
+  async getUnassignedUsers(): Promise<User[]> {
+    try {
+      const unassignedUsers = await db
+        .select()
+        .from(users)
+        .where(isNull(users.repCode))
+        .orderBy(users.fullName, users.username);
+      
+      logger.info('Retrieved unassigned users', { userCount: unassignedUsers.length });
+      return unassignedUsers;
+    } catch (error) {
+      logger.error('Error getting unassigned users', { error });
+      throw error;
+    }
+  }
+
+  /**
+   * Search for users by name, email, or username - for assignment purposes
+   */
+  async searchUsersForAssignment(searchTerm: string): Promise<User[]> {
+    try {
+      const searchPattern = `%${searchTerm.toLowerCase()}%`;
+      const searchResults = await db
+        .select()
+        .from(users)
+        .where(
+          or(
+            ilike(users.username, searchPattern),
+            ilike(users.email, searchPattern),
+            ilike(users.fullName, searchPattern)
+          )
+        )
+        .orderBy(users.fullName, users.username)
+        .limit(50); // Limit results for performance
+      
+      logger.info('User search completed', { searchTerm, resultCount: searchResults.length });
+      return searchResults;
+    } catch (error) {
+      logger.error('Error searching users for assignment', { error, searchTerm });
+      throw error;
+    }
+  }
+
+  /**
+   * Assign a user to a sales rep by updating their repCode
+   */
+  async assignUserToRep(userId: number, repCode: string | null): Promise<User | undefined> {
+    try {
+      // Validate that the rep code exists if provided
+      if (repCode) {
+        const rep = await this.getSalesRepByCode(repCode);
+        if (!rep) {
+          throw new Error(`Sales rep with code ${repCode} not found`);
+        }
+      }
+
+      const [updatedUser] = await db
+        .update(users)
+        .set({ 
+          repCode,
+          updatedAt: new Date().toISOString()
+        })
+        .where(eq(users.id, userId))
+        .returning();
+
+      if (!updatedUser) {
+        throw new Error(`User with ID ${userId} not found`);
+      }
+
+      logger.info('User rep assignment updated', { 
+        userId, 
+        newRepCode: repCode,
+        previousRepCode: updatedUser.repCode 
+      });
+      return updatedUser;
+    } catch (error) {
+      logger.error('Error assigning user to rep', { error, userId, repCode });
+      throw error;
+    }
+  }
+
+  /**
+   * Remove a user's rep assignment (set repCode to null)
+   */
+  async removeUserRepAssignment(userId: number): Promise<User | undefined> {
+    try {
+      return await this.assignUserToRep(userId, null);
+    } catch (error) {
+      logger.error('Error removing user rep assignment', { error, userId });
+      throw error;
+    }
+  }
+
+  /**
+   * Get assignment statistics for a sales rep
+   */
+  async getRepAssignmentStats(repCode: string): Promise<{
+    totalAssignedUsers: number;
+    activeAssignedUsers: number;
+    recentAssignments: number;
+  }> {
+    try {
+      // Get total assigned users
+      const [totalResult] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(users)
+        .where(eq(users.repCode, repCode));
+      
+      // Get active assigned users
+      const [activeResult] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(users)
+        .where(and(eq(users.repCode, repCode), eq(users.isActive, true)));
+      
+      // Get recent assignments (last 30 days)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      const [recentResult] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(users)
+        .where(and(
+          eq(users.repCode, repCode),
+          gte(users.updatedAt, thirtyDaysAgo.toISOString())
+        ));
+
+      return {
+        totalAssignedUsers: Number(totalResult?.count) || 0,
+        activeAssignedUsers: Number(activeResult?.count) || 0,
+        recentAssignments: Number(recentResult?.count) || 0
+      };
+    } catch (error) {
+      logger.error('Error getting rep assignment stats', { error, repCode });
+      throw error;
+    }
+  }
+
   /**
    * Get user statistics for admin dashboard
    */

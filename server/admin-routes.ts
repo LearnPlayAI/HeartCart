@@ -1186,4 +1186,158 @@ router.get("/sales-reps/:id/payments", isAdmin, asyncHandler(async (req: Request
   }
 }));
 
+// ===============================================================
+// SALES REP USER ASSIGNMENT MANAGEMENT ROUTES
+// ===============================================================
+
+// Get users assigned to a specific sales rep
+router.get("/sales-reps/:id/users", isAdmin, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const repId = parseInt(req.params.id);
+    if (isNaN(repId)) {
+      return sendError(res, "Invalid sales rep ID", 400);
+    }
+
+    // Get the sales rep to verify it exists and get the repCode
+    const rep = await storage.getSalesRepById(repId);
+    if (!rep) {
+      return sendError(res, "Sales rep not found", 404);
+    }
+
+    const assignedUsers = await storage.getUsersByRepCode(rep.repCode);
+    
+    logger.info("Users fetched for sales rep", { repId, repCode: rep.repCode, userCount: assignedUsers.length });
+    return sendSuccess(res, assignedUsers);
+  } catch (error) {
+    logger.error("Error fetching users for sales rep", { error, repId: req.params.id });
+    return sendError(res, "Failed to fetch users", 500);
+  }
+}));
+
+// Get unassigned users (not assigned to any sales rep)
+router.get("/users/unassigned", isAdmin, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const unassignedUsers = await storage.getUnassignedUsers();
+    
+    logger.info("Unassigned users fetched", { userCount: unassignedUsers.length });
+    return sendSuccess(res, unassignedUsers);
+  } catch (error) {
+    logger.error("Error fetching unassigned users", { error });
+    return sendError(res, "Failed to fetch unassigned users", 500);
+  }
+}));
+
+// Search users for assignment purposes
+router.get("/users/search", isAdmin, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { q: searchTerm } = req.query;
+    
+    if (!searchTerm || typeof searchTerm !== 'string' || searchTerm.trim().length < 2) {
+      return sendError(res, "Search term must be at least 2 characters", 400);
+    }
+
+    const searchResults = await storage.searchUsersForAssignment(searchTerm.trim());
+    
+    logger.info("User search completed", { searchTerm, resultCount: searchResults.length });
+    return sendSuccess(res, searchResults);
+  } catch (error) {
+    logger.error("Error searching users", { error, searchTerm: req.query.q });
+    return sendError(res, "Failed to search users", 500);
+  }
+}));
+
+// Assign user to sales rep
+router.put("/users/:userId/rep-assignment", isAdmin, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.userId);
+    const { repCode } = req.body;
+
+    if (isNaN(userId)) {
+      return sendError(res, "Invalid user ID", 400);
+    }
+
+    // Validate repCode if provided (null means removing assignment)
+    if (repCode !== null && repCode !== undefined) {
+      if (typeof repCode !== 'string' || repCode.trim().length === 0) {
+        return sendError(res, "Invalid rep code", 400);
+      }
+    }
+
+    const updatedUser = await storage.assignUserToRep(userId, repCode || null);
+    
+    if (!updatedUser) {
+      return sendError(res, "User not found", 404);
+    }
+
+    logger.info("User rep assignment updated by admin", { 
+      userId, 
+      newRepCode: repCode || null,
+      adminUserId: req.user?.id
+    });
+    
+    return sendSuccess(res, updatedUser);
+  } catch (error) {
+    logger.error("Error updating user rep assignment", { 
+      error: error instanceof Error ? error.message : String(error),
+      userId: req.params.userId,
+      repCode: req.body.repCode
+    });
+    return sendError(res, error instanceof Error ? error.message : "Failed to update assignment", 500);
+  }
+}));
+
+// Remove user's rep assignment
+router.delete("/users/:userId/rep-assignment", isAdmin, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.userId);
+
+    if (isNaN(userId)) {
+      return sendError(res, "Invalid user ID", 400);
+    }
+
+    const updatedUser = await storage.removeUserRepAssignment(userId);
+    
+    if (!updatedUser) {
+      return sendError(res, "User not found", 404);
+    }
+
+    logger.info("User rep assignment removed by admin", { 
+      userId,
+      adminUserId: req.user?.id
+    });
+    
+    return sendSuccess(res, updatedUser);
+  } catch (error) {
+    logger.error("Error removing user rep assignment", { 
+      error: error instanceof Error ? error.message : String(error),
+      userId: req.params.userId
+    });
+    return sendError(res, "Failed to remove assignment", 500);
+  }
+}));
+
+// Get assignment statistics for a sales rep
+router.get("/sales-reps/:id/assignment-stats", isAdmin, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const repId = parseInt(req.params.id);
+    if (isNaN(repId)) {
+      return sendError(res, "Invalid sales rep ID", 400);
+    }
+
+    // Get the sales rep to verify it exists and get the repCode
+    const rep = await storage.getSalesRepById(repId);
+    if (!rep) {
+      return sendError(res, "Sales rep not found", 404);
+    }
+
+    const stats = await storage.getRepAssignmentStats(rep.repCode);
+    
+    logger.info("Assignment stats fetched for sales rep", { repId, repCode: rep.repCode, stats });
+    return sendSuccess(res, stats);
+  } catch (error) {
+    logger.error("Error fetching assignment stats", { error, repId: req.params.id });
+    return sendError(res, "Failed to fetch assignment stats", 500);
+  }
+}));
+
 export { router as adminRoutes };

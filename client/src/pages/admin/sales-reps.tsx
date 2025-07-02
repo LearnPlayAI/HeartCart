@@ -10,8 +10,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Users, DollarSign, TrendingUp, Plus, Edit2, Eye, Calendar, Share2, Copy, MessageCircle } from "lucide-react";
+import { Users, DollarSign, TrendingUp, Plus, Edit2, Eye, Calendar, Share2, Copy, MessageCircle, UserCog } from "lucide-react";
 import { AdminLayout } from "@/components/admin/layout";
+import { UserAssignmentDialog } from "@/components/admin/UserAssignmentDialog";
 
 interface SalesRep {
   id: number;
@@ -59,6 +60,7 @@ export default function SalesRepsPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [isUserAssignmentDialogOpen, setIsUserAssignmentDialogOpen] = useState(false);
   const [selectedRep, setSelectedRep] = useState<SalesRep | null>(null);
   const [selectedRepCommissions, setSelectedRepCommissions] = useState<Commission[]>([]);
   const [selectedRepPayments, setSelectedRepPayments] = useState<Payment[]>([]);
@@ -322,6 +324,11 @@ Register now and start shopping! 🛍️`;
     await loadRepPayments(rep.id);
   };
 
+  const handleManageUsers = (rep: SalesRep) => {
+    setSelectedRep(rep);
+    setIsUserAssignmentDialogOpen(true);
+  };
+
   const handleRecordPayment = () => {
     if (!selectedRep) return;
     
@@ -550,6 +557,14 @@ Register now and start shopping! 🛍️`;
                       >
                         <Eye className="w-4 h-4 mr-1" />
                         View
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleManageUsers(rep)}
+                        title="Manage user assignments"
+                      >
+                        <UserCog className="w-4 h-4" />
                       </Button>
                       <Button
                         variant="outline"
@@ -969,6 +984,14 @@ Register now and start shopping! 🛍️`;
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* User Assignment Dialog */}
+      <UserAssignmentDialog
+        open={isUserAssignmentDialogOpen}
+        onOpenChange={setIsUserAssignmentDialogOpen}
+        salesRep={selectedRep}
+        allSalesReps={reps}
+      />
       </div>
     </AdminLayout>
   );
