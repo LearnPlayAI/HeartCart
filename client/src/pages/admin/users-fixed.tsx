@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { formatDistanceToNow } from 'date-fns';
 import { apiRequest } from '@/lib/queryClient';
 import {
   Card,
@@ -287,11 +286,21 @@ export default function UserAdminPageFixed() {
 
   const formatDate = (dateString: string) => {
     try {
+      if (!dateString || dateString === '') {
+        return 'N/A';
+      }
       const date = new Date(dateString);
       if (isNaN(date.getTime())) {
         return 'N/A';
       }
-      return formatDistanceToNow(date, { addSuffix: true });
+      // Format as actual date for admin tracking
+      return date.toLocaleDateString('en-ZA', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
     } catch {
       return 'N/A';
     }
@@ -419,7 +428,7 @@ export default function UserAdminPageFixed() {
                   <TableHead>Role</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Contact</TableHead>
-                  <TableHead>Created</TableHead>
+                  <TableHead>Join Date</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
