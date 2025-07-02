@@ -219,7 +219,11 @@ export const productsQuerySchema = z.object({
   minTmyPercent: z.coerce.number().min(0).max(1000).optional(),
   status: z.enum(['active', 'inactive', 'all']).optional(),
   sortField: z.string().optional(),
-  sortOrder: z.enum(['asc', 'desc']).optional()
+  sortOrder: z.enum(['asc', 'desc']).optional(),
+  // New filter parameters
+  onPromotion: z.coerce.boolean().optional(),
+  featuredProducts: z.coerce.boolean().optional(),
+  newArrivals: z.coerce.boolean().optional()
 });
 
 /**

@@ -789,7 +789,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/products", 
     validateRequest({ query: productsQuerySchema }),
     withStandardResponse(async (req: Request, res: Response) => {
-      const { limit, offset, categoryId, parentCategoryId, search, minTmyPercent, status, sortField, sortOrder } = req.query;
+      const { limit, offset, categoryId, parentCategoryId, search, minTmyPercent, status, sortField, sortOrder, onPromotion, featuredProducts, newArrivals } = req.query;
       
       const user = req.user as any;
       const isAdmin = user && user.role === 'admin';
@@ -800,7 +800,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         minTmyPercent: minTmyPercent ? Number(minTmyPercent) : undefined,
         statusFilter: status as string | undefined,
         sortField: sortField as string | undefined,
-        sortOrder: sortOrder as 'asc' | 'desc' | undefined
+        sortOrder: sortOrder as 'asc' | 'desc' | undefined,
+        // New filter options
+        onPromotion: onPromotion === 'true',
+        featuredProducts: featuredProducts === 'true',
+        newArrivals: newArrivals === 'true'
       };
       
       // Get products with pagination data

@@ -35,8 +35,9 @@ const CategoryPage = () => {
   const [sortBy, setSortBy] = useState('default');
   const [priceRange, setPriceRange] = useState([0, 2000]);
   const [filters, setFilters] = useState({
-    onSale: false,
-    freeShipping: false,
+    onPromotion: false,
+    featuredProducts: false,
+    newArrivals: false
   });
   
   // State for attribute filters
@@ -168,7 +169,7 @@ const CategoryPage = () => {
     setSortBy(value);
   };
   
-  const handleFilterChange = (key: string, value: boolean) => {
+  const handleFilterChange = (key: keyof typeof filters, value: boolean) => {
     setFilters(prev => ({ ...prev, [key]: value }));
   };
   
@@ -352,33 +353,49 @@ const CategoryPage = () => {
                   <div className="space-y-3">
                     <div className="flex items-center space-x-2">
                       <Checkbox 
-                        id="onSale" 
-                        checked={filters.onSale}
+                        id="onPromotion" 
+                        checked={filters.onPromotion}
                         onCheckedChange={checked => 
-                          handleFilterChange('onSale', checked as boolean)
+                          handleFilterChange('onPromotion', checked as boolean)
                         }
                       />
                       <label 
-                        htmlFor="onSale"
+                        htmlFor="onPromotion"
                         className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                       >
-                        On Sale
+                        On Promotion
                       </label>
                     </div>
                     
                     <div className="flex items-center space-x-2">
                       <Checkbox 
-                        id="freeShipping" 
-                        checked={filters.freeShipping}
+                        id="featuredProducts" 
+                        checked={filters.featuredProducts}
                         onCheckedChange={checked => 
-                          handleFilterChange('freeShipping', checked as boolean)
+                          handleFilterChange('featuredProducts', checked as boolean)
                         }
                       />
                       <label 
-                        htmlFor="freeShipping"
+                        htmlFor="featuredProducts"
                         className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                       >
-                        Free Shipping
+                        Featured Products
+                      </label>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="newArrivals" 
+                        checked={filters.newArrivals}
+                        onCheckedChange={checked => 
+                          handleFilterChange('newArrivals', checked as boolean)
+                        }
+                      />
+                      <label 
+                        htmlFor="newArrivals"
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
+                        New Arrivals
                       </label>
                     </div>
                   </div>
