@@ -224,7 +224,7 @@ const Header = () => {
                     </span>
                   )}
                   <span className="text-xs font-bold">
-                    R{(cartSummary.totalAmount || 0).toFixed(2)}
+                    R{(cartSummary.finalTotal || 0).toFixed(2)}
                   </span>
                 </Button>
               </>
