@@ -160,6 +160,12 @@ export function setupAuth(app: Express): void {
             return done(null, false, { message: "Invalid email or password" });
           }
 
+          // Check if user account is active
+          if (!user.isActive) {
+            logger.info('Failed login attempt: inactive account', { email, userId: user.id });
+            return done(null, false, { message: "Your account has been deactivated. Please contact support." });
+          }
+
           // Verify the password against the stored hash
           const isValid = await comparePasswords(password, user.password);
           if (!isValid) {
