@@ -80,6 +80,52 @@ const TimeLeftProgressBar = ({ product }: { product: Product }) => {
   );
 };
 
+// Promotion Time Left Progress Bar Component - for promotional deals
+const PromotionTimeLeftProgressBar = ({ endDate }: { endDate: string | null }) => {
+  // Safety check for required fields
+  if (!endDate) {
+    return null;
+  }
+  
+  const { timeRemaining, isExpired } = useCountdown(new Date(endDate));
+  
+  // Calculate progress based on estimated promotion duration (assume 7 days for promotions)
+  const promotionDuration = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+  const timeRemaining_ms = timeRemaining.total;
+  
+  // Calculate percentage of time remaining (100% = full time left, 0% = expired)
+  const progressPercentage = Math.max(0, Math.min(100, (timeRemaining_ms / promotionDuration) * 100));
+  
+  if (isExpired) {
+    return (
+      <div className="w-full">
+        <div className="flex justify-between text-xs text-gray-600 mb-1">
+          <span>Promotion Expired</span>
+          <span>0%</span>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-1.5">
+          <div className="bg-gray-400 h-1.5 rounded-full w-0"></div>
+        </div>
+      </div>
+    );
+  }
+  
+  return (
+    <div className="w-full">
+      <div className="flex justify-between text-xs text-gray-600 mb-1">
+        <span>Time Left</span>
+        <span>{timeRemaining.days}d, {timeRemaining.hours}h</span>
+      </div>
+      <div className="w-full bg-gray-200 rounded-full h-1.5">
+        <div 
+          className="bg-gradient-to-r from-red-500 to-[#FF69B4] h-1.5 rounded-full transition-all duration-1000" 
+          style={{ width: `${progressPercentage}%` }}
+        ></div>
+      </div>
+    </div>
+  );
+};
+
 type ProductCardProps = {
   product: Product;
   isFlashDeal?: boolean;
@@ -374,8 +420,11 @@ const ProductCard: React.FC<ProductCardProps> = ({
           
           {isFlashDeal && (
             <div className="mt-2 mb-1">
-              {product.specialSaleEnd && (
-                <TimeLeftProgressBar product={product} />
+              {/* Show countdown for promotional products or products with special sale end */}
+              {(promotionInfo?.promotionEndDate || product.specialSaleEnd) && (
+                <PromotionTimeLeftProgressBar 
+                  endDate={promotionInfo?.promotionEndDate || product.specialSaleEnd} 
+                />
               )}
             </div>
           )}
