@@ -72,6 +72,8 @@ interface PudoLockerPickerProps {
   customerProvince?: string;
   customerCity?: string;
   mode?: 'selection' | 'confirmation';
+  onSavePreferred?: () => void; // Function to save current selection as preferred
+  savePreferredTrigger?: boolean; // Trigger to save preferred locker
 }
 
 export default function PudoLockerPicker({ 
@@ -79,7 +81,9 @@ export default function PudoLockerPicker({
   onLockerSelect, 
   customerProvince, 
   customerCity,
-  mode = 'selection'
+  mode = 'selection',
+  onSavePreferred,
+  savePreferredTrigger
 }: PudoLockerPickerProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
@@ -174,6 +178,34 @@ export default function PudoLockerPicker({
   useEffect(() => {
     setHasInitialAutoSelection(false);
   }, [preferredLocker?.id]);
+
+  // Function to save current selection as preferred (called during checkout)
+  const saveCurrentSelectionAsPreferred = () => {
+    if (selectedLockerId && displayLockers.length > 0) {
+      const currentLocker = displayLockers.find(l => l.id === selectedLockerId);
+      if (currentLocker) {
+        console.log("Saving current selection as preferred during checkout:", currentLocker);
+        savePreferredMutation.mutate(currentLocker);
+        return true;
+      }
+    }
+    return false;
+  };
+
+  // Trigger save when savePreferredTrigger changes
+  useEffect(() => {
+    if (savePreferredTrigger && selectedLockerId && displayLockers.length > 0) {
+      const currentLocker = displayLockers.find(l => l.id === selectedLockerId);
+      if (currentLocker) {
+        console.log("Saving current selection as preferred during checkout:", currentLocker);
+        savePreferredMutation.mutate(currentLocker);
+        // Call parent callback if provided
+        if (onSavePreferred) {
+          onSavePreferred();
+        }
+      }
+    }
+  }, [savePreferredTrigger, selectedLockerId, displayLockers, onSavePreferred]);
 
   // Auto-select preferred locker when it loads and lockers are available (only if no manual change)
   useEffect(() => {
@@ -290,8 +322,8 @@ export default function PudoLockerPicker({
               variant="outline"
               size="sm"
               onClick={() => {
-                onLockerSelect(null as any); // Clear selection
-                setSearchQuery(""); // Clear search
+                setSearchQuery(""); // Clear search first
+                onLockerSelect(null as any); // Then clear selection
               }}
               className="text-xs"
             >
