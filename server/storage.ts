@@ -593,6 +593,7 @@ export interface IStorage {
   updateSalesRep(id: number, repData: Partial<InsertSalesRep>): Promise<SalesRep | undefined>;
   getAllSalesReps(): Promise<SalesRep[]>;
   getSalesRepCommissions(repId: number, limit?: number, offset?: number): Promise<RepCommission[]>;
+  getUnpaidRepCommissions(repId: number): Promise<RepCommission[]>;
   createRepCommission(commissionData: InsertRepCommission): Promise<RepCommission>;
   getRepCommissionsByOrder(orderId: number): Promise<RepCommission[]>;
   calculateRepEarnings(repId: number, startDate?: string, endDate?: string): Promise<{ totalEarnings: number; commissionCount: number }>;
@@ -13455,6 +13456,53 @@ export class DatabaseStorage implements IStorage {
       return newCommission;
     } catch (error) {
       logger.error('Error creating rep commission', { error, commissionData });
+      throw error;
+    }
+  }
+
+  async getUnpaidRepCommissions(repId: number): Promise<RepCommission[]> {
+    try {
+      const commissions = await db
+        .select({
+          id: repCommissions.id,
+          repId: repCommissions.repId,
+          orderId: repCommissions.orderId,
+          userId: repCommissions.userId,
+          commissionAmount: repCommissions.commissionAmount,
+          orderAmount: repCommissions.orderAmount,
+          commissionRate: repCommissions.commissionRate,
+          totalProfitAmount: repCommissions.totalProfitAmount,
+          totalCustomerPaidAmount: repCommissions.totalCustomerPaidAmount,
+          totalCostAmount: repCommissions.totalCostAmount,
+          status: repCommissions.status,
+          notes: repCommissions.notes,
+          createdAt: repCommissions.createdAt,
+          updatedAt: repCommissions.updatedAt,
+          orderNumber: orders.orderNumber,
+        })
+        .from(repCommissions)
+        .leftJoin(orders, eq(repCommissions.orderId, orders.id))
+        .where(and(
+          eq(repCommissions.repId, repId),
+          eq(repCommissions.status, 'earned')
+        ))
+        .orderBy(asc(repCommissions.createdAt));
+      
+      logger.info('Unpaid rep commissions fetched successfully', { 
+        repId, 
+        commissionCount: commissions.length,
+        commissions: commissions.map(c => ({ 
+          id: c.id, 
+          orderId: c.orderId, 
+          commissionAmount: c.commissionAmount,
+          orderNumber: c.orderNumber,
+          status: c.status 
+        }))
+      });
+      
+      return commissions;
+    } catch (error) {
+      logger.error('Error getting unpaid rep commissions', { error, repId });
       throw error;
     }
   }

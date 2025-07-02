@@ -1101,6 +1101,47 @@ router.get("/sales-reps/:id/commissions", isAdmin, asyncHandler(async (req: Requ
   }
 }));
 
+router.get("/sales-reps/:id/commissions-for-payment", isAdmin, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const repId = parseInt(req.params.id);
+    
+    logger.info("Fetching commissions for payment", { repId });
+    
+    // Get all unpaid commissions for this rep
+    const unpaidCommissions = await storage.getUnpaidRepCommissions(repId);
+    
+    // Calculate total amount owed from unpaid commissions
+    let totalAmountOwed = 0;
+    const orderNumbers: string[] = [];
+    
+    for (const commission of unpaidCommissions) {
+      const commissionAmount = Number(commission.commissionAmount);
+      totalAmountOwed += commissionAmount;
+      
+      // Get order number for this commission
+      if (commission.orderNumber) {
+        orderNumbers.push(commission.orderNumber);
+      }
+    }
+    
+    logger.info("Commissions for payment calculated", { 
+      repId, 
+      unpaidCount: unpaidCommissions.length,
+      totalAmountOwed,
+      orderNumbers
+    });
+    
+    return sendSuccess(res, {
+      commissions: unpaidCommissions,
+      totalAmountOwed,
+      orderNumbers
+    });
+  } catch (error) {
+    logger.error("Error fetching commissions for payment", { error, repId: req.params.id });
+    return sendError(res, "Failed to fetch commissions for payment", 500);
+  }
+}));
+
 router.get("/sales-reps/:id/earnings", isAdmin, asyncHandler(async (req: Request, res: Response) => {
   try {
     const repId = parseInt(req.params.id);
