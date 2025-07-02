@@ -157,17 +157,28 @@ export default function PudoLockerPicker({
     searchData: searchResults
   });
 
-  // Auto-select preferred locker when it loads and lockers are available
+  // Track if user has manually changed selection to prevent auto-override
+  const [hasManuallyChanged, setHasManuallyChanged] = useState(false);
+
+  // Reset manual change flag when component is cleared (Change Selection clicked)
+  useEffect(() => {
+    if (!selectedLockerId) {
+      setHasManuallyChanged(false);
+    }
+  }, [selectedLockerId]);
+
+  // Auto-select preferred locker when it loads and lockers are available (only if no manual change)
   useEffect(() => {
     console.log("Auto-selection check:", {
       hasPreferredLocker: !!preferredLocker,
       preferredLockerId: preferredLocker?.id,
       selectedLockerId,
       displayLockersCount: displayLockers.length,
-      isLocationLoading: locationLoading
+      isLocationLoading: locationLoading,
+      hasManuallyChanged
     });
     
-    if (preferredLocker && !selectedLockerId && displayLockers.length > 0) {
+    if (preferredLocker && !selectedLockerId && displayLockers.length > 0 && !hasManuallyChanged) {
       // Find the preferred locker in the display list by ID
       const matchingLocker = displayLockers.find(locker => locker.id === preferredLocker.id);
       console.log("Looking for matching locker:", {
@@ -185,7 +196,7 @@ export default function PudoLockerPicker({
         onLockerSelect(matchingLocker);
       }
     }
-  }, [preferredLocker, selectedLockerId, displayLockers, onLockerSelect, locationLoading]);
+  }, [preferredLocker, selectedLockerId, displayLockers, onLockerSelect, locationLoading, hasManuallyChanged]);
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -193,6 +204,8 @@ export default function PudoLockerPicker({
   };
 
   const handleLockerSelection = (locker: PudoLocker) => {
+    console.log("Locker manually selected:", locker);
+    setHasManuallyChanged(true); // Mark that user has manually changed selection
     onLockerSelect(locker);
     
     // Save as preferred locker
