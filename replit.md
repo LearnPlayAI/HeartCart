@@ -508,6 +508,7 @@ Changelog:
   * Added visual dots for subcategory indicators and improved subcategory styling
   * Added "All Categories" option for navigation mode (previously only available in filter mode)
   * Mobile users can now browse all products through "All Categories" link in sidebar
+  * Updated all hover states from dull gray to hot pink (bg-pink-50, border-pink-200/300) for better user visibility
   * ALL existing functionality preserved: filter mode, navigation mode, expand/collapse, callbacks, routing
 - July 1, 2025. Enhanced EFT Payment Management card for improved admin banking verification:
   * Completely redesigned EFT Payment Management card on admin order detail page (/admin/orders/{id})

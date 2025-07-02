@@ -171,7 +171,7 @@ export function CategorySidebar({
                     "w-full px-4 py-3 text-sm text-left rounded-lg transition-all duration-200 border shadow-sm",
                     selectedCategoryId === null
                       ? "font-semibold text-white bg-gradient-to-r from-pink-500 to-pink-600 border-pink-500 shadow-pink-200"
-                      : "bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300 hover:shadow-md"
+                      : "bg-white border-gray-200 hover:bg-pink-50 hover:border-pink-300 hover:shadow-md"
                   )}
                 >
                   <div className="flex items-center gap-2">
@@ -187,7 +187,7 @@ export function CategorySidebar({
                     "block w-full px-4 py-3 text-sm text-left rounded-lg transition-all duration-200 border shadow-sm",
                     (location === "/products" || (location.startsWith("/products") && !location.includes("categoryId"))) || location === "/"
                       ? "font-semibold text-white bg-gradient-to-r from-pink-500 to-pink-600 border-pink-500 shadow-pink-200"
-                      : "bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300 hover:shadow-md"
+                      : "bg-white border-gray-200 hover:bg-pink-50 hover:border-pink-300 hover:shadow-md"
                   )}
                 >
                   <div className="flex items-center gap-2">
@@ -232,7 +232,7 @@ export function CategorySidebar({
                           "flex-1 px-3 py-2.5 text-sm text-left rounded-lg transition-all duration-200",
                           selectedCategoryId === item.category.id
                             ? "font-semibold text-white bg-gradient-to-r from-pink-500 to-pink-600"
-                            : "hover:bg-gray-50"
+                            : "hover:bg-pink-50 hover:border-pink-200"
                         )}
                       >
                         <div className="flex items-center gap-2">
@@ -252,7 +252,7 @@ export function CategorySidebar({
                           "flex-1 px-3 py-2.5 text-sm rounded-lg transition-all duration-200",
                           categorySlug === item.category.slug
                             ? "font-semibold text-white bg-gradient-to-r from-pink-500 to-pink-600"
-                            : "hover:bg-gray-50"
+                            : "hover:bg-pink-50 hover:border-pink-200"
                         )}
                       >
                         <div className="flex items-center gap-2">
