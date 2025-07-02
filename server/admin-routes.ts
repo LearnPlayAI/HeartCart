@@ -1273,9 +1273,8 @@ router.get("/sales-reps/:id/summary", isAdmin, asyncHandler(async (req: Request,
     const commissions = await storage.getSalesRepCommissions(repId); // Get all commissions without limit
     const payments = await storage.getRepPayments(repId);
 
-    // Calculate server-side totals
+    // Calculate server-side totals - totalEarned should be ALL commissions regardless of status
     const totalEarned = commissions
-      .filter(c => c.status === 'earned')
       .reduce((sum, c) => sum + Number(c.commissionAmount), 0);
     
     const totalPaid = payments
