@@ -149,16 +149,18 @@ export class CacheManager {
   }
 }
 
+// Old cache manager disabled - now using SimpleCacheManager with manual refresh
 // Auto-initialization enabled with user-controlled updates
 if (typeof window !== 'undefined') {
-  // Wait for DOM to be ready
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-      CacheManager.getInstance().initialize();
-    });
-  } else {
-    CacheManager.getInstance().initialize();
-  }
+  console.log('[CacheManager] Original cache manager disabled - using manual refresh system');
+  // // Wait for DOM to be ready
+  // if (document.readyState === 'loading') {
+  //   document.addEventListener('DOMContentLoaded', () => {
+  //     CacheManager.getInstance().initialize();
+  //   });
+  // } else {
+  //   CacheManager.getInstance().initialize();
+  // }
 }
 
 export const cacheManager = CacheManager.getInstance();

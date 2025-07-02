@@ -29,7 +29,7 @@ import NotFound from "@/pages/not-found";
 import VerifyEmail from "@/pages/verify-email";
 import CartDrawer from "@/components/cart/cart-drawer";
 import { SessionExpiryWarning } from "@/components/session/session-expiry-warning";
-import { UpdateNotification } from "@/components/layout/UpdateNotification";
+
 import MobileAppInstallButton from "@/components/pwa/MobileAppInstallButton";
 import React, { Suspense } from "react";
 
@@ -146,7 +146,6 @@ function App() {
             <ScrollManager>
               <Toaster />
               <SessionExpiryWarning />
-              <UpdateNotification />
               <MobileAppInstallButton />
               <div className="flex flex-col min-h-screen">
                 <Switch>
@@ -289,7 +288,6 @@ function App() {
           </TooltipProvider>
         </CartProvider>
       </FavouritesProvider>
-      <UpdateNotification />
     </AuthProvider>
   );
 }

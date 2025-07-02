@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
-import { User, ShoppingCart, LogIn, UserPlus, LogOut, ChevronDown, LayoutDashboard, Terminal, Package, Heart, CreditCard, Settings } from 'lucide-react';
+import { User, ShoppingCart, LogIn, UserPlus, LogOut, ChevronDown, LayoutDashboard, Terminal, Package, Heart, CreditCard, Settings, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { 
   DropdownMenu, 
@@ -19,6 +19,7 @@ import { CategorySidebarDrawer } from '@/components/ui/category-sidebar-drawer';
 import ProductSearch from '@/components/ui/product-search';
 import MobileInstallButton from '@/components/pwa/MobileInstallButton';
 import { StandardApiResponse } from "@/types/api";
+import { simpleCacheManager } from '@/utils/simpleCacheManager';
 
 type Category = {
   id: number;
@@ -32,10 +33,31 @@ const Header = () => {
   const { user, logoutMutation } = useAuth();
   const { toast } = useToast();
   const { formattedBalance, balanceLoading } = useCredits();
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   const handleLogout = () => {
     // Use the centralized logout mutation which already handles navigation
     logoutMutation.mutate();
+  };
+
+  const handleRefreshSite = async () => {
+    setIsRefreshing(true);
+    try {
+      toast({
+        title: "Refreshing Site",
+        description: "Clearing cache and reloading with latest updates...",
+      });
+      
+      await simpleCacheManager.refreshSite();
+    } catch (error) {
+      console.error('Error refreshing site:', error);
+      toast({
+        title: "Refresh Error",
+        description: "Failed to clear cache. Please try again.",
+        variant: "destructive",
+      });
+      setIsRefreshing(false);
+    }
   };
   
   const { data: categoriesResponse } = useQuery<StandardApiResponse<Category[]>>({
@@ -138,6 +160,16 @@ const Header = () => {
                     )}
                     
                     <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      onClick={handleRefreshSite}
+                      disabled={isRefreshing}
+                      className="cursor-pointer flex items-center hover:bg-pink-50 hover:text-[#FF69B4] transition-colors p-2 rounded"
+                    >
+                      <RefreshCw className={`h-4 w-4 mr-2 text-[#FF69B4] ${isRefreshing ? 'animate-spin' : ''}`} />
+                      <span className="font-medium">
+                        {isRefreshing ? 'Refreshing...' : 'Refresh Site'}
+                      </span>
+                    </DropdownMenuItem>
                     <DropdownMenuItem 
                       onClick={handleLogout} 
                       className="text-red-500 cursor-pointer flex items-center"

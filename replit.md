@@ -575,6 +575,15 @@ Changelog:
   * Complete integration across all admin order management interfaces for consistent payment tracking workflow
   * Added payment reference number search functionality - admins can now search orders by payment reference numbers (e.g., "TMY-8123-01072025")
   * Enhanced search covers all order fields: order numbers, customer details, payment references, tracking numbers, product names, and notes
+- July 2, 2025. Simplified manual cache clearing system implemented:
+  * Replaced automatic version checking and blue popup notifications with manual "Refresh Site" option
+  * Created simplified cache manager (simpleCacheManager.ts) that only handles manual cache clearing without version detection
+  * Added "Refresh Site" option to user dropdown menu in header with loading state and success feedback
+  * Removed obsolete files: UpdateNotification.tsx and useAppUpdate.ts components
+  * Disabled original cache manager initialization to prevent automatic update checking
+  * Users can now manually clear all browser cached files when experiencing issues after deployments
+  * System clears browser caches, localStorage, sessionStorage, and TanStack Query cache with single click
+  * Manual refresh approach eliminates unwanted popup notifications while preserving effective cache clearing functionality
 ```
 
 ## User Preferences
