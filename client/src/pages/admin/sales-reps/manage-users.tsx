@@ -331,79 +331,93 @@ export default function ManageUsersPage() {
                 <p>Use the search above to find and assign users to this sales rep.</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>User</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Phone</TableHead>
-                      <TableHead>Join Date</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {assignedUsers.map((user: User) => (
-                      <TableRow key={user.id}>
-                        <TableCell>
-                          <div>
-                            <div className="font-medium">{user.fullName || user.username}</div>
-                            <div className="text-sm text-gray-500">@{user.username}</div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-6">
+                {assignedUsers.map((user: User) => (
+                  <Card key={user.id} className="border-l-4 border-l-pink-500 hover:shadow-lg transition-shadow">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <CardTitle className="text-lg font-semibold text-gray-900">
+                            {user.fullName || user.username}
+                          </CardTitle>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-sm text-gray-500">@{user.username}</span>
+                            <Badge variant={user.isActive ? "default" : "secondary"}>
+                              {user.isActive ? "Active" : "Inactive"}
+                            </Badge>
                           </div>
-                        </TableCell>
-                        <TableCell>{user.email}</TableCell>
-                        <TableCell>{user.phoneNumber || '-'}</TableCell>
-                        <TableCell>{formatDate(user.createdAt)}</TableCell>
-                        <TableCell>
-                          <Badge variant={user.isActive ? "default" : "secondary"}>
-                            {user.isActive ? "Active" : "Inactive"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Select value={selectedNewRepId} onValueChange={setSelectedNewRepId}>
-                              <SelectTrigger className="w-32 h-8 text-xs">
-                                <SelectValue placeholder="Reassign to..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {salesReps.filter(rep => rep.id !== repId && rep.isActive).map((rep: SalesRep) => (
-                                  <SelectItem key={rep.id} value={rep.id.toString()}>
-                                    {rep.repCode}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleReassignUser(user.id)}
-                              disabled={!selectedNewRepId || reassignUserMutation.isPending}
-                            >
-                              {reassignUserMutation.isPending ? (
-                                <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-                              ) : (
-                                <RefreshCw className="w-3 h-3" />
-                              )}
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => handleRemoveUser(user.id)}
-                              disabled={removeUserMutation.isPending}
-                            >
-                              {removeUserMutation.isPending ? (
-                                <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin"></div>
-                              ) : (
-                                <UserMinus className="w-3 h-3" />
-                              )}
-                            </Button>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-xs text-gray-500">
+                            Joined {formatDate(user.createdAt)}
                           </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                        </div>
+                      </div>
+                    </CardHeader>
+
+                    <CardContent className="pt-0 space-y-4">
+                      {/* Contact Information */}
+                      <div className="space-y-2">
+                        <div className="text-sm">
+                          <span className="text-gray-500">Email:</span>
+                          <div className="font-medium text-gray-900">{user.email}</div>
+                        </div>
+                        <div className="text-sm">
+                          <span className="text-gray-500">Phone:</span>
+                          <div className="font-medium text-gray-900">
+                            {user.phoneNumber || 'No phone number'}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="space-y-3 pt-2 border-t border-gray-200">
+                        <div className="flex items-center gap-2">
+                          <Select value={selectedNewRepId} onValueChange={setSelectedNewRepId}>
+                            <SelectTrigger className="flex-1">
+                              <SelectValue placeholder="Reassign to another rep..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {salesReps.filter(rep => rep.id !== repId && rep.isActive).map((rep: SalesRep) => (
+                                <SelectItem key={rep.id} value={rep.id.toString()}>
+                                  {rep.firstName} {rep.lastName} ({rep.repCode})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleReassignUser(user.id)}
+                            disabled={!selectedNewRepId || reassignUserMutation.isPending}
+                            className="px-3"
+                          >
+                            {reassignUserMutation.isPending ? (
+                              <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                            ) : (
+                              <RefreshCw className="w-4 h-4" />
+                            )}
+                          </Button>
+                        </div>
+                        
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleRemoveUser(user.id)}
+                          disabled={removeUserMutation.isPending}
+                          className="w-full"
+                        >
+                          {removeUserMutation.isPending ? (
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                          ) : (
+                            <UserMinus className="w-4 h-4 mr-2" />
+                          )}
+                          Remove from {selectedRep.repCode}
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             )}
           </CardContent>
@@ -432,56 +446,64 @@ export default function ManageUsersPage() {
                 <p>All users are currently assigned to sales representatives.</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>User</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Phone</TableHead>
-                      <TableHead>Join Date</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {unassignedUsers.map((user: User) => (
-                      <TableRow key={user.id}>
-                        <TableCell>
-                          <div>
-                            <div className="font-medium">{user.fullName || user.username}</div>
-                            <div className="text-sm text-gray-500">@{user.username}</div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-6">
+                {unassignedUsers.map((user: User) => (
+                  <Card key={user.id} className="border-l-4 border-l-green-500 hover:shadow-lg transition-shadow">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <CardTitle className="text-lg font-semibold text-gray-900">
+                            {user.fullName || user.username}
+                          </CardTitle>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-sm text-gray-500">@{user.username}</span>
+                            <Badge variant={user.isActive ? "default" : "secondary"}>
+                              {user.isActive ? "Active" : "Inactive"}
+                            </Badge>
                           </div>
-                        </TableCell>
-                        <TableCell>{user.email}</TableCell>
-                        <TableCell>{user.phoneNumber || '-'}</TableCell>
-                        <TableCell>{formatDate(user.createdAt)}</TableCell>
-                        <TableCell>
-                          <Badge variant={user.isActive ? "default" : "secondary"}>
-                            {user.isActive ? "Active" : "Inactive"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            size="sm"
-                            onClick={() => handleAssignUser(user.id)}
-                            disabled={assignUserMutation.isPending}
-                            className="bg-green-500 hover:bg-green-600"
-                          >
-                            {assignUserMutation.isPending ? (
-                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                            ) : (
-                              <>
-                                <UserPlus className="w-4 h-4 mr-1" />
-                                Assign
-                              </>
-                            )}
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-xs text-gray-500">
+                            Joined {formatDate(user.createdAt)}
+                          </div>
+                        </div>
+                      </div>
+                    </CardHeader>
+
+                    <CardContent className="pt-0 space-y-4">
+                      {/* Contact Information */}
+                      <div className="space-y-2">
+                        <div className="text-sm">
+                          <span className="text-gray-500">Email:</span>
+                          <div className="font-medium text-gray-900">{user.email}</div>
+                        </div>
+                        <div className="text-sm">
+                          <span className="text-gray-500">Phone:</span>
+                          <div className="font-medium text-gray-900">
+                            {user.phoneNumber || 'No phone number'}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Action */}
+                      <div className="pt-2 border-t border-gray-200">
+                        <Button
+                          size="sm"
+                          onClick={() => handleAssignUser(user.id)}
+                          disabled={assignUserMutation.isPending}
+                          className="w-full bg-green-500 hover:bg-green-600"
+                        >
+                          {assignUserMutation.isPending ? (
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                          ) : (
+                            <UserPlus className="w-4 h-4 mr-2" />
+                          )}
+                          Assign to {selectedRep.repCode}
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             )}
           </CardContent>
