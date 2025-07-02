@@ -315,37 +315,15 @@ export function setupAuth(app: Express): void {
         });
       }
 
-      // Auto-login after registration
-      return new Promise((resolve, reject) => {
-        req.login(user as Express.User, (err) => {
-          if (err) {
-            logger.error('Auto-login after registration failed', { 
-              error: err,
-              userId: user.id,
-              username,
-              email
-            });
-            reject(err);
-            return;
-          }
-          // Update last login timestamp on registration
-          storage.updateUserLastLogin(user.id).catch(err => {
-            logger.error('Failed to update last login timestamp on registration', {
-              error: err,
-              userId: user.id
-            });
-          });
-          
-          // Return user data (excluding password) with verification info
-          const { password, ...userData } = user;
-          res.status(201); // Set status code for created
-          resolve({
-            ...userData,
-            emailVerificationSent: true,
-            message: "Registration successful! Please check your email to verify your account."
-          });
-        });
-      });
+      // Return registration success without auto-login when email verification is required
+      // Users should only be logged in after they verify their email
+      const { password: userPassword, ...userData } = user;
+      res.status(201); // Set status code for created
+      return {
+        ...userData,
+        emailVerificationSent: true,
+        message: "Registration successful! Please check your email to verify your account."
+      };
     } catch (error) {
       // Handle specific error types from validation
       if (error instanceof AppError) {

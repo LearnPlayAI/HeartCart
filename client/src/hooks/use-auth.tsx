@@ -163,9 +163,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Handle direct response format (fallback)
       return data;
     },
-    onSuccess: (user: User) => {
-      // Store data in the standardized format for consistency
-      queryClient.setQueryData(["/api/user"], { success: true, data: user });
+    onSuccess: (response: any) => {
+      // Only set user as authenticated if email verification was NOT sent
+      // If emailVerificationSent is true, user should remain unauthenticated until they verify
+      if (!response?.emailVerificationSent) {
+        queryClient.setQueryData(["/api/user"], { success: true, data: response });
+      }
+      // If email verification was sent, don't authenticate user - let the auth page handle the verification flow
     },
     onError: (error: Error) => {
       toast({
