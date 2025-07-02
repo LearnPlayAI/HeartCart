@@ -201,6 +201,16 @@ const Header = () => {
                   className="hidden sm:flex"
                 />
                 
+                {/* Mobile Refresh Button - Safe position next to cart */}
+                <button
+                  onClick={handleRefreshSite}
+                  disabled={isRefreshing}
+                  className="sm:hidden flex items-center justify-center p-2 text-[#FF69B4] hover:text-[#FF1493] hover:bg-pink-50 rounded-full transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title={isRefreshing ? 'Refreshing...' : 'Refresh Site'}
+                >
+                  <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                </button>
+
                 <Button 
                   variant="ghost" 
                   size="icon" 
@@ -250,16 +260,6 @@ const Header = () => {
         <div className="container mx-auto flex items-center whitespace-nowrap py-2 px-4">
           {/* Mobile Category Menu Button */}
           <CategorySidebarDrawer />
-          
-          {/* Mobile Refresh Button - Icon only for space efficiency */}
-          <button
-            onClick={handleRefreshSite}
-            disabled={isRefreshing}
-            className="sm:hidden flex items-center justify-center px-2 py-1 bg-white bg-opacity-90 hover:bg-opacity-100 text-[#FF69B4] hover:text-[#FF1493] rounded-full ml-2 transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-            title={isRefreshing ? 'Refreshing...' : 'Refresh Site'}
-          >
-            <RefreshCw className={`h-3 w-3 ${isRefreshing ? 'animate-spin' : ''}`} />
-          </button>
           
           {/* Desktop Navigation Links */}
           <div className="flex items-center overflow-x-auto scrollbar-none">
