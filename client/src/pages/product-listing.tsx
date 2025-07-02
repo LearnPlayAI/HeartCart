@@ -268,9 +268,9 @@ const ProductListing = () => {
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const [attributeFilters, setAttributeFilters] = useState<AttributeFilter[]>([]);
   const [filters, setFilters] = useState({
-    onPromotion: searchParams.get('on_promotion') === 'true',
-    featuredProducts: searchParams.get('featured_products') === 'true',
-    newArrivals: searchParams.get('new_arrivals') === 'true'
+    onPromotion: searchParams.get('onPromotion') === 'true',
+    featuredProducts: searchParams.get('featuredProducts') === 'true',
+    newArrivals: searchParams.get('newArrivals') === 'true'
   });
   
   // Pagination - Initialize with saved state priority
@@ -570,9 +570,9 @@ const ProductListing = () => {
     if (selectedCategory) params.set('category', selectedCategory);
     if (ratingFilter) params.set('rating', ratingFilter);
     if (searchQuery) params.set('q', searchQuery);
-    if (filters.onPromotion) params.set('on_promotion', 'true');
-    if (filters.featuredProducts) params.set('featured_products', 'true');
-    if (filters.newArrivals) params.set('new_arrivals', 'true');
+    if (filters.onPromotion) params.set('onPromotion', 'true');
+    if (filters.featuredProducts) params.set('featuredProducts', 'true');
+    if (filters.newArrivals) params.set('newArrivals', 'true');
     if (page > 1) params.set('page', page.toString());
     
     const queryString = params.toString();
