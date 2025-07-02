@@ -598,6 +598,12 @@ Changelog:
   * Fixed mobile refresh button visibility to show for ALL users (authenticated and non-authenticated)
   * Moved mobile refresh button outside authentication check for universal accessibility
   * Eliminated duplicate mobile refresh button implementation within authenticated user section
+- July 2, 2025. Sales rep commission system statistics and display fixes:
+  * Fixed "Total Earned" calculation to show sum of ALL commission amounts regardless of status (R 1.83 correctly displayed)
+  * Updated commission rate display in table rows to show sales rep's actual commission rate (5.0%) instead of stored commission rate (0.1%)
+  * Commission statistics boxes now correctly update when accessing commission pages with accurate totals
+  * Enhanced server-side commission summary calculation to use totalEarned from all commissions rather than just "earned" status
+  * Payment reference number generation working correctly with REPCODE-##-ddmmyy format from server-side endpoint
 - July 2, 2025. Complete transactional data cleanup for fresh testing environment:
   * Cleared ALL transactional testing data: orders (15), orderItems (32), orderStatusHistory (52), orderItemSupplierStatus (17)
   * Removed shopping cart and user interaction data: cart_items, abandonedCarts, userFavourites (1), productInteractions (96)

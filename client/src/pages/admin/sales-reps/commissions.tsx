@@ -278,7 +278,7 @@ export default function SalesRepCommissionsPage() {
                         <div className="space-y-2">
                           <div>
                             <p className="text-sm font-medium text-gray-600">Rate</p>
-                            <p className="text-sm font-medium">{Number(commission.commissionRate).toFixed(1)}%</p>
+                            <p className="text-sm font-medium">{Number(selectedRep.commissionRate).toFixed(1)}%</p>
                           </div>
                           <div>
                             <p className="text-sm font-medium text-gray-600">Status</p>
