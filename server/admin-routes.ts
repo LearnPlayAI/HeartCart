@@ -1196,8 +1196,8 @@ router.post("/sales-reps/:id/payments", isAdmin, asyncHandler(async (req: Reques
     // Mark commissions as paid based on payment amount
     await storage.markCommissionsAsPaid(repId, parseFloat(req.body.amount));
     
-    // If payment method is credit, award store credit to the sales rep
-    if (req.body.paymentMethod === 'credit') {
+    // If payment method is store credit, award store credit to the sales rep
+    if (req.body.paymentMethod === 'Store Credit') {
       // Get the sales rep information
       const rep = await storage.getSalesRepById(repId);
       if (rep) {
