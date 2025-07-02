@@ -156,15 +156,29 @@ export default function PudoLockerPicker({
 
   // Auto-select preferred locker when it loads and lockers are available
   useEffect(() => {
+    console.log("Auto-selection check:", {
+      hasPreferredLocker: !!preferredLocker,
+      preferredLockerId: preferredLocker?.id,
+      selectedLockerId,
+      displayLockersCount: displayLockers.length,
+      isLocationLoading: locationLoading
+    });
+    
     if (preferredLocker && !selectedLockerId && displayLockers.length > 0) {
       // Find the preferred locker in the display list by ID
       const matchingLocker = displayLockers.find(locker => locker.id === preferredLocker.id);
+      console.log("Looking for matching locker:", {
+        preferredId: preferredLocker.id,
+        found: !!matchingLocker,
+        firstDisplayLocker: displayLockers[0]
+      });
+      
       if (matchingLocker) {
         console.log("Auto-selecting preferred locker:", matchingLocker);
         onLockerSelect(matchingLocker);
       }
     }
-  }, [preferredLocker, selectedLockerId, displayLockers, onLockerSelect]);
+  }, [preferredLocker, selectedLockerId, displayLockers, onLockerSelect, locationLoading]);
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
