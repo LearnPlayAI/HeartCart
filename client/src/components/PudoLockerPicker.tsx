@@ -154,19 +154,17 @@ export default function PudoLockerPicker({
     searchData: searchResults
   });
 
-  // Auto-select preferred locker if available and no locker is selected
+  // Auto-select preferred locker when it loads and lockers are available
   useEffect(() => {
-    if (preferredLocker && !selectedLockerId) {
-      onLockerSelect(preferredLocker);
+    if (preferredLocker && !selectedLockerId && displayLockers.length > 0) {
+      // Find the preferred locker in the display list by ID
+      const matchingLocker = displayLockers.find(locker => locker.id === preferredLocker.id);
+      if (matchingLocker) {
+        console.log("Auto-selecting preferred locker:", matchingLocker);
+        onLockerSelect(matchingLocker);
+      }
     }
-  }, [preferredLocker, selectedLockerId, onLockerSelect]);
-
-  // Also auto-select on component mount if preferred locker is already loaded
-  useEffect(() => {
-    if (preferredLocker && !selectedLockerId && customerProvince) {
-      onLockerSelect(preferredLocker);
-    }
-  }, [customerProvince]); // Trigger when customer location is available
+  }, [preferredLocker, selectedLockerId, displayLockers, onLockerSelect]);
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
