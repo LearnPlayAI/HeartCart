@@ -246,6 +246,16 @@ const Header = () => {
           {/* Mobile Category Menu Button */}
           <CategorySidebarDrawer />
           
+          {/* Mobile Refresh Button - Icon only for space efficiency */}
+          <button
+            onClick={handleRefreshSite}
+            disabled={isRefreshing}
+            className="sm:hidden flex items-center justify-center px-2 py-1 bg-white bg-opacity-90 hover:bg-opacity-100 text-[#FF69B4] hover:text-[#FF1493] rounded-full ml-2 transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+            title={isRefreshing ? 'Refreshing...' : 'Refresh Site'}
+          >
+            <RefreshCw className={`h-3 w-3 ${isRefreshing ? 'animate-spin' : ''}`} />
+          </button>
+          
           {/* Desktop Navigation Links */}
           <div className="flex items-center overflow-x-auto scrollbar-none">
             <Link href="/" className="px-4 py-1 font-medium text-sm hover:bg-white hover:text-[#FF69B4] rounded-full mx-1 transition-colors duration-200">
@@ -256,11 +266,11 @@ const Header = () => {
               All Products
             </Link>
             
-            {/* Standalone Refresh Site Button */}
+            {/* Standalone Refresh Site Button - Hidden on mobile to prevent overflow */}
             <button
               onClick={handleRefreshSite}
               disabled={isRefreshing}
-              className="flex items-center px-3 py-1 font-medium text-sm bg-white bg-opacity-90 hover:bg-opacity-100 text-[#FF69B4] hover:text-[#FF1493] rounded-full mx-1 transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+              className="hidden sm:flex items-center px-3 py-1 font-medium text-sm bg-white bg-opacity-90 hover:bg-opacity-100 text-[#FF69B4] hover:text-[#FF1493] rounded-full mx-1 transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <RefreshCw className={`h-3 w-3 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
               <span className="text-xs font-semibold">

@@ -584,6 +584,14 @@ Changelog:
   * Users can now manually clear all browser cached files when experiencing issues after deployments
   * System clears browser caches, localStorage, sessionStorage, and TanStack Query cache with single click
   * Manual refresh approach eliminates unwanted popup notifications while preserving effective cache clearing functionality
+- July 2, 2025. Standalone refresh site button implementation completed:
+  * Added standalone refresh button in header navigation using same simpleCacheManager functions as dropdown menu
+  * Desktop version: Full "Refresh Site" button with text and icon in categories navigation bar
+  * Mobile version: Icon-only compact button next to category menu to prevent overflow issues
+  * Both versions show loading state with spinning RefreshCw icon when active
+  * Styled with TeeMeYou hot pink theme for consistency across all devices
+  * Mobile optimization prevents navigation overflow while maintaining functionality access
+  * Fixed promotional pricing display consistency between /products and /category pages by adding promotional data fetching to category pages
 ```
 
 ## User Preferences
