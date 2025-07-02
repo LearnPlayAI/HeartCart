@@ -87,10 +87,13 @@ export default function PudoLockerPicker({
   const queryClient = useQueryClient();
 
   // Fetch user's preferred locker
-  const { data: preferredLocker } = useQuery({
+  const { data: preferredLockerResponse } = useQuery({
     queryKey: ["/api/user/preferred-locker"],
     enabled: !selectedLockerId
   });
+  
+  // Extract the actual locker data from the API response
+  const preferredLocker = preferredLockerResponse?.data;
 
   // Smart locker fetching based on customer location - automatically loads user's area
   const { data: locationBasedLockers, isLoading: locationLoading } = useQuery({
