@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
 import { Users, DollarSign, TrendingUp, Plus, Edit2, Eye, Calendar, Share2, Copy, MessageCircle, UserCog } from "lucide-react";
 import { AdminLayout } from "@/components/admin/layout";
 
@@ -207,123 +207,146 @@ Register now and start shopping! 🛍️`;
                 </Button>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Rep Details</TableHead>
-                      <TableHead>Contact</TableHead>
-                      <TableHead>Performance</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {salesReps.map((rep: SalesRep) => (
-                      <TableRow key={rep.id}>
-                        <TableCell>
-                          <div>
-                            <div className="font-medium">{rep.firstName} {rep.lastName}</div>
-                            <div className="text-sm text-gray-500 font-mono">
-                              {rep.repCode} • {rep.commissionRate}% rate
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div>
-                            <div className="text-sm">{rep.email}</div>
-                            <div className="text-sm text-gray-500">
-                              {rep.phoneNumber || 'No phone'}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div>
-                            <div className="text-sm font-medium">
-                              {formatCurrency(rep.totalEarnings || 0)}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              {rep.commissionCount || 0} commissions
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="space-y-1">
-                            <Badge variant={rep.isActive ? "default" : "secondary"}>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
+                {salesReps.map((rep: SalesRep) => (
+                  <Card key={rep.id} className="border-l-4 border-l-pink-500 hover:shadow-lg transition-shadow">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <CardTitle className="text-lg font-semibold text-gray-900">
+                            {rep.firstName} {rep.lastName}
+                          </CardTitle>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge 
+                              variant={rep.isActive ? "default" : "secondary"}
+                              className={rep.isActive ? "bg-green-100 text-green-800" : ""}
+                            >
                               {rep.isActive ? "Active" : "Inactive"}
                             </Badge>
-                            <div className="text-xs text-gray-500">
-                              Since {formatDate(rep.createdAt)}
-                            </div>
+                            <span className="text-sm font-mono text-pink-600 font-medium">
+                              {rep.repCode}
+                            </span>
                           </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-wrap gap-1">
-                            {/* Edit Rep */}
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => setLocation(`/admin/sales-reps/${rep.id}/edit`)}
-                              className="h-8 w-8 p-0"
-                            >
-                              <Edit2 className="w-3 h-3" />
-                            </Button>
-
-                            {/* View Commissions */}
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => setLocation(`/admin/sales-reps/${rep.id}/commissions`)}
-                              className="h-8 w-8 p-0"
-                            >
-                              <Eye className="w-3 h-3" />
-                            </Button>
-
-                            {/* Record Payment */}
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => setLocation(`/admin/sales-reps/${rep.id}/record-payment`)}
-                              className="h-8 w-8 p-0"
-                            >
-                              <DollarSign className="w-3 h-3" />
-                            </Button>
-
-                            {/* Manage Users */}
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => setLocation(`/admin/sales-reps/${rep.id}/manage-users`)}
-                              className="h-8 w-8 p-0"
-                            >
-                              <UserCog className="w-3 h-3" />
-                            </Button>
-
-                            {/* Share Registration URL */}
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => shareToWhatsApp(rep)}
-                              className="h-8 w-8 p-0"
-                            >
-                              <MessageCircle className="w-3 h-3" />
-                            </Button>
-
-                            {/* Copy Registration URL */}
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => copyRegistrationUrl(rep)}
-                              className="h-8 w-8 p-0"
-                            >
-                              <Copy className="w-3 h-3" />
-                            </Button>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm font-medium text-gray-900">
+                            {rep.commissionRate}% rate
                           </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                          <div className="text-xs text-gray-500">
+                            Since {formatDate(rep.createdAt)}
+                          </div>
+                        </div>
+                      </div>
+                    </CardHeader>
+
+                    <CardContent className="pt-0 space-y-4">
+                      {/* Contact Information */}
+                      <div className="space-y-2">
+                        <div className="text-sm">
+                          <span className="text-gray-500">Email:</span>
+                          <div className="font-medium text-gray-900">{rep.email}</div>
+                        </div>
+                        <div className="text-sm">
+                          <span className="text-gray-500">Phone:</span>
+                          <div className="font-medium text-gray-900">
+                            {rep.phoneNumber || 'No phone number'}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Performance Stats */}
+                      <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-600">Total Earnings</span>
+                          <span className="font-semibold text-green-600">
+                            {formatCurrency(rep.totalEarnings || 0)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-600">Commissions</span>
+                          <span className="font-medium text-gray-900">
+                            {rep.commissionCount || 0}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="grid grid-cols-3 gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setLocation(`/admin/sales-reps/${rep.id}/edit`)}
+                          className="flex flex-col items-center gap-1 h-auto py-2"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                          <span className="text-xs">Edit</span>
+                        </Button>
+                        
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setLocation(`/admin/sales-reps/${rep.id}/commissions`)}
+                          className="flex flex-col items-center gap-1 h-auto py-2"
+                        >
+                          <Eye className="w-4 h-4" />
+                          <span className="text-xs">View</span>
+                        </Button>
+                        
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setLocation(`/admin/sales-reps/${rep.id}/record-payment`)}
+                          className="flex flex-col items-center gap-1 h-auto py-2"
+                        >
+                          <DollarSign className="w-4 h-4" />
+                          <span className="text-xs">Pay</span>
+                        </Button>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setLocation(`/admin/sales-reps/${rep.id}/manage-users`)}
+                          className="flex flex-col items-center gap-1 h-auto py-2"
+                        >
+                          <UserCog className="w-4 h-4" />
+                          <span className="text-xs">Users</span>
+                        </Button>
+                        
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => shareToWhatsApp(rep)}
+                          className="flex flex-col items-center gap-1 h-auto py-2"
+                        >
+                          <MessageCircle className="w-4 h-4" />
+                          <span className="text-xs">Share</span>
+                        </Button>
+                        
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => copyRegistrationUrl(rep)}
+                          className="flex flex-col items-center gap-1 h-auto py-2"
+                        >
+                          <Copy className="w-4 h-4" />
+                          <span className="text-xs">Copy</span>
+                        </Button>
+                      </div>
+
+                      {/* Notes if available */}
+                      {rep.notes && (
+                        <div className="pt-2 border-t border-gray-200">
+                          <div className="text-xs text-gray-500 mb-1">Notes:</div>
+                          <div className="text-sm text-gray-700 italic">
+                            {rep.notes.length > 100 ? `${rep.notes.substring(0, 100)}...` : rep.notes}
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             )}
           </CardContent>
