@@ -140,10 +140,17 @@ export default function PudoLockerPicker({
     
     displayLockers = selectedLocker ? [selectedLocker] : [];
   } else {
-    // Show search results or location-based results
-    displayLockers = searchQuery 
-      ? (searchResults?.data || [])
-      : (locationBasedLockers?.data || []);
+    // Show search results, location-based results, or include preferred locker if it's not in the local list
+    if (searchQuery) {
+      displayLockers = searchResults?.data || [];
+    } else {
+      displayLockers = locationBasedLockers?.data || [];
+      
+      // If user has a preferred locker that's not in the local area, add it to the list
+      if (preferredLocker && !displayLockers.find(l => l.id === preferredLocker.id)) {
+        displayLockers = [preferredLocker, ...displayLockers];
+      }
+    }
   }
 
   const isLoading = searchQuery ? searchLoading : locationLoading;

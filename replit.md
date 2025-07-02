@@ -537,6 +537,14 @@ Changelog:
   * System invalidates both /api/user/preferred-locker and /api/user queries for complete data freshness
   * Database remains single source of truth with proper cache management for optimal user experience
   * Preferred locker automatically saved during order placement and immediately reflected in subsequent page visits
+- July 2, 2025. PUDO locker cross-province preferred selection system completed:
+  * Fixed critical issue where preferred lockers from different provinces weren't displaying on checkout page
+  * Enhanced display logic to include user's preferred locker even if it's not in their current province/city
+  * Added checkout page cache invalidation on load to ensure fresh preferred locker data
+  * Implemented smooth auto-selection with 100ms delay and loading state checks to prevent screen flashing
+  * Cross-province preferred lockers now appear at top of list and auto-select properly (e.g., KwaZulu-Natal locker shows in Gauteng checkout)
+  * Comprehensive timing coordination between cache refresh and auto-selection eliminates visual glitches
+  * Database as single source of truth maintained with proper query cache management for real-time updates
 - July 1, 2025. Enhanced EFT Payment Management card for improved admin banking verification:
   * Completely redesigned EFT Payment Management card on admin order detail page (/admin/orders/{id})
   * Replaced outdated proof of payment upload system with comprehensive customer payment information display
