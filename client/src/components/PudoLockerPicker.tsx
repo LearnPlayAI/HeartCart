@@ -159,11 +159,14 @@ export default function PudoLockerPicker({
 
   // Track if user has manually changed selection to prevent auto-override
   const [hasManuallyChanged, setHasManuallyChanged] = useState(false);
+  // Track if we've done initial auto-selection to prevent repeated auto-selection
+  const [hasInitialAutoSelection, setHasInitialAutoSelection] = useState(false);
 
-  // Reset manual change flag when component is cleared (Change Selection clicked)
+  // Reset flags when component is cleared (Change Selection clicked)
   useEffect(() => {
     if (!selectedLockerId) {
       setHasManuallyChanged(false);
+      // Don't reset hasInitialAutoSelection - we want to prevent auto-selection after manual changes
     }
   }, [selectedLockerId]);
 
@@ -175,10 +178,11 @@ export default function PudoLockerPicker({
       selectedLockerId,
       displayLockersCount: displayLockers.length,
       isLocationLoading: locationLoading,
-      hasManuallyChanged
+      hasManuallyChanged,
+      hasInitialAutoSelection
     });
     
-    if (preferredLocker && !selectedLockerId && displayLockers.length > 0 && !hasManuallyChanged) {
+    if (preferredLocker && !selectedLockerId && displayLockers.length > 0 && !hasManuallyChanged && !hasInitialAutoSelection) {
       // Find the preferred locker in the display list by ID
       const matchingLocker = displayLockers.find(locker => locker.id === preferredLocker.id);
       console.log("Looking for matching locker:", {
@@ -194,9 +198,10 @@ export default function PudoLockerPicker({
       if (matchingLocker) {
         console.log("Auto-selecting preferred locker:", matchingLocker);
         onLockerSelect(matchingLocker);
+        setHasInitialAutoSelection(true); // Mark that we've done initial auto-selection
       }
     }
-  }, [preferredLocker, selectedLockerId, displayLockers, onLockerSelect, locationLoading, hasManuallyChanged]);
+  }, [preferredLocker, selectedLockerId, displayLockers, onLockerSelect, locationLoading, hasManuallyChanged, hasInitialAutoSelection]);
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
