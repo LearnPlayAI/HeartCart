@@ -162,9 +162,9 @@ export function CategorySidebar({
           </div>
         ) : (
           <div className="p-3 space-y-1.5 h-full">
-            {/* Enhanced All Categories option for filter mode */}
-            {isFilterMode && (
-              <div className="mb-3">
+            {/* Enhanced All Categories option for both filter and navigation modes */}
+            <div className="mb-3">
+              {isFilterMode ? (
                 <button
                   onClick={handleAllCategoriesSelect}
                   className={cn(
@@ -179,8 +179,24 @@ export function CategorySidebar({
                     All Categories
                   </div>
                 </button>
-              </div>
-            )}
+              ) : (
+                <Link
+                  href="/products"
+                  onClick={onCategorySelect}
+                  className={cn(
+                    "block w-full px-4 py-3 text-sm text-left rounded-lg transition-all duration-200 border shadow-sm",
+                    (location === "/products" || (location.startsWith("/products") && !location.includes("categoryId"))) || location === "/"
+                      ? "font-semibold text-white bg-gradient-to-r from-pink-500 to-pink-600 border-pink-500 shadow-pink-200"
+                      : "bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300 hover:shadow-md"
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <Grid3X3 className="h-4 w-4" />
+                    All Categories
+                  </div>
+                </Link>
+              )}
+            </div>
             
             <ul className="space-y-1.5">
               {categoriesWithChildren.map((item) => (

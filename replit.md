@@ -506,6 +506,8 @@ Changelog:
   * Enhanced loading states with card-style skeleton loaders
   * Improved error states with better visual feedback and styling
   * Added visual dots for subcategory indicators and improved subcategory styling
+  * Added "All Categories" option for navigation mode (previously only available in filter mode)
+  * Mobile users can now browse all products through "All Categories" link in sidebar
   * ALL existing functionality preserved: filter mode, navigation mode, expand/collapse, callbacks, routing
 - July 1, 2025. Enhanced EFT Payment Management card for improved admin banking verification:
   * Completely redesigned EFT Payment Management card on admin order detail page (/admin/orders/{id})
