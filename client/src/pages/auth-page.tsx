@@ -534,7 +534,7 @@ export default function AuthPage() {
                                   <User size={16} />
                                 </span>
                                 <Input
-                                  placeholder="Choose a username"
+                                  placeholder="Choose an Alias or Display Name"
                                   className="pl-10"
                                   {...field}
                                 />
