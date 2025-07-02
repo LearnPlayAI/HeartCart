@@ -168,7 +168,11 @@ export default function PudoLockerPicker({
       // Find the preferred locker in the display list by ID
       const matchingLocker = displayLockers.find(locker => locker.id === preferredLocker.id);
       console.log("Looking for matching locker:", {
+        preferredLocker: preferredLocker,
         preferredId: preferredLocker.id,
+        preferredType: typeof preferredLocker.id,
+        firstDisplayLockerId: displayLockers[0].id,
+        firstDisplayLockerType: typeof displayLockers[0].id,
         found: !!matchingLocker,
         firstDisplayLocker: displayLockers[0]
       });
