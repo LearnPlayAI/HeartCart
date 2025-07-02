@@ -279,7 +279,7 @@ export function UserAssignmentDialog({ open, onOpenChange, salesRep, allSalesRep
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden w-[95vw] sm:w-full m-2 sm:m-6">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full m-2 sm:m-6">
         <DialogHeader>
           <DialogTitle>Manage User Assignments</DialogTitle>
           <DialogDescription>
@@ -350,26 +350,28 @@ export function UserAssignmentDialog({ open, onOpenChange, salesRep, allSalesRep
                     No users assigned to this representative
                   </div>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>User</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Rep Code</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {assignedUsers.map((user: User) => (
-                        <UserRow
-                          key={user.id}
-                          user={user}
-                          showRemoveButton={true}
-                          showReassignSelect={true}
-                        />
-                      ))}
-                    </TableBody>
-                  </Table>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>User</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Rep Code</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {assignedUsers.map((user: User) => (
+                          <UserRow
+                            key={user.id}
+                            user={user}
+                            showRemoveButton={true}
+                            showReassignSelect={true}
+                          />
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -392,25 +394,27 @@ export function UserAssignmentDialog({ open, onOpenChange, salesRep, allSalesRep
                     All users are assigned to sales representatives
                   </div>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>User</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Rep Code</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {unassignedUsers.map((user: User) => (
-                        <UserRow
-                          key={user.id}
-                          user={user}
-                          showAssignButton={true}
-                        />
-                      ))}
-                    </TableBody>
-                  </Table>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>User</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Rep Code</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {unassignedUsers.map((user: User) => (
+                          <UserRow
+                            key={user.id}
+                            user={user}
+                            showAssignButton={true}
+                          />
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -448,26 +452,28 @@ export function UserAssignmentDialog({ open, onOpenChange, salesRep, allSalesRep
                     No users found matching "{searchTerm}"
                   </div>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>User</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Current Rep</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {searchUsers.map((user: User) => (
-                        <UserRow
-                          key={user.id}
-                          user={user}
-                          showAssignButton={!user.repCode || user.repCode !== salesRep.repCode}
-                          showReassignSelect={!!user.repCode && user.repCode !== salesRep.repCode}
-                        />
-                      ))}
-                    </TableBody>
-                  </Table>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>User</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Current Rep</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {searchUsers.map((user: User) => (
+                          <UserRow
+                            key={user.id}
+                            user={user}
+                            showAssignButton={!user.repCode || user.repCode !== salesRep.repCode}
+                            showReassignSelect={!!user.repCode && user.repCode !== salesRep.repCode}
+                          />
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 )}
               </CardContent>
             </Card>

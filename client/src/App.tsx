@@ -65,6 +65,11 @@ import CustomerPromotionsPage from "@/pages/promotions";
 import FeaturedPage from "@/pages/featured";
 import UserAdminPageFixed from "@/pages/admin/users-fixed";
 import SalesRepsPage from "@/pages/admin/sales-reps";
+import CreateSalesRepPage from "@/pages/admin/sales-reps/create";
+import EditSalesRepPage from "@/pages/admin/sales-reps/edit";
+import SalesRepCommissionsPage from "@/pages/admin/sales-reps/commissions";
+import RecordPaymentPage from "@/pages/admin/sales-reps/record-payment";
+import ManageUsersPage from "@/pages/admin/sales-reps/manage-users";
 
 // Developer Pages
 import DeveloperDashboard from "@/pages/developer";
@@ -228,6 +233,11 @@ function App() {
                   <AdminProtectedRoute path="/admin/supplier-orders" component={SupplierOrders} />
                   <AdminProtectedRoute path="/admin/users" component={UserAdminPageFixed} />
                   <AdminProtectedRoute path="/admin/sales-reps" component={SalesRepsPage} />
+                  <AdminProtectedRoute path="/admin/sales-reps/create" component={CreateSalesRepPage} />
+                  <AdminProtectedRoute path="/admin/sales-reps/:id/edit" component={EditSalesRepPage} />
+                  <AdminProtectedRoute path="/admin/sales-reps/:id/commissions" component={SalesRepCommissionsPage} />
+                  <AdminProtectedRoute path="/admin/sales-reps/:id/record-payment" component={RecordPaymentPage} />
+                  <AdminProtectedRoute path="/admin/sales-reps/:id/manage-users" component={ManageUsersPage} />
                   <AdminProtectedRoute path="/admin/ai-settings" component={AdminAISettings} />
                   <AdminProtectedRoute path="/admin/batch-upload" component={BatchUpload} />
                   <AdminProtectedRoute path="/admin/auth-test" component={AuthTestDashboard} />
