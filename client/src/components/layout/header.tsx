@@ -98,8 +98,7 @@ const Header = () => {
                       variant="outline" 
                       className="relative border-[#FF69B4] bg-gradient-to-r from-[#FF69B4] to-[#FF1493] text-white hover:from-[#FF1493] hover:to-[#DC143C] px-3 py-2 h-auto shadow-md hover:shadow-lg transition-all duration-200"
                     >
-                      <User className="h-4 w-4 mr-2" />
-                      <span className="text-sm font-medium">Menu</span>
+                      <User className="h-4 w-4" />
                       <ChevronDown className="h-3 w-3 ml-2" />
                     </Button>
                   </DropdownMenuTrigger>
