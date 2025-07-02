@@ -223,9 +223,6 @@ const Header = () => {
                       {cartSummary.itemCount}
                     </span>
                   )}
-                  <span className="text-xs font-bold">
-                    R{(cartSummary.finalTotal || 0).toFixed(2)}
-                  </span>
                 </Button>
               </>
             ) : (
