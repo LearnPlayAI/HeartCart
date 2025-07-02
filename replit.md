@@ -497,6 +497,16 @@ Changelog:
   * Changed default payment method from "Bank Transfer" to "Store Credit" in payment recording modal
   * Streamlines admin workflow by pre-selecting the most commonly used payment method
   * Maintains all existing payment functionality while improving user experience
+- July 2, 2025. Enhanced category sidebar visual design with modern styling:
+  * Added gradient backgrounds, card-style category containers, and improved visual hierarchy
+  * Implemented category icons (Grid3X3, Folder, FolderOpen) for better visual cues
+  * Enhanced hover states with smooth transitions and shadow effects
+  * Improved selected state indicators with TeeMeYou pink gradient styling
+  * Added subtle borders, rounded corners, and better spacing throughout
+  * Enhanced loading states with card-style skeleton loaders
+  * Improved error states with better visual feedback and styling
+  * Added visual dots for subcategory indicators and improved subcategory styling
+  * ALL existing functionality preserved: filter mode, navigation mode, expand/collapse, callbacks, routing
 - July 1, 2025. Enhanced EFT Payment Management card for improved admin banking verification:
   * Completely redesigned EFT Payment Management card on admin order detail page (/admin/orders/{id})
   * Replaced outdated proof of payment upload system with comprehensive customer payment information display
