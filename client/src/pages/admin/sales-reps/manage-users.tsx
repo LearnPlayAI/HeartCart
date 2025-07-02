@@ -86,12 +86,16 @@ export default function ManageUsersPage() {
     mutationFn: ({ userId }: { userId: number }) => 
       apiRequest('POST', `/api/admin/sales-reps/${repId}/assign-user`, { userId }),
     onSuccess: () => {
+      // Invalidate all related queries
       queryClient.invalidateQueries({ queryKey: ['/api/admin/sales-reps'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/sales-reps/${repId}/users`] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/users/unassigned'] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/users/search'] });
+      
+      // Force immediate refetch
       refetchAssigned();
       refetchUnassigned();
+      
       toast({
         title: "Success",
         description: "User assigned successfully",
@@ -111,12 +115,16 @@ export default function ManageUsersPage() {
     mutationFn: ({ userId }: { userId: number }) => 
       apiRequest('POST', `/api/admin/sales-reps/${repId}/remove-user`, { userId }),
     onSuccess: () => {
+      // Invalidate all related queries
       queryClient.invalidateQueries({ queryKey: ['/api/admin/sales-reps'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/sales-reps/${repId}/users`] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/users/unassigned'] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/users/search'] });
+      
+      // Force immediate refetch
       refetchAssigned();
       refetchUnassigned();
+      
       toast({
         title: "Success",
         description: "User removed successfully",
@@ -136,13 +144,17 @@ export default function ManageUsersPage() {
     mutationFn: ({ userId, newRepId }: { userId: number, newRepId: number }) => 
       apiRequest('POST', `/api/admin/users/${userId}/reassign`, { newRepId }),
     onSuccess: () => {
+      // Invalidate all related queries
       queryClient.invalidateQueries({ queryKey: ['/api/admin/sales-reps'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/sales-reps/${repId}/users`] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/users/unassigned'] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/users/search'] });
+      
+      // Force immediate refetch
       refetchAssigned();
       refetchUnassigned();
       setSelectedNewRepId('');
+      
       toast({
         title: "Success",
         description: "User reassigned successfully",
@@ -269,40 +281,68 @@ export default function ManageUsersPage() {
                   ) : searchUsers.length === 0 ? (
                     <p className="text-gray-500 text-center py-4">No users found matching your search.</p>
                   ) : (
-                    <div className="max-h-64 overflow-y-auto space-y-2">
-                      {searchUsers.map((user: User) => (
-                        <div key={user.id} className="flex items-center justify-between p-3 border rounded-lg">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium">{user.fullName || user.username}</span>
-                              <Badge variant={user.isActive ? "default" : "secondary"}>
+                    <div className="max-h-96 overflow-y-auto">
+                      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        {searchUsers.map((user: User) => (
+                          <div key={user.id} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                            <div className="flex items-start justify-between mb-3">
+                              <div className="flex-1">
+                                <h4 className="font-semibold text-gray-900">
+                                  {user.fullName || user.username}
+                                </h4>
+                                <p className="text-sm text-gray-600">@{user.username}</p>
+                              </div>
+                              <Badge variant={user.isActive ? "default" : "secondary"} className="shrink-0">
                                 {user.isActive ? "Active" : "Inactive"}
                               </Badge>
+                            </div>
+                            
+                            <div className="space-y-2 text-sm">
+                              <div>
+                                <span className="font-medium text-gray-700">Email:</span>
+                                <p className="text-gray-600 break-all">{user.email}</p>
+                              </div>
+                              
+                              <div>
+                                <span className="font-medium text-gray-700">Phone:</span>
+                                <p className="text-gray-600">{user.phoneNumber || 'No phone number'}</p>
+                              </div>
+                              
+                              <div>
+                                <span className="font-medium text-gray-700">Joined:</span>
+                                <p className="text-gray-600">{formatDate(user.createdAt)}</p>
+                              </div>
+                              
                               {user.repCode && (
-                                <Badge variant="outline" className="text-xs">
-                                  Rep: {user.repCode}
-                                </Badge>
+                                <div>
+                                  <span className="font-medium text-gray-700">Current Rep:</span>
+                                  <Badge variant="outline" className="ml-2">
+                                    {user.repCode}
+                                  </Badge>
+                                </div>
                               )}
                             </div>
-                            <p className="text-sm text-gray-600">{user.email}</p>
+                            
+                            <div className="mt-4 pt-3 border-t border-gray-100">
+                              <Button
+                                size="sm"
+                                onClick={() => handleAssignUser(user.id)}
+                                disabled={user.repCode === selectedRep.repCode || assignUserMutation.isPending}
+                                className="w-full bg-blue-500 hover:bg-blue-600 text-white"
+                              >
+                                {assignUserMutation.isPending ? (
+                                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                ) : (
+                                  <>
+                                    <UserPlus className="w-4 h-4 mr-2" />
+                                    {user.repCode === selectedRep.repCode ? 'Already Assigned' : user.repCode ? 'Reassign to This Rep' : 'Assign to This Rep'}
+                                  </>
+                                )}
+                              </Button>
+                            </div>
                           </div>
-                          <Button
-                            size="sm"
-                            onClick={() => handleAssignUser(user.id)}
-                            disabled={user.repCode === selectedRep.repCode || assignUserMutation.isPending}
-                            className="bg-blue-500 hover:bg-blue-600"
-                          >
-                            {assignUserMutation.isPending ? (
-                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                            ) : (
-                              <>
-                                <UserPlus className="w-4 h-4 mr-1" />
-                                {user.repCode ? 'Reassign' : 'Assign'}
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
