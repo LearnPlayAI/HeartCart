@@ -545,6 +545,9 @@ Changelog:
   * Cross-province preferred lockers now appear at top of list and auto-select properly (e.g., KwaZulu-Natal locker shows in Gauteng checkout)
   * Comprehensive timing coordination between cache refresh and auto-selection eliminates visual glitches
   * Database as single source of truth maintained with proper query cache management for real-time updates
+  * Fixed UI display issue where selected locker showed generic "Locker Selected" message instead of actual locker details
+  * Enhanced selected locker display with complete information: name, address, opening hours, preferred badge, and Google Maps link
+  * Selected locker now shows all relevant details including "Preferred" badge and distance indicators for optimal user experience
 - July 1, 2025. Enhanced EFT Payment Management card for improved admin banking verification:
   * Completely redesigned EFT Payment Management card on admin order detail page (/admin/orders/{id})
   * Replaced outdated proof of payment upload system with comprehensive customer payment information display

@@ -327,26 +327,105 @@ export default function PudoLockerPicker({
           </div>
         )}
 
-        {/* Selected Locker Actions */}
-        {selectedLockerId && (
-          <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg p-3">
-            <div className="flex items-center gap-2 text-green-800">
-              <Check className="h-4 w-4" />
-              <span className="text-sm font-medium">Locker Selected</span>
+        {/* Selected Locker Display */}
+        {selectedLockerId && (() => {
+          const selectedLocker = displayLockers.find(l => l.id === selectedLockerId) || 
+                                 (preferredLocker?.id === selectedLockerId ? preferredLocker : null);
+          
+          if (!selectedLocker) {
+            return (
+              <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg p-3">
+                <div className="flex items-center gap-2 text-green-800">
+                  <Check className="h-4 w-4" />
+                  <span className="text-sm font-medium">Locker Selected</span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setSearchQuery(""); // Clear search first
+                    onLockerSelect(null as any); // Then clear selection
+                  }}
+                  className="text-xs"
+                >
+                  Change Selection
+                </Button>
+              </div>
+            );
+          }
+
+          return (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2 text-green-800">
+                  <Check className="h-4 w-4" />
+                  <span className="text-sm font-medium">Selected Locker</span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setSearchQuery(""); // Clear search first
+                    onLockerSelect(null as any); // Then clear selection
+                  }}
+                  className="text-xs"
+                >
+                  Change Selection
+                </Button>
+              </div>
+              
+              {/* Selected Locker Details */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-medium text-gray-900">{selectedLocker.name}</h4>
+                  <div className="flex items-center gap-2">
+                    {preferredLocker?.id === selectedLocker.id && (
+                      <Badge variant="secondary" className="text-xs bg-pink-100 text-pink-800">
+                        <Star className="h-3 w-3 mr-1" />
+                        Preferred
+                      </Badge>
+                    )}
+                    <Badge variant="outline" className="text-xs">
+                      {selectedLocker.code}
+                    </Badge>
+                  </div>
+                </div>
+                
+                <div className="space-y-2 text-sm text-gray-600">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4" />
+                    <span>{selectedLocker.address}</span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    <span>{formatOpeningHours(selectedLocker.openingHours)}</span>
+                  </div>
+                  
+                  {getLockerDistance(selectedLocker) && (
+                    <div className="flex items-center gap-2">
+                      <Package className="h-4 w-4" />
+                      <span>{getLockerDistance(selectedLocker)}</span>
+                    </div>
+                  )}
+                </div>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full mt-3 text-pink-600 border-pink-200 hover:bg-pink-50"
+                  onClick={() => {
+                    const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedLocker.address)}`;
+                    window.open(googleMapsUrl, '_blank');
+                  }}
+                >
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  View Location on Google Maps
+                </Button>
+              </div>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setSearchQuery(""); // Clear search first
-                onLockerSelect(null as any); // Then clear selection
-              }}
-              className="text-xs"
-            >
-              Change Selection
-            </Button>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Location Info Banner */}
         {!searchQuery && customerCity && customerProvince && (
