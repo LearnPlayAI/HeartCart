@@ -45,7 +45,7 @@ const registerSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   confirmPassword: z.string().min(6, "Password must be at least 6 characters"),
-  repCode: z.string().trim().optional().transform(val => val === "" ? null : val), // Optional sales rep code, convert empty string to null
+  repCode: z.string().trim().optional().transform(val => val === "" ? undefined : val), // Optional sales rep code, convert empty string to undefined
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords do not match",
   path: ["confirmPassword"],
