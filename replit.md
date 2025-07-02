@@ -592,6 +592,21 @@ Changelog:
   * Styled with TeeMeYou hot pink theme for consistency across all devices
   * Mobile optimization prevents navigation overflow while maintaining functionality access
   * Fixed promotional pricing display consistency between /products and /category pages by adding promotional data fetching to category pages
+- July 2, 2025. Header UI cleanup and mobile refresh button universal access:
+  * Removed currency text from cart button for cleaner header appearance
+  * Removed "Menu" text from user dropdown button, keeping only User icon and chevron
+  * Fixed mobile refresh button visibility to show for ALL users (authenticated and non-authenticated)
+  * Moved mobile refresh button outside authentication check for universal accessibility
+  * Eliminated duplicate mobile refresh button implementation within authenticated user section
+- July 2, 2025. Complete transactional data cleanup for fresh testing environment:
+  * Cleared ALL transactional testing data: orders (15), orderItems (32), orderStatusHistory (52), orderItemSupplierStatus (17)
+  * Removed shopping cart and user interaction data: cart_items, abandonedCarts, userFavourites (1), productInteractions (96)
+  * Cleared email system data: emailLogs (15), mailTokens (1) for clean notification testing
+  * Removed sales commission tracking: repCommissions (8), repPayments (7) for fresh commission calculations
+  * Cleared credit system data: creditTransactions (8) for clean credit testing
+  * Preserved ALL core system data: users (5), products (583), categories (204), suppliers (2), promotions (1), product_attributes (35)
+  * Reset sequence counters to start new records from ID 1 for organized testing
+  * System ready for comprehensive testing with clean transactional slate while maintaining full product catalog and user accounts
 ```
 
 ## User Preferences
