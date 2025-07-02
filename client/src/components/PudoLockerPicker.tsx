@@ -90,10 +90,9 @@ export default function PudoLockerPicker({
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch user's preferred locker
+  // Fetch user's preferred locker - always enabled to ensure fresh data
   const { data: preferredLockerResponse } = useQuery({
-    queryKey: ["/api/user/preferred-locker"],
-    enabled: !selectedLockerId
+    queryKey: ["/api/user/preferred-locker"]
   });
   
   // Extract the actual locker data from the API response
@@ -230,7 +229,7 @@ export default function PudoLockerPicker({
       hasInitialAutoSelection
     });
     
-    if (preferredLocker && !selectedLockerId && displayLockers.length > 0 && !hasManuallyChanged && !hasInitialAutoSelection && !locationLoading) {
+    if (preferredLocker && displayLockers.length > 0 && !hasManuallyChanged && !hasInitialAutoSelection && !locationLoading && (!selectedLockerId || selectedLockerId !== preferredLocker.id)) {
       // Add small delay to prevent flashing during cache refresh
       const timer = setTimeout(() => {
         // Find the preferred locker in the display list by ID
@@ -427,8 +426,8 @@ export default function PudoLockerPicker({
           );
         })()}
 
-        {/* Location Info Banner */}
-        {!searchQuery && customerCity && customerProvince && (
+        {/* Location Info Banner - Only show when no locker is selected */}
+        {!searchQuery && customerCity && customerProvince && !selectedLockerId && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
             <div className="flex items-center gap-2 text-blue-800">
               <MapPin className="h-4 w-4" />
