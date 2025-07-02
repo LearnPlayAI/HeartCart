@@ -508,7 +508,7 @@ Register now and start shopping! 🛍️`;
         </Card>
       </div>
 
-      {/* Sales Reps Table */}
+      {/* Sales Reps Section */}
       <Card>
         <CardHeader>
           <CardTitle>Sales Representatives</CardTitle>
@@ -517,84 +517,172 @@ Register now and start shopping! 🛍️`;
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Code</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Commission Rate</TableHead>
-                <TableHead>Total Earnings</TableHead>
-                <TableHead>Orders</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {reps.map((rep: SalesRep) => (
-                <TableRow key={rep.id}>
-                  <TableCell className="font-medium">
-                    {rep.firstName} {rep.lastName}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{rep.repCode}</Badge>
-                  </TableCell>
-                  <TableCell>{rep.email}</TableCell>
-                  <TableCell>{rep.commissionRate}%</TableCell>
-                  <TableCell>{formatCurrency(rep.totalEarnings)}</TableCell>
-                  <TableCell>{rep.commissionCount}</TableCell>
-                  <TableCell>
-                    <Badge variant={rep.isActive ? "default" : "secondary"}>
-                      {rep.isActive ? "Active" : "Inactive"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex space-x-1">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleViewCommissions(rep)}
-                      >
-                        <Eye className="w-4 h-4 mr-1" />
-                        View
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleManageUsers(rep)}
-                        title="Manage user assignments"
-                      >
-                        <UserCog className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEditRep(rep)}
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => shareToWhatsApp(rep)}
-                        title="Share registration URL to WhatsApp"
-                      >
-                        <MessageCircle className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => copyRegistrationUrl(rep)}
-                        title="Copy registration URL to clipboard"
-                      >
-                        <Copy className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
+          {/* Desktop Table View */}
+          <div className="hidden md:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Code</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Commission Rate</TableHead>
+                  <TableHead>Total Earnings</TableHead>
+                  <TableHead>Orders</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {reps.map((rep: SalesRep) => (
+                  <TableRow key={rep.id}>
+                    <TableCell className="font-medium">
+                      {rep.firstName} {rep.lastName}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{rep.repCode}</Badge>
+                    </TableCell>
+                    <TableCell>{rep.email}</TableCell>
+                    <TableCell>{rep.commissionRate}%</TableCell>
+                    <TableCell>{formatCurrency(rep.totalEarnings)}</TableCell>
+                    <TableCell>{rep.commissionCount}</TableCell>
+                    <TableCell>
+                      <Badge variant={rep.isActive ? "default" : "secondary"}>
+                        {rep.isActive ? "Active" : "Inactive"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex space-x-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleViewCommissions(rep)}
+                        >
+                          <Eye className="w-4 h-4 mr-1" />
+                          View
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleManageUsers(rep)}
+                          title="Manage user assignments"
+                        >
+                          <UserCog className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditRep(rep)}
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => shareToWhatsApp(rep)}
+                          title="Share registration URL to WhatsApp"
+                        >
+                          <MessageCircle className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => copyRegistrationUrl(rep)}
+                          title="Copy registration URL to clipboard"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Mobile Card View */}
+          <div className="block md:hidden space-y-4">
+            {reps.map((rep: SalesRep) => (
+              <Card key={rep.id} className="border border-gray-200">
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <h3 className="font-semibold text-lg">
+                        {rep.firstName} {rep.lastName}
+                      </h3>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge variant="outline">{rep.repCode}</Badge>
+                        <Badge variant={rep.isActive ? "default" : "secondary"}>
+                          {rep.isActive ? "Active" : "Inactive"}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2 mb-4">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">Email:</span>
+                      <span className="text-sm">{rep.email}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">Commission Rate:</span>
+                      <span className="text-sm font-medium">{rep.commissionRate}%</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">Total Earnings:</span>
+                      <span className="text-sm font-medium">{formatCurrency(rep.totalEarnings)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">Orders:</span>
+                      <span className="text-sm">{rep.commissionCount}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleViewCommissions(rep)}
+                      className="flex-1 min-w-0"
+                    >
+                      <Eye className="w-4 h-4 mr-1" />
+                      View
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleManageUsers(rep)}
+                      title="Manage user assignments"
+                    >
+                      <UserCog className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEditRep(rep)}
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => shareToWhatsApp(rep)}
+                      title="Share registration URL to WhatsApp"
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => copyRegistrationUrl(rep)}
+                      title="Copy registration URL to clipboard"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </CardContent>
       </Card>
 
