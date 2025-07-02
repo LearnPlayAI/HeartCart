@@ -67,7 +67,7 @@ export function UserAssignmentDialog({ open, onOpenChange, salesRep, allSalesRep
   });
 
   // Get unassigned users
-  const { data: unassignedUsersResponse, isLoading: unassignedLoading } = useQuery({
+  const { data: unassignedUsersResponse, isLoading: unassignedLoading, refetch: refetchUnassigned } = useQuery({
     queryKey: ['/api/admin/users/unassigned'],
     queryFn: async () => {
       const response = await apiRequest('GET', '/api/admin/users/unassigned');
