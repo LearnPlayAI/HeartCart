@@ -705,7 +705,7 @@ Register now and start shopping! 🛍️`;
 
       {/* Create Rep Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent>
+        <DialogContent className="w-[95vw] sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Add New Sales Rep</DialogTitle>
             <DialogDescription>
@@ -714,7 +714,7 @@ Register now and start shopping! 🛍️`;
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="firstName">First Name</Label>
                 <Input
@@ -743,7 +743,7 @@ Register now and start shopping! 🛍️`;
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="phoneNumber">Phone Number</Label>
                 <Input
@@ -803,7 +803,7 @@ Register now and start shopping! 🛍️`;
 
       {/* Edit Rep Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="w-[95vw] sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Edit Sales Rep</DialogTitle>
             <DialogDescription>
@@ -812,7 +812,7 @@ Register now and start shopping! 🛍️`;
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="editFirstName">First Name</Label>
                 <Input
@@ -841,7 +841,7 @@ Register now and start shopping! 🛍️`;
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="editPhoneNumber">Phone Number</Label>
                 <Input
@@ -861,7 +861,7 @@ Register now and start shopping! 🛍️`;
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="editCommissionRate">Commission Rate (%)</Label>
                 <Input
