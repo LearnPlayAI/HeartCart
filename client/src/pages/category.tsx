@@ -114,6 +114,16 @@ const CategoryPage = () => {
   
   const categories = categoriesResponse?.success ? categoriesResponse.data : [];
   
+  // Fetch active promotions for pricing calculations
+  const { data: promotionsResponse } = useQuery<any>({
+    queryKey: ['/api/promotions/active-with-products'],
+    staleTime: 0, // No cache - always fetch fresh promotional data
+    gcTime: 0, // Don't keep in cache when component unmounts
+    refetchOnWindowFocus: true, // Refetch when window gains focus
+    refetchOnMount: true, // Always refetch on mount
+  });
+  const activePromotions = promotionsResponse?.data || promotionsResponse || [];
+  
   // Fetch category attributes for filtering
   const { data: categoryAttributesResponse } = useQuery({
     queryKey: [`/api/categories/${category?.id}/attributes`],
@@ -450,13 +460,29 @@ const CategoryPage = () => {
               </div>
             ) : filteredProducts.length > 0 ? (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {filteredProducts.map(product => (
-                  <ProductCard
-                    key={product.id}
-                    product={product}
-                    showAddToCart={true}
-                  />
-                ))}
+                {filteredProducts.map(product => {
+                  // Find promotion for this product
+                  const productPromotion = activePromotions
+                    .flatMap((promo: any) => promo.products?.map((pp: any) => ({ ...pp, promotion: promo })) || [])
+                    .find((pp: any) => pp.productId === product.id);
+
+                  const promotionInfo = productPromotion ? {
+                    promotionName: productPromotion.promotion.promotionName,
+                    promotionDiscount: productPromotion.extraDiscountPercentage || productPromotion.discountOverride || productPromotion.promotion.discountValue,
+                    promotionDiscountType: productPromotion.promotion.promotionType,
+                    promotionEndDate: productPromotion.promotion.endDate,
+                    promotionalPrice: productPromotion.promotionalPrice ? Number(productPromotion.promotionalPrice) : null
+                  } : undefined;
+
+                  return (
+                    <ProductCard
+                      key={product.id}
+                      product={product}
+                      showAddToCart={true}
+                      promotionInfo={promotionInfo}
+                    />
+                  );
+                })}
               </div>
             ) : (
               <div className="bg-white rounded-lg shadow-md p-8 text-center">
