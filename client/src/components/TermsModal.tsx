@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Shield, CheckCircle } from "lucide-react";
 
 interface TermsModalProps {
@@ -43,11 +42,11 @@ export function TermsModal({ open, onAccept, onCancel }: TermsModalProps) {
           </DialogDescription>
         </DialogHeader>
         
-        <ScrollArea 
-          className="flex-1 max-h-[60vh] px-4 py-2 border rounded-md"
+        <div 
+          className="flex-1 max-h-[60vh] overflow-y-auto px-4 py-2 border rounded-md"
           onScroll={handleScroll}
         >
-          <div className="space-y-6 text-sm">
+          <div className="space-y-6 text-sm pr-2">
             {/* Introduction */}
             <section>
               <p className="text-xs text-muted-foreground mb-4">
@@ -242,7 +241,7 @@ export function TermsModal({ open, onAccept, onCancel }: TermsModalProps) {
               </div>
             </div>
           </div>
-        </ScrollArea>
+        </div>
 
         <DialogFooter className="flex gap-2 pt-4">
           <Button variant="outline" onClick={onCancel}>
