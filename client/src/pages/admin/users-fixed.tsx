@@ -520,6 +520,15 @@ export default function UserAdminPageFixed() {
                               <Shield className="mr-2 h-4 w-4" />
                               {user.role === 'admin' ? 'Remove Admin' : 'Make Admin'}
                             </DropdownMenuItem>
+                            {!user.isActive && (
+                              <DropdownMenuItem 
+                                onClick={() => handleStatusChange(user.id, true)}
+                                className="text-green-600"
+                              >
+                                <UserCheck className="mr-2 h-4 w-4" />
+                                Reactivate User
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuSeparator />
                             <DropdownMenuItem 
                               onClick={() => handleDeleteUser(user)}

@@ -33,6 +33,13 @@ router.post('/forgot-password', asyncHandler(async (req: Request, res: Response)
     const foundUser = user[0];
     console.log(`✅ User found: ${foundUser.username} (ID: ${foundUser.id})`);
 
+    // Check if user is active
+    if (!foundUser.isActive) {
+      console.log(`⚠️ User account is inactive: ${email}`);
+      // Don't reveal that the account is inactive for security reasons
+      return sendSuccess(res, { message: "If an account with that email exists, a password reset link has been sent." });
+    }
+
     // Create password reset token
     const { token } = await unifiedEmailService.createPasswordResetToken(foundUser.id, email);
     console.log(`🔑 Password reset token created for user: ${foundUser.id}`);
