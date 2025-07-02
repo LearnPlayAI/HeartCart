@@ -791,6 +791,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     withStandardResponse(async (req: Request, res: Response) => {
       const { limit, offset, categoryId, parentCategoryId, search, minTmyPercent, status, sortField, sortOrder, onPromotion, featuredProducts, newArrivals } = req.query;
       
+      console.log('DEBUG: Query params received:', JSON.stringify(req.query, null, 2));
+      console.log('DEBUG: Destructured values:', { onPromotion, featuredProducts, newArrivals });
+      
       const user = req.user as any;
       const isAdmin = user && user.role === 'admin';
       
