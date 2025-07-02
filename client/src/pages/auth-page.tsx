@@ -527,7 +527,7 @@ export default function AuthPage() {
                         name="username"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Username</FormLabel>
+                            <FormLabel>Alias Display Name</FormLabel>
                             <FormControl>
                               <div className="relative">
                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
@@ -718,7 +718,6 @@ export default function AuthPage() {
           </div>
         </div>
       </div>
-
       {/* Email Sent Confirmation Modal */}
       <Dialog open={isEmailSentModalOpen} onOpenChange={setIsEmailSentModalOpen}>
         <DialogContent className="sm:max-w-md">
@@ -752,7 +751,6 @@ export default function AuthPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
       {/* Reset Password Modal */}
       <Dialog open={isResetPasswordModalOpen} onOpenChange={setIsResetPasswordModalOpen}>
         <DialogContent className="sm:max-w-md">
@@ -827,7 +825,6 @@ export default function AuthPage() {
           </Form>
         </DialogContent>
       </Dialog>
-
       {/* Email Verification Modal */}
       <Dialog open={isEmailVerificationModalOpen} onOpenChange={setIsEmailVerificationModalOpen}>
         <DialogContent className="sm:max-w-md">
@@ -883,7 +880,6 @@ export default function AuthPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
       {/* Terms & Conditions Modal */}
       <TermsModal
         open={isTermsModalOpen}
