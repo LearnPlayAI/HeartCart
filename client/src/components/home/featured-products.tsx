@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import ProductCard from '@/components/product/product-card';
 import type { Product } from '@shared/schema';
