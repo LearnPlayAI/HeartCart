@@ -628,10 +628,7 @@ export default function AdminOrdersPage() {
       // Invalidate and refetch orders list to update statistics and order display
       queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
       refetch(); // Force immediate refetch
-      toast({
-        title: "Order Updated",
-        description: "Order status has been successfully updated.",
-      });
+      
     },
     onError: (error: any) => {
       console.error('Status update error:', error);
@@ -653,10 +650,7 @@ export default function AdminOrdersPage() {
       // Invalidate and refetch orders list to update statistics and order display
       queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
       refetch(); // Force immediate refetch
-      toast({
-        title: "Payment Status Updated",
-        description: "Payment status has been successfully updated.",
-      });
+      
     },
     onError: (error: any) => {
       console.error('Payment status update error:', error);

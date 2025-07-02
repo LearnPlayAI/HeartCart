@@ -122,10 +122,7 @@ const SupplierOrders = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/supplier-orders'] });
-      toast({
-        title: "Success",
-        description: "Supplier order information updated for all items in this order.",
-      });
+      
     },
     onError: (error: any) => {
       toast({
@@ -174,10 +171,7 @@ const SupplierOrders = () => {
       apiRequest(`/api/admin/supplier-orders/${orderId}/validate-url`, { method: 'POST' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/supplier-orders'] });
-      toast({
-        title: 'URL validation updated',
-        description: 'Supplier URL validation status has been updated',
-      });
+      
     },
     onError: () => {
       toast({
@@ -229,12 +223,7 @@ const SupplierOrders = () => {
         queryClient.refetchQueries({ queryKey: ['/api/credits/transactions'] });
       }
       
-      toast({
-        title: 'Status updated',
-        description: variables.status === 'unavailable' 
-          ? 'Product marked unavailable. Customer credit has been generated.'
-          : 'Supplier order status has been updated',
-      });
+      
     },
     onError: (err, variables, context) => {
       // If the mutation fails, use the context returned from onMutate to roll back
@@ -265,10 +254,7 @@ const SupplierOrders = () => {
       queryClient.invalidateQueries({ queryKey: ['/api/credits/balance'] });
       queryClient.refetchQueries({ queryKey: ['/api/credits/balance'] });
       
-      toast({
-        title: 'Credit generated',
-        description: 'Customer credit has been generated for unavailable item',
-      });
+      
     },
     onError: () => {
       toast({
@@ -287,9 +273,7 @@ const SupplierOrders = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/supplier-orders'] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
-      toast({
-        description: "Tracking number updated successfully"
-      });
+      
     },
     onError: () => {
       toast({ 

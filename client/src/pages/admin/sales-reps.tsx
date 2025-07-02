@@ -132,10 +132,7 @@ Register now and start shopping! 🛍️`;
     const registrationUrl = generateRegistrationUrl(rep.repCode);
     try {
       await navigator.clipboard.writeText(registrationUrl);
-      toast({
-        title: "URL Copied!",
-        description: `Registration URL for ${rep.firstName} ${rep.lastName} copied to clipboard`,
-      });
+      
     } catch (error) {
       toast({
         title: "Copy Failed",
@@ -196,10 +193,7 @@ Register now and start shopping! 🛍️`;
         commissionRate: 3,
         notes: ''
       });
-      toast({
-        title: "Success",
-        description: "Sales rep created successfully"
-      });
+      
     },
     onError: (error: any) => {
       toast({
@@ -218,10 +212,7 @@ Register now and start shopping! 🛍️`;
       queryClient.invalidateQueries({ queryKey: ['/api/admin/sales-reps'] });
       setIsEditDialogOpen(false);
       setSelectedRep(null);
-      toast({
-        title: "Success",
-        description: "Sales rep updated successfully"
-      });
+      
     },
     onError: (error: any) => {
       console.error('Update rep error:', error);
@@ -250,10 +241,7 @@ Register now and start shopping! 🛍️`;
         referenceNumber: '',
         notes: ''
       });
-      toast({
-        title: "Success",
-        description: "Payment recorded successfully"
-      });
+      
       
       // Reload data to update UI with fresh information
       if (selectedRep) {
@@ -343,11 +331,7 @@ Register now and start shopping! 🛍️`;
     
     // Check if there's no outstanding amount
     if (amountOwed <= 0) {
-      toast({
-        title: "No Outstanding Amount",
-        description: `${selectedRep.firstName} ${selectedRep.lastName} has no outstanding commissions to pay. All earnings have been paid.`,
-        variant: "default"
-      });
+      
       return;
     }
     

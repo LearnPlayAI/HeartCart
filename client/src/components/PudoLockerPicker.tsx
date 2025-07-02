@@ -116,10 +116,7 @@ export default function PudoLockerPicker({
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/user/preferred-locker"] });
-      toast({
-        title: "Preference saved",
-        description: "Your preferred PUDO locker has been saved for future orders."
-      });
+      
     }
   });
 

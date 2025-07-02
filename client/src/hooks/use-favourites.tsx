@@ -51,10 +51,7 @@ export function FavouritesProvider({ children }: FavouritesProviderProps) {
     },
     onSuccess: (data, productId) => {
       queryClient.invalidateQueries({ queryKey: ['/api/favourites'] });
-      toast({
-        title: "Added to favourites",
-        description: "Product has been added to your favourites.",
-      });
+      
     },
     onError: (error: any, productId) => {
       // Revert optimistic update
@@ -85,10 +82,7 @@ export function FavouritesProvider({ children }: FavouritesProviderProps) {
     },
     onSuccess: (data, productId) => {
       queryClient.invalidateQueries({ queryKey: ['/api/favourites'] });
-      toast({
-        title: "Removed from favourites",
-        description: "Product has been removed from your favourites.",
-      });
+      
     },
     onError: (error: any, productId) => {
       // Revert optimistic update

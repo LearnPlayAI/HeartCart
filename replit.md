@@ -528,6 +528,7 @@ Changelog:
   * Applied consistent design structure matching promotions page with TeeMeYou branding
   * Enhanced homepage featured products section with "View All Featured Products" button next to load more
   * Both promotional and featured content now use redirect-based navigation to dedicated pages for optimal user experience
+  * Removed all "Added to cart" success toast notifications across entire application for cleaner user experience
 - July 1, 2025. Enhanced EFT Payment Management card for improved admin banking verification:
   * Completely redesigned EFT Payment Management card on admin order detail page (/admin/orders/{id})
   * Replaced outdated proof of payment upload system with comprehensive customer payment information display

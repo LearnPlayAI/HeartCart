@@ -415,9 +415,7 @@ export default function AdminOrderDetail() {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/orders', orderId] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
       queryClient.invalidateQueries({ queryKey: ['/api/orders', orderId, 'status-history'] });
-      toast({
-        description: "Payment status updated successfully"
-      });
+      
     },
     onError: (error) => {
       console.error('Payment status update error:', error);
@@ -522,10 +520,7 @@ export default function AdminOrderDetail() {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
       
-      toast({
-        title: "Invoice Downloaded",
-        description: "Invoice has been downloaded successfully.",
-      });
+      
     } catch (error) {
       toast({
         title: "Download Failed",

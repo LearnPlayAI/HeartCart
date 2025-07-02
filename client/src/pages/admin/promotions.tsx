@@ -91,10 +91,7 @@ export default function PromotionsPage() {
       
       setIsCreateDialogOpen(false);
       createForm.reset(); // Reset form after successful creation
-      toast({
-        title: "Success",
-        description: "Promotion created successfully",
-      });
+      
     },
     onError: (error: any) => {
       toast({
@@ -124,10 +121,7 @@ export default function PromotionsPage() {
       setIsEditDialogOpen(false);
       setSelectedPromotion(null);
       editForm.reset(); // Reset edit form
-      toast({
-        title: "Success",
-        description: "Promotion updated successfully",
-      });
+      
     },
     onError: (error: any) => {
       toast({
@@ -151,10 +145,7 @@ export default function PromotionsPage() {
       
       // Refetch the main promotions query immediately
       queryClient.refetchQueries({ queryKey: ['/api/promotions'] });
-      toast({
-        title: "Success",
-        description: "Promotion deleted successfully",
-      });
+      
     },
     onError: (error: any) => {
       toast({

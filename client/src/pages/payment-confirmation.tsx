@@ -112,11 +112,7 @@ export default function PaymentConfirmation() {
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
       queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
       
-      toast({
-        title: "Order Created Successfully",
-        description: "Your order has been created and is awaiting payment verification.",
-        variant: "default"
-      });
+      
       
       // Navigate to order confirmation
       navigate(`/order-confirmation/${result.data.id}`);
@@ -132,11 +128,7 @@ export default function PaymentConfirmation() {
 
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
-    toast({
-      title: "Copied!",
-      description: `${label} copied to clipboard`,
-      variant: "default"
-    });
+    
   };
 
   const handleConfirmPayment = () => {

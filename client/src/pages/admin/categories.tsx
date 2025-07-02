@@ -357,10 +357,7 @@ export default function AdminCategories() {
       queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
       queryClient.invalidateQueries({ queryKey: ["/api/categories/main/with-children"] });
       
-      toast({
-        title: "Success",
-        description: `Reordered ${data.updatedCount} categories successfully`,
-      });
+      
     },
     onError: (error) => {
       toast({

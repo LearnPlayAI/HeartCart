@@ -517,10 +517,7 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
         console.log('Form category updated to:', finalCategoryId);
       }, 300);
       
-      toast({
-        title: 'Category Applied',
-        description: 'Product category has been saved successfully.',
-      });
+      
       
     } catch (error) {
       console.error('Error saving AI category selection:', error);
@@ -632,10 +629,7 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
         onProductNameChange(editableAiTitle);
       }
       
-      toast({
-        title: 'AI Enhancement Applied',
-        description: 'Product title and description have been updated.',
-      });
+      
     }
     setShowEnhancementPreview(false);
     setAiEnhancementResult(null);

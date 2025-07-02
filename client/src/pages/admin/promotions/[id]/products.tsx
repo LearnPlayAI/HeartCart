@@ -167,10 +167,7 @@ export default function PromotionProductsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/promotions/${promotionId}/products`] });
       queryClient.invalidateQueries({ queryKey: ['/api/promotions'] });
-      toast({
-        title: "Success",
-        description: "Product added to promotion successfully",
-      });
+      
     },
     onError: (error: any) => {
       toast({
@@ -190,10 +187,7 @@ export default function PromotionProductsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/promotions/${promotionId}/products`] });
       queryClient.invalidateQueries({ queryKey: ['/api/promotions'] });
-      toast({
-        title: "Success",
-        description: "Product removed from promotion successfully",
-      });
+      
     },
     onError: (error: any) => {
       toast({
@@ -213,10 +207,7 @@ export default function PromotionProductsPage() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/promotions/${promotionId}/products`] });
-      toast({
-        title: "Success",
-        description: "Promotional price updated successfully",
-      });
+      
     },
     onError: (error: any) => {
       toast({
@@ -236,10 +227,7 @@ export default function PromotionProductsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/promotions/${promotionId}/products`] });
       queryClient.invalidateQueries({ queryKey: ['/api/promotions/active-with-products'] });
-      toast({
-        title: "Success",
-        description: "All promotion products published successfully",
-      });
+      
     },
     onError: (error: any) => {
       toast({

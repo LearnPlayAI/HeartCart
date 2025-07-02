@@ -206,7 +206,7 @@ export default function UserAdminPage() {
       return response.json();
     },
     onSuccess: () => {
-      toast({ title: 'User updated successfully' });
+      
       setEditDialogOpen(false);
       setSelectedUser(null);
       queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
@@ -227,7 +227,7 @@ export default function UserAdminPage() {
       return response.json();
     },
     onSuccess: () => {
-      toast({ title: 'Password reset successfully' });
+      
       setResetPasswordDialogOpen(false);
       setSelectedUser(null);
       setNewPassword('');
@@ -247,7 +247,7 @@ export default function UserAdminPage() {
       return response.json();
     },
     onSuccess: () => {
-      toast({ title: 'User deleted successfully' });
+      
       setDeleteDialogOpen(false);
       setSelectedUser(null);
       queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
@@ -268,7 +268,7 @@ export default function UserAdminPage() {
       return response.json();
     },
     onSuccess: () => {
-      toast({ title: 'User status updated successfully' });
+      
       queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/users/stats'] });
     },
@@ -287,7 +287,7 @@ export default function UserAdminPage() {
       return response.json();
     },
     onSuccess: () => {
-      toast({ title: 'User role updated successfully' });
+      
       queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/users/stats'] });
     },

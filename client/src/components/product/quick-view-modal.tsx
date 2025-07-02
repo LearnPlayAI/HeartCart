@@ -332,12 +332,7 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
   const handleAcceptDisclaimers = () => {
     if (pendingCartItem) {
       addItem(pendingCartItem);
-      toast({
-        title: "Added to cart",
-        description: `${product.name} has been added to your cart.`,
-        variant: "default",
-        duration: 3000,
-      });
+      
       
       // Reset state and close modals
       setPendingCartItem(null);

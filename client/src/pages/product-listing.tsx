@@ -687,12 +687,7 @@ const ProductListing = () => {
         attributeSelections: pendingCartItem.attributeSelections
       });
       
-      toast({
-        title: "Added to cart",
-        description: `${pendingCartItem.productName} has been added to your cart.`,
-        variant: "default",
-        duration: 3000,
-      });
+      
       
       // Reset state and close modal
       setPendingCartItem(null);

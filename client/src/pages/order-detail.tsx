@@ -378,10 +378,7 @@ const OrderDetail: React.FC = () => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
       
-      toast({
-        title: "Invoice Downloaded",
-        description: "Your invoice has been downloaded successfully.",
-      });
+      
     } catch (error) {
       toast({
         title: "Download Failed",

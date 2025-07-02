@@ -250,10 +250,7 @@ export default function AuthPage() {
       {
         onSuccess: () => {
           setIsResetPasswordModalOpen(false);
-          toast({
-            title: "Password reset successful",
-            description: "Your password has been updated. You can now sign in with your new password.",
-          });
+          
           
           // Auto-login with the email from token data
           if (resetTokenData?.email) {

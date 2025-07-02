@@ -253,10 +253,7 @@ export const DraftDashboard: React.FC = () => {
     },
     onSuccess: (data) => {
       if (data.success) {
-        toast({
-          title: 'Draft Deleted',
-          description: 'Product draft has been successfully deleted.',
-        });
+        
         queryClient.invalidateQueries({ queryKey: ['/api/product-drafts'] });
       } else {
         toast({

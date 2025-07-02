@@ -120,10 +120,7 @@ export function AICategorySuggestionDialog({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
-      toast({
-        title: 'Success',
-        description: 'Categories created successfully!',
-      });
+      
     },
     onError: (error) => {
       console.error('Error creating category:', error);
@@ -152,10 +149,7 @@ export function AICategorySuggestionDialog({
       const childId = selectedSuggestion.childCategory?.id || null;
       onCategorySelected(parentId, childId);
       onOpenChange(false);
-      toast({
-        title: 'Categories Applied',
-        description: 'Product categories have been updated successfully.',
-      });
+      
     }
   };
 
@@ -263,12 +257,7 @@ export function AICategorySuggestionDialog({
       setIsCreatingCategory(false);
       setNewCategoryData(null);
 
-      toast({
-        title: 'Categories Created',
-        description: childId 
-          ? 'New child category has been created and applied to the product.'
-          : 'New categories have been created and applied to the product.',
-      });
+      
     } catch (error) {
       console.error('Error creating categories:', error);
       console.error('Error details:', {

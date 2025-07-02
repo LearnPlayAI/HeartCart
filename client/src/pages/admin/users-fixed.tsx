@@ -150,10 +150,7 @@ export default function UserAdminPageFixed() {
       return response.json();
     },
     onSuccess: (data, variables) => {
-      toast({
-        title: "Success",
-        description: `User creation ${variables ? 'enabled' : 'disabled'} successfully`
-      });
+      
       queryClient.invalidateQueries({ queryKey: ['/api/admin/settings/userCreationEnabled'] });
     },
     onError: (error, variables) => {
@@ -221,7 +218,7 @@ export default function UserAdminPageFixed() {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/users/stats'] });
       setDeleteDialogOpen(false);
       setSelectedUser(null);
-      toast({ title: 'User deleted successfully' });
+      
     },
     onError: (error: Error) => {
       toast({ 
@@ -243,7 +240,7 @@ export default function UserAdminPageFixed() {
       return response.json();
     },
     onSuccess: () => {
-      toast({ title: 'User role updated successfully' });
+      
       queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/users/stats'] });
     },

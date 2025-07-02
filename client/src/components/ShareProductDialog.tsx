@@ -66,10 +66,7 @@ ${salePrice && productPrice !== salePrice ? `~~R${productPrice.toLocaleString()}
       try {
         await navigator.share(shareData);
         setOpen(false);
-        toast({
-          title: "Shared successfully",
-          description: "Thank you for sharing this product!",
-        });
+        
       } catch (error) {
         // User cancelled or error occurred
         if (error instanceof Error && error.name !== 'AbortError') {
@@ -88,10 +85,7 @@ ${salePrice && productPrice !== salePrice ? `~~R${productPrice.toLocaleString()}
       await navigator.clipboard.writeText(productUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-      toast({
-        title: "Link copied!",
-        description: "Product link has been copied to your clipboard.",
-      });
+      
     } catch (error) {
       toast({
         title: "Copy failed",
