@@ -161,6 +161,13 @@ export default function PudoLockerPicker({
     }
   }, [preferredLocker, selectedLockerId, onLockerSelect]);
 
+  // Also auto-select on component mount if preferred locker is already loaded
+  useEffect(() => {
+    if (preferredLocker && !selectedLockerId && customerProvince) {
+      onLockerSelect(preferredLocker);
+    }
+  }, [customerProvince]); // Trigger when customer location is available
+
   const handleSearch = (query: string) => {
     setSearchQuery(query);
     setIsSearching(query.length >= 2);
