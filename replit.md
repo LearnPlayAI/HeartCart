@@ -548,6 +548,19 @@ Changelog:
   * Fixed UI display issue where selected locker showed generic "Locker Selected" message instead of actual locker details
   * Enhanced selected locker display with complete information: name, address, opening hours, preferred badge, and Google Maps link
   * Selected locker now shows all relevant details including "Preferred" badge and distance indicators for optimal user experience
+- July 2, 2025. Complete PUDO locker checkout page UX improvements:
+  * Hidden "Showing lockers in [location]" section when a locker is already selected for cleaner UI
+  * Fixed real-time preferred locker updates without requiring page refresh
+  * Enhanced auto-selection logic to handle preferred locker changes even when another locker is selected
+  * Removed query enabled condition preventing preferred locker updates when selection exists
+  * PUDO locker system now provides seamless user experience with immediate updates and proper UI state management
+- July 2, 2025. Admin order status history access authorization fixed:
+  * Resolved 403 Forbidden error preventing admins from viewing order status timelines
+  * Enhanced authorization logic in /api/orders/{id}/status-history endpoint to allow admin access
+  * System now permits access if user either owns the order OR has admin role
+  * Added comprehensive debugging logs for authorization decisions and troubleshooting
+  * Admin users can now view complete order status history for all orders in the system
+  * Order status timeline component displays correctly on admin order detail pages
 - July 1, 2025. Enhanced EFT Payment Management card for improved admin banking verification:
   * Completely redesigned EFT Payment Management card on admin order detail page (/admin/orders/{id})
   * Replaced outdated proof of payment upload system with comprehensive customer payment information display
