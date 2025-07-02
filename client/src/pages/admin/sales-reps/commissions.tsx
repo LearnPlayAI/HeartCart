@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useParams } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, DollarSign, TrendingUp, Users, Calendar } from "lucide-react";
@@ -99,9 +99,9 @@ export default function SalesRepCommissionsPage() {
   };
 
   // Calculate summary stats
-  const totalEarned = commissions.filter((c: Commission) => c.status === 'earned').reduce((sum: number, c: Commission) => sum + c.commissionAmount, 0);
-  const totalPaid = payments.reduce((sum: number, p: Payment) => sum + p.amount, 0);
-  const amountOwed = totalEarned - totalPaid;
+  const totalEarned = commissions.filter((c: Commission) => c.status === 'earned').reduce((sum: number, c: Commission) => sum + Number(c.commissionAmount), 0);
+  const totalPaid = payments.reduce((sum: number, p: Payment) => sum + Number(p.amount), 0);
+  const amountOwed = Math.max(0, totalEarned - totalPaid);
 
   if (repsLoading || commissionsLoading || paymentsLoading) {
     return (
@@ -202,7 +202,7 @@ export default function SalesRepCommissionsPage() {
                 <Calendar className="w-5 h-5 text-purple-500" />
                 <div>
                   <p className="text-sm font-medium text-gray-600">Commission Rate</p>
-                  <p className="text-2xl font-bold text-purple-600">{selectedRep.commissionRate * 100}%</p>
+                  <p className="text-2xl font-bold text-purple-600">{selectedRep.commissionRate}%</p>
                 </div>
               </div>
             </CardContent>
@@ -228,57 +228,80 @@ export default function SalesRepCommissionsPage() {
                 <p>This sales rep hasn't earned any commissions yet.</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Order ID</TableHead>
-                      <TableHead>Customer Paid</TableHead>
-                      <TableHead>Cost Amount</TableHead>
-                      <TableHead>Profit Amount</TableHead>
-                      <TableHead>Commission</TableHead>
-                      <TableHead>Rate</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {commissions.map((commission: Commission) => (
-                      <TableRow key={commission.id}>
-                        <TableCell>{formatDate(commission.createdAt)}</TableCell>
-                        <TableCell>#{commission.orderId}</TableCell>
-                        <TableCell>{formatCurrency(commission.totalCustomerPaidAmount || commission.orderAmount)}</TableCell>
-                        <TableCell>{formatCurrency(commission.totalCostAmount || 0)}</TableCell>
-                        <TableCell>
-                          <span className="font-medium text-green-600">
-                            {formatCurrency(commission.totalProfitAmount || 0)}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <span className="font-medium">
-                            {formatCurrency(commission.commissionAmount)}
-                          </span>
-                        </TableCell>
-                        <TableCell>{commission.commissionRate * 100}%</TableCell>
-                        <TableCell>
-                          {commission.status === 'paid' ? (
-                            <Badge className="bg-green-600 text-white hover:bg-green-700">
-                              Paid
-                            </Badge>
-                          ) : commission.status === 'earned' ? (
-                            <Badge className="bg-pink-500 text-white hover:bg-pink-600">
-                              Earned
-                            </Badge>
-                          ) : (
-                            <Badge variant="destructive">
-                              {commission.status}
-                            </Badge>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+              <div className="grid gap-4 p-4">
+                {commissions.map((commission: Commission) => (
+                  <Card key={commission.id} className="border border-gray-200 hover:shadow-md transition-shadow">
+                    <CardContent className="p-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {/* Date and Order ID */}
+                        <div className="space-y-2">
+                          <div>
+                            <p className="text-sm font-medium text-gray-600">Date</p>
+                            <p className="text-sm">{formatDate(commission.createdAt)}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-600">Order ID</p>
+                            <p className="text-sm font-medium">#{commission.orderId}</p>
+                          </div>
+                        </div>
+
+                        {/* Financial Details */}
+                        <div className="space-y-2">
+                          <div>
+                            <p className="text-sm font-medium text-gray-600">Customer Paid</p>
+                            <p className="text-sm font-medium">{formatCurrency(Number(commission.totalCustomerPaidAmount || commission.orderAmount))}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-600">Cost Amount</p>
+                            <p className="text-sm">{formatCurrency(Number(commission.totalCostAmount || 0))}</p>
+                          </div>
+                        </div>
+
+                        {/* Profit and Commission */}
+                        <div className="space-y-2">
+                          <div>
+                            <p className="text-sm font-medium text-gray-600">Profit Amount</p>
+                            <p className="text-sm font-medium text-green-600">
+                              {formatCurrency(Number(commission.totalProfitAmount || 0))}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-600">Commission</p>
+                            <p className="text-sm font-medium text-pink-600">
+                              {formatCurrency(Number(commission.commissionAmount))}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Rate and Status */}
+                        <div className="space-y-2">
+                          <div>
+                            <p className="text-sm font-medium text-gray-600">Rate</p>
+                            <p className="text-sm font-medium">{commission.commissionRate}%</p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-600">Status</p>
+                            <div className="mt-1">
+                              {commission.status === 'paid' ? (
+                                <Badge className="bg-green-600 text-white hover:bg-green-700">
+                                  Paid
+                                </Badge>
+                              ) : commission.status === 'earned' ? (
+                                <Badge className="bg-pink-500 text-white hover:bg-pink-600">
+                                  Earned
+                                </Badge>
+                              ) : (
+                                <Badge variant="destructive">
+                                  {commission.status}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             )}
           </CardContent>
