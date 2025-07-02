@@ -631,6 +631,12 @@ const ProductListing = () => {
       return;
     }
     
+    // Special handling for "Featured Products" filter - redirect to featured page
+    if (key === 'featuredProducts' && value) {
+      setLocation('/featured');
+      return;
+    }
+    
     setFilters(prev => ({ ...prev, [key]: value }));
     setPage(1);
   };

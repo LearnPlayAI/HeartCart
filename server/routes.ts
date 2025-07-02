@@ -1223,6 +1223,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     })
   );
 
+  // Get ALL featured products without pagination (for featured page)
+  app.get(
+    "/api/featured-products/all",
+    asyncHandler(async (req: Request, res: Response) => {
+      const user = req.user as any;
+      const isAdmin = user && user.role === 'admin';
+      
+      const options = { 
+        includeInactive: isAdmin, 
+        includeCategoryInactive: isAdmin 
+      };
+      
+      try {
+        // Get all featured products by setting a very high limit
+        const products = await storage.getFeaturedProducts(1000, options, 0);
+        
+        // Add cache-busting headers to ensure randomization works
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+        
+        // Return standardized response format
+        res.json({
+          success: true,
+          data: products || [], // Ensure we always return an array
+        });
+      } catch (error) {
+        // Log detailed error for debugging
+        logger.error('Error fetching all featured products', { 
+          error
+        });
+        
+        // Return empty array instead of throwing error to prevent site crash
+        res.json({
+          success: true,
+          data: [],
+        });
+      }
+    })
+  );
+
   // Create flash deals query schema
   const flashDealsQuerySchema = z.object({
     limit: z.coerce.number().int().nonnegative().default(6)
