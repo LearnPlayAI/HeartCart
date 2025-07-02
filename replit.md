@@ -529,6 +529,14 @@ Changelog:
   * Enhanced homepage featured products section with "View All Featured Products" button next to load more
   * Both promotional and featured content now use redirect-based navigation to dedicated pages for optimal user experience
   * Removed all "Added to cart" success toast notifications across entire application for cleaner user experience
+- July 2, 2025. Enhanced PUDO locker preferred selection system with comprehensive cache invalidation:
+  * Added trigger-based preferred locker saving system during checkout process
+  * Modified checkout page to trigger preferred locker saving on Place Order button click
+  * Integrated savePreferredTrigger state with PudoLockerPicker component for real-time communication
+  * Enhanced query cache invalidation to ensure latest preferred locker selection is always reflected
+  * System invalidates both /api/user/preferred-locker and /api/user queries for complete data freshness
+  * Database remains single source of truth with proper cache management for optimal user experience
+  * Preferred locker automatically saved during order placement and immediately reflected in subsequent page visits
 - July 1, 2025. Enhanced EFT Payment Management card for improved admin banking verification:
   * Completely redesigned EFT Payment Management card on admin order detail page (/admin/orders/{id})
   * Replaced outdated proof of payment upload system with comprehensive customer payment information display

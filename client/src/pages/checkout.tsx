@@ -130,6 +130,12 @@ export default function CheckoutPage() {
     enabled: !!creditBalance // Only fetch if user has credit balance
   });
 
+  // Invalidate preferred locker cache when checkout page loads to ensure fresh data
+  useEffect(() => {
+    queryClient.invalidateQueries({ queryKey: ["/api/user/preferred-locker"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+  }, [queryClient]);
+
   // Extract cart items from the response
   const cartItems = cartResponse?.data || [];
   const activePromotions = promotionsResponse?.data || [];

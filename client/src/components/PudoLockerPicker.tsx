@@ -122,8 +122,9 @@ export default function PudoLockerPicker({
         })
       }),
     onSuccess: () => {
+      // Invalidate all relevant queries to ensure fresh data everywhere
       queryClient.invalidateQueries({ queryKey: ["/api/user/preferred-locker"] });
-      
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
     }
   });
 
@@ -199,13 +200,16 @@ export default function PudoLockerPicker({
       if (currentLocker) {
         console.log("Saving current selection as preferred during checkout:", currentLocker);
         savePreferredMutation.mutate(currentLocker);
+        // Invalidate cache to ensure fresh preferred locker data
+        queryClient.invalidateQueries({ queryKey: ["/api/user/preferred-locker"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/user"] });
         // Call parent callback if provided
         if (onSavePreferred) {
           onSavePreferred();
         }
       }
     }
-  }, [savePreferredTrigger, selectedLockerId, displayLockers, onSavePreferred]);
+  }, [savePreferredTrigger, selectedLockerId, displayLockers, onSavePreferred, queryClient]);
 
   // Auto-select preferred locker when it loads and lockers are available (only if no manual change)
   useEffect(() => {
@@ -219,24 +223,29 @@ export default function PudoLockerPicker({
       hasInitialAutoSelection
     });
     
-    if (preferredLocker && !selectedLockerId && displayLockers.length > 0 && !hasManuallyChanged && !hasInitialAutoSelection) {
-      // Find the preferred locker in the display list by ID
-      const matchingLocker = displayLockers.find(locker => locker.id === preferredLocker.id);
-      console.log("Looking for matching locker:", {
-        preferredLocker: preferredLocker,
-        preferredId: preferredLocker.id,
-        preferredType: typeof preferredLocker.id,
-        firstDisplayLockerId: displayLockers[0].id,
-        firstDisplayLockerType: typeof displayLockers[0].id,
-        found: !!matchingLocker,
-        firstDisplayLocker: displayLockers[0]
-      });
+    if (preferredLocker && !selectedLockerId && displayLockers.length > 0 && !hasManuallyChanged && !hasInitialAutoSelection && !locationLoading) {
+      // Add small delay to prevent flashing during cache refresh
+      const timer = setTimeout(() => {
+        // Find the preferred locker in the display list by ID
+        const matchingLocker = displayLockers.find(locker => locker.id === preferredLocker.id);
+        console.log("Looking for matching locker:", {
+          preferredLocker: preferredLocker,
+          preferredId: preferredLocker.id,
+          preferredType: typeof preferredLocker.id,
+          firstDisplayLockerId: displayLockers[0].id,
+          firstDisplayLockerType: typeof displayLockers[0].id,
+          found: !!matchingLocker,
+          firstDisplayLocker: displayLockers[0]
+        });
+        
+        if (matchingLocker) {
+          console.log("Auto-selecting preferred locker:", matchingLocker);
+          onLockerSelect(matchingLocker);
+          setHasInitialAutoSelection(true); // Mark that we've done initial auto-selection
+        }
+      }, 100); // Small delay to smooth transition
       
-      if (matchingLocker) {
-        console.log("Auto-selecting preferred locker:", matchingLocker);
-        onLockerSelect(matchingLocker);
-        setHasInitialAutoSelection(true); // Mark that we've done initial auto-selection
-      }
+      return () => clearTimeout(timer);
     }
   }, [preferredLocker, selectedLockerId, displayLockers, onLockerSelect, locationLoading, hasManuallyChanged, hasInitialAutoSelection]);
 
