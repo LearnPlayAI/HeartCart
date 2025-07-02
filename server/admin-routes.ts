@@ -605,6 +605,38 @@ router.get("/users/stats", isAuthenticated, asyncHandler(async (req: Request, re
   }
 }));
 
+// Get unassigned users (not assigned to any sales rep)
+router.get("/users/unassigned", isAdmin, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const unassignedUsers = await storage.getUnassignedUsers();
+    
+    logger.info("Unassigned users fetched", { userCount: unassignedUsers.length });
+    return sendSuccess(res, unassignedUsers);
+  } catch (error) {
+    logger.error("Error fetching unassigned users", { error });
+    return sendError(res, "Failed to fetch unassigned users", 500);
+  }
+}));
+
+// Search users for assignment purposes
+router.get("/users/search", isAdmin, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { q: searchTerm } = req.query;
+    
+    if (!searchTerm || typeof searchTerm !== 'string' || searchTerm.trim().length < 2) {
+      return sendError(res, "Search term must be at least 2 characters", 400);
+    }
+
+    const searchResults = await storage.searchUsersForAssignment(searchTerm.trim());
+    
+    logger.info("User search completed", { searchTerm, resultCount: searchResults.length });
+    return sendSuccess(res, searchResults);
+  } catch (error) {
+    logger.error("Error searching users", { error, searchTerm: req.query.q });
+    return sendError(res, "Failed to search users", 500);
+  }
+}));
+
 // Get specific user by ID
 router.get("/users/:id", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
   try {
@@ -1211,38 +1243,6 @@ router.get("/sales-reps/:id/users", isAdmin, asyncHandler(async (req: Request, r
   } catch (error) {
     logger.error("Error fetching users for sales rep", { error, repId: req.params.id });
     return sendError(res, "Failed to fetch users", 500);
-  }
-}));
-
-// Get unassigned users (not assigned to any sales rep)
-router.get("/users/unassigned", isAdmin, asyncHandler(async (req: Request, res: Response) => {
-  try {
-    const unassignedUsers = await storage.getUnassignedUsers();
-    
-    logger.info("Unassigned users fetched", { userCount: unassignedUsers.length });
-    return sendSuccess(res, unassignedUsers);
-  } catch (error) {
-    logger.error("Error fetching unassigned users", { error });
-    return sendError(res, "Failed to fetch unassigned users", 500);
-  }
-}));
-
-// Search users for assignment purposes
-router.get("/users/search", isAdmin, asyncHandler(async (req: Request, res: Response) => {
-  try {
-    const { q: searchTerm } = req.query;
-    
-    if (!searchTerm || typeof searchTerm !== 'string' || searchTerm.trim().length < 2) {
-      return sendError(res, "Search term must be at least 2 characters", 400);
-    }
-
-    const searchResults = await storage.searchUsersForAssignment(searchTerm.trim());
-    
-    logger.info("User search completed", { searchTerm, resultCount: searchResults.length });
-    return sendSuccess(res, searchResults);
-  } catch (error) {
-    logger.error("Error searching users", { error, searchTerm: req.query.q });
-    return sendError(res, "Failed to search users", 500);
   }
 }));
 
