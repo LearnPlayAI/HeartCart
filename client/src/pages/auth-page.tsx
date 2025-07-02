@@ -201,7 +201,6 @@ export default function AuthPage() {
       password: "",
       confirmPassword: "",
       repCode: repCodeFromUrl || "", // Pre-fill repCode from URL parameter, default to empty string
-      acceptTerms: false,
     },
   });
 
@@ -283,34 +282,56 @@ export default function AuthPage() {
     );
   };
 
-  // Handle register submit
+  // Handle register submit - show Terms modal first
   const onRegisterSubmit = (data: RegisterFormData) => {
-    // Send all data including confirmPassword and acceptTerms as expected by backend
-    registerMutation.mutate(data, {
-      onSuccess: (response: any) => {
-        // Check if email verification was sent
-        if (response?.emailVerificationSent) {
-          // Show email verification modal instead of navigating
-          setVerificationEmailData({
-            email: data.email,
-            username: data.username
+    // Store the registration data and show Terms modal
+    setPendingRegistrationData(data);
+    setIsTermsModalOpen(true);
+  };
+
+  // Handle Terms acceptance - proceed with actual registration
+  const handleTermsAccepted = () => {
+    setIsTermsModalOpen(false);
+    
+    if (pendingRegistrationData) {
+      // Send registration data to backend (with acceptTerms: true implied)
+      const registrationData = { ...pendingRegistrationData, acceptTerms: true };
+      registerMutation.mutate(registrationData, {
+        onSuccess: (response: any) => {
+          // Check if email verification was sent
+          if (response?.emailVerificationSent) {
+            // Show email verification modal instead of navigating
+            setVerificationEmailData({
+              email: pendingRegistrationData.email,
+              username: pendingRegistrationData.username
+            });
+            setIsEmailVerificationModalOpen(true);
+          } else {
+            // Fallback to old behavior if no verification sent
+            queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
+            navigate('/');
+          }
+          // Clear pending data
+          setPendingRegistrationData(null);
+        },
+        onError: (error: Error) => {
+          toast({
+            title: "Registration failed",
+            description: error.message,
+            variant: "destructive",
           });
-          setIsEmailVerificationModalOpen(true);
-        } else {
-          // Fallback to old behavior if no verification sent
-          queryClient.invalidateQueries({ queryKey: ['/api/user'] });
-          queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
-          navigate('/');
-        }
-      },
-      onError: (error: Error) => {
-        toast({
-          title: "Registration failed",
-          description: error.message,
-          variant: "destructive",
-        });
-      },
-    });
+          // Clear pending data
+          setPendingRegistrationData(null);
+        },
+      });
+    }
+  };
+
+  // Handle Terms cancellation
+  const handleTermsCancelled = () => {
+    setIsTermsModalOpen(false);
+    setPendingRegistrationData(null);
   };
 
   return (
@@ -651,29 +672,6 @@ export default function AuthPage() {
                         )}
                       />
 
-                      <FormField
-                        control={registerForm.control}
-                        name="acceptTerms"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                            <FormControl>
-                              <input
-                                type="checkbox"
-                                checked={field.value}
-                                onChange={field.onChange}
-                                className="mt-1"
-                              />
-                            </FormControl>
-                            <div className="space-y-1 leading-none">
-                              <FormLabel className="text-sm font-normal">
-                                I accept the terms and conditions
-                              </FormLabel>
-                              <FormMessage />
-                            </div>
-                          </FormItem>
-                        )}
-                      />
-
                       <Button
                         type="submit"
                         className="w-full"
@@ -885,6 +883,13 @@ export default function AuthPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Terms & Conditions Modal */}
+      <TermsModal
+        open={isTermsModalOpen}
+        onAccept={handleTermsAccepted}
+        onCancel={handleTermsCancelled}
+      />
     </div>
   );
 }

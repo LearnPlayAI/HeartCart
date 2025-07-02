@@ -173,29 +173,9 @@ export function TermsModal({ open, onAccept, onCancel }: TermsModalProps) {
               </div>
             </section>
 
-            {/* Payment Information */}
-            <section>
-              <h3 className="font-semibold text-base mb-2">8. Payments and Payment Options</h3>
-              <div className="space-y-2">
-                <p>
-                  <strong>IMPORTANT:</strong> Your payment confirms your order. No product will be supplied or shipped without payment confirmation.
-                </p>
-                
-                <p>Payment methods available:</p>
-                <ul className="list-disc list-inside ml-4 space-y-1">
-                  <li><strong>Bank EFT:</strong> Electronic Funds Transfer using your order number as reference</li>
-                  <li><strong>Store Credit:</strong> Use accumulated store credit for purchases</li>
-                </ul>
-                
-                <p>
-                  When paying via bank deposit or EFT, please use your order number as reference to ensure proper payment allocation.
-                </p>
-              </div>
-            </section>
-
             {/* Product Descriptions & Disclaimers */}
             <section>
-              <h3 className="font-semibold text-base mb-2">9. Color and Size Disclaimer</h3>
+              <h3 className="font-semibold text-base mb-2">8. Color and Size Disclaimer</h3>
               <div className="space-y-3">
                 <p>
                   The details of products, descriptions, or specifications (for example weight, color, size, etc.) are only approximate values. 
@@ -222,7 +202,7 @@ export function TermsModal({ open, onAccept, onCancel }: TermsModalProps) {
 
             {/* Legal Terms */}
             <section>
-              <h3 className="font-semibold text-base mb-2">10. Legal Terms</h3>
+              <h3 className="font-semibold text-base mb-2">9. Legal Terms</h3>
               <div className="space-y-2">
                 <p>
                   We reserve the right to refuse orders, cancel any sale, and terminate accounts at our discretion.
@@ -239,7 +219,7 @@ export function TermsModal({ open, onAccept, onCancel }: TermsModalProps) {
 
             {/* Contact Information */}
             <section>
-              <h3 className="font-semibold text-base mb-2">11. Contact Information</h3>
+              <h3 className="font-semibold text-base mb-2">10. Contact Information</h3>
               <div className="space-y-1">
                 <p>For questions about these Terms & Conditions or any issues:</p>
                 <p className="ml-4">
