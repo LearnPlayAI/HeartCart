@@ -248,6 +248,29 @@ export default function UserAdminPageFixed() {
     },
   });
 
+  // Update user status mutation
+  const updateUserStatusMutation = useMutation({
+    mutationFn: async ({ userId, isActive }: { userId: number; isActive: boolean }) => {
+      const response = await apiRequest('PATCH', `/api/admin/users/${userId}`, { isActive });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update user status');
+      }
+      return response.json();
+    },
+    onSuccess: (data, variables) => {
+      toast({ 
+        title: variables.isActive ? 'User reactivated' : 'User deactivated',
+        description: variables.isActive ? 'The user can now log in again.' : 'The user can no longer log in.'
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users/stats'] });
+    },
+    onError: () => {
+      toast({ title: 'Failed to update user status', variant: 'destructive' });
+    },
+  });
+
 
 
   const handleFilterChange = (type: string, value: string) => {
@@ -282,6 +305,10 @@ export default function UserAdminPageFixed() {
 
   const handleRoleChange = (userId: number, newRole: string) => {
     updateUserRoleMutation.mutate({ userId, role: newRole });
+  };
+
+  const handleStatusChange = (userId: number, isActive: boolean) => {
+    updateUserStatusMutation.mutate({ userId, isActive });
   };
 
   const formatDate = (dateString: string) => {
