@@ -268,8 +268,8 @@ const ProductListing = () => {
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const [attributeFilters, setAttributeFilters] = useState<AttributeFilter[]>([]);
   const [filters, setFilters] = useState({
-    onSale: searchParams.get('on_sale') === 'true',
-    freeShipping: searchParams.get('free_shipping') === 'true',
+    onPromotion: searchParams.get('on_promotion') === 'true',
+    featuredProducts: searchParams.get('featured_products') === 'true',
     newArrivals: searchParams.get('new_arrivals') === 'true'
   });
   
@@ -570,8 +570,8 @@ const ProductListing = () => {
     if (selectedCategory) params.set('category', selectedCategory);
     if (ratingFilter) params.set('rating', ratingFilter);
     if (searchQuery) params.set('q', searchQuery);
-    if (filters.onSale) params.set('on_sale', 'true');
-    if (filters.freeShipping) params.set('free_shipping', 'true');
+    if (filters.onPromotion) params.set('on_promotion', 'true');
+    if (filters.featuredProducts) params.set('featured_products', 'true');
     if (filters.newArrivals) params.set('new_arrivals', 'true');
     if (page > 1) params.set('page', page.toString());
     
@@ -589,8 +589,8 @@ const ProductListing = () => {
       const category = categories?.find(c => c.id.toString() === selectedCategory);
       if (category) newActiveFilters.push(`Category: ${category.name}`);
     }
-    if (filters.onSale) newActiveFilters.push('On Sale');
-    if (filters.freeShipping) newActiveFilters.push('Free Shipping');
+    if (filters.onPromotion) newActiveFilters.push('On Promotion');
+    if (filters.featuredProducts) newActiveFilters.push('Featured Products');
     if (filters.newArrivals) newActiveFilters.push('New Arrivals');
     if (ratingFilter) {
       const ratingOption = ratingOptions.find(o => o.value === ratingFilter);
@@ -750,10 +750,10 @@ const ProductListing = () => {
   const removeFilter = (filter: string) => {
     if (filter.startsWith('Category:')) {
       setSelectedCategory(null);
-    } else if (filter === 'On Sale') {
-      setFilters(prev => ({ ...prev, onSale: false }));
-    } else if (filter === 'Free Shipping') {
-      setFilters(prev => ({ ...prev, freeShipping: false }));
+    } else if (filter === 'On Promotion') {
+      setFilters(prev => ({ ...prev, onPromotion: false }));
+    } else if (filter === 'Featured Products') {
+      setFilters(prev => ({ ...prev, featuredProducts: false }));
     } else if (filter === 'New Arrivals') {
       setFilters(prev => ({ ...prev, newArrivals: false }));
     } else if (ratingOptions.some(o => o.label === filter)) {
@@ -790,8 +790,8 @@ const ProductListing = () => {
     setRatingFilter('');
     setPriceRange([0, 5000]);
     setFilters({
-      onSale: false,
-      freeShipping: false,
+      onPromotion: false,
+      featuredProducts: false,
       newArrivals: false
     });
     setAttributeFilters([]);
@@ -1083,33 +1083,33 @@ const ProductListing = () => {
                   <div className="space-y-3">
                     <div className="flex items-center space-x-2">
                       <Checkbox 
-                        id="onSale" 
-                        checked={filters.onSale}
+                        id="onPromotion" 
+                        checked={filters.onPromotion}
                         onCheckedChange={checked => 
-                          handleFilterChange('onSale', checked as boolean)
+                          handleFilterChange('onPromotion', checked as boolean)
                         }
                       />
                       <label 
-                        htmlFor="onSale"
+                        htmlFor="onPromotion"
                         className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                       >
-                        Special Deals
+                        On Promotion
                       </label>
                     </div>
                     
                     <div className="flex items-center space-x-2">
                       <Checkbox 
-                        id="freeShipping" 
-                        checked={filters.freeShipping}
+                        id="featuredProducts" 
+                        checked={filters.featuredProducts}
                         onCheckedChange={checked => 
-                          handleFilterChange('freeShipping', checked as boolean)
+                          handleFilterChange('featuredProducts', checked as boolean)
                         }
                       />
                       <label 
-                        htmlFor="freeShipping"
+                        htmlFor="featuredProducts"
                         className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                       >
-                        Free Shipping
+                        Featured Products
                       </label>
                     </div>
                     
