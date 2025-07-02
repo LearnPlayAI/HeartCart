@@ -366,7 +366,7 @@ Register now and start shopping! 🛍️`;
     // Pre-fill the payment form with the calculated amount owed and auto-generated reference
     setNewPayment({
       amount: amountOwed.toFixed(2),
-      paymentMethod: 'bank_transfer',
+      paymentMethod: 'credit',
       referenceNumber: autoReferenceNumber,
       notes: ''
     });

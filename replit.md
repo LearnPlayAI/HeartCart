@@ -493,6 +493,10 @@ Changelog:
   * Complete audit trail system: auto-reference numbers + detailed notes with order numbers + commission status tracking
   * Enhanced payment processing maintains all existing functionality (commission marking, credit conversion, etc.)
   * Production-ready with improved tracking and accountability for commission payment management
+- July 2, 2025. Sales rep payment default selection optimization:
+  * Changed default payment method from "Bank Transfer" to "Store Credit" in payment recording modal
+  * Streamlines admin workflow by pre-selecting the most commonly used payment method
+  * Maintains all existing payment functionality while improving user experience
 - July 1, 2025. Enhanced EFT Payment Management card for improved admin banking verification:
   * Completely redesigned EFT Payment Management card on admin order detail page (/admin/orders/{id})
   * Replaced outdated proof of payment upload system with comprehensive customer payment information display
