@@ -51,7 +51,6 @@ export default function RecordPaymentPage() {
   const repId = parseInt(params.id || '0');
 
   const [paymentData, setPaymentData] = useState({
-    amount: 0,
     paymentMethod: 'Store Credit', // Default to Store Credit as per requirement
     referenceNumber: '',
     notes: ''
@@ -89,7 +88,6 @@ export default function RecordPaymentPage() {
       setPaymentData(prev => ({
         ...prev,
         referenceNumber,
-        amount: totalAmountOwed,
         notes: orderNumbers.length > 0 ? `Commission payment for orders: ${orderNumbers.join(', ')}` : ''
       }));
     }
@@ -119,10 +117,10 @@ export default function RecordPaymentPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!paymentData.amount || paymentData.amount <= 0) {
+    if (!totalAmountOwed || totalAmountOwed <= 0) {
       toast({
         title: "Validation Error",
-        description: "Please enter a valid payment amount",
+        description: "No outstanding commissions to pay",
         variant: "destructive"
       });
       return;
@@ -135,7 +133,13 @@ export default function RecordPaymentPage() {
       });
       return;
     }
-    recordPaymentMutation.mutate(paymentData);
+    
+    // Submit with auto-calculated amount instead of user-entered amount
+    const submitData = {
+      ...paymentData,
+      amount: totalAmountOwed // Use API-calculated amount
+    };
+    recordPaymentMutation.mutate(submitData);
   };
 
   const formatCurrency = (amount: number) => {
@@ -244,22 +248,30 @@ export default function RecordPaymentPage() {
           </CardHeader>
           <CardContent className="p-6">
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Amount */}
+              {/* Amount - Auto-populated from outstanding commissions */}
               <div className="space-y-2">
                 <Label htmlFor="amount" className="text-sm font-medium">
                   Payment Amount <span className="text-red-500">*</span>
                 </Label>
-                <Input
-                  id="amount"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={paymentData.amount}
-                  onChange={(e) => setPaymentData({...paymentData, amount: parseFloat(e.target.value) || 0})}
-                  className="focus:ring-pink-500 focus:border-pink-500"
-                  placeholder="Enter payment amount"
-                />
-                <p className="text-xs text-gray-500">Amount in South African Rand (ZAR)</p>
+                <div className="relative">
+                  <Input
+                    id="amount"
+                    type="text"
+                    value={formatCurrency(totalAmountOwed)}
+                    readOnly
+                    className="bg-gray-50 border-gray-300 text-gray-700 cursor-not-allowed"
+                    placeholder="Auto-calculated from outstanding commissions"
+                  />
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                    <Calculator className="w-4 h-4 text-gray-400" />
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <Info className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
+                  <p className="text-xs text-blue-600">
+                    Amount automatically calculated from outstanding commissions ({commissions.length} unpaid commissions totaling {formatCurrency(totalAmountOwed)})
+                  </p>
+                </div>
               </div>
 
               {/* Payment Method */}
