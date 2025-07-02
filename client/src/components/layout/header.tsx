@@ -89,6 +89,16 @@ const Header = () => {
           
           {/* Navigation Icons */}
           <div className="flex items-center space-x-4">
+            {/* Mobile Refresh Button - Available for all users */}
+            <button
+              onClick={handleRefreshSite}
+              disabled={isRefreshing}
+              className="sm:hidden flex items-center justify-center p-2 text-[#FF69B4] hover:text-[#FF1493] hover:bg-pink-50 rounded-full transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              title={isRefreshing ? 'Refreshing...' : 'Refresh Site'}
+            >
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            </button>
+
             {user ? (
               // Authenticated user - show profile dropdown, cart and logout
               <>
@@ -199,16 +209,6 @@ const Header = () => {
                   size="sm"
                   className="hidden sm:flex"
                 />
-                
-                {/* Mobile Refresh Button - Safe position next to cart */}
-                <button
-                  onClick={handleRefreshSite}
-                  disabled={isRefreshing}
-                  className="sm:hidden flex items-center justify-center p-2 text-[#FF69B4] hover:text-[#FF1493] hover:bg-pink-50 rounded-full transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                  title={isRefreshing ? 'Refreshing...' : 'Refresh Site'}
-                >
-                  <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                </button>
 
                 <Button 
                   variant="outline" 
