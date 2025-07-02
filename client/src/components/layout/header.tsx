@@ -212,17 +212,20 @@ const Header = () => {
                 </button>
 
                 <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="relative"
+                  variant="outline" 
+                  className="relative flex items-center gap-2 border-[#FF69B4] bg-white hover:bg-[#FF69B4] text-[#FF69B4] hover:text-white font-medium transition-all duration-200 shadow-sm hover:shadow-md px-3 py-2"
                   onClick={openCart}
                 >
-                  <ShoppingCart className="h-5 w-5 text-gray-700 hover:text-[#FF69B4]" />
+                  <ShoppingCart className="h-4 w-4" />
+                  <span className="hidden sm:inline text-sm font-semibold">Cart</span>
                   {cartSummary.itemCount > 0 && (
-                    <span className="absolute -top-2 -right-2 bg-[#FF69B4] text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                    <span className="bg-[#FF1493] text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center min-w-[20px]">
                       {cartSummary.itemCount}
                     </span>
                   )}
+                  <span className="text-xs font-bold">
+                    R{cartSummary.totalAmount.toFixed(2)}
+                  </span>
                 </Button>
               </>
             ) : (
