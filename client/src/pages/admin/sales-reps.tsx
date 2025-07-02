@@ -171,7 +171,7 @@ Register now and start shopping! 🛍️`;
             <CardContent>
               <div className="text-2xl font-bold">
                 {salesReps.length > 0 
-                  ? (salesReps.reduce((sum: number, rep: SalesRep) => sum + rep.commissionRate, 0) / salesReps.length).toFixed(1)
+                  ? (salesReps.reduce((sum: number, rep: SalesRep) => sum + Number(rep.commissionRate), 0) / salesReps.length).toFixed(1)
                   : 0}%
               </div>
               <p className="text-xs text-muted-foreground">
