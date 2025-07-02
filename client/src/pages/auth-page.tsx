@@ -16,6 +16,7 @@ import { useLocation, useParams } from "wouter";
 import { AtSign, KeyRound, User, ShoppingBag, Loader2, Mail, CheckCircle, Lock as LockIcon } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { TermsModal } from "@/components/TermsModal";
 
 // Define the login form schema
 const loginSchema = z.object({
@@ -45,9 +46,6 @@ const registerSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters"),
   confirmPassword: z.string().min(6, "Password must be at least 6 characters"),
   repCode: z.string().trim().optional().transform(val => val === "" ? null : val), // Optional sales rep code, convert empty string to null
-  acceptTerms: z.boolean().refine(val => val === true, {
-    message: "You must accept the terms and conditions"
-  })
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords do not match",
   path: ["confirmPassword"],
@@ -71,6 +69,8 @@ export default function AuthPage() {
   const [isEmailSentModalOpen, setIsEmailSentModalOpen] = useState(false);
   const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
   const [isEmailVerificationModalOpen, setIsEmailVerificationModalOpen] = useState(false);
+  const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
+  const [pendingRegistrationData, setPendingRegistrationData] = useState<RegisterFormData | null>(null);
   const [resetTokenData, setResetTokenData] = useState<{email: string} | null>(null);
   const [verificationEmailData, setVerificationEmailData] = useState<{email: string, username: string} | null>(null);
   const [currentResetToken, setCurrentResetToken] = useState<string | null>(resetToken);
