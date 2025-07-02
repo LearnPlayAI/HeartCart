@@ -1283,13 +1283,29 @@ const ProductListing = () => {
               <>
                 {viewMode === 'grid' ? (
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {filteredProducts.map(product => (
-                      <ProductCard
-                        key={product.id}
-                        product={product}
-                        showAddToCart={true}
-                      />
-                    ))}
+                    {filteredProducts.map(product => {
+                      // Find promotion for this product
+                      const productPromotion = activePromotions
+                        .flatMap((promo: any) => promo.products?.map((pp: any) => ({ ...pp, promotion: promo })) || [])
+                        .find((pp: any) => pp.productId === product.id);
+
+                      const promotionInfo = productPromotion ? {
+                        promotionName: productPromotion.promotion.promotionName,
+                        promotionDiscount: productPromotion.extraDiscountPercentage || productPromotion.discountOverride || productPromotion.promotion.discountValue,
+                        promotionDiscountType: productPromotion.promotion.promotionType,
+                        promotionEndDate: productPromotion.promotion.endDate,
+                        promotionalPrice: productPromotion.promotionalPrice ? Number(productPromotion.promotionalPrice) : null
+                      } : undefined;
+
+                      return (
+                        <ProductCard
+                          key={product.id}
+                          product={product}
+                          showAddToCart={true}
+                          promotionInfo={promotionInfo}
+                        />
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="space-y-4">
