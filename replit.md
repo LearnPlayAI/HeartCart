@@ -615,6 +615,13 @@ Changelog:
   * Updated column header from "Created" to "Join Date" for better clarity in admin dashboard
   * Applied timestamps to all existing users in database with realistic historical dates
   * Future user registrations will now properly capture join date timestamps automatically
+- July 2, 2025. Enhanced sales rep user assignment system with comprehensive cache invalidation:
+  * Fixed critical cache invalidation issue where assignment changes weren't reflecting in search results and unassigned users list
+  * Updated all three mutation success handlers (assign, remove, reassign) to invalidate all relevant query caches
+  * Added cache invalidation for: /api/admin/sales-reps, /api/admin/users, /api/admin/users/unassigned, /api/admin/users/search
+  * All mutations now trigger refetchAssigned() and refetchUnassigned() for immediate UI updates
+  * Assignment changes now reflect instantly in search results, unassigned users list, and assigned users sections
+  * Comprehensive real-time synchronization ensures database as single source of truth with proper cache management
 ```
 
 ## User Preferences

@@ -112,7 +112,10 @@ export function UserAssignmentDialog({ open, onOpenChange, salesRep, allSalesRep
       // Invalidate and refetch all related queries
       queryClient.invalidateQueries({ queryKey: ['/api/admin/sales-reps'] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users/unassigned'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users/search'] });
       refetchAssigned();
+      refetchUnassigned();
     },
     onError: (error: any) => {
       toast({
@@ -136,7 +139,10 @@ export function UserAssignmentDialog({ open, onOpenChange, salesRep, allSalesRep
       });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/sales-reps'] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users/unassigned'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users/search'] });
       refetchAssigned();
+      refetchUnassigned();
     },
     onError: (error: any) => {
       toast({
@@ -160,7 +166,10 @@ export function UserAssignmentDialog({ open, onOpenChange, salesRep, allSalesRep
       });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/sales-reps'] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users/unassigned'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users/search'] });
       refetchAssigned();
+      refetchUnassigned();
     },
     onError: (error: any) => {
       toast({
