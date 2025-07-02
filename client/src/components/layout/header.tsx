@@ -271,7 +271,7 @@ const Header = () => {
               All Products
             </Link>
             
-            {/* Standalone Refresh Site Button - Hidden on mobile to prevent overflow */}
+            {/* Standalone Refresh Site Button - Right after All Products */}
             <button
               onClick={handleRefreshSite}
               disabled={isRefreshing}
