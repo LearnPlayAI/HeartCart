@@ -694,8 +694,8 @@ export default function CheckoutPage() {
               <PudoLockerPicker
                 selectedLockerId={selectedLocker?.id}
                 onLockerSelect={setSelectedLocker}
-                customerProvince={form.watch("province")}
-                customerCity={form.watch("city")}
+                customerProvince={user?.province || form.watch("province")}
+                customerCity={user?.city || form.watch("city")}
               />
             )}
 
