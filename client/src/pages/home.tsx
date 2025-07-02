@@ -51,9 +51,9 @@ const Home = () => {
               <div className="bg-gradient-to-r from-[#FF69B4] to-[#FF1493] p-4 flex-shrink-0">
                 <h2 className="text-white text-lg font-bold">Categories</h2>
               </div>
-              <div className="p-4 bg-[#ff68b32e] flex-1 min-h-0 overflow-hidden">
+              <div className="p-4 bg-[#ff68b32e] flex-1 min-h-0 overflow-y-auto">
                 <CategorySidebar 
-                  className="border-none p-0 h-full" 
+                  className="border-none p-0" 
                   isFilterMode={true}
                   onCategoryFilter={(categoryId, includeChildren) => {
                     // Navigate to products page with category filter using React Router

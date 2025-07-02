@@ -281,8 +281,8 @@ const CategoryPage = () => {
             )}
             
             {/* Desktop Category Sidebar */}
-            <div className="hidden md:block mb-6 max-h-64 overflow-hidden">
-              <CategorySidebar className="border rounded-md shadow-sm h-full" />
+            <div className="hidden md:block mb-6">
+              <CategorySidebar className="border rounded-md shadow-sm max-h-[calc(100vh-16rem)] overflow-y-auto" />
             </div>
             
             <div className="hidden md:flex justify-between items-center mb-4">
