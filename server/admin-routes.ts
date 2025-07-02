@@ -720,6 +720,67 @@ router.patch("/users/:id/role", isAuthenticated, asyncHandler(async (req: Reques
   }
 }));
 
+// Update user (general endpoint)
+router.patch("/users/:id", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    // TODO: Add admin role check here
+    const userId = parseInt(req.params.id);
+    
+    if (isNaN(userId)) {
+      return sendError(res, "Invalid user ID", 400);
+    }
+
+    const updateData = req.body;
+    
+    // If it's just an isActive update, use the status endpoint logic
+    if (Object.keys(updateData).length === 1 && 'isActive' in updateData) {
+      const { isActive } = updateData;
+      
+      if (typeof isActive !== 'boolean') {
+        return sendError(res, "Invalid status. Must be true or false", 400);
+      }
+
+      const updatedUser = await storage.updateUserStatus(userId, isActive);
+      
+      if (!updatedUser) {
+        return sendError(res, "User not found", 404);
+      }
+
+      // Remove password from response
+      const { password, ...userWithoutPassword } = updatedUser;
+
+      logger.info("User status updated successfully", { 
+        userId,
+        isActive,
+        adminUserId: req.user?.id
+      });
+
+      return sendSuccess(res, userWithoutPassword);
+    }
+
+    // For other updates, use the general update method
+    const updatedUser = await storage.updateUser(userId, updateData);
+    
+    if (!updatedUser) {
+      return sendError(res, "User not found", 404);
+    }
+
+    // Remove password from response
+    const { password, ...userWithoutPassword } = updatedUser;
+
+    logger.info("User updated successfully", { 
+      userId,
+      updateData: Object.keys(updateData),
+      adminUserId: req.user?.id
+    });
+
+    return sendSuccess(res, userWithoutPassword);
+  } catch (error) {
+    logger.error("Error updating user", { error, userId: req.params.id });
+    return sendError(res, "Failed to update user", 500);
+  }
+}));
+
 // Update user status (active/inactive)
 router.patch("/users/:id/status", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
   try {

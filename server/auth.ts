@@ -401,8 +401,9 @@ export function setupAuth(app: Express): void {
               timestamp: new Date().toISOString()
             });
             
-            // Return standardized auth error
-            sendError(res, "Invalid email or password", 401);
+            // Return specific error message for inactive accounts
+            const errorMessage = info?.message || "Invalid email or password";
+            sendError(res, errorMessage, 401);
             resolve(null);
             return;
           }
