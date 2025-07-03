@@ -532,7 +532,7 @@ export default function AdminOrderDetail() {
 
   // Proof of Payment download function
   const downloadProofOfPayment = async () => {
-    if (!order || !order.proofOfPayment) {
+    if (!order || !order.eftPop) {
       toast({
         title: "No Proof of Payment",
         description: "No proof of payment file is available for this order.",
@@ -543,7 +543,7 @@ export default function AdminOrderDetail() {
     
     try {
       // Extract the file path from the proof of payment URL
-      const filePath = order.proofOfPayment.replace('/api/files/', '');
+      const filePath = order.eftPop.replace('/api/files/', '');
       
       const response = await fetch(`/api/files/${filePath}`, {
         method: 'GET',
