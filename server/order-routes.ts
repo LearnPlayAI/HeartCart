@@ -324,6 +324,31 @@ router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Respons
     // Create the order
     const newOrder = await storage.createOrder(order, orderItems);
     
+    // If proof of payment was uploaded during checkout, save the path to database
+    if (orderData.proofOfPayment) {
+      try {
+        // Convert the proof of payment URL to the proper format for database storage
+        const proofPath = orderData.proofOfPayment.startsWith('/api/files/') 
+          ? orderData.proofOfPayment 
+          : `/api/files/${orderData.proofOfPayment}`;
+        
+        await storage.updateOrderEftProof(newOrder.id, proofPath);
+        
+        logger.info("Proof of payment path saved to database", {
+          orderId: newOrder.id,
+          orderNumber: newOrder.orderNumber,
+          proofPath: proofPath
+        });
+      } catch (proofError) {
+        logger.error("Failed to save proof of payment path to database", {
+          error: proofError,
+          orderId: newOrder.id,
+          proofOfPayment: orderData.proofOfPayment
+        });
+        // Don't fail the order creation if proof saving fails
+      }
+    }
+    
     // ONLY NOW deduct credits after successful order creation using transaction-based system
     if (orderData.creditUsed && orderData.creditUsed > 0) {
       try {

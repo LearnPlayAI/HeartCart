@@ -810,7 +810,7 @@ export default function AdminOrderDetail() {
                   {/* Download Buttons */}
                   <div className="flex items-center gap-2">
                     {/* Proof of Payment Download Button */}
-                    {order.proofOfPayment && (
+                    {order.eftPop && (
                       <Button 
                         onClick={downloadProofOfPayment}
                         variant="outline"
