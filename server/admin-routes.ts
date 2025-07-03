@@ -1185,13 +1185,14 @@ router.get("/sales-reps/:id/commissions-for-payment", isAdmin, asyncHandler(asyn
     // Get all unpaid commissions for this rep
     const unpaidCommissions = await storage.getUnpaidRepCommissions(repId);
     
-    // Calculate total amount owed from unpaid commissions
+    // Calculate total amount owed from unpaid commissions using the owed field
     let totalAmountOwed = 0;
     const orderNumbers: string[] = [];
     
     for (const commission of unpaidCommissions) {
-      const commissionAmount = Number(commission.commissionAmount);
-      totalAmountOwed += commissionAmount;
+      // Use the owed amount instead of commission amount for accurate debt tracking
+      const owedAmount = Number(commission.owed || commission.commissionAmount);
+      totalAmountOwed += owedAmount;
       
       // Get order number for this commission
       if (commission.orderNumber) {
@@ -1395,16 +1396,14 @@ router.get("/sales-reps/:id/summary", isAdmin, asyncHandler(async (req: Request,
     const totalEarned = commissions
       .reduce((sum, c) => sum + Number(c.commissionAmount), 0);
     
-    // Calculate effective total paid considering Bank Transfer logic
-    // Bank Transfer payments count as double their amount since they clear 100% debt with 50% payment
+    // Calculate total actually paid from payment records (for display purposes)
     const totalPaid = payments
-      .reduce((sum, p) => {
-        const paymentAmount = Number(p.amount);
-        const effectiveAmount = p.paymentMethod === 'Bank Transfer' ? paymentAmount * 2 : paymentAmount;
-        return sum + effectiveAmount;
-      }, 0);
+      .reduce((sum, p) => sum + Number(p.amount), 0);
     
-    const amountOwed = Math.max(0, totalEarned - totalPaid);
+    // Calculate amount owed using the new owed field system - sum up actual owed amounts from unpaid commissions
+    const amountOwed = commissions
+      .filter(c => c.status === 'earned') // Only unpaid commissions
+      .reduce((sum, c) => sum + Number(c.owed || c.commissionAmount), 0);
 
     const summary = {
       totalEarned,

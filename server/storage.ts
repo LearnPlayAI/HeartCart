@@ -4039,6 +4039,7 @@ export class DatabaseStorage implements IStorage {
                       totalCustomerPaidAmount: totalCustomerPaidAmount.toString(),
                       totalCostAmount: totalCostAmount.toString(),
                       status: 'earned' as const,
+                      owed: totalCommission.toString(), // Set owed amount equal to commission amount for new commissions
                       notes: `Commission for delivered order ${updatedOrder.orderNumber}`
                     };
 
@@ -13475,6 +13476,8 @@ export class DatabaseStorage implements IStorage {
           totalCustomerPaidAmount: repCommissions.totalCustomerPaidAmount,
           totalCostAmount: repCommissions.totalCostAmount,
           status: repCommissions.status,
+          paymentMethod: repCommissions.paymentMethod,
+          owed: repCommissions.owed,
           notes: repCommissions.notes,
           createdAt: repCommissions.createdAt,
           updatedAt: repCommissions.updatedAt,
@@ -13590,6 +13593,7 @@ export class DatabaseStorage implements IStorage {
         .select({
           id: repCommissions.id,
           commissionAmount: repCommissions.commissionAmount,
+          owed: repCommissions.owed,
           orderId: repCommissions.orderId
         })
         .from(repCommissions)
@@ -13604,12 +13608,13 @@ export class DatabaseStorage implements IStorage {
 
       // Select commissions that will be paid starting with the oldest
       for (const commission of unpaidCommissions) {
-        const commissionAmount = Number(commission.commissionAmount);
+        // Use the owed amount instead of commission amount for payment calculations
+        const owedAmount = Number(commission.owed || commission.commissionAmount);
         
-        if (remainingPayment >= commissionAmount) {
+        if (remainingPayment >= owedAmount) {
           // This commission can be fully paid
           commissionsForPayment.push(commission);
-          remainingPayment -= commissionAmount;
+          remainingPayment -= owedAmount;
         } else if (remainingPayment > 0) {
           // Partial payment scenario - for simplicity, we'll only mark as paid if fully covered
           break;
@@ -13718,50 +13723,27 @@ export class DatabaseStorage implements IStorage {
         ));
 
       if (unpaidCommissions.length > 0) {
-        // For Bank Transfer: Update commission amounts and rates to half values in the database
-        if (paymentMethod === 'Bank Transfer') {
-          for (const commission of unpaidCommissions) {
-            const halfCommissionAmount = (Number(commission.commissionAmount) / 2).toFixed(2);
-            const halfCommissionRate = (Number(commission.commissionRate) / 2).toFixed(2);
-            
-            await db
-              .update(repCommissions)
-              .set({ 
-                status: 'paid',
-                paymentMethod: paymentMethod,
-                commissionAmount: halfCommissionAmount,
-                commissionRate: halfCommissionRate,
-                updatedAt: new Date()
-              })
-              .where(eq(repCommissions.id, commission.id));
-          }
-          
-          logger.info('Marked all unpaid commissions as paid with halved amounts for bank transfer', { 
-            repId, 
-            paymentMethod,
-            commissionsMarkedAsPaid: unpaidCommissions.length,
-            commissionIds: unpaidCommissions.map(c => c.id)
-          });
-        } else {
-          // For other payment methods: Keep original amounts and rates
-          const commissionIds = unpaidCommissions.map(c => c.id);
-          
-          await db
-            .update(repCommissions)
-            .set({ 
-              status: 'paid',
-              paymentMethod: paymentMethod,
-              updatedAt: new Date()
-            })
-            .where(inArray(repCommissions.id, commissionIds));
+        // Mark all unpaid commissions as paid and zero out the owed amount
+        // Keep original commission amounts intact for record keeping
+        const commissionIds = unpaidCommissions.map(c => c.id);
+        
+        await db
+          .update(repCommissions)
+          .set({ 
+            status: 'paid',
+            paymentMethod: paymentMethod,
+            owed: '0.00', // Zero out the owed amount when paid
+            updatedAt: new Date()
+          })
+          .where(inArray(repCommissions.id, commissionIds));
 
-          logger.info('Marked all unpaid commissions as paid', { 
-            repId, 
-            paymentMethod,
-            commissionsMarkedAsPaid: commissionIds.length,
-            commissionIds 
-          });
-        }
+        logger.info('Marked all unpaid commissions as paid and zeroed owed amounts', { 
+          repId, 
+          paymentMethod,
+          commissionsMarkedAsPaid: commissionIds.length,
+          commissionIds,
+          totalOwedCleared: unpaidCommissions.reduce((sum, c) => sum + Number(c.owed || c.commissionAmount), 0)
+        });
       }
     } catch (error) {
       logger.error('Error marking all unpaid commissions as paid', { error, repId });
