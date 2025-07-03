@@ -530,6 +530,69 @@ export default function AdminOrderDetail() {
     }
   };
 
+  // Proof of Payment download function
+  const downloadProofOfPayment = async () => {
+    if (!order || !order.proofOfPayment) {
+      toast({
+        title: "No Proof of Payment",
+        description: "No proof of payment file is available for this order.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      // Extract the file path from the proof of payment URL
+      const filePath = order.proofOfPayment.replace('/api/files/', '');
+      
+      const response = await fetch(`/api/files/${filePath}`, {
+        method: 'GET',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          toast({
+            title: "File Not Found",
+            description: "The proof of payment file could not be found.",
+            variant: "destructive",
+          });
+        } else {
+          throw new Error(`Failed to download proof of payment: ${response.status}`);
+        }
+        return;
+      }
+
+      // Create blob from response
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      
+      // Create download link
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Proof-of-Payment-${order.orderNumber}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Download Started",
+        description: "Proof of payment download has started.",
+      });
+      
+    } catch (error) {
+      console.error('Proof of payment download error:', error);
+      toast({
+        title: "Download Failed",
+        description: "Failed to download proof of payment. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (isLoading) {
     return (
       <AdminLayout>
@@ -744,18 +807,34 @@ export default function AdminOrderDetail() {
                     </Badge>
                   </div>
                   
-                  {/* Invoice Download Button */}
-                  {(order.paymentStatus === 'payment_received' || order.status === 'payment received') && (
-                    <Button 
-                      onClick={downloadInvoice}
-                      variant="outline"
-                      size="sm"
-                      className="flex items-center gap-2"
-                    >
-                      <Download className="h-4 w-4" />
-                      Download Invoice
-                    </Button>
-                  )}
+                  {/* Download Buttons */}
+                  <div className="flex items-center gap-2">
+                    {/* Proof of Payment Download Button */}
+                    {order.proofOfPayment && (
+                      <Button 
+                        onClick={downloadProofOfPayment}
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center gap-2"
+                      >
+                        <Download className="h-4 w-4" />
+                        Download POP
+                      </Button>
+                    )}
+                    
+                    {/* Invoice Download Button */}
+                    {(order.paymentStatus === 'payment_received' || order.status === 'payment received') && (
+                      <Button 
+                        onClick={downloadInvoice}
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center gap-2"
+                      >
+                        <Download className="h-4 w-4" />
+                        Download Invoice
+                      </Button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Customer & Payment Information */}
