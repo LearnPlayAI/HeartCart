@@ -39,8 +39,8 @@ const PrivacyPolicy = () => {
               <div className="bg-pink-50 p-4 rounded-lg border-l-4 border-[#FF69B4]">
                 <p className="text-gray-700 font-medium">
                   <strong>Data Protection Officer:</strong> TeeMeYou Privacy Team<br />
-                  <strong>Contact:</strong> privacy@teemeyou.shop<br />
-                  <strong>Phone:</strong> +27 (0) 11 123 4567
+                  <strong>Contact:</strong> sales@teemeyou.shop<br />
+                  <strong>Phone:</strong> +27 71 2063084
                 </p>
               </div>
             </CardContent>
@@ -410,8 +410,8 @@ const PrivacyPolicy = () => {
                 <div>
                   <h4 className="font-semibold text-gray-900 mb-3">Contact Our Privacy Team</h4>
                   <div className="space-y-2 text-gray-700">
-                    <p><strong>Email:</strong> privacy@teemeyou.shop</p>
-                    <p><strong>Phone:</strong> +27 (0) 11 123 4567</p>
+                    <p><strong>Email:</strong> sales@teemeyou.shop</p>
+                    <p><strong>Phone:</strong> +27 71 2063084</p>
                     <p><strong>Address:</strong><br />
                     TeeMeYou Privacy Department<br />
                     Johannesburg, South Africa</p>
