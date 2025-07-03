@@ -63,6 +63,8 @@ import BatchUpload from "@/pages/admin/batch-upload";
 import AuthTestDashboard from "@/pages/admin/auth-test-dashboard";
 import PromotionsPage from "@/pages/admin/promotions";
 import PromotionProductsPage from "@/pages/admin/promotions/[id]/products";
+import CreatePromotionPage from "@/pages/admin/promotions/create";
+import EditPromotionPage from "@/pages/admin/promotions/edit";
 import CustomerPromotionsPage from "@/pages/promotions";
 import FeaturedPage from "@/pages/featured";
 import UserAdminPageFixed from "@/pages/admin/users-fixed";
@@ -229,6 +231,8 @@ function App() {
                   <AdminProtectedRoute path="/admin/attributes/:id/options" component={AttributeOptionEditor} />
                   <AdminProtectedRoute path="/admin/pricing" component={AdminPricing} />
                   <AdminProtectedRoute path="/admin/promotions" component={PromotionsPage} />
+                  <AdminProtectedRoute path="/admin/promotions/create" component={CreatePromotionPage} />
+                  <AdminProtectedRoute path="/admin/promotions/:id/edit" component={EditPromotionPage} />
                   <AdminProtectedRoute path="/admin/promotions/:id/products" component={PromotionProductsPage} />
                   <AdminProtectedRoute path="/admin/orders" component={AdminOrders} />
                   <AdminProtectedRoute path="/admin/orders/:id" component={AdminOrderDetail} />

@@ -1,25 +1,13 @@
-import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { AdminLayout } from "@/components/admin/layout";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Plus, Edit, Trash2, Users, TrendingUp, Gift, Package, Search, X } from "lucide-react";
+import { Calendar, Plus, Edit, Trash2, TrendingUp, Gift, MoreHorizontal, Package } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import PromotionRuleBuilder from "@/components/admin/PromotionRuleBuilder";
 
 // Types for promotions
 interface Promotion {
@@ -38,34 +26,7 @@ interface Promotion {
   updatedAt: string;
 }
 
-// Form schema for creating/editing promotions
-const promotionSchema = z.object({
-  promotionName: z.string().min(1, "Promotion name is required"),
-  description: z.string().optional(),
-  startDate: z.string().min(1, "Start date is required"),
-  endDate: z.string().min(1, "End date is required"),
-  isActive: z.boolean().default(true),
-  promotionType: z.enum(['percentage', 'fixed', 'bogo']),
-  discountValue: z.union([
-    z.string().transform((val) => val === '' ? undefined : parseFloat(val)),
-    z.number(),
-    z.undefined()
-  ]).optional(),
-  minimumOrderValue: z.union([
-    z.string().transform((val) => val === '' ? undefined : parseFloat(val)),
-    z.number(),
-    z.undefined()
-  ]).optional(),
-  rules: z.any().optional(), // JSON field for flexible promotion rules
-});
-
-type PromotionFormData = z.infer<typeof promotionSchema>;
-
 export default function PromotionsPage() {
-  const [selectedPromotion, setSelectedPromotion] = useState<Promotion | null>(null);
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, navigate] = useLocation();
@@ -77,63 +38,7 @@ export default function PromotionsPage() {
 
   const promotions = promotionsData?.data || [];
 
-  // Create promotion mutation
-  const createPromotionMutation = useMutation({
-    mutationFn: (data: PromotionFormData) => apiRequest('/api/promotions', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
-    onSuccess: () => {
-      // Invalidate all promotion-related queries
-      queryClient.invalidateQueries({ queryKey: ['/api/promotions'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/promotions/active'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/promotions/active-with-products'] });
-      
-      // Refetch the main promotions query immediately
-      queryClient.refetchQueries({ queryKey: ['/api/promotions'] });
-      
-      setIsCreateDialogOpen(false);
-      createForm.reset(); // Reset form after successful creation
-      
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error?.message || "Failed to create promotion",
-        variant: "destructive",
-      });
-    },
-  });
 
-  // Update promotion mutation
-  const updatePromotionMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<PromotionFormData> }) =>
-      apiRequest(`/api/promotions/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify(data),
-      }),
-    onSuccess: () => {
-      // Invalidate all promotion-related queries
-      queryClient.invalidateQueries({ queryKey: ['/api/promotions'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/promotions/active'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/promotions/active-with-products'] });
-      
-      // Refetch the main promotions query immediately
-      queryClient.refetchQueries({ queryKey: ['/api/promotions'] });
-      
-      setIsEditDialogOpen(false);
-      setSelectedPromotion(null);
-      editForm.reset(); // Reset edit form
-      
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error?.message || "Failed to update promotion",
-        variant: "destructive",
-      });
-    },
-  });
 
   // Delete promotion mutation
   const deletePromotionMutation = useMutation({
@@ -159,49 +64,10 @@ export default function PromotionsPage() {
     },
   });
 
-  const createForm = useForm<PromotionFormData>({
-    resolver: zodResolver(promotionSchema),
-    defaultValues: {
-      promotionName: "",
-      description: "",
-      startDate: "",
-      endDate: "",
-      isActive: true,
-      promotionType: "percentage",
-      discountValue: "",
-      minimumOrderValue: "",
-      rules: null,
-    },
-  });
 
-  const editForm = useForm<PromotionFormData>({
-    resolver: zodResolver(promotionSchema),
-  });
-
-  const onCreateSubmit = (data: PromotionFormData) => {
-    createPromotionMutation.mutate(data);
-  };
-
-  const onEditSubmit = (data: PromotionFormData) => {
-    if (selectedPromotion) {
-      updatePromotionMutation.mutate({ id: selectedPromotion.id, data });
-    }
-  };
 
   const handleEdit = (promotion: Promotion) => {
-    setSelectedPromotion(promotion);
-    editForm.reset({
-      promotionName: promotion.promotionName,
-      description: promotion.description || "",
-      startDate: promotion.startDate.split('T')[0], // Convert to date input format
-      endDate: promotion.endDate.split('T')[0],
-      isActive: promotion.isActive,
-      promotionType: promotion.promotionType,
-      discountValue: promotion.discountValue ? promotion.discountValue.toString() : "",
-      minimumOrderValue: promotion.minimumOrderValue ? promotion.minimumOrderValue.toString() : "",
-      rules: promotion.rules || null,
-    });
-    setIsEditDialogOpen(true);
+    navigate(`/admin/promotions/edit/${promotion.id}`);
   };
 
   const handleDelete = (promotion: Promotion) => {
@@ -261,193 +127,11 @@ export default function PromotionsPage() {
           <h1 className="text-3xl font-bold">Promotions Management</h1>
           <p className="text-muted-foreground">Create and manage promotional campaigns</p>
         </div>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Create Promotion
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Create New Promotion</DialogTitle>
-              <DialogDescription>
-                Set up a new promotional campaign for your products
-              </DialogDescription>
-            </DialogHeader>
-            <Form {...createForm}>
-              <form onSubmit={createForm.handleSubmit(onCreateSubmit)} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={createForm.control}
-                    name="promotionName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Promotion Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Father's Day Sale" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={createForm.control}
-                    name="promotionType"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Discount Type</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select type" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="percentage">Percentage</SelectItem>
-                            <SelectItem value="fixed">Fixed Amount</SelectItem>
-                            <SelectItem value="bogo">Buy One Get One</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+        <Button onClick={() => navigate('/admin/promotions/create')}>
+          <Plus className="mr-2 h-4 w-4" />
+          Create Promotion
+        </Button>
 
-                <FormField
-                  control={createForm.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description</FormLabel>
-                      <FormControl>
-                        <Textarea placeholder="Promotional campaign description" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={createForm.control}
-                    name="startDate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Start Date</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={createForm.control}
-                    name="endDate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>End Date</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={createForm.control}
-                    name="discountValue"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Discount Value</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            placeholder="10" 
-                            {...field} 
-                            onChange={(e) => field.onChange(e.target.value)}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={createForm.control}
-                    name="minimumOrderValue"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Minimum Order Value</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            placeholder="100" 
-                            {...field} 
-                            onChange={(e) => field.onChange(e.target.value)}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                {/* Promotion Rules Builder */}
-                <FormField
-                  control={createForm.control}
-                  name="rules"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <PromotionRuleBuilder
-                          value={field.value}
-                          onChange={field.onChange}
-                          disabled={createPromotionMutation.isPending}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={createForm.control}
-                  name="isActive"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                      <div className="space-y-0.5">
-                        <FormLabel className="text-base">Active Status</FormLabel>
-                        <div className="text-sm text-muted-foreground">
-                          Enable this promotion immediately
-                        </div>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                <div className="flex justify-end space-x-2">
-                  <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={createPromotionMutation.isPending}>
-                    {createPromotionMutation.isPending ? "Creating..." : "Create Promotion"}
-                  </Button>
-                </div>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
       </div>
 
       {/* Summary Cards */}
@@ -546,189 +230,7 @@ export default function PromotionsPage() {
         </CardContent>
       </Card>
 
-      {/* Edit Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Edit Promotion</DialogTitle>
-            <DialogDescription>
-              Update the promotional campaign details
-            </DialogDescription>
-          </DialogHeader>
-          <Form {...editForm}>
-            <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4">
-              {/* Same form fields as create form */}
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={editForm.control}
-                  name="promotionName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Promotion Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Father's Day Sale" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={editForm.control}
-                  name="promotionType"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Discount Type</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select type" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="percentage">Percentage</SelectItem>
-                          <SelectItem value="fixed">Fixed Amount</SelectItem>
-                          <SelectItem value="bogo">Buy One Get One</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
 
-              <FormField
-                control={editForm.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Promotional campaign description" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={editForm.control}
-                  name="startDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Start Date</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={editForm.control}
-                  name="endDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>End Date</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={editForm.control}
-                  name="discountValue"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Discount Value</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          placeholder="10" 
-                          {...field} 
-                          onChange={(e) => field.onChange(e.target.value)}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={editForm.control}
-                  name="minimumOrderValue"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Minimum Order Value</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          placeholder="100" 
-                          {...field} 
-                          onChange={(e) => field.onChange(e.target.value)}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              {/* Promotion Rules Builder */}
-              <FormField
-                control={editForm.control}
-                name="rules"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <PromotionRuleBuilder
-                        value={field.value}
-                        onChange={field.onChange}
-                        disabled={updatePromotionMutation.isPending}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={editForm.control}
-                name="isActive"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-base">Active Status</FormLabel>
-                      <div className="text-sm text-muted-foreground">
-                        Enable this promotion immediately
-                      </div>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-
-              <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={updatePromotionMutation.isPending}>
-                  {updatePromotionMutation.isPending ? "Updating..." : "Update Promotion"}
-                </Button>
-              </div>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
 
 
       </div>
