@@ -148,7 +148,7 @@ export default function CheckoutPage() {
       promotion.products.forEach((pp: any) => {
         promotionMap.set(pp.productId, {
           promotionName: promotion.promotionName,
-          promotionDiscount: promotion.discountValue.toString(),
+          promotionDiscount: promotion.discountValue ? promotion.discountValue.toString() : '0',
           promotionEndDate: promotion.endDate,
           promotionalPrice: pp.promotionalPrice ? parseFloat(pp.promotionalPrice) : null
         });
