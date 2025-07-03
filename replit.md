@@ -613,6 +613,13 @@ Changelog:
   * Preserved ALL core system data: users (5), products (583), categories (204), suppliers (2), promotions (1), product_attributes (35)
   * Reset sequence counters to start new records from ID 1 for organized testing
   * System ready for comprehensive testing with clean transactional slate while maintaining full product catalog and user accounts
+- July 3, 2025. Terms and Conditions page and footer layout improvements:
+  * Created comprehensive Terms and Conditions page with professional card layouts and TeeMeYou hot pink branding
+  * Added routing system for /terms-and-conditions page accessible via footer link
+  * Implemented mobile-responsive design with 10 sections covering all business terms and conditions
+  * Removed Customer Service section from footer to simplify layout and eliminate redundant contact information
+  * Updated footer grid layout from 4 columns to 3 columns for better visual balance
+  * Footer now contains: Company Info, Quick Links, and Contact Us sections only
 - July 3, 2025. Complete sales rep commission payment system bug fix and database integrity enhancement:
   * Fixed critical commission payment processing bug where owed amounts weren't being properly zeroed out after bank transfer payments
   * Updated markCommissionsAsPaid function to properly set owed = '0.00' for Store Credit payments (was missing owed field update)
