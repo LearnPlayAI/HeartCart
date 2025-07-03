@@ -67,7 +67,7 @@ export default function PromotionsPage() {
 
 
   const handleEdit = (promotion: Promotion) => {
-    navigate(`/admin/promotions/edit/${promotion.id}`);
+    navigate(`/admin/promotions/${promotion.id}/edit`);
   };
 
   const handleDelete = (promotion: Promotion) => {

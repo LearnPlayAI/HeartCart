@@ -25,8 +25,8 @@ const RULE_TYPES = [
   { value: 'none', label: 'No Special Rules', description: 'Standard promotion without additional requirements' },
   { value: 'minimum_quantity_same_promotion', label: 'Minimum Quantity', description: 'Require minimum items from same promotion' },
   { value: 'minimum_order_value', label: 'Minimum Order Value', description: 'Require minimum total order amount' },
-  { value: 'buy_x_get_y', label: 'Buy X Get Y', description: 'BOGO-style promotions (Coming Soon)' },
-  { value: 'category_mix', label: 'Category Mix', description: 'Require items from specific categories (Coming Soon)' }
+  { value: 'buy_x_get_y', label: 'Buy X Get Y', description: 'BOGO-style promotions' },
+  { value: 'category_mix', label: 'Category Mix', description: 'Require items from specific categories' }
 ];
 
 const PRICING_TYPES = [
@@ -73,6 +73,20 @@ export function PromotionRuleBuilder({ value, onChange, disabled = false }: Prom
       case 'minimum_order_value':
         return {
           minimumValue: 100
+        };
+      case 'buy_x_get_y':
+        return {
+          buyQuantity: 2,
+          getQuantity: 1,
+          getDiscountType: 'percentage', // 'percentage', 'fixed', 'free'
+          getDiscountValue: 50, // 50% off or R50 off
+          applyToLowestPrice: true
+        };
+      case 'category_mix':
+        return {
+          requiredCategories: [],
+          minimumFromEach: 1,
+          totalMinimum: 2
         };
       default:
         return {};
@@ -128,6 +142,30 @@ export function PromotionRuleBuilder({ value, onChange, disabled = false }: Prom
       
       case 'minimum_order_value':
         return `Customer must spend at least R${currentRule.minimumValue || 100} to qualify for this promotion`;
+      
+      case 'buy_x_get_y':
+        const buyQty = currentRule.buyQuantity || 2;
+        const getQty = currentRule.getQuantity || 1;
+        const discountType = currentRule.getDiscountType || 'percentage';
+        const discountValue = currentRule.getDiscountValue || 50;
+        
+        if (discountType === 'free') {
+          return `Buy ${buyQty}, get ${getQty} free`;
+        } else if (discountType === 'percentage') {
+          return `Buy ${buyQty}, get ${getQty} at ${discountValue}% off`;
+        } else {
+          return `Buy ${buyQty}, get ${getQty} at R${discountValue} off each`;
+        }
+      
+      case 'category_mix':
+        const categories = currentRule.requiredCategories || [];
+        const minFromEach = currentRule.minimumFromEach || 1;
+        const totalMin = currentRule.totalMinimum || 2;
+        
+        if (categories.length === 0) {
+          return `Must select from specific categories (not configured)`;
+        }
+        return `Must add at least ${minFromEach} item(s) from each of ${categories.length} categories, minimum ${totalMin} total items`;
       
       default:
         return 'Custom promotion rule configured';
@@ -299,6 +337,190 @@ export function PromotionRuleBuilder({ value, onChange, disabled = false }: Prom
                             onChange={(e) => updateRule({ minimumValue: parseFloat(e.target.value) || 100 })}
                             disabled={disabled}
                           />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Buy X Get Y Rule */}
+                  {currentRule.type === 'buy_x_get_y' && (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="buy-quantity">Buy Quantity</Label>
+                          <Input
+                            id="buy-quantity"
+                            type="number"
+                            min="1"
+                            value={currentRule.buyQuantity || 2}
+                            onChange={(e) => updateRule({ buyQuantity: parseInt(e.target.value) || 2 })}
+                            disabled={disabled}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="get-quantity">Get Quantity</Label>
+                          <Input
+                            id="get-quantity"
+                            type="number"
+                            min="1"
+                            value={currentRule.getQuantity || 1}
+                            onChange={(e) => updateRule({ getQuantity: parseInt(e.target.value) || 1 })}
+                            disabled={disabled}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="border rounded-lg p-4 bg-gray-50">
+                        <h4 className="font-medium mb-3">Discount for "Get" Items</h4>
+                        
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label>Discount Type</Label>
+                            <RadioGroup
+                              value={currentRule.getDiscountType || 'percentage'}
+                              onValueChange={(value) => updateRule({ getDiscountType: value })}
+                              disabled={disabled}
+                            >
+                              <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="free" id="free" />
+                                <Label htmlFor="free" className="cursor-pointer">
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">Free</span>
+                                    <span className="text-xs text-muted-foreground">Get items are completely free</span>
+                                  </div>
+                                </Label>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="percentage" id="percentage" />
+                                <Label htmlFor="percentage" className="cursor-pointer">
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">Percentage Discount</span>
+                                    <span className="text-xs text-muted-foreground">Get items receive a percentage discount</span>
+                                  </div>
+                                </Label>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="fixed" id="fixed" />
+                                <Label htmlFor="fixed" className="cursor-pointer">
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">Fixed Amount Off</span>
+                                    <span className="text-xs text-muted-foreground">Get items receive a fixed rand amount discount</span>
+                                  </div>
+                                </Label>
+                              </div>
+                            </RadioGroup>
+                          </div>
+
+                          {currentRule.getDiscountType !== 'free' && (
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label htmlFor="discount-value">
+                                  {currentRule.getDiscountType === 'percentage' ? 'Discount (%)' : 'Discount Amount (R)'}
+                                </Label>
+                                <Input
+                                  id="discount-value"
+                                  type="number"
+                                  min="0"
+                                  max={currentRule.getDiscountType === 'percentage' ? '100' : undefined}
+                                  step={currentRule.getDiscountType === 'percentage' ? '1' : '0.01'}
+                                  value={currentRule.getDiscountValue || 50}
+                                  onChange={(e) => updateRule({ getDiscountValue: parseFloat(e.target.value) || 50 })}
+                                  disabled={disabled}
+                                />
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              id="lowest-price"
+                              checked={currentRule.applyToLowestPrice !== false}
+                              onChange={(e) => updateRule({ applyToLowestPrice: e.target.checked })}
+                              disabled={disabled}
+                              className="rounded border-gray-300"
+                            />
+                            <Label htmlFor="lowest-price" className="text-sm cursor-pointer">
+                              Apply discount to lowest-priced items first
+                            </Label>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Category Mix Rule */}
+                  {currentRule.type === 'category_mix' && (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="min-from-each">Minimum Items from Each Category</Label>
+                          <Input
+                            id="min-from-each"
+                            type="number"
+                            min="1"
+                            value={currentRule.minimumFromEach || 1}
+                            onChange={(e) => updateRule({ minimumFromEach: parseInt(e.target.value) || 1 })}
+                            disabled={disabled}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="total-min">Total Minimum Items</Label>
+                          <Input
+                            id="total-min"
+                            type="number"
+                            min="1"
+                            value={currentRule.totalMinimum || 2}
+                            onChange={(e) => updateRule({ totalMinimum: parseInt(e.target.value) || 2 })}
+                            disabled={disabled}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="border rounded-lg p-4 bg-gray-50">
+                        <h4 className="font-medium mb-3">Required Categories</h4>
+                        <p className="text-sm text-muted-foreground mb-3">
+                          Select categories that customers must choose from to qualify for this promotion
+                        </p>
+                        
+                        <div className="space-y-2">
+                          <Button 
+                            type="button"
+                            variant="outline" 
+                            size="sm"
+                            disabled={disabled}
+                            onClick={() => {
+                              // This would open a category selection dialog
+                              console.log('Open category selection');
+                            }}
+                          >
+                            Select Categories
+                          </Button>
+                          
+                          {currentRule.requiredCategories && currentRule.requiredCategories.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {currentRule.requiredCategories.map((categoryId: number, index: number) => (
+                                <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                                  Category {categoryId}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const newCategories = currentRule.requiredCategories.filter((_: any, i: number) => i !== index);
+                                      updateRule({ requiredCategories: newCategories });
+                                    }}
+                                    disabled={disabled}
+                                    className="ml-1 text-xs hover:text-red-600"
+                                  >
+                                    ×
+                                  </button>
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                          
+                          {(!currentRule.requiredCategories || currentRule.requiredCategories.length === 0) && (
+                            <p className="text-sm text-muted-foreground italic">No categories selected</p>
+                          )}
                         </div>
                       </div>
                     </div>
