@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, doublePrecision, jsonb, varchar, unique, decimal, index } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, doublePrecision, json, jsonb, varchar, unique, decimal, index } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -740,6 +740,7 @@ export const promotions = pgTable("promotions", {
   promotionType: text("promotionType").default("percentage").notNull(),
   discountValue: decimal("discountValue", { precision: 10, scale: 2 }),
   minimumOrderValue: decimal("minimumOrderValue", { precision: 10, scale: 2 }),
+  rules: json("rules"), // JSON field for flexible promotion rules
   createdBy: integer("createdBy").references(() => users.id),
   createdAt: text("createdAt").default(String(new Date().toISOString())).notNull(),
   updatedAt: text("updatedAt").default(String(new Date().toISOString())).notNull(),

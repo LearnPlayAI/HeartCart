@@ -19,6 +19,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import PromotionRuleBuilder from "@/components/admin/PromotionRuleBuilder";
 
 // Types for promotions
 interface Promotion {
@@ -31,6 +32,7 @@ interface Promotion {
   promotionType: 'percentage' | 'fixed' | 'bogo';
   discountValue?: number;
   minimumOrderValue?: number;
+  rules?: any; // JSON field for flexible promotion rules
   createdBy?: number;
   createdAt: string;
   updatedAt: string;
@@ -54,6 +56,7 @@ const promotionSchema = z.object({
     z.number(),
     z.undefined()
   ]).optional(),
+  rules: z.any().optional(), // JSON field for flexible promotion rules
 });
 
 type PromotionFormData = z.infer<typeof promotionSchema>;
@@ -167,6 +170,7 @@ export default function PromotionsPage() {
       promotionType: "percentage",
       discountValue: "",
       minimumOrderValue: "",
+      rules: null,
     },
   });
 
@@ -195,6 +199,7 @@ export default function PromotionsPage() {
       promotionType: promotion.promotionType,
       discountValue: promotion.discountValue ? promotion.discountValue.toString() : "",
       minimumOrderValue: promotion.minimumOrderValue ? promotion.minimumOrderValue.toString() : "",
+      rules: promotion.rules || null,
     });
     setIsEditDialogOpen(true);
   };
@@ -391,6 +396,24 @@ export default function PromotionsPage() {
                     )}
                   />
                 </div>
+
+                {/* Promotion Rules Builder */}
+                <FormField
+                  control={createForm.control}
+                  name="rules"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <PromotionRuleBuilder
+                          value={field.value}
+                          onChange={field.onChange}
+                          disabled={createPromotionMutation.isPending}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                 <FormField
                   control={createForm.control}
@@ -654,6 +677,24 @@ export default function PromotionsPage() {
                   )}
                 />
               </div>
+
+              {/* Promotion Rules Builder */}
+              <FormField
+                control={editForm.control}
+                name="rules"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <PromotionRuleBuilder
+                        value={field.value}
+                        onChange={field.onChange}
+                        disabled={updatePromotionMutation.isPending}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <FormField
                 control={editForm.control}
