@@ -26,7 +26,7 @@ const ProductWizardPage: React.FC = () => {
     queryFn: async () => {
       if (!id) return { success: true, data: null };
       const response = await apiRequest('GET', `/api/product-drafts/${id}`);
-      return response.json();
+      return response;
     },
     enabled: !!id,
   });
