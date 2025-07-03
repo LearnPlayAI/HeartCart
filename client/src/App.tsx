@@ -28,6 +28,7 @@ import FlashDeals from "@/pages/flash-deals";
 import NotFound from "@/pages/not-found";
 import VerifyEmail from "@/pages/verify-email";
 import TermsAndConditions from "@/pages/TermsAndConditions";
+import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import CartDrawer from "@/components/cart/cart-drawer";
 import { SessionExpiryWarning } from "@/components/session/session-expiry-warning";
 
@@ -287,6 +288,7 @@ function App() {
                           <Route path="/reset-password"><AuthPage /></Route>
                           <Route path="/verify-email"><VerifyEmail /></Route>
                           <Route path="/terms-and-conditions"><TermsAndConditions /></Route>
+                          <Route path="/privacy-policy"><PrivacyPolicy /></Route>
                           <Route><NotFound /></Route>
                         </Switch>
                       </main>

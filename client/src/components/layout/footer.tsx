@@ -125,9 +125,9 @@ const Footer = () => {
             © {currentYear} TeeMeYou. All rights reserved.
           </div>
           <div className="flex flex-wrap gap-4 text-sm">
-            <a href="#" className="text-gray-600 hover:text-[#FF69B4] transition-colors">
+            <Link href="/privacy-policy" className="text-gray-600 hover:text-[#FF69B4] transition-colors">
               Privacy Policy
-            </a>
+            </Link>
             <Link href="/terms-and-conditions" className="text-gray-600 hover:text-[#FF69B4] transition-colors">
               Terms and Conditions
             </Link>
