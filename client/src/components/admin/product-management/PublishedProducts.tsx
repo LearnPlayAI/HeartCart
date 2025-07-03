@@ -233,8 +233,7 @@ export const PublishedProducts: React.FC = () => {
         params.append('sortOrder', sortOrder);
       }
       
-      const response = await apiRequest('GET', `/api/products?${params.toString()}`);
-      return response.json();
+      return await apiRequest('GET', `/api/products?${params.toString()}`);
     }
   });
 
@@ -242,8 +241,7 @@ export const PublishedProducts: React.FC = () => {
   const { data: categoriesData } = useQuery({
     queryKey: ['/api/categories'],
     queryFn: async () => {
-      const response = await apiRequest('GET', '/api/categories');
-      return response.json();
+      return await apiRequest('GET', '/api/categories');
     }
   });
 
@@ -254,12 +252,11 @@ export const PublishedProducts: React.FC = () => {
   // Delete product mutation
   const deleteProductMutation = useMutation({
     mutationFn: async (productId: number) => {
-      const response = await apiRequest('DELETE', `/api/products/${productId}`);
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to delete product');
+      const result = await apiRequest('DELETE', `/api/products/${productId}`);
+      if (!result.success) {
+        throw new Error(result.error?.message || 'Failed to delete product');
       }
-      return response.json();
+      return result;
     },
     onSuccess: (data) => {
       // Invalidate and refetch the products list

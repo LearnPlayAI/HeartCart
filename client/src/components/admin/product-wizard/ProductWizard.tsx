@@ -266,8 +266,7 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ draftId, initialDa
     queryKey: ['/api/product-drafts', draftId],
     queryFn: async () => {
       if (!draftId) return null;
-      const response = await apiRequest('GET', `/api/product-drafts/${draftId}`);
-      return response.json();
+      return await apiRequest('GET', `/api/product-drafts/${draftId}`);
     },
     enabled: !!draftId,
   });

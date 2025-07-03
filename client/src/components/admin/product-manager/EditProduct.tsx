@@ -45,7 +45,7 @@ export const EditProduct: React.FC = () => {
         // If the response doesn't have the expected data structure, it might be because
         // we're hitting the wrong endpoint or route implementation
         
-        return response.json();
+        return response;
       } catch (error) {
         console.error('Error getting/creating product draft:', error);
         return null;

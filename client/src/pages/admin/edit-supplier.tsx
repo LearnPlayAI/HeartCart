@@ -52,13 +52,7 @@ export default function EditSupplier() {
   // Update supplier mutation
   const { mutate: updateSupplier, isPending } = useMutation({
     mutationFn: async (data: any) => {
-      const response = await apiRequest("PUT", `/api/suppliers/${supplierId}`, data);
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || "Failed to update supplier");
-      }
-      
-      const result = await response.json();
+      const result = await apiRequest("PUT", `/api/suppliers/${supplierId}`, data);
       if (!result.success) {
         throw new Error(result.error?.message || "Failed to update supplier");
       }
