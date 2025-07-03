@@ -348,32 +348,36 @@ export default function SalesRepCommissionsPage() {
                 Record of all commission payments made
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Method</TableHead>
-                      <TableHead>Reference</TableHead>
-                      <TableHead>Notes</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {payments.map((payment: Payment) => (
-                      <TableRow key={payment.id}>
-                        <TableCell>{formatDate(payment.createdAt)}</TableCell>
-                        <TableCell className="font-medium text-blue-600">
-                          {formatCurrency(payment.amount)}
-                        </TableCell>
-                        <TableCell>{payment.paymentMethod}</TableCell>
-                        <TableCell>{payment.referenceNumber || '-'}</TableCell>
-                        <TableCell className="max-w-xs truncate">{payment.notes || '-'}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+            <CardContent className="p-6">
+              <div className="space-y-4">
+                {payments.map((payment: Payment) => (
+                  <Card key={payment.id} className="border-l-4 border-l-blue-500 bg-gradient-to-r from-blue-50/30 to-transparent">
+                    <CardContent className="p-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div>
+                          <p className="text-sm text-gray-600 mb-1">Date</p>
+                          <p className="font-medium">{formatDate(payment.createdAt)}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-600 mb-1">Amount</p>
+                          <p className="font-bold text-lg text-blue-600">{formatCurrency(payment.amount)}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-600 mb-1">Method</p>
+                          <p className="font-medium">{payment.paymentMethod}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-600 mb-1">Reference</p>
+                          <p className="font-medium">{payment.referenceNumber || '-'}</p>
+                        </div>
+                        <div className="md:col-span-2">
+                          <p className="text-sm text-gray-600 mb-1">Notes</p>
+                          <p className="font-medium">{payment.notes || '-'}</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             </CardContent>
           </Card>
