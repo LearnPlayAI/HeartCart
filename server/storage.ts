@@ -13689,6 +13689,7 @@ export class DatabaseStorage implements IStorage {
           .set({ 
             status: 'paid',
             paymentMethod: paymentMethod,
+            owed: '0.00', // Zero out the owed amount when paid
             updatedAt: new Date()
           })
           .where(inArray(repCommissions.id, commissionsToUpdate));

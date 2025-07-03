@@ -613,6 +613,15 @@ Changelog:
   * Preserved ALL core system data: users (5), products (583), categories (204), suppliers (2), promotions (1), product_attributes (35)
   * Reset sequence counters to start new records from ID 1 for organized testing
   * System ready for comprehensive testing with clean transactional slate while maintaining full product catalog and user accounts
+- July 3, 2025. Complete sales rep commission payment system bug fix and database integrity enhancement:
+  * Fixed critical commission payment processing bug where owed amounts weren't being properly zeroed out after bank transfer payments
+  * Updated markCommissionsAsPaid function to properly set owed = '0.00' for Store Credit payments (was missing owed field update)
+  * Enhanced markAllUnpaidCommissionsAsPaid function validation and error handling for Bank Transfer payments
+  * Updated all commission calculation methods to consistently use owed field for accurate debt tracking
+  * Fixed commission summary calculations to properly sum owed amounts from database instead of calculated differences
+  * Resolved display bug where commission status remained "earned" instead of being marked as "paid" after payments
+  * Database integrity ensured: all commission payments now properly update both status and owed fields
+  * System verified: Amount Owed now correctly displays 0 when all commissions are paid via bank transfer or store credit
 - July 3, 2025. Comprehensive sales rep commission system optimization and UI improvements:
   * Fixed commission rate database schema to use whole number percentages (5%, 10%) with precision DECIMAL(5,2) instead of decimals
   * Updated commission rate input fields in create and edit forms to only accept whole numbers with step=1 and improved user guidance
