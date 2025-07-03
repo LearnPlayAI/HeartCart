@@ -847,9 +847,7 @@ export default function CheckoutPage() {
             >
               {isProcessing 
                 ? "Processing Order..." 
-                : !canProceedToCheckout 
-                  ? "Resolve Promotion Requirements" 
-                  : `Place Order - R${finalTotal.toFixed(2)}`}
+                : `Place Order - R${finalTotal.toFixed(2)}`}
             </Button>
           </form>
         </div>
