@@ -175,33 +175,30 @@ export function DraftProvider({ children, initialDraftId }: DraftProviderProps) 
       
       // The minimum required data for creating a draft 
       // following the database schema requirements
-      const response = await apiRequest('/api/product-drafts', {
-        method: 'POST',
-        body: JSON.stringify({
-          name: `New Product ${timestamp}-${randomNum}`,
-          slug: `new-product-${timestamp.replace(/-/g, '')}-${randomNum}`,
-          draftStatus: 'draft',
-          // Use camelCase property names to match the server-side model
-          regularPrice: 0,
-          costPrice: 0,
-          stockLevel: 0,
-          sku: `SKU-${timestamp.replace(/-/g, '')}-${randomNum}`,
-          wizardProgress: {
-            "basic-info": false,
-            "images": false,
-            "pricing": false,
-            "attributes": false,
-            "additional-info": false,
-            "seo": false
-          },
-          // Set default values for required fields to avoid null issues
-          imageUrls: [],
-          imageObjectKeys: [],
-          attributes: [],
-          mainImageIndex: 0,
-          isActive: true,
-          completedSteps: []
-        }),
+      const response = await apiRequest('POST', '/api/product-drafts', {
+        name: `New Product ${timestamp}-${randomNum}`,
+        slug: `new-product-${timestamp.replace(/-/g, '')}-${randomNum}`,
+        draftStatus: 'draft',
+        // Use camelCase property names to match the server-side model
+        regularPrice: 0,
+        costPrice: 0,
+        stockLevel: 0,
+        sku: `SKU-${timestamp.replace(/-/g, '')}-${randomNum}`,
+        wizardProgress: {
+          "basic-info": false,
+          "images": false,
+          "pricing": false,
+          "attributes": false,
+          "additional-info": false,
+          "seo": false
+        },
+        // Set default values for required fields to avoid null issues
+        imageUrls: [],
+        imageObjectKeys: [],
+        attributes: [],
+        mainImageIndex: 0,
+        isActive: true,
+        completedSteps: []
       });
       
       if (response.success && response.data) {
@@ -239,7 +236,7 @@ export function DraftProvider({ children, initialDraftId }: DraftProviderProps) 
       setLoading(true);
       setError(null);
       
-      const response = await apiRequest(`/api/product-drafts/${draftId}`);
+      const response = await apiRequest('GET', `/api/product-drafts/${draftId}`);
       
       if (response.success && response.data) {
         setDraft(response.data);
@@ -272,10 +269,7 @@ export function DraftProvider({ children, initialDraftId }: DraftProviderProps) 
     try {
       setLoading(true);
       
-      const response = await apiRequest(`/api/product-drafts/${draft.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify(draft),
-      });
+      const response = await apiRequest('PATCH', `/api/product-drafts/${draft.id}`, draft);
       
       if (!response.success) {
         throw new Error(response.message || 'Failed to save draft');
@@ -304,9 +298,7 @@ export function DraftProvider({ children, initialDraftId }: DraftProviderProps) 
     try {
       setLoading(true);
       
-      const response = await apiRequest(`/api/product-drafts/${draftId}/publish`, {
-        method: 'POST',
-      });
+      const response = await apiRequest('POST', `/api/product-drafts/${draftId}/publish`);
       
       if (response.success && response.data) {
         // Update the draft with published status
@@ -352,9 +344,7 @@ export function DraftProvider({ children, initialDraftId }: DraftProviderProps) 
     try {
       setLoading(true);
       
-      const response = await apiRequest(`/api/product-drafts/${draft.id}`, {
-        method: 'DELETE',
-      });
+      const response = await apiRequest('DELETE', `/api/product-drafts/${draft.id}`);
       
       if (response.success) {
         setDraft(null);
@@ -387,13 +377,13 @@ export function DraftProvider({ children, initialDraftId }: DraftProviderProps) 
       setError(null);
       
       // Get current user first to ensure we're logged in
-      const userResponse = await apiRequest('/api/user');
+      const userResponse = await apiRequest('GET', '/api/user');
       
       if (!userResponse.success || !userResponse.data) {
         throw new Error('User not authenticated. Please log in first.');
       }
       
-      const response = await apiRequest('/api/product-drafts');
+      const response = await apiRequest('GET', '/api/product-drafts');
       
       if (response.success && response.data) {
         // Sort drafts by lastModified date, newest first
@@ -431,9 +421,7 @@ export function DraftProvider({ children, initialDraftId }: DraftProviderProps) 
       setError(null);
       
       // Use the delete endpoint since we're discarding the entire draft
-      const response = await apiRequest(`/api/product-drafts/${draftId}`, {
-        method: 'DELETE',
-      });
+      const response = await apiRequest('DELETE', `/api/product-drafts/${draftId}`);
       
       if (response.success) {
         // If this is the current draft, clear it
