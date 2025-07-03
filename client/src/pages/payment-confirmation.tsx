@@ -110,7 +110,9 @@ export default function PaymentConfirmation() {
     mutationFn: async (file: File) => {
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('folder', `POPS/${orderData?.customerInfo.email}/${referenceNumber}`);
+      // Replace @ symbol with underscore to avoid URL encoding issues
+      const safeEmail = orderData?.customerInfo.email?.replace('@', '_');
+      formData.append('folder', `POPS/${safeEmail}/${referenceNumber}`);
       
       const response = await fetch('/api/files/upload', {
         method: 'POST',

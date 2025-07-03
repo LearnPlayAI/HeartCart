@@ -533,7 +533,9 @@ router.post("/:id/upload-proof", isAuthenticated, upload.single('proofOfPayment'
     // Use object store to save the PDF file
     try {
       // Store the PDF in object store with the proper path structure
-      const objectKey = `POPS/${user.email}/${order.orderNumber}/pdf_file.pdf`;
+      // Replace @ symbol with underscore to avoid URL encoding issues
+      const safeEmail = user.email.replace('@', '_');
+      const objectKey = `POPS/${safeEmail}/${order.orderNumber}/pdf_file.pdf`;
       
       await objectStore.uploadFromBuffer(
         objectKey,
