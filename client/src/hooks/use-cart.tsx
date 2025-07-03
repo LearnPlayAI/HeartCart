@@ -97,8 +97,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       console.log('🔍 CLEAN CART MUTATION - Adding item:', cartItem);
       
       try {
-        const res = await apiRequest('POST', '/api/cart', cartItem);
-        const data: StandardApiResponse<any> = await res.json();
+        const data: StandardApiResponse<any> = await apiRequest('POST', '/api/cart', cartItem);
         
         if (!data.success) {
           throw new Error(data.error?.message || "Failed to add item to cart");
@@ -148,17 +147,21 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   // Update cart item mutation
   const updateCartMutation = useMutation({
     mutationFn: async ({ id, quantity }: { id: number; quantity: number }) => {
-      const res = await apiRequest('PUT', `/api/cart/${id}`, { quantity });
-      
-      // Check for 401 authentication error before parsing JSON
-      if (res.status === 401) {
-        setLocation('/auth');
-        return;
-      }
-      
-      const data: StandardApiResponse<any> = await res.json();
-      if (!data.success) {
-        throw new Error(data.error?.message || "Failed to update cart item");
+      try {
+        const data: StandardApiResponse<any> = await apiRequest('PUT', `/api/cart/${id}`, { quantity });
+        
+        if (!data.success) {
+          throw new Error(data.error?.message || "Failed to update cart item");
+        }
+        
+        return data;
+      } catch (error: any) {
+        // Check if this is a 401 authentication error
+        if (error.message && error.message.includes('401')) {
+          setLocation('/auth');
+          return { success: true, redirected: true };
+        }
+        throw error;
       }
     },
     onSuccess: () => {
@@ -176,17 +179,21 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   // Remove from cart mutation
   const removeFromCartMutation = useMutation({
     mutationFn: async (id: number) => {
-      const res = await apiRequest('DELETE', `/api/cart/${id}`);
-      
-      // Check for 401 authentication error before parsing JSON
-      if (res.status === 401) {
-        setLocation('/auth');
-        return;
-      }
-      
-      const data: StandardApiResponse<any> = await res.json();
-      if (!data.success) {
-        throw new Error(data.error?.message || "Failed to remove item from cart");
+      try {
+        const data: StandardApiResponse<any> = await apiRequest('DELETE', `/api/cart/${id}`);
+        
+        if (!data.success) {
+          throw new Error(data.error?.message || "Failed to remove item from cart");
+        }
+        
+        return data;
+      } catch (error: any) {
+        // Check if this is a 401 authentication error
+        if (error.message && error.message.includes('401')) {
+          setLocation('/auth');
+          return { success: true, redirected: true };
+        }
+        throw error;
       }
     },
     onSuccess: () => {
@@ -204,17 +211,21 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   // Clear cart mutation
   const clearCartMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest('DELETE', '/api/cart');
-      
-      // Check for 401 authentication error before parsing JSON
-      if (res.status === 401) {
-        setLocation('/auth');
-        return;
-      }
-      
-      const data: StandardApiResponse<any> = await res.json();
-      if (!data.success) {
-        throw new Error(data.error?.message || "Failed to clear cart");
+      try {
+        const data: StandardApiResponse<any> = await apiRequest('DELETE', '/api/cart');
+        
+        if (!data.success) {
+          throw new Error(data.error?.message || "Failed to clear cart");
+        }
+        
+        return data;
+      } catch (error: any) {
+        // Check if this is a 401 authentication error
+        if (error.message && error.message.includes('401')) {
+          setLocation('/auth');
+          return { success: true, redirected: true };
+        }
+        throw error;
       }
     },
     onSuccess: () => {
@@ -233,20 +244,24 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   // Remove attribute option mutation
   const removeAttributeOptionMutation = useMutation({
     mutationFn: async ({ cartItemId, attributeName, attributeValue }: { cartItemId: number, attributeName: string, attributeValue: string }) => {
-      const res = await apiRequest('PATCH', `/api/cart/${cartItemId}/remove-attribute`, {
-        attributeName,
-        attributeValue
-      });
-      
-      // Check for 401 authentication error before parsing JSON
-      if (res.status === 401) {
-        setLocation('/auth');
-        return;
-      }
-      
-      const data: StandardApiResponse<any> = await res.json();
-      if (!data.success) {
-        throw new Error(data.error?.message || "Failed to remove attribute option");
+      try {
+        const data: StandardApiResponse<any> = await apiRequest('PATCH', `/api/cart/${cartItemId}/remove-attribute`, {
+          attributeName,
+          attributeValue
+        });
+        
+        if (!data.success) {
+          throw new Error(data.error?.message || "Failed to remove attribute option");
+        }
+        
+        return data;
+      } catch (error: any) {
+        // Check if this is a 401 authentication error
+        if (error.message && error.message.includes('401')) {
+          setLocation('/auth');
+          return { success: true, redirected: true };
+        }
+        throw error;
       }
     },
     onSuccess: () => {
