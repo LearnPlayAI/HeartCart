@@ -1554,12 +1554,9 @@ export class DatabaseStorage implements IStorage {
         allConditions.push(eq(products.isFeatured, true));
       }
 
-      // Add new arrivals filter (products created within last 30 days)
+      // Add new arrivals filter (products with discount_label = "Just Arrived")
       if (options?.newArrivals) {
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        const thirtyDaysAgoString = thirtyDaysAgo.toISOString();
-        allConditions.push(sql`${products.createdAt} >= ${thirtyDaysAgoString}`);
+        allConditions.push(eq(products.discountLabel, 'Just Arrived'));
       }
 
       // Add on promotion filter (products with active promotions)

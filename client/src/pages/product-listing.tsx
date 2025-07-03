@@ -642,7 +642,7 @@ const ProductListing = () => {
     }
     if (filters.onPromotion) newActiveFilters.push('On Promotion');
     if (filters.featuredProducts) newActiveFilters.push('Featured Products');
-    if (filters.newArrivals) newActiveFilters.push('New Arrivals');
+    if (filters.newArrivals) newActiveFilters.push('Just Arrived');
     if (ratingFilter) {
       const ratingOption = ratingOptions.find(o => o.value === ratingFilter);
       if (ratingOption) newActiveFilters.push(ratingOption.label);
@@ -1183,7 +1183,7 @@ const ProductListing = () => {
                         htmlFor="newArrivals"
                         className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                       >
-                        New Arrivals (Last 30 days)
+                        Just Arrived
                       </label>
                     </div>
                   </div>
@@ -1241,7 +1241,7 @@ const ProductListing = () => {
                   <SelectItem value="name-asc">Name: A to Z</SelectItem>
                   <SelectItem value="name-desc">Name: Z to A</SelectItem>
                   <SelectItem value="rating-desc">Highest Rated</SelectItem>
-                  <SelectItem value="newest">Newest Arrivals</SelectItem>
+                  <SelectItem value="newest">Just Arrived</SelectItem>
                   <SelectItem value="popularity">Popularity</SelectItem>
                 </SelectContent>
               </Select>
