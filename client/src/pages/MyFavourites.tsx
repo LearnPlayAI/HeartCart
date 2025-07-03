@@ -43,10 +43,7 @@ export default function MyFavourites() {
 
   const { data: favouritesData, isLoading, error } = useQuery({
     queryKey: ['/api/favourites', { withProducts: true }],
-    queryFn: async () => {
-      const response = await apiRequest('GET', '/api/favourites?withProducts=true');
-      return await response.json();
-    },
+    queryFn: () => apiRequest('GET', '/api/favourites?withProducts=true'),
   });
 
   // Fetch active promotions to check if favourited products are promotional - no cache for real-time pricing

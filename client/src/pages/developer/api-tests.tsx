@@ -247,8 +247,7 @@ function ApiTestsPage() {
   const runAllTestsMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest('POST', '/api/api-test/run-all');
-      const responseJson = await response.json();
-      return responseJson.success && 'data' in responseJson ? responseJson.data : responseJson;
+      return response.success && 'data' in response ? response.data : response;
     },
     onSuccess: (data) => {
       // Update the results directly instead of refetching

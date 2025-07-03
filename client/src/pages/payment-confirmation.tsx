@@ -69,10 +69,10 @@ export default function PaymentConfirmation() {
       if (productIds.length === 0) return [];
       const promises = productIds.map(async (id) => {
         const response = await apiRequest('GET', `/api/products/${id}`);
-        return response.json();
+        return response.data;
       });
       const results = await Promise.all(promises);
-      return results.map(result => result.data);
+      return results;
     },
     enabled: productIds.length > 0
   });
@@ -102,7 +102,7 @@ export default function PaymentConfirmation() {
   const createOrderMutation = useMutation({
     mutationFn: async (orderData: OrderData) => {
       const response = await apiRequest('POST', '/api/orders', orderData);
-      return response.json();
+      return response;
     },
     onSuccess: (result) => {
       // Clear pending order data

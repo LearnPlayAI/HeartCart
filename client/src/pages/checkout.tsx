@@ -256,8 +256,7 @@ export default function CheckoutPage() {
   // Update user profile mutation
   const updateProfileMutation = useMutation({
     mutationFn: async (profileData: any) => {
-      const response = await apiRequest("PATCH", "/api/user/profile", profileData);
-      return response.json();
+      return apiRequest("PATCH", "/api/user/profile", profileData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
@@ -358,15 +357,7 @@ export default function CheckoutPage() {
       return;
     }
 
-    // Validate promotion requirements before checkout
-    if (!canProceedToCheckout) {
-      toast({
-        title: "Promotion Requirements Not Met",
-        description: "Please resolve promotion requirements before proceeding to checkout.",
-        variant: "destructive"
-      });
-      return;
-    }
+
 
     // Validate PUDO locker selection for PUDO shipping
     if (data.shippingMethod === "pudo" && !selectedLocker) {
