@@ -85,9 +85,8 @@ export default function AuthPage() {
       if (!repCode.trim()) return { valid: false };
       console.log('Validating rep code:', repCode);
       const response = await apiRequest('GET', `/api/validate-rep-code/${encodeURIComponent(repCode.trim())}`);
-      const data = await response.json();
-      console.log('Validation response:', data);
-      return data.data; // Extract the data from the success response wrapper
+      console.log('Validation response:', response);
+      return response.data; // Extract the data from the success response wrapper
     },
     onSuccess: (data) => {
       console.log('Validation success:', data);
@@ -151,7 +150,7 @@ export default function AuthPage() {
       const response = await apiRequest(`/api/auth/validate-reset-token/${token}`, {
         method: 'GET',
       });
-      return await response.json();
+      return response;
     },
   });
 
@@ -162,7 +161,7 @@ export default function AuthPage() {
         method: 'POST',
         body: JSON.stringify(data),
       });
-      return await response.json();
+      return response;
     },
   });
 

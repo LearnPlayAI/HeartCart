@@ -112,8 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
-      const res = await apiRequest("POST", "/api/login", credentials);
-      const data = await res.json();
+      const data = await apiRequest("POST", "/api/login", credentials);
       
       // Handle standard API response format
       if ('success' in data) {
@@ -149,8 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const registerMutation = useMutation({
     mutationFn: async (credentials: InsertUser) => {
-      const res = await apiRequest("POST", "/api/register", credentials);
-      const data = await res.json();
+      const data = await apiRequest("POST", "/api/register", credentials);
       
       // Handle standard API response format
       if ('success' in data) {
@@ -182,17 +180,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/logout");
+      const data = await apiRequest("POST", "/api/logout");
       
-      // Check if response has content
-      const contentType = res.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        const data = await res.json();
-        
-        // Handle standard API response format
-        if ('success' in data && !data.success) {
-          throw new Error(data.error?.message || "Logout failed");
-        }
+      // Handle standard API response format
+      if ('success' in data && !data.success) {
+        throw new Error(data.error?.message || "Logout failed");
       }
       
       // Return void instead of null to match the return type declaration
