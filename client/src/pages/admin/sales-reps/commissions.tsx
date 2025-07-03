@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useParams } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -57,10 +57,23 @@ export default function SalesRepCommissionsPage() {
 
   const repId = parseInt(params.id || '0');
 
+  // Invalidate all related caches when component mounts to ensure fresh data
+  useEffect(() => {
+    if (repId) {
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/sales-reps/${repId}/commissions`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/sales-reps/${repId}/payments`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/sales-reps/${repId}/summary`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/sales-reps`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/sales-reps/overview`] });
+    }
+  }, [repId, queryClient]);
+
   // Fetch sales rep data
   const { data: salesRepsResponse, isLoading: repsLoading } = useQuery({
     queryKey: ['/api/admin/sales-reps'],
-    refetchOnWindowFocus: true
+    refetchOnWindowFocus: true,
+    staleTime: 0, // Always fetch fresh data
+    gcTime: 0 // Don't cache
   });
 
   const salesReps = Array.isArray(salesRepsResponse?.data) ? salesRepsResponse.data : 
@@ -70,7 +83,9 @@ export default function SalesRepCommissionsPage() {
   // Fetch commissions
   const { data: commissionsResponse, isLoading: commissionsLoading } = useQuery({
     queryKey: [`/api/admin/sales-reps/${repId}/commissions`],
-    enabled: !!repId
+    enabled: !!repId,
+    staleTime: 0, // Always fetch fresh data
+    gcTime: 0 // Don't cache
   });
 
   const commissions = commissionsResponse?.data?.commissions || [];
@@ -83,7 +98,9 @@ export default function SalesRepCommissionsPage() {
 
   const { data: summaryResponse, isLoading: summaryLoading } = useQuery({
     queryKey: [`/api/admin/sales-reps/${repId}/summary`],
-    enabled: !!repId
+    enabled: !!repId,
+    staleTime: 0, // Always fetch fresh data
+    gcTime: 0 // Don't cache
   });
 
   const payments = paymentsResponse?.data || [];

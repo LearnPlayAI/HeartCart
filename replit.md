@@ -629,6 +629,14 @@ Changelog:
   * Copy-to-clipboard functionality with user feedback and professional reset-to-default option
   * BETA badge and TeeMeYou branding throughout sharing interface for beta tester recruitment campaigns
   * Production-ready system allows admins to recruit friends and family as beta testers and potential sales representatives
+- July 3, 2025. Complete sales representative commission payment system with method-based calculations fully operational:
+  * Implemented markAllUnpaidCommissionsAsPaid function for bank transfer payment logic where 50% payment clears 100% debt
+  * Fixed critical bug where bank transfers left remaining balance instead of zeroing out entire debt amount
+  * Enhanced commission payment method calculation: Bank Transfer = 50% payment but clears all debt, Store Credit = 100% payment
+  * Added comprehensive cache invalidation to commissions page using useEffect and staleTime: 0 for immediate data freshness
+  * Admin always sees latest commission data without manual page refresh through automatic query invalidation
+  * Complete payment workflow now properly handles both payment methods with accurate debt clearing logic
+  * Production-ready commission system with proper banking details validation and automated reference number generation
 - July 2, 2025. Fixed user registration timestamp capture and admin users page date display:
   * Resolved issue where user registration wasn't capturing createdAt timestamps in database
   * Updated auth.ts to explicitly set createdAt and updatedAt timestamps during user registration

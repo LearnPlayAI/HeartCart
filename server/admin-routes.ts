@@ -1295,8 +1295,14 @@ router.post("/sales-reps/:id/payments", isAdmin, asyncHandler(async (req: Reques
     // Create the payment record
     const newPayment = await storage.createRepPayment(paymentData);
     
-    // Mark commissions as paid based on calculated payment amount
-    await storage.markCommissionsAsPaid(repId, paymentAmount);
+    // Mark commissions as paid
+    // For Bank Transfer: mark ALL unpaid commissions as paid (50% payment clears 100% debt)
+    // For Store Credit: mark commissions up to the payment amount
+    if (paymentMethod === 'Bank Transfer') {
+      await storage.markAllUnpaidCommissionsAsPaid(repId);
+    } else {
+      await storage.markCommissionsAsPaid(repId, paymentAmount);
+    }
     
     // If payment method is store credit, award store credit to the sales rep
     if (req.body.paymentMethod === 'Store Credit') {

@@ -13698,6 +13698,45 @@ export class DatabaseStorage implements IStorage {
       throw error;
     }
   }
+
+  /**
+   * Mark ALL unpaid commissions as paid for bank transfer payments
+   * Bank transfers pay 50% but clear 100% of debt
+   */
+  async markAllUnpaidCommissionsAsPaid(repId: number): Promise<void> {
+    try {
+      // Get all unpaid commissions for this rep
+      const unpaidCommissions = await db
+        .select()
+        .from(repCommissions)
+        .where(and(
+          eq(repCommissions.repId, repId),
+          eq(repCommissions.status, 'earned')
+        ));
+
+      if (unpaidCommissions.length > 0) {
+        const commissionIds = unpaidCommissions.map(c => c.id);
+        
+        // Mark ALL unpaid commissions as paid
+        await db
+          .update(repCommissions)
+          .set({ 
+            status: 'paid',
+            updatedAt: new Date()
+          })
+          .where(inArray(repCommissions.id, commissionIds));
+
+        logger.info('Marked all unpaid commissions as paid for bank transfer', { 
+          repId, 
+          commissionsMarkedAsPaid: commissionIds.length,
+          commissionIds 
+        });
+      }
+    } catch (error) {
+      logger.error('Error marking all unpaid commissions as paid', { error, repId });
+      throw error;
+    }
+  }
 }
 
 export const storage = new DatabaseStorage();
