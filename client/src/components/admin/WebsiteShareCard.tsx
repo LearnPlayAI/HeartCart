@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { 
   Share2, 
   MessageCircle, 
@@ -13,18 +15,33 @@ import {
   Heart,
   ExternalLink,
   RotateCcw,
-  Edit3
+  Edit3,
+  Loader2,
+  Save
 } from "lucide-react";
+
+// Simple debounce utility
+function debounce<T extends (...args: any[]) => any>(func: T, wait: number): T {
+  let timeout: NodeJS.Timeout;
+  return ((...args: any[]) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  }) as T;
+}
 
 /**
  * Website Share Card Component
  * Allows admins to share the TeeMeYou website with friends and family via WhatsApp
+ * Uses systemSettings for persistent storage
  */
 export function WebsiteShareCard() {
   const [copied, setCopied] = useState(false);
+  const [localMessage, setLocalMessage] = useState("");
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  // Default website sharing message using the user's exact text
+  // Default website sharing message
   const defaultMessage = `🛍️ Welcome to Tee Me You 🛍️
 
 Hi Family and Friends! We are excited to invite you to join our new online store - https://teemeyou.shop 
@@ -45,11 +62,73 @@ Please feel free to forward this to your trusted friends and not to strangers be
 Thank you for supporting our growing business! 🙏
 [TeeMeYou Logo]`;
 
-  // Editable message state
-  const [websiteShareMessage, setWebsiteShareMessage] = useState(defaultMessage);
+  // Fetch message from systemSettings
+  const { data: settingResponse, isLoading: isLoadingSetting } = useQuery({
+    queryKey: ['/api/admin/settings/website_share_message'],
+    queryFn: async () => {
+      const response = await fetch('/api/admin/settings/website_share_message', {
+        credentials: 'include'
+      });
+      if (!response.ok) throw new Error('Failed to fetch setting');
+      return response.json();
+    }
+  });
+
+  // Update message mutation
+  const updateMessageMutation = useMutation({
+    mutationFn: async (message: string) => {
+      return apiRequest('PATCH', '/api/admin/settings/website_share_message', {
+        value: message
+      });
+    },
+    onSuccess: () => {
+      setHasUnsavedChanges(false);
+      toast({
+        title: "Message saved",
+        description: "Your sharing message has been saved successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/settings/website_share_message'] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Save failed",
+        description: "Failed to save your message. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Get the current message (from API or local state)
+  const websiteShareMessage = localMessage || settingResponse?.data?.settingValue || defaultMessage;
+
+  // Initialize local message when data loads
+  useEffect(() => {
+    if (settingResponse?.data?.settingValue && !localMessage) {
+      setLocalMessage(settingResponse.data.settingValue);
+    }
+  }, [settingResponse, localMessage]);
+
+  // Debounced save function
+  const debouncedSave = useCallback(
+    debounce((message: string) => {
+      if (message !== settingResponse?.data?.settingValue) {
+        updateMessageMutation.mutate(message);
+      }
+    }, 2000),
+    [settingResponse, updateMessageMutation]
+  );
+
+  // Handle message change
+  const handleMessageChange = (message: string) => {
+    setLocalMessage(message);
+    setHasUnsavedChanges(true);
+    debouncedSave(message);
+  };
 
   const handleResetMessage = () => {
-    setWebsiteShareMessage(defaultMessage);
+    setLocalMessage(defaultMessage);
+    setHasUnsavedChanges(true);
+    updateMessageMutation.mutate(defaultMessage);
     toast({
       title: "Message reset",
       description: "The message has been reset to the default text.",
@@ -130,12 +209,36 @@ Thank you for supporting our growing business! 🙏
                 Reset
               </Button>
             </div>
-            <Textarea
-              value={websiteShareMessage}
-              onChange={(e) => setWebsiteShareMessage(e.target.value)}
-              className="min-h-[180px] text-sm font-mono resize-none bg-white border-gray-300 focus:border-pink-400 focus:ring-pink-400"
-              placeholder="Enter your sharing message..."
-            />
+            {isLoadingSetting ? (
+              <div className="min-h-[180px] bg-white border border-gray-300 rounded-md flex items-center justify-center">
+                <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+              </div>
+            ) : (
+              <Textarea
+                value={websiteShareMessage}
+                onChange={(e) => handleMessageChange(e.target.value)}
+                className="min-h-[180px] text-sm font-mono resize-none bg-white border-gray-300 focus:border-pink-400 focus:ring-pink-400"
+                placeholder="Enter your sharing message..."
+                disabled={updateMessageMutation.isPending}
+              />
+            )}
+            
+            {/* Save status indicator */}
+            {(hasUnsavedChanges || updateMessageMutation.isPending) && (
+              <div className="flex items-center gap-2 mt-2 text-sm">
+                {updateMessageMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-3 w-3 animate-spin text-blue-500" />
+                    <span className="text-blue-500">Saving...</span>
+                  </>
+                ) : hasUnsavedChanges ? (
+                  <>
+                    <Save className="h-3 w-3 text-orange-500" />
+                    <span className="text-orange-500">Auto-saving in 2 seconds...</span>
+                  </>
+                ) : null}
+              </div>
+            )}
           </div>
 
           {/* Action buttons */}
