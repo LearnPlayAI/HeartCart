@@ -74,13 +74,12 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ draft, onS
         formData.append('images', file);
       });
       
-      const response = await apiRequest(
+      return await apiRequest(
         'POST',
         `/api/product-drafts/${draft.id}/images`,
         formData,
         { isFormData: true }
       );
-      return response.json();
     },
     onSuccess: (data) => {
       setUploadingImages(false);
@@ -115,11 +114,10 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ draft, onS
         throw new Error('No draft ID available');
       }
       
-      const response = await apiRequest(
+      return await apiRequest(
         'DELETE',
         `/api/product-drafts/${draft.id}/images/${imageIndex}`
       );
-      return response.json();
     },
     onSuccess: (data) => {
       // Update the form values with the remaining images
@@ -152,12 +150,11 @@ export const ProductImagesStep: React.FC<ProductImagesStepProps> = ({ draft, onS
         throw new Error('No draft ID available');
       }
       
-      const response = await apiRequest(
+      return await apiRequest(
         'POST',
         `/api/product-drafts/${draft.id}/images/reorder`,
         { imageIndexes }
       );
-      return response.json();
     },
     onSuccess: (data) => {
       // Update the form values with the reordered images

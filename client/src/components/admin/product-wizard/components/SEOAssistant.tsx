@@ -64,7 +64,7 @@ export const SEOAssistant: React.FC<SEOAssistantProps> = ({
     setApiError(null);
 
     try {
-      const response = await apiRequest('POST', '/api/ai/optimize-seo', {
+      const data = await apiRequest('POST', '/api/ai/optimize-seo', {
         productName,
         currentTitle,
         currentDescription,
@@ -72,8 +72,6 @@ export const SEOAssistant: React.FC<SEOAssistantProps> = ({
         productDescription,
         categoryName,
       });
-
-      const data = await response.json();
 
       if (data.success && data.data && data.data.suggestions && data.data.suggestions.length > 0) {
         setSuggestions(data.data.suggestions);

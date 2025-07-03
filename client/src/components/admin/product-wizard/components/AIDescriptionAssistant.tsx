@@ -50,15 +50,13 @@ export const AIDescriptionAssistant: React.FC<AIDescriptionAssistantProps> = ({
     setApiError(null);
 
     try {
-      const response = await apiRequest('POST', '/api/ai/suggest-description', {
+      const data = await apiRequest('POST', '/api/ai/suggest-description', {
         productName,
         currentDescription,
         categoryName,
         brandName,
         keyFeatures,
       });
-
-      const data = await response.json();
 
       if (data.success && data.data && data.data.suggestions && data.data.suggestions.length > 0) {
         setSuggestions(data.data.suggestions);

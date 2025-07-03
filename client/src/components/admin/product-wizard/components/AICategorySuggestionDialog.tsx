@@ -67,8 +67,7 @@ export function AICategorySuggestionDialog({
   const { data: categoriesData, isLoading: isCategoriesLoading, error: categoriesError } = useQuery({
     queryKey: ['/api/categories'],
     queryFn: async () => {
-      const response = await apiRequest('GET', '/api/categories');
-      const data = await response.json();
+      const data = await apiRequest('GET', '/api/categories');
       return data.success ? data.data : [];
     },
     // Enable the query immediately when dialog opens
@@ -82,11 +81,10 @@ export function AICategorySuggestionDialog({
   // Fetch AI category suggestions
   const categorySuggestionMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest('POST', '/api/ai/suggest-categories', {
+      const data = await apiRequest('POST', '/api/ai/suggest-categories', {
         productName,
         productDescription,
       });
-      const data = await response.json();
       console.log('AI Category Suggestions Response:', data);
       
       if (!data.success) {
@@ -115,8 +113,7 @@ export function AICategorySuggestionDialog({
       level: number;
       displayOrder: number;
     }) => {
-      const response = await apiRequest('POST', '/api/categories', categoryData);
-      return response.json();
+      return await apiRequest('POST', '/api/categories', categoryData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/categories'] });

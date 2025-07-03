@@ -115,8 +115,7 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
   const { data: categoriesData, isLoading: isCategoriesLoading } = useQuery({
     queryKey: ['/api/categories'],
     queryFn: async () => {
-      const response = await apiRequest('GET', '/api/categories');
-      return response.json();
+      return await apiRequest('GET', '/api/categories');
     },
   });
 
@@ -124,8 +123,7 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
   const { data: suppliersData, isLoading: isSuppliersLoading } = useQuery({
     queryKey: ['/api/suppliers'],
     queryFn: async () => {
-      const response = await apiRequest('GET', '/api/suppliers');
-      return response.json();
+      return await apiRequest('GET', '/api/suppliers');
     },
   });
 
@@ -262,8 +260,7 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
       const supplierIdToUse = watchSupplierId || draft.supplierId;
       if (!supplierIdToUse) return { data: [] };
       
-      const response = await apiRequest('GET', `/api/suppliers/${supplierIdToUse}/catalogs`);
-      return response.json();
+      return await apiRequest('GET', `/api/suppliers/${supplierIdToUse}/catalogs`);
     },
     // Enable the query if we have a supplier ID from the form or from the draft
     enabled: !!(watchSupplierId || draft.supplierId),
@@ -491,13 +488,12 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
       console.log('Saving AI category selection to database:', updateData);
       
       // Save the category assignment using the wizard step endpoint to match form submission
-      const response = await apiRequest('PATCH', `/api/product-drafts/${draft.id}/wizard-step`, {
+      const result = await apiRequest('PATCH', `/api/product-drafts/${draft.id}/wizard-step`, {
         step: 0, // Basic info step
         draftData: {
           categoryId: finalCategoryId
         }
       });
-      const result = await response.json();
       
       if (!result.success) {
         throw new Error(result.error?.message || 'Failed to save category assignment');
@@ -570,14 +566,12 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
       }
       
       // API request to enhance product
-      const response = await apiRequest('POST', '/api/ai/enhance-product', {
+      const data = await apiRequest('POST', '/api/ai/enhance-product', {
         productName,
         productDescription: currentDescription,
         categoryName,
         brand: formValues.brand || undefined,
       });
-      
-      const data = await response.json();
       
       if (data.success && data.data) {
         // Store the AI enhancement result and show preview modal

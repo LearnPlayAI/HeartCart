@@ -91,8 +91,7 @@ export const ReviewAndSaveStep: React.FC<ReviewAndSaveStepProps> = ({
   const { data: allCategoriesData } = useQuery({
     queryKey: ['/api/categories'],
     queryFn: async () => {
-      const response = await apiRequest('GET', '/api/categories');
-      return response.json();
+      return await apiRequest('GET', '/api/categories');
     }
   });
 
@@ -108,8 +107,7 @@ export const ReviewAndSaveStep: React.FC<ReviewAndSaveStepProps> = ({
   const { data: validationData, isLoading: isValidating, refetch: refetchValidation } = useQuery({
     queryKey: ['/api/product-drafts/validate', draft.id],
     queryFn: async () => {
-      const response = await apiRequest('POST', `/api/product-drafts/${draft.id}/validate`);
-      return response.json();
+      return await apiRequest('POST', `/api/product-drafts/${draft.id}/validate`);
     },
     enabled: !!draft.id
   });
@@ -117,8 +115,7 @@ export const ReviewAndSaveStep: React.FC<ReviewAndSaveStepProps> = ({
   // Use mutation for status updates
   const updateStatusMutation = useMutation({
     mutationFn: async (updateData: { status: ProductDraftStatus, note?: string }) => {
-      const response = await apiRequest('PATCH', `/api/product-drafts/${draft.id}/status`, updateData);
-      return response.json();
+      return await apiRequest('PATCH', `/api/product-drafts/${draft.id}/status`, updateData);
     },
     onSuccess: (data) => {
       if (data.success) {
@@ -171,8 +168,7 @@ export const ReviewAndSaveStep: React.FC<ReviewAndSaveStepProps> = ({
   // Use mutation for publishing
   const publishMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest('POST', `/api/product-drafts/${draft.id}/publish`);
-      return response.json();
+      return await apiRequest('POST', `/api/product-drafts/${draft.id}/publish`);
     },
     onSuccess: (data) => {
       if (data.success) {

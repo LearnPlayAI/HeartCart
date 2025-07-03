@@ -77,8 +77,7 @@ export const SEOStep: React.FC<SEOStepProps> = ({
     queryKey: ['/api/categories', draft.categoryId],
     queryFn: async () => {
       if (!draft.categoryId) return { success: true, data: null };
-      const response = await apiRequest('GET', `/api/categories/${draft.categoryId}`);
-      return response.json();
+      return await apiRequest('GET', `/api/categories/${draft.categoryId}`);
     },
     enabled: !!draft.categoryId
   });
@@ -122,7 +121,7 @@ export const SEOStep: React.FC<SEOStepProps> = ({
       }
       
       const currentValues = form.getValues();
-      const response = await apiRequest('POST', '/api/ai/optimize-seo', {
+      const data = await apiRequest('POST', '/api/ai/optimize-seo', {
         productName: draft.name,
         productDescription: draft.description || '',
         categoryName,
@@ -130,8 +129,6 @@ export const SEOStep: React.FC<SEOStepProps> = ({
         currentDescription: currentValues.metaDescription || '',
         currentKeywords: currentValues.metaKeywords || ''
       });
-      
-      const data = await response.json();
       
       if (data.success && data.data) {
         setAiSuggestions(data.data);
