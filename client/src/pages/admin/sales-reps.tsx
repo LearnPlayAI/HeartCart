@@ -245,7 +245,7 @@ Register now and start shopping! 🛍️`;
                         </div>
                         <div className="text-right">
                           <div className="text-sm font-medium text-gray-900">
-                            {rep.commissionRate}% rate
+                            {Number(rep.commissionRate)}% rate
                           </div>
                           <div className="text-xs text-gray-500">
                             Since {formatDate(rep.createdAt)}

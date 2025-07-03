@@ -621,6 +621,9 @@ Changelog:
   * Sales rep cards now update automatically when commission rates are changed without requiring manual page refresh
   * Improved user experience with clear placeholder text "e.g. 5 for 5%" and help text explaining whole numbers only
   * Commission calculation logic correctly converts whole numbers to decimals by dividing by 100 for accurate profit calculations
+  * Fixed commission rate display issues: commission rates stored as decimals in database (0.05 for 5%) now properly display as percentages (5%) in UI
+  * Updated commission history cards to always show payment method for all commissions when available, not just for 'paid' status
+  * Database stores commission rates as decimals in repCommissions table after Bank Transfer payments, frontend multiplies by 100 for percentage display
 - July 3, 2025. WhatsApp website sharing system for beta tester recruitment fully operational:
   * Complete WebsiteShareCard component integrated in admin dashboard with editable sharing messages
   * Default recruitment message includes website URL, rep program details with commission benefits, and contact information

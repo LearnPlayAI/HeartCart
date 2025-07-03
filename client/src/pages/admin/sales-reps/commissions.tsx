@@ -297,10 +297,10 @@ export default function SalesRepCommissionsPage() {
                           <div>
                             <p className="text-sm font-medium text-gray-600">Rate</p>
                             <p className="text-sm font-medium">
-                              {Number(commission.commissionRate).toFixed(1)}%
+                              {(Number(commission.commissionRate) * 100).toFixed(1)}%
                             </p>
                           </div>
-                          {commission.status === 'paid' && commission.paymentMethod && (
+                          {commission.paymentMethod && (
                             <div>
                               <p className="text-sm font-medium text-gray-600">Payment Method</p>
                               <p className="text-sm font-medium text-blue-600">
