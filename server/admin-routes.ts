@@ -1225,12 +1225,45 @@ router.get("/sales-reps/:id/earnings", isAdmin, asyncHandler(async (req: Request
 router.post("/sales-reps/:id/payments", isAdmin, asyncHandler(async (req: Request, res: Response) => {
   try {
     const repId = parseInt(req.params.id);
+    const { paymentMethod } = req.body;
     
-    // Get the commissions that will be paid and their order details
-    const commissionsForPayment = await storage.getCommissionsForPayment(repId, parseFloat(req.body.amount));
+    // Get sales rep to validate banking details for Bank Transfer
+    const rep = await storage.getSalesRepById(repId);
+    if (!rep) {
+      return sendError(res, "Sales rep not found", 404);
+    }
+    
+    // Validate banking details for Bank Transfer payments
+    if (paymentMethod === 'Bank Transfer') {
+      if (!rep.bankName || !rep.accountNumber || !rep.accountHolderName) {
+        return sendError(res, "Banking details are required for bank transfer payments. Please update the sales rep's banking information first.", 400);
+      }
+    }
+    
+    // Get total amount owed to calculate payment amount
+    const unpaidCommissions = await storage.getUnpaidRepCommissions(repId);
+    const totalAmountOwed = unpaidCommissions.reduce((sum, commission) => 
+      sum + Number(commission.commissionAmount), 0
+    );
+    
+    if (totalAmountOwed <= 0) {
+      return sendError(res, "No outstanding commissions to pay", 400);
+    }
+    
+    // Calculate payment amount based on payment method
+    let paymentAmount: number;
+    if (paymentMethod === 'Bank Transfer') {
+      paymentAmount = totalAmountOwed * 0.5; // 50% for Bank Transfer
+    } else if (paymentMethod === 'Store Credit') {
+      paymentAmount = totalAmountOwed; // 100% for Store Credit
+    } else {
+      return sendError(res, "Invalid payment method. Must be 'Bank Transfer' or 'Store Credit'", 400);
+    }
+    
+    // Get the commissions that will be paid based on calculated amount
+    const commissionsForPayment = await storage.getCommissionsForPayment(repId, paymentAmount);
     
     // Auto-generate reference number if not provided
-    const rep = await storage.getSalesRepById(repId);
     const today = new Date();
     const ddmmyy = today.toLocaleDateString('en-GB', { 
       day: '2-digit', 
@@ -1240,15 +1273,19 @@ router.post("/sales-reps/:id/payments", isAdmin, asyncHandler(async (req: Reques
     
     // Get next sequential number for this rep and date
     const sequentialNumber = await storage.getNextPaymentSequentialNumber(repId, ddmmyy);
-    const autoReferenceNumber = `${rep?.repCode || `REP${repId}`}-${sequentialNumber.toString().padStart(2, '0')}-${ddmmyy}`;
+    const autoReferenceNumber = `${rep.repCode || `REP${repId}`}-${sequentialNumber.toString().padStart(2, '0')}-${ddmmyy}`;
     
-    // Create auto-notes with order IDs
+    // Create auto-notes with order IDs and payment method details
     const orderIds = commissionsForPayment.map(c => `#${c.orderId}`).join(', ');
-    const autoNotes = `Commission payment for Order IDs: ${orderIds}`;
+    const paymentMethodNote = paymentMethod === 'Bank Transfer' 
+      ? `Bank transfer payment (50% of R${totalAmountOwed.toFixed(2)} = R${paymentAmount.toFixed(2)})`
+      : `Store credit payment (100% of R${totalAmountOwed.toFixed(2)} = R${paymentAmount.toFixed(2)})`;
+    const autoNotes = `Commission payment for Order IDs: ${orderIds}\n${paymentMethodNote}`;
     const finalNotes = req.body.notes ? `${autoNotes}\n\nAdmin notes: ${req.body.notes}` : autoNotes;
     
     const paymentData = { 
-      ...req.body, 
+      ...req.body,
+      amount: paymentAmount, // Use calculated amount instead of req.body.amount
       repId,
       processedBy: req.user?.id,
       referenceNumber: req.body.referenceNumber || autoReferenceNumber,
@@ -1258,8 +1295,8 @@ router.post("/sales-reps/:id/payments", isAdmin, asyncHandler(async (req: Reques
     // Create the payment record
     const newPayment = await storage.createRepPayment(paymentData);
     
-    // Mark commissions as paid based on payment amount
-    await storage.markCommissionsAsPaid(repId, parseFloat(req.body.amount));
+    // Mark commissions as paid based on calculated payment amount
+    await storage.markCommissionsAsPaid(repId, paymentAmount);
     
     // If payment method is store credit, award store credit to the sales rep
     if (req.body.paymentMethod === 'Store Credit') {

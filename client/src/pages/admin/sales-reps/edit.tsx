@@ -22,6 +22,10 @@ interface SalesRep {
   commissionRate: number;
   isActive: boolean;
   notes: string | null;
+  bankName: string | null;
+  accountNumber: string | null;
+  accountHolderName: string | null;
+  branchCode: string | null;
   createdAt: string;
   totalEarnings: number;
   commissionCount: number;
@@ -43,6 +47,10 @@ export default function EditSalesRepPage() {
     repCode: '',
     commissionRate: 3,
     notes: '',
+    bankName: '',
+    accountNumber: '',
+    accountHolderName: '',
+    branchCode: '',
     isActive: true
   });
 
@@ -65,8 +73,12 @@ export default function EditSalesRepPage() {
         email: selectedRep.email,
         phoneNumber: selectedRep.phoneNumber || '',
         repCode: selectedRep.repCode,
-        commissionRate: parseFloat(selectedRep.commissionRate.toString()),
+        commissionRate: Math.round(parseFloat(selectedRep.commissionRate.toString())),
         notes: selectedRep.notes || '',
+        bankName: selectedRep.bankName || '',
+        accountNumber: selectedRep.accountNumber || '',
+        accountHolderName: selectedRep.accountHolderName || '',
+        branchCode: selectedRep.branchCode || '',
         isActive: selectedRep.isActive
       });
     }
@@ -76,7 +88,13 @@ export default function EditSalesRepPage() {
   const updateRepMutation = useMutation({
     mutationFn: (data: any) => apiRequest('PUT', `/api/admin/sales-reps/${repId}`, data),
     onSuccess: () => {
+      // Invalidate all sales rep related caches
       queryClient.invalidateQueries({ queryKey: ['/api/admin/sales-reps'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/sales-reps/overview'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/sales-reps/${repId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/sales-reps/${repId}/commissions`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/sales-reps/${repId}/summary`] });
+      
       toast({
         title: "Success",
         description: "Sales representative updated successfully",
@@ -242,13 +260,13 @@ export default function EditSalesRepPage() {
                   type="number"
                   min="0"
                   max="100"
-                  step="0.1"
+                  step="1"
                   value={editRep.commissionRate}
-                  onChange={(e) => setEditRep({...editRep, commissionRate: parseFloat(e.target.value)})}
+                  onChange={(e) => setEditRep({...editRep, commissionRate: parseInt(e.target.value) || 0})}
                   className="focus:ring-pink-500 focus:border-pink-500"
-                  placeholder="Enter commission rate"
+                  placeholder="Enter commission rate (e.g. 5 for 5%)"
                 />
-                <p className="text-xs text-gray-500">The percentage of profit this rep will earn on sales</p>
+                <p className="text-xs text-gray-500">Enter whole numbers only (e.g., 5 = 5%, 10 = 10%)</p>
               </div>
 
               {/* Active Status */}
@@ -276,6 +294,62 @@ export default function EditSalesRepPage() {
                   className="focus:ring-pink-500 focus:border-pink-500 min-h-[80px]"
                   placeholder="Optional notes about this sales rep"
                 />
+              </div>
+
+              {/* Banking Details Section */}
+              <div className="space-y-4 pt-4 border-t border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900">Banking Details (Optional)</h3>
+                <p className="text-sm text-gray-600">Add banking details for bank transfer payments. Required for bank transfer commission payments.</p>
+                
+                <div className="space-y-4">
+                  {/* Bank Name */}
+                  <div className="space-y-2">
+                    <Label htmlFor="bankName" className="text-sm font-medium">Bank Name</Label>
+                    <Input
+                      id="bankName"
+                      value={editRep.bankName}
+                      onChange={(e) => setEditRep({...editRep, bankName: e.target.value})}
+                      className="focus:ring-pink-500 focus:border-pink-500"
+                      placeholder="e.g. FNB, Capitec, Standard Bank"
+                    />
+                  </div>
+
+                  {/* Account Holder Name */}
+                  <div className="space-y-2">
+                    <Label htmlFor="accountHolderName" className="text-sm font-medium">Account Holder Name</Label>
+                    <Input
+                      id="accountHolderName"
+                      value={editRep.accountHolderName}
+                      onChange={(e) => setEditRep({...editRep, accountHolderName: e.target.value})}
+                      className="focus:ring-pink-500 focus:border-pink-500"
+                      placeholder="Full name as it appears on the account"
+                    />
+                  </div>
+
+                  {/* Account Number and Branch Code */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="accountNumber" className="text-sm font-medium">Account Number</Label>
+                      <Input
+                        id="accountNumber"
+                        value={editRep.accountNumber}
+                        onChange={(e) => setEditRep({...editRep, accountNumber: e.target.value})}
+                        className="focus:ring-pink-500 focus:border-pink-500"
+                        placeholder="Account number"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="branchCode" className="text-sm font-medium">Branch Code</Label>
+                      <Input
+                        id="branchCode"
+                        value={editRep.branchCode}
+                        onChange={(e) => setEditRep({...editRep, branchCode: e.target.value})}
+                        className="focus:ring-pink-500 focus:border-pink-500"
+                        placeholder="Branch code (optional)"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Action Buttons */}

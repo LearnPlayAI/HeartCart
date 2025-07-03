@@ -613,6 +613,22 @@ Changelog:
   * Preserved ALL core system data: users (5), products (583), categories (204), suppliers (2), promotions (1), product_attributes (35)
   * Reset sequence counters to start new records from ID 1 for organized testing
   * System ready for comprehensive testing with clean transactional slate while maintaining full product catalog and user accounts
+- July 3, 2025. Comprehensive sales rep commission system optimization and UI improvements:
+  * Fixed commission rate database schema to use whole number percentages (5%, 10%) with precision DECIMAL(5,2) instead of decimals
+  * Updated commission rate input fields in create and edit forms to only accept whole numbers with step=1 and improved user guidance
+  * Enhanced cache invalidation across ALL sales rep forms (create, edit, record payment) to refresh UI immediately after changes
+  * All forms now invalidate multiple query caches: main list, overview statistics, individual rep data, commissions, and payments
+  * Sales rep cards now update automatically when commission rates are changed without requiring manual page refresh
+  * Improved user experience with clear placeholder text "e.g. 5 for 5%" and help text explaining whole numbers only
+  * Commission calculation logic correctly converts whole numbers to decimals by dividing by 100 for accurate profit calculations
+- July 3, 2025. WhatsApp website sharing system for beta tester recruitment fully operational:
+  * Complete WebsiteShareCard component integrated in admin dashboard with editable sharing messages
+  * Default recruitment message includes website URL, rep program details with commission benefits, and contact information
+  * Auto-save functionality with debounced message editing and persistent storage via systemSettings
+  * WhatsApp sharing with encoded URL generation for direct message sending to contacts
+  * Copy-to-clipboard functionality with user feedback and professional reset-to-default option
+  * BETA badge and TeeMeYou branding throughout sharing interface for beta tester recruitment campaigns
+  * Production-ready system allows admins to recruit friends and family as beta testers and potential sales representatives
 - July 2, 2025. Fixed user registration timestamp capture and admin users page date display:
   * Resolved issue where user registration wasn't capturing createdAt timestamps in database
   * Updated auth.ts to explicitly set createdAt and updatedAt timestamps during user registration

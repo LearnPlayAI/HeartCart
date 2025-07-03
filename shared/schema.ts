@@ -399,9 +399,16 @@ export const salesReps = pgTable("salesReps", {
   lastName: text("lastName").notNull(),
   email: text("email").notNull().unique(),
   phoneNumber: text("phoneNumber"),
-  commissionRate: decimal("commissionRate", { precision: 5, scale: 4 }).notNull().default("0.0300"), // 3% default commission
+  commissionRate: decimal("commissionRate", { precision: 5, scale: 2 }).notNull().default("3.00"), // 3% default commission as whole number
   isActive: boolean("isActive").default(true).notNull(),
   notes: text("notes"), // Admin notes about the rep
+  
+  // Banking details for payments
+  bankName: text("bankName"),
+  accountNumber: text("accountNumber"),
+  accountHolderName: text("accountHolderName"),
+  branchCode: text("branchCode"),
+  
   createdAt: timestamp("createdAt").defaultNow(),
   updatedAt: timestamp("updatedAt").defaultNow(),
 }, (table) => {
