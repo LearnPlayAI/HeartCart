@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { CheckCircle, Copy, Building2, MapPin, Clock, Phone, Package, Mail, User } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { CheckCircle, Copy, Building2, MapPin, Clock, Phone, Package, Mail, User, Upload, FileCheck, XCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
@@ -58,6 +59,12 @@ export default function PaymentConfirmation() {
   const [, navigate] = useLocation();
   const [orderData, setOrderData] = useState<OrderData | null>(null);
   const [referenceNumber, setReferenceNumber] = useState('');
+  
+  // Upload state
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [proofOfPayment, setProofOfPayment] = useState<string | null>(null);
+  
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -98,6 +105,40 @@ export default function PaymentConfirmation() {
     }
   }, [navigate]);
 
+  // Upload proof mutation using existing endpoint
+  const uploadProofMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('folder', `POPS/${orderData?.customerInfo.email}/${referenceNumber}`);
+      
+      const response = await fetch('/api/files/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to upload proof of payment');
+      }
+      
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setProofOfPayment(data.data.url);
+      toast({
+        title: "Upload Successful",
+        description: "Proof of payment uploaded successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Upload Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   // Create order mutation (when user confirms payment)
   const createOrderMutation = useMutation({
     mutationFn: async (orderData: OrderData) => {
@@ -126,18 +167,67 @@ export default function PaymentConfirmation() {
     }
   });
 
+  // File upload handler
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (file.type !== 'application/pdf') {
+      toast({
+        title: "Invalid File Type",
+        description: "Please upload a PDF file only",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (10MB max)
+    const maxSizeInBytes = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSizeInBytes) {
+      toast({
+        title: "File Too Large",
+        description: "File must be under 10MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Set upload state
+    setIsUploading(true);
+    setUploadProgress(0);
+    
+    // Start upload
+    uploadProofMutation.mutate(file, {
+      onSettled: () => {
+        setIsUploading(false);
+        setUploadProgress(0);
+      }
+    });
+  };
+
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     
   };
 
   const handleConfirmPayment = () => {
+    if (!proofOfPayment) {
+      toast({
+        title: "Proof of Payment Required",
+        description: "Please upload your proof of payment before creating the order",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (orderData) {
-      // Add payment reference number to order data
+      // Add payment reference number and proof of payment to order data
       const orderWithPaymentRef = {
         ...orderData,
         paymentReferenceNumber: referenceNumber,
-        paymentStatus: 'paid' // Set status to indicate payment proof was uploaded
+        proofOfPayment: proofOfPayment,
+        paymentStatus: 'pending_verification' // Payment uploaded but needs verification
       };
       createOrderMutation.mutate(orderWithPaymentRef);
     }
@@ -419,11 +509,79 @@ export default function PaymentConfirmation() {
             </CardContent>
           </Card>
 
+          {/* Upload Proof of Payment */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Upload className="w-5 h-5" />
+                Upload Proof of Payment
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="text-sm text-gray-600 mb-4">
+                After making your EFT payment, please upload your proof of payment (PDF only, max 10MB)
+              </div>
+              
+              {!proofOfPayment ? (
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                  <input
+                    type="file"
+                    accept=".pdf,application/pdf"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                    id="proof-upload"
+                    disabled={isUploading}
+                  />
+                  <label
+                    htmlFor="proof-upload"
+                    className={`cursor-pointer ${isUploading ? 'cursor-not-allowed opacity-50' : ''}`}
+                  >
+                    <div className="space-y-2">
+                      <Upload className="w-8 h-8 mx-auto text-gray-400" />
+                      <div className="text-sm text-gray-600">
+                        {isUploading ? 'Uploading...' : 'Click to upload proof of payment'}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        PDF only, max 10MB
+                      </div>
+                    </div>
+                  </label>
+                  
+                  {isUploading && (
+                    <div className="mt-4">
+                      <Progress value={uploadProgress} className="w-full" />
+                      <div className="text-xs text-gray-500 mt-1">
+                        Uploading... {uploadProgress}%
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <FileCheck className="w-5 h-5 text-green-600" />
+                    <span className="text-sm text-green-700">
+                      Proof of payment uploaded successfully
+                    </span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setProofOfPayment(null)}
+                    className="text-red-600 hover:text-red-700"
+                  >
+                    <XCircle className="w-4 h-4" />
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Action Buttons */}
           <div className="space-y-3">
             <Button
               onClick={handleConfirmPayment}
-              disabled={createOrderMutation.isPending}
+              disabled={createOrderMutation.isPending || !proofOfPayment}
               className="w-full"
               size="lg"
             >
