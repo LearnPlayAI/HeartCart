@@ -168,7 +168,7 @@ export const DraftDashboard: React.FC = () => {
     queryKey: ['/api/categories'],
     queryFn: async () => {
       const response = await apiRequest('GET', '/api/categories');
-      return response.json();
+      return response;
     }
   });
 
@@ -202,7 +202,7 @@ export const DraftDashboard: React.FC = () => {
       searchParams.append('offset', ((currentPage - 1) * itemsPerPage).toString());
       const url = `/api/product-drafts?${searchParams.toString()}`;
       const response = await apiRequest('GET', url);
-      return response.json();
+      return response;
     }
   });
   
@@ -213,7 +213,7 @@ export const DraftDashboard: React.FC = () => {
         name: draftName,
         slug: draftName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
       });
-      return response.json();
+      return response;
     },
     onSuccess: (data) => {
       if (data.success) {
@@ -249,7 +249,7 @@ export const DraftDashboard: React.FC = () => {
   const deleteDraftMutation = useMutation({
     mutationFn: async (draftId: number) => {
       const response = await apiRequest('DELETE', `/api/product-drafts/${draftId}`);
-      return response.json();
+      return response;
     },
     onSuccess: (data) => {
       if (data.success) {

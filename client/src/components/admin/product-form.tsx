@@ -151,11 +151,10 @@ export default function ProductForm({ productId, onSuccess }: ProductFormProps) 
       delete formattedData.newTag;
       
       const res = await apiRequest('POST', '/api/products', formattedData);
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || 'Failed to create product');
+      if (!res.success) {
+        throw new Error(res.message || 'Failed to create product');
       }
-      return res.json();
+      return res;
     },
     onSuccess: (data) => {
       
@@ -189,11 +188,10 @@ export default function ProductForm({ productId, onSuccess }: ProductFormProps) 
       delete formattedData.newTag;
       
       const res = await apiRequest('PUT', `/api/products/${productId}`, formattedData);
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || 'Failed to update product');
+      if (!res.success) {
+        throw new Error(res.message || 'Failed to update product');
       }
-      return res.json();
+      return res;
     },
     onSuccess: () => {
       

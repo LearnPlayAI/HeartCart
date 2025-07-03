@@ -69,8 +69,7 @@ export function MassUploadStep6({ data, onUpdate, onComplete, onPrevious }: Mass
             
             // Only update if at least one price option is selected
             if (Object.keys(priceUpdateData).length > 0) {
-              const response = await apiRequest('PATCH', `/api/products/${product.existingProduct.id}`, priceUpdateData);
-              const result = await response.json();
+              const result = await apiRequest('PATCH', `/api/products/${product.existingProduct.id}`, priceUpdateData);
               
               if (result.success) {
                 results.push({
@@ -118,8 +117,7 @@ export function MassUploadStep6({ data, onUpdate, onComplete, onPrevious }: Mass
               }
             };
 
-            const response = await apiRequest('POST', '/api/product-drafts', draftData);
-            const result = await response.json();
+            const result = await apiRequest('POST', '/api/product-drafts', draftData);
             
             if (result.success) {
               results.push({

@@ -253,7 +253,7 @@ export default function ProductFormWizard({ productId, catalogId, onSuccess }: P
       
       // Use centralized error handling in apiRequest
       const res = await apiRequest('POST', '/api/products', formattedData);
-      return res.json();
+      return res;
     },
     onSuccess: async (response) => {
       // Extract the product data from standardized response
@@ -284,7 +284,7 @@ export default function ProductFormWizard({ productId, catalogId, onSuccess }: P
                 
                 // Move the image file using centralized error handling
                 const moveRes = await apiRequest('POST', '/api/products/images/move', moveData);
-                const movedImage = await moveRes.json();
+                const movedImage = moveRes;
                 console.log(`Successfully moved image to ${movedImage.objectKey}`);
                 
                 // Create product image record 
@@ -298,7 +298,7 @@ export default function ProductFormWizard({ productId, catalogId, onSuccess }: P
                 
                 // Create image record with centralized error handling
                 const imgRes = await apiRequest('POST', `/api/products/${data.id}/images`, imageData);
-                await imgRes.json();
+                const imgResult = imgRes;
                 console.log("Product image record created successfully");
               } catch (imgError) {
                 console.error(`Error processing image:`, imgError);
@@ -348,7 +348,7 @@ export default function ProductFormWizard({ productId, catalogId, onSuccess }: P
       
       // Use centralized error handling in apiRequest
       const res = await apiRequest('PUT', `/api/products/${productId}`, formattedData);
-      return res.json();
+      return res;
     },
     onSuccess: (response) => {
       // Extract the product data from standardized response

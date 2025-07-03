@@ -19,7 +19,7 @@ export const EditProduct: React.FC = () => {
     queryFn: async () => {
       if (!productId) return null;
       const response = await apiRequest('GET', `/api/products/${productId}`);
-      return response.json();
+      return response;
     },
     enabled: !!productId,
   });

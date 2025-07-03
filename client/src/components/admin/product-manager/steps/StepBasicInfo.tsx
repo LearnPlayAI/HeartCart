@@ -73,7 +73,7 @@ export const StepBasicInfo: React.FC<StepComponentProps> = ({
     queryKey: ['/api/categories'],
     queryFn: async () => {
       const response = await apiRequest('GET', '/api/categories');
-      return response.json();
+      return response;
     },
   });
   
@@ -82,7 +82,7 @@ export const StepBasicInfo: React.FC<StepComponentProps> = ({
     queryKey: ['/api/catalogs'],
     queryFn: async () => {
       const response = await apiRequest('GET', '/api/catalogs');
-      return response.json();
+      return response;
     },
   });
   
@@ -91,7 +91,7 @@ export const StepBasicInfo: React.FC<StepComponentProps> = ({
     queryKey: ['/api/suppliers'],
     queryFn: async () => {
       const response = await apiRequest('GET', '/api/suppliers');
-      return response.json();
+      return response;
     },
   });
   

@@ -87,7 +87,7 @@ export const ProductForm: React.FC<ProductFormSharedProps> = ({
     queryKey: ['/api/catalogs'],
     queryFn: async () => {
       const response = await apiRequest('GET', '/api/catalogs');
-      return response.json();
+      return response;
     }
   });
   
@@ -95,7 +95,7 @@ export const ProductForm: React.FC<ProductFormSharedProps> = ({
     queryKey: ['/api/suppliers'],
     queryFn: async () => {
       const response = await apiRequest('GET', '/api/suppliers');
-      return response.json();
+      return response;
     }
   });
   
@@ -112,7 +112,7 @@ export const ProductForm: React.FC<ProductFormSharedProps> = ({
       };
       
       const response = await apiRequest('POST', '/api/product-drafts', requestData);
-      return response.json();
+      return response;
     },
     onSuccess: (data) => {
       if (data.success && data.data?.id) {
@@ -147,7 +147,7 @@ export const ProductForm: React.FC<ProductFormSharedProps> = ({
     queryFn: async () => {
       if (!draftId) return { success: false, data: null };
       const response = await apiRequest('GET', `/api/product-drafts/${draftId}`);
-      return response.json();
+      return response;
     },
     enabled: !!draftId,
   });
@@ -176,7 +176,7 @@ export const ProductForm: React.FC<ProductFormSharedProps> = ({
       console.log(`Updating step ${stepId}:`, requestData);
       
       const response = await apiRequest('PATCH', `/api/product-drafts/${draftId}/wizard-step`, requestData);
-      return response.json();
+      return response;
     },
     onSuccess: (data) => {
       if (data.success) {
@@ -204,7 +204,7 @@ export const ProductForm: React.FC<ProductFormSharedProps> = ({
     mutationFn: async () => {
       if (!draftId) throw new Error('No draft ID available');
       const response = await apiRequest('DELETE', `/api/product-drafts/${draftId}`);
-      return response.json();
+      return response;
     },
     onSuccess: (data) => {
       if (data.success) {
@@ -232,7 +232,7 @@ export const ProductForm: React.FC<ProductFormSharedProps> = ({
     mutationFn: async () => {
       if (!draftId) throw new Error('No draft ID available');
       const response = await apiRequest('POST', `/api/product-drafts/${draftId}/publish`);
-      return response.json();
+      return response;
     },
     onSuccess: (data) => {
       if (data.success) {

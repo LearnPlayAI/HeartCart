@@ -52,8 +52,7 @@ export function MassUploadStep5({ data, onUpdate, onNext, onPrevious }: MassUplo
   const { data: categoriesData } = useQuery({
     queryKey: ['/api/categories'],
     queryFn: async () => {
-      const response = await apiRequest('GET', '/api/categories');
-      return response.json();
+      return await apiRequest('GET', '/api/categories');
     },
   });
 
@@ -70,8 +69,7 @@ export function MassUploadStep5({ data, onUpdate, onNext, onPrevious }: MassUplo
   // Create category mutation
   const createCategoryMutation = useMutation({
     mutationFn: async (categoryData: any) => {
-      const response = await apiRequest('POST', '/api/categories', categoryData);
-      return response.json();
+      return await apiRequest('POST', '/api/categories', categoryData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/categories'] });

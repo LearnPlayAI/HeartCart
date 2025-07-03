@@ -24,8 +24,7 @@ export function MassUploadStep1({ data, onUpdate, onNext }: MassUploadStep1Props
   const { data: suppliersData, isLoading: isLoadingSuppliers } = useQuery({
     queryKey: ['/api/suppliers'],
     queryFn: async () => {
-      const response = await apiRequest('GET', '/api/suppliers');
-      return response.json();
+      return await apiRequest('GET', '/api/suppliers');
     },
   });
 
@@ -34,8 +33,7 @@ export function MassUploadStep1({ data, onUpdate, onNext }: MassUploadStep1Props
     queryKey: ['/api/suppliers', selectedSupplierId, 'catalogs'],
     queryFn: async () => {
       if (!selectedSupplierId) return { success: true, data: [] };
-      const response = await apiRequest('GET', `/api/suppliers/${selectedSupplierId}/catalogs`);
-      return response.json();
+      return await apiRequest('GET', `/api/suppliers/${selectedSupplierId}/catalogs`);
     },
     enabled: !!selectedSupplierId,
   });

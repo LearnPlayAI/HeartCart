@@ -193,7 +193,7 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ draftId, initialDa
     queryKey: ['/api/catalogs'],
     queryFn: async () => {
       const response = await apiRequest('GET', '/api/catalogs');
-      return response.json();
+      return response;
     },
   });
   
@@ -201,7 +201,7 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ draftId, initialDa
     queryKey: ['/api/suppliers'],
     queryFn: async () => {
       const response = await apiRequest('GET', '/api/suppliers');
-      return response.json();
+      return response;
     },
   });
 
@@ -219,7 +219,7 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ draftId, initialDa
       
       console.log('API Request: POST /api/product-drafts', requestData);
       const response = await apiRequest('POST', '/api/product-drafts', requestData);
-      return response.json();
+      return response;
     },
     onSuccess: (data) => {
       if (data.success && data.data && data.data.id) {
@@ -316,7 +316,7 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ draftId, initialDa
       }
       
       const response = await apiRequest('PATCH', `/api/product-drafts/${draftId}/wizard-step`, requestData);
-      const responseData = await response.json();
+      const responseData = response;
       
       // Log response for debugging
       console.log(`Server response for step ${step}:`, responseData);
@@ -362,7 +362,7 @@ export const ProductWizard: React.FC<ProductWizardProps> = ({ draftId, initialDa
     mutationFn: async () => {
       if (!draftId) throw new Error('No draft ID available');
       const response = await apiRequest('POST', `/api/product-drafts/${draftId}/publish`);
-      return response.json();
+      return response;
     },
     onSuccess: (data) => {
       if (data.success) {
