@@ -27,6 +27,7 @@ import AuthPage from "@/pages/auth-page";
 import FlashDeals from "@/pages/flash-deals";
 import NotFound from "@/pages/not-found";
 import VerifyEmail from "@/pages/verify-email";
+import TermsAndConditions from "@/pages/TermsAndConditions";
 import CartDrawer from "@/components/cart/cart-drawer";
 import { SessionExpiryWarning } from "@/components/session/session-expiry-warning";
 
@@ -285,6 +286,7 @@ function App() {
                           <Route path="/auth"><AuthPage /></Route>
                           <Route path="/reset-password"><AuthPage /></Route>
                           <Route path="/verify-email"><VerifyEmail /></Route>
+                          <Route path="/terms-and-conditions"><TermsAndConditions /></Route>
                           <Route><NotFound /></Route>
                         </Switch>
                       </main>
