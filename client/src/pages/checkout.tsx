@@ -100,6 +100,7 @@ export default function CheckoutPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedLocker, setSelectedLocker] = useState(null);
   const [savePreferredTrigger, setSavePreferredTrigger] = useState(false);
+  const [canProceedToCheckout, setCanProceedToCheckout] = useState(true);
   const { creditBalance, formattedBalance, balanceLoading, transactions } = useCredits();
 
   // Fetch current user details
@@ -353,6 +354,16 @@ export default function CheckoutPage() {
       toast({
         title: "Empty Cart",
         description: "Please add items to your cart before checkout.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validate promotion requirements before checkout
+    if (!canProceedToCheckout) {
+      toast({
+        title: "Promotion Requirements Not Met",
+        description: "Please resolve promotion requirements before proceeding to checkout.",
         variant: "destructive"
       });
       return;
@@ -833,9 +844,13 @@ export default function CheckoutPage() {
               type="submit"
               size="lg"
               className="w-full"
-              disabled={isProcessing || createPaymentSessionMutation.isPending || confirmPaymentMutation.isPending}
+              disabled={isProcessing || createPaymentSessionMutation.isPending || confirmPaymentMutation.isPending || !canProceedToCheckout}
             >
-              {isProcessing ? "Processing Order..." : `Place Order - R${finalTotal.toFixed(2)}`}
+              {isProcessing 
+                ? "Processing Order..." 
+                : !canProceedToCheckout 
+                  ? "Resolve Promotion Requirements" 
+                  : `Place Order - R${finalTotal.toFixed(2)}`}
             </Button>
           </form>
         </div>
@@ -974,7 +989,10 @@ export default function CheckoutPage() {
               <Separator />
 
               {/* Promotion Validation */}
-              <PromotionValidationCard cartItems={cartItems} />
+              <PromotionValidationCard 
+                cartItems={cartItems} 
+                onValidationChange={setCanProceedToCheckout}
+              />
 
               {/* Auto Credit Application Display */}
               {autoCreditAmount > 0 && (

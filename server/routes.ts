@@ -3368,6 +3368,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return promotionsWithProducts;
   }));
 
+  // Validate cart items against promotion requirements
+  app.post("/api/promotions/validate-cart", withStandardResponse(async (req: Request, res: Response) => {
+    const cartValidationSchema = z.object({
+      items: z.array(z.object({
+        productId: z.number(),
+        quantity: z.number().min(1),
+        product: z.object({
+          id: z.number(),
+          name: z.string(),
+          price: z.number(),
+          salePrice: z.number().optional()
+        }).optional()
+      }))
+    });
+
+    const { items } = cartValidationSchema.parse(req.body);
+    
+    // Import the validation service dynamically
+    const { PromotionValidationService } = await import('./promotion-validation-service');
+    
+    const validationResult = await PromotionValidationService.validateCartForCheckout(items);
+    
+    return {
+      isValid: validationResult.isValid,
+      canProceedToCheckout: validationResult.canProceedToCheckout,
+      errors: validationResult.errors,
+      warnings: validationResult.warnings,
+      blockedPromotions: validationResult.blockedPromotions
+    };
+  }));
+
   // Get promotion by ID
   app.get("/api/promotions/:id", withStandardResponse(async (req: Request, res: Response) => {
     const id = parseInt(req.params.id);

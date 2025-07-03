@@ -3,162 +3,98 @@
  * Displays promotion validation messages, tips, and requirements in the cart
  */
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { CheckCircle, AlertCircle, ShoppingCart, Gift, ArrowRight } from 'lucide-react';
+import { CheckCircle, AlertCircle, Gift, ArrowRight, XCircle } from 'lucide-react';
 import { CartItemWithDiscounts } from '@/types/cart.types';
+import { apiRequest } from '@/lib/queryClient';
 
-interface PromotionData {
-  id: number;
-  promotionName: string;
-  description?: string;
-  startDate: string;
-  endDate: string;
-  isActive: boolean;
-  promotionType: string;
-  discountValue?: number;
-  minimumOrderValue?: number;
-  rules?: {
-    type: string;
-    minimumQuantity?: number;
-    minimumValue?: number;
-    buyQuantity?: number;
-    getQuantity?: number;
-  };
+interface ValidationResult {
+  isValid: boolean;
+  canProceedToCheckout: boolean;
+  errors: string[];
+  warnings: string[];
+  blockedPromotions: Array<{
+    promotionId: number;
+    promotionName: string;
+    reason: string;
+    required: number;
+    current: number;
+  }>;
 }
 
 interface PromotionValidationCardProps {
   cartItems: CartItemWithDiscounts[];
+  onValidationChange?: (canProceed: boolean) => void;
 }
 
-export default function PromotionValidationCard({ cartItems }: PromotionValidationCardProps) {
-  const [validationMessages, setValidationMessages] = useState<Array<{
-    type: 'success' | 'warning' | 'error' | 'info';
-    promotionName: string;
-    message: string;
-  }>>([]);
+export default function PromotionValidationCard({ cartItems, onValidationChange }: PromotionValidationCardProps) {
+  // Validate cart items using server-side validation
+  const { data: validationResponse, isLoading } = useQuery({
+    queryKey: ['/api/promotions/validate-cart', cartItems.map(item => ({ id: item.productId, quantity: item.quantity }))],
+    queryFn: async () => {
+      const cartData = cartItems.map(item => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        product: {
+          id: item.productId,
+          name: (item as any).product?.name || 'Unknown Product',
+          price: Number((item as any).product?.price) || 0,
+          salePrice: Number((item as any).product?.salePrice) || Number((item as any).product?.price) || 0
+        }
+      }));
 
-  // Fetch active promotions
-  const { data: promotionsResponse, isLoading } = useQuery({
-    queryKey: ['/api/promotions/active-with-products'],
+      return await apiRequest('/api/promotions/validate-cart', {
+        method: 'POST',
+        body: JSON.stringify({ items: cartData }),
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+    },
     enabled: cartItems.length > 0,
     refetchOnWindowFocus: false,
   });
 
-  const activePromotions = promotionsResponse?.success ? promotionsResponse.data : [];
+  const validationResult: ValidationResult | null = validationResponse?.success ? validationResponse.data : null;
 
+  // Notify parent component when validation changes
   useEffect(() => {
-    if (!cartItems.length || !activePromotions.length) {
-      setValidationMessages([]);
-      return;
+    if (onValidationChange && validationResult) {
+      onValidationChange(validationResult.canProceedToCheckout);
     }
+  }, [validationResult, onValidationChange]);
 
-    const messages: Array<{
-      type: 'success' | 'warning' | 'error' | 'info';
-      promotionName: string;
-      message: string;
-    }> = [];
-
-    // Group cart items by promotion
-    const promotionGroups = new Map<number, CartItemWithDiscounts[]>();
-    cartItems.forEach(item => {
-      const product = (item as any).product;
-      const promotionId = product?.promotionId || (product as any)?.promotionInfo?.promotionId;
-      
-      if (promotionId) {
-        if (!promotionGroups.has(promotionId)) {
-          promotionGroups.set(promotionId, []);
-        }
-        promotionGroups.get(promotionId)!.push(item);
-      }
-    });
-
-    // Validate each promotion group
-    for (const [promotionId, items] of Array.from(promotionGroups.entries())) {
-      const promotion = activePromotions.find((p: PromotionData) => p.id === promotionId);
-      if (!promotion) continue;
-
-      const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
-      const totalValue = items.reduce((sum, item) => {
-        const price = Number(item.itemPrice) || 0;
-        return sum + (price * item.quantity);
-      }, 0);
-
-      // Validate based on promotion type
-      if (promotion.promotionType === 'bogo' && promotion.rules) {
-        const rule = promotion.rules;
-        if (rule.type === 'minimum_quantity_same_promotion' && rule.minimumQuantity) {
-          if (totalQuantity >= rule.minimumQuantity) {
-            messages.push({
-              type: 'success',
-              promotionName: promotion.promotionName,
-              message: `Great! You qualify for "${promotion.promotionName}" with ${totalQuantity} items.`
-            });
-          } else {
-            const needed = rule.minimumQuantity - totalQuantity;
-            messages.push({
-              type: 'warning',
-              promotionName: promotion.promotionName,
-              message: `Add ${needed} more item${needed > 1 ? 's' : ''} from this promotion to qualify for "${promotion.promotionName}".`
-            });
-          }
-        }
-
-        if (rule.type === 'buy_x_get_y' && rule.buyQuantity) {
-          const setsQualified = Math.floor(totalQuantity / rule.buyQuantity);
-          if (setsQualified > 0) {
-            messages.push({
-              type: 'success',
-              promotionName: promotion.promotionName,
-              message: `You qualify for ${setsQualified} free item${setsQualified > 1 ? 's' : ''} with "${promotion.promotionName}".`
-            });
-          } else {
-            const needed = rule.buyQuantity - totalQuantity;
-            messages.push({
-              type: 'info',
-              promotionName: promotion.promotionName,
-              message: `Add ${needed} more item${needed > 1 ? 's' : ''} to get a free item with "${promotion.promotionName}".`
-            });
-          }
-        }
-      }
-
-      // Check minimum order value
-      if (promotion.minimumOrderValue && totalValue < promotion.minimumOrderValue) {
-        const needed = promotion.minimumOrderValue - totalValue;
-        messages.push({
-          type: 'warning',
-          promotionName: promotion.promotionName,
-          message: `Spend R${needed.toFixed(2)} more to qualify for "${promotion.promotionName}".`
-        });
-      }
-    }
-
-    setValidationMessages(messages);
-  }, [cartItems, activePromotions]);
-
-  if (isLoading || !cartItems.length || !validationMessages.length) {
+  if (isLoading || !cartItems.length) {
     return null;
   }
 
-  const getMessageIcon = (type: string) => {
+  // Don't show the card if validation passes with no messages
+  if (validationResult && validationResult.isValid && 
+      !validationResult.errors.length && 
+      !validationResult.warnings.length && 
+      !validationResult.blockedPromotions.length) {
+    return null;
+  }
+
+  const getMessageIcon = (type: 'success' | 'warning' | 'error' | 'info') => {
     switch (type) {
       case 'success':
         return <CheckCircle className="h-4 w-4 text-green-600" />;
       case 'warning':
         return <AlertCircle className="h-4 w-4 text-yellow-600" />;
       case 'error':
-        return <AlertCircle className="h-4 w-4 text-red-600" />;
+        return <XCircle className="h-4 w-4 text-red-600" />;
       default:
         return <Gift className="h-4 w-4 text-blue-600" />;
     }
   };
 
-  const getMessageColor = (type: string) => {
+  const getMessageColor = (type: 'success' | 'warning' | 'error' | 'info') => {
     switch (type) {
       case 'success':
         return 'border-green-200 bg-green-50';
@@ -171,12 +107,50 @@ export default function PromotionValidationCard({ cartItems }: PromotionValidati
     }
   };
 
+  // Prepare validation messages for display
+  const validationMessages = [];
+  
+  if (validationResult) {
+    // Add error messages
+    validationResult.errors.forEach(error => {
+      validationMessages.push({
+        type: 'error' as const,
+        message: error,
+        promotionName: 'Validation Error'
+      });
+    });
+    
+    // Add warning messages
+    validationResult.warnings.forEach(warning => {
+      validationMessages.push({
+        type: 'warning' as const,
+        message: warning,
+        promotionName: 'Promotion Warning'
+      });
+    });
+    
+    // Add blocked promotions
+    validationResult.blockedPromotions.forEach(blocked => {
+      const needed = blocked.required - blocked.current;
+      validationMessages.push({
+        type: 'error' as const,
+        message: `${blocked.reason} Need ${needed} more items to qualify.`,
+        promotionName: blocked.promotionName
+      });
+    });
+  }
+
   return (
     <Card className="w-full">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
           <Gift className="h-5 w-5 text-pink-600" />
           Promotion Status
+          {validationResult && !validationResult.canProceedToCheckout && (
+            <Badge variant="destructive" className="text-xs">
+              Checkout Blocked
+            </Badge>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -198,7 +172,17 @@ export default function PromotionValidationCard({ cartItems }: PromotionValidati
           </Alert>
         ))}
         
-        {validationMessages.some(m => m.type === 'warning' || m.type === 'info') && (
+        {validationResult && !validationResult.canProceedToCheckout && (
+          <>
+            <Separator className="my-3" />
+            <div className="flex items-center gap-2 text-xs text-red-600 font-medium">
+              <XCircle className="h-3 w-3" />
+              <span>Please resolve the issues above before proceeding to checkout.</span>
+            </div>
+          </>
+        )}
+        
+        {validationResult && validationResult.canProceedToCheckout && validationMessages.some(m => m.type === 'warning') && (
           <>
             <Separator className="my-3" />
             <div className="flex items-center gap-2 text-xs text-gray-600">

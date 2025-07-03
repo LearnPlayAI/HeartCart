@@ -11,6 +11,7 @@ import path from "path";
 import fs from "fs";
 import { objectStore } from "./object-store";
 import { databaseEmailService } from "./database-email-service";
+import { PromotionValidationService } from "./promotion-validation-service";
 
 // Define the order creation schema that matches the checkout form structure
 const checkoutOrderSchema = z.object({
@@ -274,6 +275,51 @@ router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Respons
         provider: orderData.lockerDetails.provider
       } : null,
     };
+
+    // Validate cart items against promotion requirements before creating order
+    try {
+      // Convert orderItems to cart format for validation
+      const cartItems = orderItems.map(item => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        product: {
+          id: item.productId,
+          name: item.productName,
+          price: item.unitPrice,
+          salePrice: item.unitPrice
+        }
+      }));
+
+      const validationResult = await PromotionValidationService.validateCartForCheckout(cartItems);
+      
+      if (!validationResult.canProceedToCheckout) {
+        logger.warn("Order creation blocked due to promotion validation failure", {
+          userId,
+          errors: validationResult.errors,
+          blockedPromotions: validationResult.blockedPromotions
+        });
+        
+        return sendError(res, 
+          `Promotion requirements not met: ${validationResult.errors.join(', ')}`, 
+          400, 
+          {
+            validationErrors: validationResult.errors,
+            blockedPromotions: validationResult.blockedPromotions
+          }
+        );
+      }
+
+      logger.info("Promotion validation passed for order creation", {
+        userId,
+        validationResult: validationResult.isValid
+      });
+    } catch (validationError) {
+      logger.error("Error during promotion validation", {
+        error: validationError instanceof Error ? validationError.message : String(validationError),
+        userId
+      });
+      // On validation error, allow order to proceed (fail safe)
+    }
 
     // Create the order
     const newOrder = await storage.createOrder(order, orderItems);
