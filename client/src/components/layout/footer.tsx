@@ -131,12 +131,6 @@ const Footer = () => {
             <Link href="/terms-and-conditions" className="text-gray-600 hover:text-[#FF69B4] transition-colors">
               Terms and Conditions
             </Link>
-            <a href="#" className="text-gray-600 hover:text-[#FF69B4] transition-colors">
-              Shipping Info
-            </a>
-            <a href="#" className="text-gray-600 hover:text-[#FF69B4] transition-colors">
-              Returns
-            </a>
           </div>
         </div>
       </div>

@@ -619,7 +619,8 @@ Changelog:
   * Implemented mobile-responsive design with 10 sections covering all business terms and conditions
   * Removed Customer Service section from footer to simplify layout and eliminate redundant contact information
   * Updated footer grid layout from 4 columns to 3 columns for better visual balance
-  * Footer now contains: Company Info, Quick Links, and Contact Us sections only
+  * Removed "Shipping Info" and "Returns" links from footer bottom links for cleaner design
+  * Footer now contains: Company Info, Quick Links, and Contact Us sections with minimal bottom links (Privacy Policy, Terms and Conditions)
 - July 3, 2025. Complete sales rep commission payment system bug fix and database integrity enhancement:
   * Fixed critical commission payment processing bug where owed amounts weren't being properly zeroed out after bank transfer payments
   * Updated markCommissionsAsPaid function to properly set owed = '0.00' for Store Credit payments (was missing owed field update)
