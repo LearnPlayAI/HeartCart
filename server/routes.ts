@@ -6787,6 +6787,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allowedPrefixes = [
         // Standard system folders
         'products/', 'categories/', 'temp/', 'suppliers/', 'catalog/', 'catalogs/',
+        // Proof of payment files
+        'POPS/',
         // New folder structure for supplier/catalog-based paths
         // Any path that starts with a supplier name is allowed
       ];
