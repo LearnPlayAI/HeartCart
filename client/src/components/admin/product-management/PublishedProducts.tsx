@@ -817,16 +817,13 @@ export const PublishedProducts: React.FC = () => {
                                   console.log(`Creating draft for product ID: ${product.id}`);
                                   
                                   // Create a draft from the published product for editing
-                                  const response = await apiRequest('POST', `/api/product-drafts/create-from-published/${product.id}`);
-                                  
-                                  if (!response.ok) {
-                                    const errorData = await response.json();
-                                    console.error('API Error:', errorData);
-                                    throw new Error(errorData.error?.message || 'Failed to create draft');
-                                  }
-                                  
-                                  const result = await response.json();
+                                  const result = await apiRequest('POST', `/api/product-drafts/create-from-published/${product.id}`);
                                   console.log('API Response:', result);
+                                  
+                                  if (!result.success) {
+                                    console.error('API Error:', result);
+                                    throw new Error(result.error?.message || 'Failed to create draft');
+                                  }
                                   
                                   if (result.success && result.data?.draftId) {
                                     console.log(`Navigating to wizard with draft ID: ${result.data.draftId}`);

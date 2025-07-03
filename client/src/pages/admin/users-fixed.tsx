@@ -117,8 +117,7 @@ export default function UserAdminPageFixed() {
   const { data: statsData } = useQuery<{ success: boolean; data: UserStats }>({
     queryKey: ['/api/admin/users/stats'],
     queryFn: async () => {
-      const response = await apiRequest('GET', '/api/admin/users/stats');
-      return response.json();
+      return await apiRequest('GET', '/api/admin/users/stats');
     }
   });
 
@@ -128,8 +127,7 @@ export default function UserAdminPageFixed() {
   const { data: userCreationSettingData } = useQuery({
     queryKey: ['/api/admin/settings/userCreationEnabled'],
     queryFn: async () => {
-      const response = await apiRequest('GET', '/api/admin/settings/userCreationEnabled');
-      return response.json();
+      return await apiRequest('GET', '/api/admin/settings/userCreationEnabled');
     }
   });
 

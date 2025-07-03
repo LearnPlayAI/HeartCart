@@ -634,18 +634,14 @@ export default function CatalogProducts() {
       
       
       // Call API to reuse existing draft (same as published products edit)
-      const response = await apiRequest(
+      const result = await apiRequest(
         "POST", 
         `/api/product-drafts/create-from-published/${product.id}`
       );
       
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || "Failed to create product draft");
+      if (!result.success) {
+        throw new Error(result.error?.message || "Failed to create product draft");
       }
-      
-      // Get the draft data
-      const result = await response.json();
       
       if (result.success && result.data) {
         // Success toast - replaces the loading toast by using same ID
