@@ -18,6 +18,20 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { PromotionRuleBuilder } from "@/components/admin/PromotionRuleBuilder";
 
+// All available promotion types (basic + rule-based)
+const PROMOTION_TYPES = [
+  // Basic promotion types
+  { value: 'percentage', label: 'Percentage Discount', description: 'Simple percentage off the total' },
+  { value: 'fixed', label: 'Fixed Amount Discount', description: 'Fixed rand amount off the total' },
+  { value: 'bogo', label: 'Buy One Get One', description: 'Classic BOGO promotion' },
+  
+  // Rule-based promotion types (from PromotionRuleBuilder)
+  { value: 'minimum_quantity_same_promotion', label: 'Minimum Quantity', description: 'Require minimum items from same promotion' },
+  { value: 'minimum_order_value', label: 'Minimum Order Value', description: 'Require minimum total order amount' },
+  { value: 'buy_x_get_y', label: 'Buy X Get Y', description: 'BOGO-style promotions' },
+  { value: 'category_mix', label: 'Category Mix', description: 'Require items from specific categories' }
+];
+
 // Form validation schema
 const promotionSchema = z.object({
   promotionName: z.string().min(1, "Promotion name is required"),
@@ -25,7 +39,10 @@ const promotionSchema = z.object({
   startDate: z.string().min(1, "Start date is required"),
   endDate: z.string().min(1, "End date is required"),
   isActive: z.boolean().default(true),
-  promotionType: z.enum(["percentage", "fixed", "bogo"]),
+  promotionType: z.enum([
+    "percentage", "fixed", "bogo", 
+    "minimum_quantity_same_promotion", "minimum_order_value", "buy_x_get_y", "category_mix"
+  ]),
   discountValue: z.string().optional(),
   minimumOrderValue: z.string().optional(),
   rules: z.any().optional(),
@@ -40,7 +57,7 @@ interface Promotion {
   startDate: string;
   endDate: string;
   isActive: boolean;
-  promotionType: 'percentage' | 'fixed' | 'bogo';
+  promotionType: 'percentage' | 'fixed' | 'bogo' | 'minimum_quantity_same_promotion' | 'minimum_order_value' | 'buy_x_get_y' | 'category_mix';
   discountValue?: number;
   minimumOrderValue?: number;
   rules?: any;
@@ -48,6 +65,16 @@ interface Promotion {
   createdAt: string;
   updatedAt: string;
 }
+
+// Helper function to determine the display promotion type
+const getDisplayPromotionType = (promotion: any) => {
+  // If promotion has rules with a type, prioritize that over basic promotionType
+  if (promotion.rules?.type) {
+    return promotion.rules.type;
+  }
+  // Otherwise use the basic promotionType
+  return promotion.promotionType;
+};
 
 export default function EditPromotionPage() {
   const params = useParams();
@@ -81,13 +108,15 @@ export default function EditPromotionPage() {
   useEffect(() => {
     if (promotionResponse?.success && promotionResponse.data) {
       const promotionData = promotionResponse.data;
+      const displayType = getDisplayPromotionType(promotionData);
+      
       form.reset({
         promotionName: promotionData.promotionName || "",
         description: promotionData.description || "",
         startDate: promotionData.startDate ? promotionData.startDate.split('T')[0] : "",
         endDate: promotionData.endDate ? promotionData.endDate.split('T')[0] : "",
         isActive: promotionData.isActive || false,
-        promotionType: promotionData.promotionType || "",
+        promotionType: displayType || "",
         discountValue: promotionData.discountValue ? promotionData.discountValue.toString() : "",
         minimumOrderValue: promotionData.minimumOrderValue ? promotionData.minimumOrderValue.toString() : "",
         rules: promotionData.rules || null,
@@ -261,9 +290,11 @@ export default function EditPromotionPage() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="percentage">Percentage Discount</SelectItem>
-                              <SelectItem value="fixed">Fixed Amount Discount</SelectItem>
-                              <SelectItem value="bogo">Buy One Get One</SelectItem>
+                              {PROMOTION_TYPES.map((type) => (
+                                <SelectItem key={type.value} value={type.value}>
+                                  {type.label}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                           <FormMessage />

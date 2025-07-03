@@ -68,6 +68,12 @@ export class PromotionValidationService {
       // Group cart items by promotion
       const promotionGroups = this.groupCartItemsByPromotion(cartItems, promotionsWithProducts);
 
+      logger.debug('Promotion groups detected', {
+        groupCount: promotionGroups.size,
+        groupIds: Array.from(promotionGroups.keys()),
+        groupSizes: Object.fromEntries(Array.from(promotionGroups.entries()).map(([id, items]) => [id, items.length]))
+      });
+
       // Validate each promotion group  
       const promotionEntries = Array.from(promotionGroups.entries());
       for (let i = 0; i < promotionEntries.length; i++) {
@@ -75,7 +81,23 @@ export class PromotionValidationService {
         const promotion = promotionsWithProducts.find(p => p.id === promotionId);
         if (!promotion) continue;
 
+        logger.debug('Validating promotion group', {
+          promotionId,
+          promotionName: promotion.promotionName,
+          promotionType: promotion.promotionType,
+          itemCount: items.length,
+          rules: promotion.rules
+        });
+
         const validationResult = this.validatePromotionGroup(promotion, items);
+        
+        logger.debug('Promotion validation result', {
+          promotionId,
+          isValid: validationResult.isValid,
+          reason: validationResult.reason,
+          required: validationResult.required,
+          current: validationResult.current
+        });
         
         if (!validationResult.isValid) {
           result.isValid = false;
@@ -162,58 +184,91 @@ export class PromotionValidationService {
       }
     }
 
-    // Validate based on promotion type
-    switch (promotion.promotionType) {
-      case 'buy_x_get_y':
-        const buyQuantity = rules.buyQuantity || 2;
-        if (totalQuantity < buyQuantity) {
-          return {
-            isValid: false,
-            reason: `Requires ${buyQuantity} items`,
-            required: buyQuantity,
-            current: totalQuantity
-          };
-        }
-        break;
-
-      case 'quantity_discount':
-        const minimumQuantity = rules.minimumQuantity || 2;
-        if (totalQuantity < minimumQuantity) {
-          return {
-            isValid: false,
-            reason: `Requires ${minimumQuantity} items`,
-            required: minimumQuantity,
-            current: totalQuantity
-          };
-        }
-        break;
-
-      case 'category_mix':
-        // For category mix, need at least one item from required categories
-        const requiredCategories = rules.requiredCategories || [];
-        if (requiredCategories.length > 0) {
-          const itemCategories = new Set();
-          items.forEach(item => {
-            if (item.product?.categoryIds) {
-              item.product.categoryIds.forEach(catId => itemCategories.add(catId));
-            }
-          });
-          
-          const hasRequiredCategories = requiredCategories.some((catId: number) => itemCategories.has(catId));
-          if (!hasRequiredCategories) {
+    // Check rules first (rules override basic promotion type)
+    if (rules && rules.type && rules.type !== 'none') {
+      switch (rules.type) {
+        case 'minimum_quantity_same_promotion':
+          const minimumQuantity = rules.minimumQuantity || 2;
+          if (totalQuantity < minimumQuantity) {
             return {
               isValid: false,
-              reason: 'Requires items from specific categories',
-              required: requiredCategories.length,
-              current: itemCategories.size
+              reason: `Requires ${minimumQuantity} items from the same promotion`,
+              required: minimumQuantity,
+              current: totalQuantity
             };
           }
-        }
-        break;
+          break;
 
-      default:
-        // For unknown promotion types, assume they're valid
-        break;
+        case 'minimum_order_value':
+          // This would need order value calculation, not just quantity
+          break;
+
+        case 'buy_x_get_y':
+          const buyQuantity = rules.buyQuantity || 2;
+          if (totalQuantity < buyQuantity) {
+            return {
+              isValid: false,
+              reason: `Requires ${buyQuantity} items`,
+              required: buyQuantity,
+              current: totalQuantity
+            };
+          }
+          break;
+
+        case 'category_mix':
+          const requiredCategories = rules.requiredCategories || [];
+          if (requiredCategories.length > 0) {
+            const itemCategories = new Set();
+            items.forEach(item => {
+              if (item.product?.categoryIds) {
+                item.product.categoryIds.forEach(catId => itemCategories.add(catId));
+              }
+            });
+            
+            const hasRequiredCategories = requiredCategories.some((catId: number) => itemCategories.has(catId));
+            if (!hasRequiredCategories) {
+              return {
+                isValid: false,
+                reason: 'Requires items from specific categories',
+                required: requiredCategories.length,
+                current: itemCategories.size
+              };
+            }
+          }
+          break;
+      }
+    } else {
+      // Fallback to basic promotion type validation if no rules
+      switch (promotion.promotionType) {
+        case 'buy_x_get_y':
+        case 'bogo':
+          // Basic BOGO requires at least 2 items
+          if (totalQuantity < 2) {
+            return {
+              isValid: false,
+              reason: `Requires 2 items`,
+              required: 2,
+              current: totalQuantity
+            };
+          }
+          break;
+
+        case 'quantity_discount':
+          const minimumQuantity = 2; // Default minimum for quantity discounts
+          if (totalQuantity < minimumQuantity) {
+            return {
+              isValid: false,
+              reason: `Requires ${minimumQuantity} items`,
+              required: minimumQuantity,
+              current: totalQuantity
+            };
+          }
+          break;
+
+        default:
+          // For basic promotion types like 'percentage' and 'fixed', no quantity restrictions
+          break;
+      }
     }
 
     return {
