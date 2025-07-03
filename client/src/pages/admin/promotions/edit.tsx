@@ -110,7 +110,14 @@ export default function EditPromotionPage() {
       const promotionData = promotionResponse.data;
       const displayType = getDisplayPromotionType(promotionData);
       
-      form.reset({
+      console.log('Form hydration debug:', {
+        promotionData,
+        displayType,
+        hasRules: !!promotionData.rules,
+        rulesType: promotionData.rules?.type
+      });
+      
+      const formData = {
         promotionName: promotionData.promotionName || "",
         description: promotionData.description || "",
         startDate: promotionData.startDate ? promotionData.startDate.split('T')[0] : "",
@@ -120,7 +127,11 @@ export default function EditPromotionPage() {
         discountValue: promotionData.discountValue ? promotionData.discountValue.toString() : "",
         minimumOrderValue: promotionData.minimumOrderValue ? promotionData.minimumOrderValue.toString() : "",
         rules: promotionData.rules || null,
-      });
+      };
+      
+      console.log('Form data for reset:', formData);
+      form.reset(formData);
+      console.log('Form reset completed, current values:', form.getValues());
     }
   }, [promotionResponse, form]);
 
