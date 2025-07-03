@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { useDateFormat } from "@/hooks/use-date-format";
+import { WebsiteShareCard } from "@/components/admin/WebsiteShareCard";
 
 // Define interfaces for our data
 interface Order {
@@ -922,6 +923,12 @@ export default function AdminDashboard() {
         <div>
           <h2 className="text-lg font-semibold mb-4">Business Metrics</h2>
           <BusinessOverview />
+        </div>
+
+        {/* Website Sharing */}
+        <div>
+          <h2 className="text-lg font-semibold mb-4">Marketing & Growth</h2>
+          <WebsiteShareCard />
         </div>
         
         {/* Recent Activity */}
