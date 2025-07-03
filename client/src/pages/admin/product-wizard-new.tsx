@@ -9,6 +9,7 @@ import { useLocation, useRoute } from 'wouter';
 import { AdminLayout } from '@/components/admin/layout';
 import { ProductWizard } from '@/components/admin/product-wizard/ProductWizard';
 import { useQuery } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
 import {
   Breadcrumb,
   BreadcrumbList,
@@ -42,9 +43,12 @@ export default function ProductWizardPage() {
     queryKey: catalogId ? [`/api/catalogs/${catalogId}`] : null,
     queryFn: async () => {
       if (!catalogId) return null;
-      const response = await fetch(`/api/catalogs/${catalogId}`);
-      if (!response.ok) return null;
-      return response.json();
+      try {
+        return await apiRequest('GET', `/api/catalogs/${catalogId}`);
+      } catch (error) {
+        console.error('Failed to fetch catalog:', error);
+        return null;
+      }
     },
     enabled: !!catalogId
   });
@@ -54,9 +58,12 @@ export default function ProductWizardPage() {
     queryKey: productId ? [`/api/products/${productId}`] : null,
     queryFn: async () => {
       if (!productId) return null;
-      const response = await fetch(`/api/products/${productId}`);
-      if (!response.ok) return null;
-      return response.json();
+      try {
+        return await apiRequest('GET', `/api/products/${productId}`);
+      } catch (error) {
+        console.error('Failed to fetch product:', error);
+        return null;
+      }
     },
     enabled: !!productId
   });
