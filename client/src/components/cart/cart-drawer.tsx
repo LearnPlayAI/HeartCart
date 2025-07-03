@@ -367,21 +367,6 @@ const CartDrawer = () => {
                 <span>{formatCurrency(cartTotal)}</span>
               </div>
               
-              {/* Auto Credit Application Display */}
-              {autoCreditAmount > 0 && (
-                <div className="my-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <CreditCard className="h-4 w-4 text-green-600" />
-                    <span className="text-sm font-medium text-green-700">
-                      Credit Auto-Applied: {formatCurrency(autoCreditAmount)}
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-600">
-                    Available: {formatCurrency(availableCredit)} • Maximum applied automatically
-                  </p>
-                </div>
-              )}
-              
               {/* Applied Credit Display */}
               {autoCreditAmount > 0 && (
                 <>
