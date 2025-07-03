@@ -141,10 +141,9 @@ export default function UserAdminPageFixed() {
   // Mutation for updating user creation setting
   const updateUserCreationSettingMutation = useMutation({
     mutationFn: async (enabled: boolean) => {
-      const response = await apiRequest('PATCH', '/api/admin/settings/userCreationEnabled', {
+      return await apiRequest('PATCH', '/api/admin/settings/userCreationEnabled', {
         value: enabled.toString()
       });
-      return response.json();
     },
     onSuccess: (data, variables) => {
       
@@ -188,8 +187,7 @@ export default function UserAdminPageFixed() {
         params.append('status', statusFilter);
       }
       
-      const response = await apiRequest('GET', `/api/admin/users?${params.toString()}`);
-      return response.json();
+      return await apiRequest('GET', `/api/admin/users?${params.toString()}`);
     }
   });
 
@@ -203,12 +201,11 @@ export default function UserAdminPageFixed() {
   // Delete user mutation
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: number) => {
-      const response = await apiRequest('DELETE', `/api/admin/users/${userId}`);
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to delete user');
+      const result = await apiRequest('DELETE', `/api/admin/users/${userId}`);
+      if (!result.success) {
+        throw new Error(result.error?.message || 'Failed to delete user');
       }
-      return response.json();
+      return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
@@ -229,12 +226,11 @@ export default function UserAdminPageFixed() {
   // Update user role mutation
   const updateUserRoleMutation = useMutation({
     mutationFn: async ({ userId, role }: { userId: number; role: string }) => {
-      const response = await apiRequest('PATCH', `/api/admin/users/${userId}`, { role });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to update user role');
+      const result = await apiRequest('PATCH', `/api/admin/users/${userId}`, { role });
+      if (!result.success) {
+        throw new Error(result.error?.message || 'Failed to update user role');
       }
-      return response.json();
+      return result;
     },
     onSuccess: () => {
       
@@ -249,12 +245,11 @@ export default function UserAdminPageFixed() {
   // Update user status mutation
   const updateUserStatusMutation = useMutation({
     mutationFn: async ({ userId, isActive }: { userId: number; isActive: boolean }) => {
-      const response = await apiRequest('PATCH', `/api/admin/users/${userId}`, { isActive });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to update user status');
+      const result = await apiRequest('PATCH', `/api/admin/users/${userId}`, { isActive });
+      if (!result.success) {
+        throw new Error(result.error?.message || 'Failed to update user status');
       }
-      return response.json();
+      return result;
     },
     onSuccess: (data, variables) => {
       toast({ 

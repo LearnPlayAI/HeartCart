@@ -708,6 +708,14 @@ Changelog:
   * Resolved issue where proof of payment files uploaded successfully to object storage but eftPop field remained empty
   * Payment confirmation page now properly saves proof of payment path during order creation process
   * Complete end-to-end proof of payment system fully operational for order verification workflow
+- July 3, 2025. System-wide JSON response handling bug fix completed:
+  * Fixed critical "response.json is not a function" errors across multiple admin components
+  * Root cause: Components mixing legacy fetch() pattern with modern apiRequest() helper function
+  * apiRequest() already returns parsed JSON objects, not Response objects requiring .json() calls
+  * Fixed files: client/src/pages/admin/users-fixed.tsx and client/src/components/admin/UserAssignmentDialog.tsx
+  * Created comprehensive documentation at docs/json/jsonfixes.md for future reference
+  * All admin interface functionality (user management, assignments, statistics) now working correctly
+  * Established clear patterns: use apiRequest() for standard API calls, reserve fetch() for file uploads only
 ```
 
 ## User Preferences

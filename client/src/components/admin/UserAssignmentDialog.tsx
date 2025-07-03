@@ -60,8 +60,7 @@ export function UserAssignmentDialog({ open, onOpenChange, salesRep, allSalesRep
     queryKey: ['/api/admin/sales-reps', salesRep?.id, 'users'],
     queryFn: async () => {
       if (!salesRep) return { success: false, data: [] };
-      const response = await apiRequest('GET', `/api/admin/sales-reps/${salesRep.id}/users`);
-      return response.json();
+      return await apiRequest('GET', `/api/admin/sales-reps/${salesRep.id}/users`);
     },
     enabled: !!salesRep && open
   });
@@ -70,8 +69,7 @@ export function UserAssignmentDialog({ open, onOpenChange, salesRep, allSalesRep
   const { data: unassignedUsersResponse, isLoading: unassignedLoading, refetch: refetchUnassigned } = useQuery({
     queryKey: ['/api/admin/users/unassigned'],
     queryFn: async () => {
-      const response = await apiRequest('GET', '/api/admin/users/unassigned');
-      return response.json();
+      return await apiRequest('GET', '/api/admin/users/unassigned');
     },
     enabled: open && activeTab === "unassigned"
   });
@@ -81,8 +79,7 @@ export function UserAssignmentDialog({ open, onOpenChange, salesRep, allSalesRep
     queryKey: ['/api/admin/users/search', debouncedSearchTerm],
     queryFn: async () => {
       if (!debouncedSearchTerm || debouncedSearchTerm.length < 2) return { success: false, data: [] };
-      const response = await apiRequest('GET', `/api/admin/users/search?q=${encodeURIComponent(debouncedSearchTerm)}`);
-      return response.json();
+      return await apiRequest('GET', `/api/admin/users/search?q=${encodeURIComponent(debouncedSearchTerm)}`);
     },
     enabled: open && activeTab === "search" && debouncedSearchTerm.length >= 2
   });
@@ -92,8 +89,7 @@ export function UserAssignmentDialog({ open, onOpenChange, salesRep, allSalesRep
     queryKey: ['/api/admin/sales-reps', salesRep?.id, 'assignment-stats'],
     queryFn: async () => {
       if (!salesRep) return { success: false, data: null };
-      const response = await apiRequest('GET', `/api/admin/sales-reps/${salesRep.id}/assignment-stats`);
-      return response.json();
+      return await apiRequest('GET', `/api/admin/sales-reps/${salesRep.id}/assignment-stats`);
     },
     enabled: !!salesRep && open
   });
@@ -101,8 +97,7 @@ export function UserAssignmentDialog({ open, onOpenChange, salesRep, allSalesRep
   // Assign user to rep mutation
   const assignUserMutation = useMutation({
     mutationFn: async ({ userId, repCode }: { userId: number; repCode: string }) => {
-      const response = await apiRequest('PUT', `/api/admin/users/${userId}/rep-assignment`, { repCode });
-      return response.json();
+      return await apiRequest('PUT', `/api/admin/users/${userId}/rep-assignment`, { repCode });
     },
     onSuccess: () => {
       toast({
@@ -129,8 +124,7 @@ export function UserAssignmentDialog({ open, onOpenChange, salesRep, allSalesRep
   // Remove user assignment mutation
   const removeAssignmentMutation = useMutation({
     mutationFn: async (userId: number) => {
-      const response = await apiRequest('DELETE', `/api/admin/users/${userId}/rep-assignment`);
-      return response.json();
+      return await apiRequest('DELETE', `/api/admin/users/${userId}/rep-assignment`);
     },
     onSuccess: () => {
       toast({
@@ -156,8 +150,7 @@ export function UserAssignmentDialog({ open, onOpenChange, salesRep, allSalesRep
   // Reassign user to different rep mutation
   const reassignUserMutation = useMutation({
     mutationFn: async ({ userId, newRepCode }: { userId: number; newRepCode: string }) => {
-      const response = await apiRequest('PUT', `/api/admin/users/${userId}/rep-assignment`, { repCode: newRepCode });
-      return response.json();
+      return await apiRequest('PUT', `/api/admin/users/${userId}/rep-assignment`, { repCode: newRepCode });
     },
     onSuccess: () => {
       toast({
