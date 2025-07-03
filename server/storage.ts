@@ -1840,6 +1840,8 @@ export class DatabaseStorage implements IStorage {
         'displayOrder': products.displayOrder,
         'brand': products.brand,
         'isActive': products.isActive,
+        'rating': products.createdAt, // Placeholder: sort by creation date as proxy for rating
+        'popularity': products.displayOrder, // Use display order as proxy for popularity
         'tmyPercentage': sql`CASE WHEN COALESCE(${products.costPrice}, 0) > 0 THEN ((COALESCE(${products.salePrice}, ${products.price}, 0) - COALESCE(${products.costPrice}, 0)) / COALESCE(${products.costPrice}, 1) * 100) ELSE 0 END`
       };
 

@@ -63,15 +63,59 @@ const CategoryPage = () => {
   const limit = 20;
   const offset = (page - 1) * limit;
 
+  // Helper function to map sortBy values to API parameters
+  const getSortParams = (sortBy: string) => {
+    switch (sortBy) {
+      case 'price-asc':
+        return { sortField: 'price', sortOrder: 'asc' };
+      case 'price-desc':
+        return { sortField: 'price', sortOrder: 'desc' };
+      case 'name-asc':
+        return { sortField: 'name', sortOrder: 'asc' };
+      case 'name-desc':
+        return { sortField: 'name', sortOrder: 'desc' };
+      case 'rating-desc':
+        return { sortField: 'rating', sortOrder: 'desc' };
+      case 'newest-arrivals':
+        return { sortField: 'createdAt', sortOrder: 'desc' };
+      case 'popularity':
+        return { sortField: 'popularity', sortOrder: 'desc' };
+      default:
+        return {};
+    }
+  };
+
   const { data: productsResponse, isLoading: isLoadingProducts } = useQuery({
-    queryKey: [`/api/products`, { categoryId: category?.id, limit, offset, page }],
+    queryKey: [`/api/products`, { categoryId: category?.id, limit, offset, page, sortBy, filters }],
     queryFn: async () => {
       if (!category?.id) return null;
+      
+      const sortParams = getSortParams(sortBy);
       const params = new URLSearchParams({
         categoryId: category.id.toString(),
         limit: limit.toString(),
         offset: offset.toString()
       });
+      
+      // Add sorting parameters
+      if (sortParams.sortField) {
+        params.append('sortField', sortParams.sortField);
+        params.append('sortOrder', sortParams.sortOrder);
+      }
+      
+      // Add filter parameters based on active filters
+      if (filters.onPromotion) {
+        params.append('onPromotion', 'true');
+      }
+      if (filters.featuredProducts) {
+        params.append('featuredProducts', 'true');
+      }
+      if (filters.newArrivals) {
+        params.append('newArrivals', 'true');
+      }
+      
+      console.log('Category products API call with params:', params.toString());
+      console.log('sortBy:', sortBy, 'sortParams:', sortParams);
       const response = await fetch(`/api/products?${params}`);
       if (!response.ok) throw new Error('Failed to fetch products');
       return response.json();

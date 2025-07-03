@@ -424,6 +424,28 @@ const ProductListing = () => {
   });
   const categories = categoriesResponse?.success ? categoriesResponse.data : [];
   
+  // Helper function to map sortBy values to API parameters
+  const getSortParams = (sortBy: string) => {
+    switch (sortBy) {
+      case 'price-asc':
+        return { sortField: 'price', sortOrder: 'asc' };
+      case 'price-desc':
+        return { sortField: 'price', sortOrder: 'desc' };
+      case 'name-asc':
+        return { sortField: 'name', sortOrder: 'asc' };
+      case 'name-desc':
+        return { sortField: 'name', sortOrder: 'desc' };
+      case 'rating-desc':
+        return { sortField: 'rating', sortOrder: 'desc' };
+      case 'newest-arrivals':
+        return { sortField: 'createdAt', sortOrder: 'desc' };
+      case 'popularity':
+        return { sortField: 'popularity', sortOrder: 'desc' };
+      default:
+        return {};
+    }
+  };
+
   // Fetch products with proper search or filtering
   const { 
     data: productsResponse, 
@@ -431,19 +453,28 @@ const ProductListing = () => {
     error: productsError
   } = useQuery<StandardApiResponse<Product[], { total?: number, totalPages?: number }>>({
     queryKey: searchQuery ? 
-      ['/api/search', { query: searchQuery, page, limit }] : 
-      ['/api/products', { page, categoryId: selectedCategoryId, includeChildren: searchParams.get('includeChildren'), limit }],
+      ['/api/search', { query: searchQuery, page, limit, sortBy }] : 
+      ['/api/products', { page, categoryId: selectedCategoryId, includeChildren: searchParams.get('includeChildren'), limit, sortBy, filters }],
     staleTime: 0, // Always fetch fresh data when category/page changes
     gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
     refetchOnWindowFocus: false,
     queryFn: async () => {
+      const sortParams = getSortParams(sortBy);
+      
       if (searchQuery) {
-        const searchParams = new URLSearchParams({
+        const searchParamsObj = new URLSearchParams({
           q: searchQuery,
           limit: limit.toString(),
           offset: ((page - 1) * limit).toString()
         });
-        const response = await fetch(`/api/search?${searchParams}`);
+        
+        // Add sorting parameters
+        if (sortParams.sortField) {
+          searchParamsObj.append('sortField', sortParams.sortField);
+          searchParamsObj.append('sortOrder', sortParams.sortOrder);
+        }
+        
+        const response = await fetch(`/api/search?${searchParamsObj}`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -453,14 +484,34 @@ const ProductListing = () => {
           limit: limit.toString(),
           offset: ((page - 1) * limit).toString()
         });
+        
         if (selectedCategoryId) {
           productParams.append('categoryId', selectedCategoryId.toString());
         }
         if (searchParams.get('includeChildren') === 'true') {
           productParams.append('includeChildren', 'true');
         }
+        
+        // Add sorting parameters
+        if (sortParams.sortField) {
+          productParams.append('sortField', sortParams.sortField);
+          productParams.append('sortOrder', sortParams.sortOrder);
+        }
+        
+        // Add filter parameters based on active filters
+        if (filters.onPromotion) {
+          productParams.append('onPromotion', 'true');
+        }
+        if (filters.featuredProducts) {
+          productParams.append('featuredProducts', 'true');
+        }
+        if (filters.newArrivals) {
+          productParams.append('newArrivals', 'true');
+        }
+        
         console.log('Fetching products with params:', productParams.toString());
         console.log('selectedCategoryId:', selectedCategoryId);
+        console.log('sortBy:', sortBy, 'sortParams:', sortParams);
         const response = await fetch(`/api/products?${productParams}`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
