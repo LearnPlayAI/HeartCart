@@ -556,6 +556,8 @@ export default function CheckoutPage() {
                     type="email"
                     {...form.register("email")}
                     placeholder="Enter your email"
+                    readOnly
+                    className="bg-gray-50 cursor-not-allowed"
                   />
                   {form.formState.errors.email && (
                     <p className="text-sm text-red-600 mt-1">

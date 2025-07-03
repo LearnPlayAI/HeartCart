@@ -569,6 +569,65 @@ export function setupAuth(app: Express): void {
     return userData;
   }));
   
+  // Update current user's profile
+  app.put("/api/user", isAuthenticated, withStandardResponse(async (req: Request, res: Response) => {
+    const currentUser = req.user as Express.User;
+    
+    try {
+      // Validation schema for profile updates
+      const updateUserSchema = z.object({
+        fullName: z.string().min(2, 'Full name must be at least 2 characters').optional(),
+        email: z.string().email('Please enter a valid email address').optional(),
+        phoneNumber: z.string().min(10, 'Please enter a valid phone number').optional(),
+        address: z.string().min(5, 'Please enter your full address').optional(),
+        city: z.string().min(2, 'Please enter your city').optional(),
+        postalCode: z.string().min(4, 'Please enter a valid postal code').optional(),
+        province: z.string().min(2, 'Please select your province').optional(),
+      });
+
+      const validatedData = updateUserSchema.parse(req.body);
+
+      // Update the user using storage method
+      const updatedUser = await storage.updateUser(currentUser.id, validatedData);
+      
+      if (!updatedUser) {
+        throw new NotFoundError(`User with ID ${currentUser.id} not found`, "user");
+      }
+
+      // Remove password from response and return updated user data
+      const { password, ...userWithoutPassword } = updatedUser;
+
+      logger.info("User profile updated successfully", { 
+        userId: currentUser.id,
+        updatedFields: Object.keys(validatedData)
+      });
+
+      return userWithoutPassword;
+    } catch (error) {
+      logger.error("Error updating user profile", { error, userId: currentUser.id });
+      
+      if (error instanceof z.ZodError) {
+        throw new AppError(
+          "Invalid profile data", 
+          ErrorCode.VALIDATION_ERROR,
+          400,
+          { errors: error.format() }
+        );
+      }
+      
+      if (error instanceof NotFoundError || error instanceof ForbiddenError) {
+        throw error;
+      }
+      
+      throw new AppError(
+        "Failed to update profile. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
+    }
+  }));
+  
   // Session refresh endpoint - lightweight endpoint just to keep session alive
   app.post("/api/session/refresh", isAuthenticated, withStandardResponse(async (req: Request, res: Response) => {
     // Simply return success - the session cookie will be updated automatically 

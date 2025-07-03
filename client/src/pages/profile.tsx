@@ -231,18 +231,19 @@ const ProfilePage: React.FC = () => {
   // Profile update mutation
   const profileMutation = useMutation({
     mutationFn: async (data: ProfileFormValues) => {
-      return apiRequest('/api/user', {
-        method: 'PUT',
-        body: JSON.stringify(data),
-      });
+      return apiRequest('PUT', '/api/user', data);
     },
     onSuccess: () => {
-      
+      toast({
+        title: "Profile updated successfully",
+        description: "Your profile information has been saved.",
+        variant: "default",
+      });
       queryClient.invalidateQueries({ queryKey: ['/api/user'] });
     },
     onError: (error: any) => {
       toast({
-        title: "Error updating profile",
+        title: "Update failed",
         description: error.message || "Please try again later.",
         variant: "destructive",
       });
