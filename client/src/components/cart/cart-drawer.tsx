@@ -12,8 +12,11 @@ import { Link } from 'wouter';
 import { calculateShippingCost } from '@/utils/pricing';
 import { useQuery } from '@tanstack/react-query';
 import ContextualInstallPrompts from '@/components/pwa/ContextualInstallPrompts';
+import PromotionValidationCard from '@/components/cart/PromotionValidationCard';
 
 const CartDrawer = () => {
+  const [canProceedToCheckout, setCanProceedToCheckout] = useState(true);
+  
   const { 
     cartItems, 
     isOpen, 
@@ -27,6 +30,11 @@ const CartDrawer = () => {
   } = useCart();
   
   const { creditBalance, formattedBalance, transactions } = useCredits();
+
+  // Handle validation changes from PromotionValidationCard
+  const handleValidationChange = (canProceed: boolean) => {
+    setCanProceedToCheckout(canProceed);
+  };
   
   // Ref for auto-scrolling to highlighted item
   const cartListRef = useRef<HTMLDivElement>(null);
@@ -329,12 +337,21 @@ const CartDrawer = () => {
                 </span>
               </div>
               
+              {/* Promotion Validation Card */}
+              <div className="mb-4">
+                <PromotionValidationCard 
+                  cartItems={cartItems}
+                  onValidationChange={handleValidationChange}
+                />
+              </div>
+              
               <Link href={`/checkout${autoCreditAmount > 0 ? `?credit=${autoCreditAmount}` : ''}`}>
                 <Button 
-                  className="w-full bg-[#FF69B4] hover:bg-[#FF1493] text-white"
+                  className="w-full bg-[#FF69B4] hover:bg-[#FF1493] text-white disabled:bg-gray-400 disabled:cursor-not-allowed"
                   onClick={closeCart}
+                  disabled={!canProceedToCheckout}
                 >
-                  Proceed to Checkout
+                  {canProceedToCheckout ? 'Proceed to Checkout' : 'Cannot Proceed - Promotion Requirements Not Met'}
                 </Button>
               </Link>
               <Button 

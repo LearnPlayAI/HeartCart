@@ -29,7 +29,6 @@ import {
   Package
 } from "lucide-react";
 import ContextualInstallPrompts from "@/components/pwa/ContextualInstallPrompts";
-import PromotionValidationCard from "@/components/cart/PromotionValidationCard";
 
 // Enhanced checkout form schema with comprehensive validation
 const checkoutSchema = z.object({
@@ -100,7 +99,7 @@ export default function CheckoutPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedLocker, setSelectedLocker] = useState(null);
   const [savePreferredTrigger, setSavePreferredTrigger] = useState(false);
-  const [canProceedToCheckout, setCanProceedToCheckout] = useState(true);
+
   const { creditBalance, formattedBalance, balanceLoading, transactions } = useCredits();
 
   // Fetch current user details
@@ -844,7 +843,7 @@ export default function CheckoutPage() {
               type="submit"
               size="lg"
               className="w-full"
-              disabled={isProcessing || createPaymentSessionMutation.isPending || confirmPaymentMutation.isPending || !canProceedToCheckout}
+              disabled={isProcessing || createPaymentSessionMutation.isPending || confirmPaymentMutation.isPending}
             >
               {isProcessing 
                 ? "Processing Order..." 
