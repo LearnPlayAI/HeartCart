@@ -13677,6 +13677,7 @@ export class DatabaseStorage implements IStorage {
       }
 
       // Mark the selected commissions as paid with payment method
+      // For Store Credit: Keep original commission amounts and rates (no halving)
       if (commissionsToUpdate.length > 0) {
         await db
           .update(repCommissions)
@@ -13687,7 +13688,7 @@ export class DatabaseStorage implements IStorage {
           })
           .where(inArray(repCommissions.id, commissionsToUpdate));
 
-        logger.info('Marked commissions as paid', { 
+        logger.info('Marked commissions as paid for store credit', { 
           repId, 
           paymentAmount,
           paymentMethod,
@@ -13717,24 +13718,50 @@ export class DatabaseStorage implements IStorage {
         ));
 
       if (unpaidCommissions.length > 0) {
-        const commissionIds = unpaidCommissions.map(c => c.id);
-        
-        // Mark ALL unpaid commissions as paid with payment method
-        await db
-          .update(repCommissions)
-          .set({ 
-            status: 'paid',
-            paymentMethod: paymentMethod,
-            updatedAt: new Date()
-          })
-          .where(inArray(repCommissions.id, commissionIds));
+        // For Bank Transfer: Update commission amounts and rates to half values in the database
+        if (paymentMethod === 'Bank Transfer') {
+          for (const commission of unpaidCommissions) {
+            const halfCommissionAmount = (Number(commission.commissionAmount) / 2).toFixed(2);
+            const halfCommissionRate = (Number(commission.commissionRate) / 2).toFixed(2);
+            
+            await db
+              .update(repCommissions)
+              .set({ 
+                status: 'paid',
+                paymentMethod: paymentMethod,
+                commissionAmount: halfCommissionAmount,
+                commissionRate: halfCommissionRate,
+                updatedAt: new Date()
+              })
+              .where(eq(repCommissions.id, commission.id));
+          }
+          
+          logger.info('Marked all unpaid commissions as paid with halved amounts for bank transfer', { 
+            repId, 
+            paymentMethod,
+            commissionsMarkedAsPaid: unpaidCommissions.length,
+            commissionIds: unpaidCommissions.map(c => c.id)
+          });
+        } else {
+          // For other payment methods: Keep original amounts and rates
+          const commissionIds = unpaidCommissions.map(c => c.id);
+          
+          await db
+            .update(repCommissions)
+            .set({ 
+              status: 'paid',
+              paymentMethod: paymentMethod,
+              updatedAt: new Date()
+            })
+            .where(inArray(repCommissions.id, commissionIds));
 
-        logger.info('Marked all unpaid commissions as paid for bank transfer', { 
-          repId, 
-          paymentMethod,
-          commissionsMarkedAsPaid: commissionIds.length,
-          commissionIds 
-        });
+          logger.info('Marked all unpaid commissions as paid', { 
+            repId, 
+            paymentMethod,
+            commissionsMarkedAsPaid: commissionIds.length,
+            commissionIds 
+          });
+        }
       }
     } catch (error) {
       logger.error('Error marking all unpaid commissions as paid', { error, repId });

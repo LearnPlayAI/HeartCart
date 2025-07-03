@@ -287,10 +287,7 @@ export default function SalesRepCommissionsPage() {
                           <div>
                             <p className="text-sm font-medium text-gray-600">Commission</p>
                             <p className="text-sm font-medium text-pink-600">
-                              {commission.paymentMethod === 'Bank Transfer' && commission.status === 'paid' 
-                                ? formatCurrency(Number(commission.commissionAmount) / 2)
-                                : formatCurrency(Number(commission.commissionAmount))
-                              }
+                              {formatCurrency(Number(commission.commissionAmount))}
                             </p>
                           </div>
                         </div>
@@ -300,10 +297,7 @@ export default function SalesRepCommissionsPage() {
                           <div>
                             <p className="text-sm font-medium text-gray-600">Rate</p>
                             <p className="text-sm font-medium">
-                              {commission.paymentMethod === 'Bank Transfer' && commission.status === 'paid'
-                                ? (Number(selectedRep.commissionRate) / 2).toFixed(1)
-                                : Number(selectedRep.commissionRate).toFixed(1)
-                              }%
+                              {Number(commission.commissionRate).toFixed(1)}%
                             </p>
                           </div>
                           {commission.status === 'paid' && commission.paymentMethod && (
