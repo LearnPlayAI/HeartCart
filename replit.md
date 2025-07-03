@@ -739,6 +739,11 @@ Changelog:
   * Added visual styling (gray background, disabled cursor) to clearly indicate field is non-editable
   * Users must update email through profile page rather than during checkout for security
   * Improves checkout data integrity by preventing email changes during order process
+- July 4, 2025. Automatic shipping address data persistence in checkout system:
+  * Modified checkout form to always save shipping address data when logged-in users place orders
+  * Removed dependency on "Save details" checkbox for address information persistence
+  * All shipping address fields (street, city, province, postal code) now automatically saved to user profile
+  * Ensures users never lose address information and eliminates need to re-enter on future orders
 ```
 
 ## User Preferences

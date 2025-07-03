@@ -381,8 +381,8 @@ export default function CheckoutPage() {
         setSavePreferredTrigger(false);
       }
 
-      // Save user details if requested
-      if (data.saveDetails && user) {
+      // Always save shipping address data for logged-in users
+      if (user) {
         await updateProfileMutation.mutateAsync({
           firstName: data.firstName,
           lastName: data.lastName,
