@@ -68,14 +68,18 @@ const CartDrawer = () => {
         }
       });
 
+      console.log('Validation response:', response);
       const validationResult = response?.success ? response.data : null;
+      console.log('Validation result:', validationResult);
       
       if (validationResult && !validationResult.canProceedToCheckout) {
+        console.log('Validation FAILED - blocking checkout:', validationResult.blockedPromotions);
         setValidationErrors(validationResult.blockedPromotions || []);
         setShowValidationModal(true);
         return false;
       }
       
+      console.log('Validation PASSED - allowing checkout');
       return true;
     } catch (error) {
       console.error('Validation error:', error);

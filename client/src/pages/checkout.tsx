@@ -985,11 +985,7 @@ export default function CheckoutPage() {
 
               <Separator />
 
-              {/* Promotion Validation */}
-              <PromotionValidationCard 
-                cartItems={cartItems} 
-                onValidationChange={setCanProceedToCheckout}
-              />
+
 
               {/* Auto Credit Application Display */}
               {autoCreditAmount > 0 && (
