@@ -438,7 +438,7 @@ const ProductListing = () => {
       case 'rating-desc':
         return { sortField: 'rating', sortOrder: 'desc' };
       case 'newest-arrivals':
-        return { sortField: 'createdAt', sortOrder: 'desc' };
+        return { sortField: 'publishedAt', sortOrder: 'desc' };
       case 'popularity':
         return { sortField: 'popularity', sortOrder: 'desc' };
       default:

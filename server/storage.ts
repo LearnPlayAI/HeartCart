@@ -1836,7 +1836,7 @@ export class DatabaseStorage implements IStorage {
         'costPrice': products.costPrice,
         'stock': products.stock,
         'createdAt': products.createdAt,
-        'publishedAt': needsDraftsJoin ? productDrafts.publishedAt : products.createdAt,
+        'publishedAt': needsDraftsJoin ? productDrafts.lastModified : products.createdAt,
         'displayOrder': products.displayOrder,
         'brand': products.brand,
         'isActive': products.isActive,
@@ -8398,6 +8398,7 @@ export class DatabaseStorage implements IStorage {
         'name': sql`name`,
         'sku': sql`sku`,
         'lastModified': sql`last_modified`,
+        'publishedAt': sql`last_modified`, // Use last_modified for newest arrivals sorting
         'createdAt': sql`created_at`,
         'draftStatus': sql`draft_status`,
         'regularPrice': sql`regular_price`,
