@@ -72,29 +72,28 @@ export default function EditPromotionPage() {
   });
 
   // Fetch promotion data
-  const { data: promotion, isLoading: isLoadingPromotion, error } = useQuery({
+  const { data: promotionResponse, isLoading: isLoadingPromotion, error } = useQuery({
     queryKey: ['/api/promotions', promotionId],
-    queryFn: () => apiRequest(`/api/promotions/${promotionId}`),
     enabled: !!promotionId,
   });
 
   // Update form when promotion data is loaded
   useEffect(() => {
-    if (promotion) {
-      const promotionData = promotion;
+    if (promotionResponse?.success && promotionResponse.data) {
+      const promotionData = promotionResponse.data;
       form.reset({
-        promotionName: promotionData.promotionName,
+        promotionName: promotionData.promotionName || "",
         description: promotionData.description || "",
-        startDate: promotionData.startDate.split('T')[0], // Convert to date input format
-        endDate: promotionData.endDate.split('T')[0],
-        isActive: promotionData.isActive,
-        promotionType: promotionData.promotionType,
+        startDate: promotionData.startDate ? promotionData.startDate.split('T')[0] : "",
+        endDate: promotionData.endDate ? promotionData.endDate.split('T')[0] : "",
+        isActive: promotionData.isActive || false,
+        promotionType: promotionData.promotionType || "",
         discountValue: promotionData.discountValue ? promotionData.discountValue.toString() : "",
         minimumOrderValue: promotionData.minimumOrderValue ? promotionData.minimumOrderValue.toString() : "",
         rules: promotionData.rules || null,
       });
     }
-  }, [promotion, form]);
+  }, [promotionResponse, form]);
 
   const updatePromotionMutation = useMutation({
     mutationFn: (data: PromotionFormData) => 
@@ -213,7 +212,7 @@ export default function EditPromotionPage() {
             <div>
               <h1 className="text-2xl font-bold">Edit Promotion</h1>
               <p className="text-muted-foreground">
-                Update "{promotion?.promotionName}" promotion settings
+                Update "{promotionResponse?.data?.promotionName}" promotion settings
               </p>
             </div>
           </div>

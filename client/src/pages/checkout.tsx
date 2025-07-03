@@ -29,6 +29,7 @@ import {
   Package
 } from "lucide-react";
 import ContextualInstallPrompts from "@/components/pwa/ContextualInstallPrompts";
+import PromotionValidationCard from "@/components/cart/PromotionValidationCard";
 
 // Enhanced checkout form schema with comprehensive validation
 const checkoutSchema = z.object({
@@ -971,6 +972,9 @@ export default function CheckoutPage() {
               </div>
 
               <Separator />
+
+              {/* Promotion Validation */}
+              <PromotionValidationCard cartItems={cartItems} />
 
               {/* Auto Credit Application Display */}
               {autoCreditAmount > 0 && (
