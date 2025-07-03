@@ -1,21 +1,32 @@
 import { useEffect, useState, useRef } from 'react';
-import { XCircle, ShoppingBag, Plus, Minus, Trash2, Tag as TagIcon, X, CreditCard } from 'lucide-react';
+import { XCircle, ShoppingBag, Plus, Minus, Trash2, Tag as TagIcon, X, CreditCard, AlertCircle } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useCart } from '@/hooks/use-cart';
 import { useCredits } from '@/hooks/use-credits';
 import { formatCurrency } from '@/lib/utils';
-import { Link } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import { calculateShippingCost } from '@/utils/pricing';
 import { useQuery } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
 import ContextualInstallPrompts from '@/components/pwa/ContextualInstallPrompts';
-import PromotionValidationCard from '@/components/cart/PromotionValidationCard';
+
+interface ValidationError {
+  promotionId: number;
+  promotionName: string;
+  reason: string;
+  required: number;
+  current: number;
+}
 
 const CartDrawer = () => {
-  const [canProceedToCheckout, setCanProceedToCheckout] = useState(true);
+  const [showValidationModal, setShowValidationModal] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
+  const [isValidating, setIsValidating] = useState(false);
   
   const { 
     cartItems, 
@@ -30,10 +41,58 @@ const CartDrawer = () => {
   } = useCart();
   
   const { creditBalance, formattedBalance, transactions } = useCredits();
+  const [location, setLocation] = useLocation();
 
-  // Handle validation changes from PromotionValidationCard
-  const handleValidationChange = (canProceed: boolean) => {
-    setCanProceedToCheckout(canProceed);
+  // Validate cart items for promotion rules
+  const validateCartForCheckout = async (): Promise<boolean> => {
+    if (cartItems.length === 0) return true;
+    
+    setIsValidating(true);
+    try {
+      const cartData = cartItems.map(item => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        product: {
+          id: item.productId,
+          name: (item as any).product?.name || 'Unknown Product',
+          price: Number((item as any).product?.price) || 0,
+          salePrice: Number((item as any).product?.salePrice) || Number((item as any).product?.price) || 0
+        }
+      }));
+
+      const response = await apiRequest('/api/promotions/validate-cart', {
+        method: 'POST',
+        body: JSON.stringify({ items: cartData }),
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const validationResult = response?.success ? response.data : null;
+      
+      if (validationResult && !validationResult.canProceedToCheckout) {
+        setValidationErrors(validationResult.blockedPromotions || []);
+        setShowValidationModal(true);
+        return false;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Validation error:', error);
+      // Allow checkout to proceed if validation fails due to network error
+      return true;
+    } finally {
+      setIsValidating(false);
+    }
+  };
+
+  // Handle checkout button click
+  const handleCheckoutClick = async () => {
+    const canProceed = await validateCartForCheckout();
+    if (canProceed) {
+      closeCart();
+      setLocation(`/checkout${autoCreditAmount > 0 ? `?credit=${autoCreditAmount}` : ''}`);
+    }
   };
   
   // Ref for auto-scrolling to highlighted item
@@ -337,23 +396,13 @@ const CartDrawer = () => {
                 </span>
               </div>
               
-              {/* Promotion Validation Card */}
-              <div className="mb-4">
-                <PromotionValidationCard 
-                  cartItems={cartItems}
-                  onValidationChange={handleValidationChange}
-                />
-              </div>
-              
-              <Link href={`/checkout${autoCreditAmount > 0 ? `?credit=${autoCreditAmount}` : ''}`}>
-                <Button 
-                  className="w-full bg-[#FF69B4] hover:bg-[#FF1493] text-white disabled:bg-gray-400 disabled:cursor-not-allowed"
-                  onClick={closeCart}
-                  disabled={!canProceedToCheckout}
-                >
-                  {canProceedToCheckout ? 'Proceed to Checkout' : 'Cannot Proceed - Promotion Requirements Not Met'}
-                </Button>
-              </Link>
+              <Button 
+                className="w-full bg-[#FF69B4] hover:bg-[#FF1493] text-white disabled:bg-gray-300 disabled:cursor-not-allowed"
+                onClick={handleCheckoutClick}
+                disabled={isValidating}
+              >
+                {isValidating ? 'Validating...' : 'Proceed to Checkout'}
+              </Button>
               <Button 
                 variant="outline"
                 className="w-full mt-2 border-[#FF69B4] text-[#FF69B4] hover:bg-[#FF69B4]/5"
@@ -371,6 +420,49 @@ const CartDrawer = () => {
           </>
         )}
       </SheetContent>
+      
+      {/* Validation Error Modal */}
+      <Dialog open={showValidationModal} onOpenChange={setShowValidationModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-orange-600">
+              <AlertCircle className="h-5 w-5" />
+              Promotion Requirements Not Met
+            </DialogTitle>
+            <DialogDescription>
+              Your cart doesn't meet the requirements for the following promotions:
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {validationErrors.map((error, index) => (
+              <div key={index} className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                <h4 className="font-semibold text-orange-800 mb-2">{error.promotionName}</h4>
+                <p className="text-sm text-orange-700 mb-2">{error.reason}</p>
+                <div className="text-xs text-orange-600">
+                  Required: {error.required} • Current: {error.current}
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          <DialogFooter className="flex flex-col gap-2 sm:flex-row">
+            <Button
+              variant="outline"
+              onClick={() => setShowValidationModal(false)}
+              className="w-full sm:w-auto"
+            >
+              Continue Shopping
+            </Button>
+            <Button
+              onClick={() => setShowValidationModal(false)}
+              className="w-full sm:w-auto bg-[#FF69B4] hover:bg-[#FF1493] text-white"
+            >
+              Update Cart
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Sheet>
   );
 };
