@@ -255,8 +255,20 @@ router.patch("/orders/:id/payment-status", isAuthenticated, asyncHandler(async (
     if (paymentStatus === "payment_received") {
       try {
         // Get full order details with items for payment confirmation email and invoice
-        const fullOrder = await storage.getOrderById(orderId);
-        if (fullOrder && fullOrder.items && fullOrder.items.length > 0) {
+        const baseOrder = await storage.getOrderById(orderId);
+        if (!baseOrder) {
+          logger.error("Order not found for payment confirmation", { orderId });
+          throw new Error("Order not found");
+        }
+        
+        // Get order items separately
+        const orderItemsData = await storage.getOrderItems(orderId);
+        const fullOrder = {
+          ...baseOrder,
+          orderItems: orderItemsData || []
+        };
+        
+        if (fullOrder.orderItems && fullOrder.orderItems.length > 0) {
           let invoicePath = null;
           
           // Generate PDF invoice first
@@ -269,12 +281,12 @@ router.patch("/orders/:id/payment-status", isAuthenticated, asyncHandler(async (
               shippingAddress: fullOrder.shippingAddress,
               shippingCity: fullOrder.shippingCity,
               shippingPostalCode: fullOrder.shippingPostalCode,
-              orderItems: fullOrder.items.map(item => ({
+              orderItems: fullOrder.orderItems.map(item => ({
                 productName: item.productName,
                 quantity: item.quantity,
                 unitPrice: item.unitPrice,
                 totalPrice: item.totalPrice,
-                attributeDisplayText: item.attributeDisplayText
+                attributeDisplayText: item.attributeDisplayText || undefined
               })),
               subtotalAmount: fullOrder.subtotalAmount,
               shippingCost: fullOrder.shippingCost,
@@ -314,7 +326,7 @@ router.patch("/orders/:id/payment-status", isAuthenticated, asyncHandler(async (
             amount: fullOrder.totalAmount,
             currency: 'R',
             paymentMethod: fullOrder.paymentMethod,
-            invoicePath: invoicePath // Include invoice path for attachment
+            invoicePath: invoicePath || undefined // Include invoice path for attachment
           };
 
           await databaseEmailService.sendPaymentConfirmationEmail(emailData);
@@ -486,8 +498,20 @@ router.post("/orders/:id/payment-received", isAuthenticated, asyncHandler(async 
     // Send payment confirmation email
     try {
       // Get full order details with items for payment confirmation email
-      const fullOrder = await storage.getOrderById(orderId);
-      if (fullOrder && fullOrder.orderItems && fullOrder.orderItems.length > 0) {
+      const baseOrder = await storage.getOrderById(orderId);
+      if (!baseOrder) {
+        logger.error("Order not found for payment confirmation", { orderId });
+        throw new Error("Order not found");
+      }
+      
+      // Get order items separately
+      const orderItemsData = await storage.getOrderItems(orderId);
+      const fullOrder = {
+        ...baseOrder,
+        orderItems: orderItemsData || []
+      };
+      
+      if (fullOrder.orderItems && fullOrder.orderItems.length > 0) {
         const emailData = {
           email: fullOrder.customerEmail,
           customerName: fullOrder.customerName,
@@ -496,7 +520,7 @@ router.post("/orders/:id/payment-received", isAuthenticated, asyncHandler(async 
           amount: fullOrder.totalAmount,
           currency: 'R',
           paymentMethod: fullOrder.paymentMethod,
-          invoicePath: fullOrder.invoicePath
+          invoicePath: fullOrder.invoicePath || undefined
         };
 
         await databaseEmailService.sendPaymentConfirmationEmail(emailData);

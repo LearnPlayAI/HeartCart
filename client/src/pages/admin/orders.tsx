@@ -621,8 +621,7 @@ export default function AdminOrdersPage() {
   const updateStatusMutation = useMutation({
     mutationFn: async ({ orderId, status, trackingNumber }: { orderId: number; status: string; trackingNumber?: string }) => {
       const body = trackingNumber ? { status, trackingNumber } : { status };
-      const response = await apiRequest('PATCH', `/api/admin/orders/${orderId}/status`, body);
-      return await response.json();
+      return await apiRequest('PATCH', `/api/admin/orders/${orderId}/status`, body);
     },
     onSuccess: () => {
       // Invalidate and refetch orders list to update statistics and order display
@@ -643,8 +642,7 @@ export default function AdminOrdersPage() {
   // Payment status update mutation
   const updatePaymentStatusMutation = useMutation({
     mutationFn: async ({ orderId, paymentStatus }: { orderId: number; paymentStatus: string }) => {
-      const response = await apiRequest('PATCH', `/api/admin/orders/${orderId}/payment-status`, { paymentStatus });
-      return await response.json();
+      return await apiRequest('PATCH', `/api/admin/orders/${orderId}/payment-status`, { paymentStatus });
     },
     onSuccess: () => {
       // Invalidate and refetch orders list to update statistics and order display
