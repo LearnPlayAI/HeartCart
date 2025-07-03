@@ -262,6 +262,7 @@ router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Respons
       creditUsed: orderData.creditUsed || 0,
       remainingBalance: remainingBalance,
       paymentReferenceNumber: orderData.paymentReferenceNumber || null,
+      eftPop: orderData.proofOfPayment || null, // Save proof of payment URL to eftPop field
       // PUDO Locker Details - mapping to camelCase columns
       selectedLockerId: orderData.selectedLockerId || null,
       selectedLockerCode: orderData.lockerDetails?.code || null,

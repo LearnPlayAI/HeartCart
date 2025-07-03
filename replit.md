@@ -700,6 +700,14 @@ Changelog:
   * All mutations now trigger refetchAssigned() and refetchUnassigned() for immediate UI updates
   * Assignment changes now reflect instantly in search results, unassigned users list, and assigned users sections
   * Comprehensive real-time synchronization ensures database as single source of truth with proper cache management
+- July 3, 2025. Complete proof of payment upload system fix:
+  * CRITICAL FIX: Added eftPop field to order creation logic in server/order-routes.ts to save proof of payment URLs to database
+  * Enhanced order creation schema to accept proofOfPayment field from payment confirmation page
+  * Fixed complete flow: payment confirmation page uploads file → generates URL → passes to order creation → saves to eftPop database field
+  * Admin download buttons now properly display when proof of payment exists in database
+  * Resolved issue where proof of payment files uploaded successfully to object storage but eftPop field remained empty
+  * Payment confirmation page now properly saves proof of payment path during order creation process
+  * Complete end-to-end proof of payment system fully operational for order verification workflow
 ```
 
 ## User Preferences
