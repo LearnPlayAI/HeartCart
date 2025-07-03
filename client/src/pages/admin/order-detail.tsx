@@ -338,9 +338,7 @@ export default function AdminOrderDetail() {
   const { data: response, isLoading, error } = useQuery({
     queryKey: ['/api/admin/orders', orderId],
     queryFn: async () => {
-      const response = await fetch(`/api/admin/orders/${orderId}`);
-      if (!response.ok) throw new Error('Failed to fetch order');
-      return response.json();
+      return await apiRequest('GET', `/api/admin/orders/${orderId}`);
     },
     enabled: !!orderId
   });
@@ -348,11 +346,7 @@ export default function AdminOrderDetail() {
   const { data: supplierOrdersResponse } = useQuery({
     queryKey: ['/api/admin/supplier-orders/order', orderId],
     queryFn: async () => {
-      const response = await fetch(`/api/admin/supplier-orders/order/${orderId}`, {
-        credentials: 'include'
-      });
-      if (!response.ok) throw new Error('Failed to fetch supplier orders');
-      return response.json();
+      return await apiRequest('GET', `/api/admin/supplier-orders/order/${orderId}`);
     },
     enabled: !!orderId
   });
@@ -408,8 +402,7 @@ export default function AdminOrderDetail() {
 
   const updatePaymentStatusMutation = useMutation({
     mutationFn: async ({ orderId, paymentStatus }: { orderId: number; paymentStatus: string }) => {
-      const response = await apiRequest('PATCH', `/api/admin/orders/${orderId}/payment-status`, { paymentStatus });
-      return await response.json();
+      return await apiRequest('PATCH', `/api/admin/orders/${orderId}/payment-status`, { paymentStatus });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/orders', orderId] });
@@ -446,8 +439,7 @@ export default function AdminOrderDetail() {
 
   const markPaymentReceivedMutation = useMutation({
     mutationFn: async ({ orderId, paymentReceivedDate }: { orderId: number; paymentReceivedDate: string }) => {
-      const response = await apiRequest('POST', `/api/orders/${orderId}/admin/payment-received`, { paymentReceivedDate });
-      return await response.json();
+      return await apiRequest('POST', `/api/orders/${orderId}/admin/payment-received`, { paymentReceivedDate });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/orders', orderId] });
