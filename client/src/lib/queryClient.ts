@@ -40,8 +40,8 @@ async function throwIfResNotOk(res: Response) {
 }
 
 // Overloaded function to support both calling patterns
-export async function apiRequest(url: string, options: { method: string; body?: string; headers?: Record<string, string> }): Promise<Response>;
-export async function apiRequest(method: string, url: string, data?: unknown, options?: { isFormData?: boolean; debug?: boolean; credentials?: RequestCredentials; headers?: Record<string, string> }): Promise<Response>;
+export async function apiRequest(url: string, options: { method: string; body?: string; headers?: Record<string, string> }): Promise<any>;
+export async function apiRequest(method: string, url: string, data?: unknown, options?: { isFormData?: boolean; debug?: boolean; credentials?: RequestCredentials; headers?: Record<string, string> }): Promise<any>;
 export async function apiRequest(
   urlOrMethod: string,
   urlOrOptions?: string | { method: string; body?: string; headers?: Record<string, string> },
@@ -101,19 +101,15 @@ export async function apiRequest(
   try {
     await throwIfResNotOk(res);
     
+    // Parse JSON response
+    const responseJson = await res.json();
+    
     // Log successful response for debugging
     if (debug || url.includes('/api/product-drafts')) {
-      const clonedRes = res.clone();
-      const responseText = await clonedRes.text();
-      try {
-        const responseJson = JSON.parse(responseText);
-        console.log(`API Response: ${method} ${url}`, responseJson);
-      } catch {
-        console.log(`API Response: ${method} ${url}`, responseText);
-      }
+      console.log(`API Response: ${method} ${url}`, responseJson);
     }
     
-    return res;
+    return responseJson;
   } catch (error) {
     // Always log errors for product-drafts API calls
     if (url.includes('/api/product-drafts')) {
