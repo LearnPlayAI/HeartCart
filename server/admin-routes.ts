@@ -1014,8 +1014,13 @@ router.get("/sales-reps/overview", isAdmin, asyncHandler(async (req: Request, re
       const earnings = await storage.calculateRepEarnings(rep.id);
       const payments = await storage.getRepPayments(rep.id);
       
-      // Calculate total payments made
-      const totalPaid = payments.reduce((sum, payment) => sum + Number(payment.amount), 0);
+      // Calculate effective total paid considering Bank Transfer logic
+      // Bank Transfer payments count as double their amount since they clear 100% debt with 50% payment
+      const totalPaid = payments.reduce((sum, payment) => {
+        const paymentAmount = Number(payment.amount);
+        const effectiveAmount = payment.paymentMethod === 'Bank Transfer' ? paymentAmount * 2 : paymentAmount;
+        return sum + effectiveAmount;
+      }, 0);
       
       // Calculate amount owed (total earnings - total paid)
       const amountOwed = Math.max(0, earnings.totalEarnings - totalPaid);
@@ -1076,8 +1081,13 @@ router.get("/sales-reps", isAdmin, asyncHandler(async (req: Request, res: Respon
       const earnings = await storage.calculateRepEarnings(rep.id);
       const payments = await storage.getRepPayments(rep.id);
       
-      // Calculate total payments made
-      const totalPaid = payments.reduce((sum, payment) => sum + Number(payment.amount), 0);
+      // Calculate effective total paid considering Bank Transfer logic
+      // Bank Transfer payments count as double their amount since they clear 100% debt with 50% payment
+      const totalPaid = payments.reduce((sum, payment) => {
+        const paymentAmount = Number(payment.amount);
+        const effectiveAmount = payment.paymentMethod === 'Bank Transfer' ? paymentAmount * 2 : paymentAmount;
+        return sum + effectiveAmount;
+      }, 0);
       
       // Calculate amount owed (total earnings - total paid)
       const amountOwed = Math.max(0, earnings.totalEarnings - totalPaid);
@@ -1299,9 +1309,9 @@ router.post("/sales-reps/:id/payments", isAdmin, asyncHandler(async (req: Reques
     // For Bank Transfer: mark ALL unpaid commissions as paid (50% payment clears 100% debt)
     // For Store Credit: mark commissions up to the payment amount
     if (paymentMethod === 'Bank Transfer') {
-      await storage.markAllUnpaidCommissionsAsPaid(repId);
+      await storage.markAllUnpaidCommissionsAsPaid(repId, paymentMethod);
     } else {
-      await storage.markCommissionsAsPaid(repId, paymentAmount);
+      await storage.markCommissionsAsPaid(repId, paymentAmount, paymentMethod);
     }
     
     // If payment method is store credit, award store credit to the sales rep
@@ -1385,8 +1395,14 @@ router.get("/sales-reps/:id/summary", isAdmin, asyncHandler(async (req: Request,
     const totalEarned = commissions
       .reduce((sum, c) => sum + Number(c.commissionAmount), 0);
     
+    // Calculate effective total paid considering Bank Transfer logic
+    // Bank Transfer payments count as double their amount since they clear 100% debt with 50% payment
     const totalPaid = payments
-      .reduce((sum, p) => sum + Number(p.amount), 0);
+      .reduce((sum, p) => {
+        const paymentAmount = Number(p.amount);
+        const effectiveAmount = p.paymentMethod === 'Bank Transfer' ? paymentAmount * 2 : paymentAmount;
+        return sum + effectiveAmount;
+      }, 0);
     
     const amountOwed = Math.max(0, totalEarned - totalPaid);
 

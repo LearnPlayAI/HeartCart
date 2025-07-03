@@ -35,6 +35,7 @@ interface Commission {
   totalCustomerPaidAmount?: number;
   totalCostAmount?: number;
   status: 'earned' | 'paid' | 'cancelled';
+  paymentMethod?: string | null;
   notes: string | null;
   createdAt: string;
 }
@@ -286,17 +287,33 @@ export default function SalesRepCommissionsPage() {
                           <div>
                             <p className="text-sm font-medium text-gray-600">Commission</p>
                             <p className="text-sm font-medium text-pink-600">
-                              {formatCurrency(Number(commission.commissionAmount))}
+                              {commission.paymentMethod === 'Bank Transfer' && commission.status === 'paid' 
+                                ? formatCurrency(Number(commission.commissionAmount) / 2)
+                                : formatCurrency(Number(commission.commissionAmount))
+                              }
                             </p>
                           </div>
                         </div>
 
-                        {/* Rate and Status */}
+                        {/* Rate, Payment Method and Status */}
                         <div className="space-y-2">
                           <div>
                             <p className="text-sm font-medium text-gray-600">Rate</p>
-                            <p className="text-sm font-medium">{Number(selectedRep.commissionRate).toFixed(1)}%</p>
+                            <p className="text-sm font-medium">
+                              {commission.paymentMethod === 'Bank Transfer' && commission.status === 'paid'
+                                ? (Number(selectedRep.commissionRate) / 2).toFixed(1)
+                                : Number(selectedRep.commissionRate).toFixed(1)
+                              }%
+                            </p>
                           </div>
+                          {commission.status === 'paid' && commission.paymentMethod && (
+                            <div>
+                              <p className="text-sm font-medium text-gray-600">Payment Method</p>
+                              <p className="text-sm font-medium text-blue-600">
+                                {commission.paymentMethod}
+                              </p>
+                            </div>
+                          )}
                           <div>
                             <p className="text-sm font-medium text-gray-600">Status</p>
                             <div className="mt-1">

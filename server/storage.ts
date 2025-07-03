@@ -13644,7 +13644,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async markCommissionsAsPaid(repId: number, paymentAmount: number): Promise<void> {
+  async markCommissionsAsPaid(repId: number, paymentAmount: number, paymentMethod: string = 'Store Credit'): Promise<void> {
     try {
       // Get unpaid commissions for this rep, ordered by creation date (oldest first)
       const unpaidCommissions = await db
@@ -13676,19 +13676,21 @@ export class DatabaseStorage implements IStorage {
         }
       }
 
-      // Mark the selected commissions as paid
+      // Mark the selected commissions as paid with payment method
       if (commissionsToUpdate.length > 0) {
         await db
           .update(repCommissions)
           .set({ 
             status: 'paid',
+            paymentMethod: paymentMethod,
             updatedAt: new Date()
           })
           .where(inArray(repCommissions.id, commissionsToUpdate));
 
         logger.info('Marked commissions as paid', { 
           repId, 
-          paymentAmount, 
+          paymentAmount,
+          paymentMethod,
           commissionsMarkedAsPaid: commissionsToUpdate.length,
           commissionIds: commissionsToUpdate 
         });
@@ -13703,7 +13705,7 @@ export class DatabaseStorage implements IStorage {
    * Mark ALL unpaid commissions as paid for bank transfer payments
    * Bank transfers pay 50% but clear 100% of debt
    */
-  async markAllUnpaidCommissionsAsPaid(repId: number): Promise<void> {
+  async markAllUnpaidCommissionsAsPaid(repId: number, paymentMethod: string = 'Bank Transfer'): Promise<void> {
     try {
       // Get all unpaid commissions for this rep
       const unpaidCommissions = await db
@@ -13717,17 +13719,19 @@ export class DatabaseStorage implements IStorage {
       if (unpaidCommissions.length > 0) {
         const commissionIds = unpaidCommissions.map(c => c.id);
         
-        // Mark ALL unpaid commissions as paid
+        // Mark ALL unpaid commissions as paid with payment method
         await db
           .update(repCommissions)
           .set({ 
             status: 'paid',
+            paymentMethod: paymentMethod,
             updatedAt: new Date()
           })
           .where(inArray(repCommissions.id, commissionIds));
 
         logger.info('Marked all unpaid commissions as paid for bank transfer', { 
           repId, 
+          paymentMethod,
           commissionsMarkedAsPaid: commissionIds.length,
           commissionIds 
         });

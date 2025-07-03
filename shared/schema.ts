@@ -432,6 +432,7 @@ export const repCommissions = pgTable("repCommissions", {
   totalCustomerPaidAmount: decimal("totalCustomerPaidAmount", { precision: 10, scale: 2 }), // Total amount customer actually paid
   totalCostAmount: decimal("totalCostAmount", { precision: 10, scale: 2 }), // Total cost of all order items
   status: text("status").notNull().default("earned"), // earned, paid, cancelled
+  paymentMethod: text("paymentMethod"), // Bank Transfer, Store Credit - set when commission is paid
   notes: text("notes"), // Admin notes about the commission
   createdAt: timestamp("createdAt").defaultNow(), // When commission was earned (order delivered)
   updatedAt: timestamp("updatedAt").defaultNow(), // Last updated
