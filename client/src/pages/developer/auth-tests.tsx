@@ -256,10 +256,9 @@ function AuthTestsPage() {
   // Individual test mutations
   const validationMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest('POST', '/api/auth-test/validate-password', {
+      const responseJson = await apiRequest('POST', '/api/auth-test/validate-password', {
         password: 'TestPassword123!',
       });
-      const responseJson = await response.json();
       return responseJson.success && 'data' in responseJson ? responseJson.data : responseJson;
     },
     onSuccess: (data) => {
@@ -282,11 +281,10 @@ function AuthTestsPage() {
 
   const credentialMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest('POST', '/api/auth-test/validate-credentials', {
+      const responseJson = await apiRequest('POST', '/api/auth-test/validate-credentials', {
         email: 'test@example.com',
         password: 'TestPassword123!',
       });
-      const responseJson = await response.json();
       return responseJson.success && 'data' in responseJson ? responseJson.data : responseJson;
     },
     onSuccess: (data) => {
@@ -309,8 +307,7 @@ function AuthTestsPage() {
 
   const sessionMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest('POST', '/api/auth-test/session-persistence');
-      const responseJson = await response.json();
+      const responseJson = await apiRequest('POST', '/api/auth-test/session-persistence');
       return responseJson.success && 'data' in responseJson ? responseJson.data : responseJson;
     },
     onSuccess: (data) => {
@@ -333,8 +330,7 @@ function AuthTestsPage() {
 
   const systemMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest('POST', '/api/auth-test/system-tests');
-      const responseJson = await response.json();
+      const responseJson = await apiRequest('POST', '/api/auth-test/system-tests');
       return responseJson.success && 'data' in responseJson ? responseJson.data : responseJson;
     },
     onSuccess: (data) => {
@@ -357,8 +353,7 @@ function AuthTestsPage() {
   
   const validationSystemMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest('GET', '/api/auth-test/validation-system');
-      const responseJson = await response.json();
+      const responseJson = await apiRequest('GET', '/api/auth-test/validation-system');
       return responseJson.success && 'data' in responseJson ? responseJson.data : responseJson;
     },
     onSuccess: (data) => {
