@@ -92,6 +92,7 @@ const createOrderSchema = z.object({
   creditUsed: z.number().default(0),
   paymentReferenceNumber: z.string().optional(),
   paymentStatus: z.string().optional(),
+  proofOfPayment: z.string().optional(),
   selectedLockerId: z.number().optional(),
   lockerDetails: z.object({
     code: z.string(),
