@@ -41,6 +41,12 @@ export function PromotionRuleBuilder({ value, onChange, disabled = false }: Prom
 
   useEffect(() => {
     setCurrentRule(value || null);
+    // Auto-open when a rule is present, auto-close when no rule
+    if (value && value.type !== 'none') {
+      setIsOpen(true);
+    } else {
+      setIsOpen(false);
+    }
   }, [value]);
 
   const handleRuleTypeChange = (ruleType: string) => {

@@ -100,7 +100,7 @@ export default function EditPromotionPage() {
 
   // Fetch promotion data
   const { data: promotionResponse, isLoading: isLoadingPromotion, error } = useQuery({
-    queryKey: ['/api/promotions', promotionId],
+    queryKey: [`/api/promotions/${promotionId}`],
     enabled: !!promotionId,
   });
 
@@ -110,14 +110,7 @@ export default function EditPromotionPage() {
       const promotionData = promotionResponse.data;
       const displayType = getDisplayPromotionType(promotionData);
       
-      console.log('Form hydration debug:', {
-        promotionData,
-        displayType,
-        hasRules: !!promotionData.rules,
-        rulesType: promotionData.rules?.type
-      });
-      
-      const formData = {
+      form.reset({
         promotionName: promotionData.promotionName || "",
         description: promotionData.description || "",
         startDate: promotionData.startDate ? promotionData.startDate.split('T')[0] : "",
@@ -127,11 +120,7 @@ export default function EditPromotionPage() {
         discountValue: promotionData.discountValue ? promotionData.discountValue.toString() : "",
         minimumOrderValue: promotionData.minimumOrderValue ? promotionData.minimumOrderValue.toString() : "",
         rules: promotionData.rules || null,
-      };
-      
-      console.log('Form data for reset:', formData);
-      form.reset(formData);
-      console.log('Form reset completed, current values:', form.getValues());
+      });
     }
   }, [promotionResponse, form]);
 
@@ -150,7 +139,7 @@ export default function EditPromotionPage() {
       queryClient.invalidateQueries({ queryKey: ['/api/promotions'] });
       queryClient.invalidateQueries({ queryKey: ['/api/promotions/active'] });
       queryClient.invalidateQueries({ queryKey: ['/api/promotions/active-with-products'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/promotions', promotionId] });
+      queryClient.invalidateQueries({ queryKey: [`/api/promotions/${promotionId}`] });
       
       toast({
         title: "Success",
@@ -170,6 +159,32 @@ export default function EditPromotionPage() {
 
   const onSubmit = (data: PromotionFormData) => {
     updatePromotionMutation.mutate(data);
+  };
+
+  // Handle promotion type change to auto-sync with rules
+  const handlePromotionTypeChange = (promotionType: string) => {
+    form.setValue('promotionType', promotionType);
+    
+    // Auto-sync rule type with promotion type for advanced rule types
+    const advancedRuleTypes = [
+      'minimum_quantity_same_promotion',
+      'minimum_order_value', 
+      'buy_x_get_y',
+      'category_mix'
+    ];
+    
+    if (advancedRuleTypes.includes(promotionType)) {
+      // Set the rule type to match the promotion type
+      const currentRules = form.getValues('rules');
+      const newRules = {
+        ...currentRules,
+        type: promotionType
+      };
+      form.setValue('rules', newRules);
+    } else {
+      // For basic types (percentage, fixed), clear rules
+      form.setValue('rules', null);
+    }
   };
 
   const handleCancel = () => {
@@ -294,7 +309,7 @@ export default function EditPromotionPage() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Discount Type</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
+                          <Select onValueChange={handlePromotionTypeChange} value={field.value}>
                             <FormControl>
                               <SelectTrigger>
                                 <SelectValue placeholder="Select discount type" />

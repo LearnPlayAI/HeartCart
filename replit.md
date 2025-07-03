@@ -678,6 +678,13 @@ Changelog:
   * Admin always sees latest commission data without manual page refresh through automatic query invalidation
   * Complete payment workflow now properly handles both payment methods with accurate debt clearing logic
   * Production-ready commission system with proper banking details validation and automated reference number generation
+- July 3, 2025. Fixed critical promotion edit form hydration bug:
+  * Resolved TanStack Query configuration issue where queryKey format prevented proper API calls to individual promotion endpoints
+  * Changed queryKey from `['/api/promotions', promotionId]` to `['/api/promotions/${promotionId}']` for correct URL generation
+  * Fixed form hydration that was receiving array of promotions instead of single promotion object
+  * Enhanced cache invalidation to match new queryKey format ensuring proper data refresh after updates
+  * All promotion edit forms now properly pre-populate with existing database values including complex rule-based promotion types
+  * Admin interface fully functional for editing all 7 promotion types with correct form field hydration
 - July 2, 2025. Fixed user registration timestamp capture and admin users page date display:
   * Resolved issue where user registration wasn't capturing createdAt timestamps in database
   * Updated auth.ts to explicitly set createdAt and updatedAt timestamps during user registration
