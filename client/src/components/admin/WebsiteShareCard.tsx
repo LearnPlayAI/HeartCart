@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Share2, 
@@ -10,7 +11,9 @@ import {
   Check,
   Users,
   Heart,
-  ExternalLink
+  ExternalLink,
+  RotateCcw,
+  Edit3
 } from "lucide-react";
 
 /**
@@ -21,8 +24,8 @@ export function WebsiteShareCard() {
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
 
-  // Website sharing message using the user's exact text
-  const websiteShareMessage = `🛍️ Welcome to Tee Me You 🛍️
+  // Default website sharing message using the user's exact text
+  const defaultMessage = `🛍️ Welcome to Tee Me You 🛍️
 
 Hi Family and Friends! We are excited to invite you to join our new online store - https://teemeyou.shop 
 
@@ -41,6 +44,17 @@ Please feel free to forward this to your trusted friends and not to strangers be
 
 Thank you for supporting our growing business! 🙏
 [TeeMeYou Logo]`;
+
+  // Editable message state
+  const [websiteShareMessage, setWebsiteShareMessage] = useState(defaultMessage);
+
+  const handleResetMessage = () => {
+    setWebsiteShareMessage(defaultMessage);
+    toast({
+      title: "Message reset",
+      description: "The message has been reset to the default text.",
+    });
+  };
 
   const handleWhatsAppShare = () => {
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(websiteShareMessage)}`;
@@ -99,12 +113,29 @@ Thank you for supporting our growing business! 🙏
       
       <CardContent className="p-6">
         <div className="space-y-4">
-          {/* Preview of the sharing message */}
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 max-h-48 overflow-y-auto">
-            <h4 className="font-semibold text-sm text-gray-700 mb-2">Preview Message:</h4>
-            <div className="text-sm text-gray-600 whitespace-pre-line font-mono">
-              {websiteShareMessage}
+          {/* Editable sharing message */}
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="font-semibold text-sm text-gray-700 flex items-center gap-2">
+                <Edit3 className="h-4 w-4" />
+                Edit Message:
+              </h4>
+              <Button
+                onClick={handleResetMessage}
+                variant="ghost"
+                size="sm"
+                className="text-gray-500 hover:text-gray-700 h-8 px-2"
+              >
+                <RotateCcw className="h-3 w-3 mr-1" />
+                Reset
+              </Button>
             </div>
+            <Textarea
+              value={websiteShareMessage}
+              onChange={(e) => setWebsiteShareMessage(e.target.value)}
+              className="min-h-[180px] text-sm font-mono resize-none bg-white border-gray-300 focus:border-pink-400 focus:ring-pink-400"
+              placeholder="Enter your sharing message..."
+            />
           </div>
 
           {/* Action buttons */}
