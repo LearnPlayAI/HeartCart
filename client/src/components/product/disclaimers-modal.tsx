@@ -13,7 +13,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Button } from '@/components/ui/button';
-import { ChevronDown, Clock, Shield, Palette } from 'lucide-react';
+import { ChevronDown, Shield, Palette } from 'lucide-react';
 
 interface DisclaimersModalProps {
   open: boolean;
@@ -39,22 +39,6 @@ export default function DisclaimersModal({
         </DialogHeader>
         
         <div className="space-y-4 py-4">
-          {/* Order Timeline Disclaimer */}
-          <Collapsible>
-            <CollapsibleTrigger className="flex items-center justify-between w-full p-3 text-left text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-lg border border-gray-200">
-              <div className="flex items-center">
-                <Clock className="h-4 w-4 mr-2 text-[#FF69B4]" />
-                Order timeline
-              </div>
-              <ChevronDown className="h-4 w-4" />
-            </CollapsibleTrigger>
-            <CollapsibleContent className="px-3 pb-3 text-sm text-gray-600">
-              <div className="pt-2 border-t border-gray-100">
-                Although we keep stock of certain items, we promote a huge range of products. For that reason, we need to pre-order stock as needed from our supplier. In order to do this as efficiently as possible, we consolidate weekly orders by a Monday, 20:00.
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-
           {/* Product Warranty Disclaimer */}
           <Collapsible>
             <CollapsibleTrigger className="flex items-center justify-between w-full p-3 text-left text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-lg border border-gray-200">
@@ -66,9 +50,9 @@ export default function DisclaimersModal({
             </CollapsibleTrigger>
             <CollapsibleContent className="px-3 pb-3 text-sm text-gray-600">
               <div className="pt-2 border-t border-gray-100 space-y-2">
-                <p>• Products with a purchase price less than R500, has a 7 day warranty</p>
-                <p>• Products with a purchase price of R500 or more, has a 30 day warranty</p>
-                <p>• In cases where products need to be returned, follow the steps detailed under Damages and Returns in the general Terms & Conditions.</p>
+                <p>• Products with a purchase price less than R500, has a 5 day warranty</p>
+                <p>• Products with a purchase price of R500 or more, has a 15 day warranty</p>
+                <p>• In cases where products need to be returned, please email us with your return request to sales@teemeyou.shop. Include your order number in the mail Title and a detailed description of the issue in the mail body.</p>
               </div>
             </CollapsibleContent>
           </Collapsible>
