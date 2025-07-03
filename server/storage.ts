@@ -1831,7 +1831,7 @@ export class DatabaseStorage implements IStorage {
       const sortFieldMap: Record<string, any> = {
         'name': products.name,
         'sku': products.sku,
-        'price': products.price,
+        'price': sql`COALESCE(${products.salePrice}, ${products.price})`, // Use sale price if available, otherwise base price
         'salePrice': products.salePrice,
         'costPrice': products.costPrice,
         'stock': products.stock,
