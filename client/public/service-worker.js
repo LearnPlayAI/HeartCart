@@ -73,6 +73,12 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   // Skip cross-origin requests, like those for Google Analytics
   if (event.request.url.startsWith(self.location.origin)) {
+    // HTTPS-only policy for mobile security
+    if (event.request.url.startsWith('http:') && self.location.protocol === 'https:') {
+      console.warn('[SW] Blocking insecure HTTP request on HTTPS site:', event.request.url);
+      return;
+    }
+    
     // For API requests, use network first strategy
     if (event.request.url.includes('/api/')) {
       event.respondWith(networkFirst(event.request));
@@ -83,7 +89,7 @@ self.addEventListener('fetch', event => {
   }
 });
 
-// Cache first strategy
+// Cache first strategy with mobile optimization
 async function cacheFirst(request) {
   const cachedResponse = await caches.match(request);
   if (cachedResponse) {
@@ -91,19 +97,43 @@ async function cacheFirst(request) {
   }
 
   try {
-    const networkResponse = await fetch(request);
-    // Cache valid responses for future use
+    // Mobile-optimized fetch with timeout for slow connections
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout for mobile
+    
+    const networkResponse = await fetch(request, { 
+      signal: controller.signal,
+      credentials: 'same-origin' // Ensure HTTPS-only credentials
+    });
+    
+    clearTimeout(timeoutId);
+    
+    // Cache valid HTTPS responses for future use
     if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
-      const cache = await caches.open(RUNTIME);
-      cache.put(request, networkResponse.clone());
+      // Only cache HTTPS resources for security
+      if (request.url.startsWith('https:') || request.url.startsWith(self.location.origin)) {
+        const cache = await caches.open(RUNTIME);
+        cache.put(request, networkResponse.clone());
+      }
     }
     return networkResponse;
   } catch (error) {
-    console.error('Fetch error:', error);
-    // For some requests like images, return a fallback
+    console.error('[SW] Mobile-optimized fetch error:', error);
+    
+    // Enhanced mobile fallback logic
     if (request.destination === 'image') {
-      return caches.match('/logo.svg');
+      return caches.match('/logo.svg') || caches.match('/icon-192.png');
     }
+    
+    // For mobile connectivity issues, try to return any cached version
+    if (error.name === 'AbortError' || error.message.includes('network')) {
+      console.log('[SW] Mobile network timeout - attempting to serve any cached content');
+      const fallbackResponse = await caches.match(request, { ignoreSearch: true });
+      if (fallbackResponse) {
+        return fallbackResponse;
+      }
+    }
+    
     throw error;
   }
 }

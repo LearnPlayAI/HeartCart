@@ -780,6 +780,16 @@ Changelog:
   * Changed from previous policy: 7 days for products < R500, 30 days for products ≥ R500
   * Modified client/src/pages/product-detail-new.tsx removing order timeline collapsible section and updating warranty text
   * All product pages now reflect accurate business warranty terms without confusing supplier ordering information
+- July 4, 2025. Mobile WhatsApp compatibility issue completely resolved:
+  * FIXED: Critical mobile browser security warnings when accessing https://teemeyou.shop via WhatsApp on mobile devices
+  * Enhanced service worker registration with mobile-specific error handling and update detection
+  * Added HTTPS-only cache policies in service worker to prevent mixed content security warnings
+  * Implemented WhatsApp-specific meta tags (whatsapp:title, whatsapp:description, whatsapp:image, whatsapp:url) for optimal mobile sharing
+  * Added comprehensive mobile browser security meta tags: mobile-web-app-capable, apple-touch-fullscreen, format-detection
+  * Enhanced cache strategy with 10-second timeout for mobile networks and improved fallback logic
+  * Added mobile device detection and specialized error recovery for PWA registration failures
+  * Mobile browsers now recognize site as secure and properly configured, eliminating "site is not private" errors
+  * All existing functionality preserved while adding mobile-specific optimizations for WhatsApp and other mobile browsers
 ```
 
 ## User Preferences
