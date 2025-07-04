@@ -744,6 +744,14 @@ Changelog:
   * Removed dependency on "Save details" checkbox for address information persistence
   * All shipping address fields (street, city, province, postal code) now automatically saved to user profile
   * Ensures users never lose address information and eliminates need to re-enter on future orders
+- July 4, 2025. CRITICAL PRODUCT ATTRIBUTE DELETION BUG FIX - System fully operational:
+  * RESOLVED CRITICAL ISSUE: Fixed missing DELETE /api/products/{productId}/attributes/{id} route that was preventing attribute removal from products
+  * Root cause: Frontend making API calls to non-existent DELETE endpoint causing silent failures when users removed attributes
+  * Added complete CRUD routes for product attribute management: GET, POST, PUT, DELETE /api/products/:productId/attributes
+  * Enhanced attribute routes with proper validation, error handling, and logging for all operations
+  * Comprehensive testing confirms attribute removal now works correctly: users can successfully remove attributes and see immediate database updates
+  * Fixed critical data persistence issue where removed attributes remained active on products after editing and publishing
+  * Product attribute system now fully functional for both draft/publication workflow and direct attribute editing
 - July 4, 2025. Authentication page tab switching issue resolved:
   * Fixed critical tab switching bug where URL parameter detection wasn't working properly with wouter router
   * Updated useEffect to use window.location.search directly instead of parsing from wouter location
