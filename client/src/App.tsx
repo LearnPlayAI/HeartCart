@@ -37,6 +37,7 @@ import React, { Suspense } from "react";
 
 // Admin Pages
 import AdminDashboard from "@/pages/admin/dashboard";
+import AdminSettings from "@/pages/admin/settings";
 import AdminProducts from "@/pages/admin/products";
 import AdminCategories from "@/pages/admin/categories";
 import AdminOrders from "@/pages/admin/orders";
@@ -160,6 +161,7 @@ function App() {
                 <Switch>
                   {/* Admin Routes - No header/footer */}
                   <AdminProtectedRoute path="/admin" component={AdminDashboard} />
+                  <AdminProtectedRoute path="/admin/settings" component={AdminSettings} />
                   <AdminProtectedRoute path="/admin/suppliers" component={AdminSuppliers} />
                   <AdminProtectedRoute path="/admin/suppliers/new" component={AddSupplier} />
                   <AdminProtectedRoute path="/admin/suppliers/:id/edit" component={EditSupplier} />
