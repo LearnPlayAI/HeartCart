@@ -228,13 +228,13 @@ const Header = () => {
               // Non-authenticated user - show login and register buttons
               <>
                 <Button variant="outline" className="flex items-center space-x-1 border-[#FF69B4] text-[#FF69B4] hover:bg-pink-50 hover:border-[#FF1493] hover:text-[#FF1493] font-medium transition-all duration-200 shadow-sm hover:shadow-md" asChild>
-                  <Link href="/auth?tab=login">
+                  <Link href="/auth?tab=login" onClick={() => console.log('Login button clicked - navigating to /auth?tab=login')}>
                     <LogIn className="h-4 w-4 mr-1" />
                     <span>Login</span>
                   </Link>
                 </Button>
                 <Button className="flex items-center space-x-1 bg-gradient-to-r from-[#FF69B4] to-[#FF1493] text-white hover:from-[#FF1493] hover:to-[#DC143C] font-medium shadow-md hover:shadow-lg transition-all duration-200" asChild>
-                  <Link href="/auth?tab=register">
+                  <Link href="/auth?tab=register" onClick={() => console.log('Register button clicked - navigating to /auth?tab=register')}>
                     <UserPlus className="h-4 w-4 mr-1" />
                     <span>Register</span>
                   </Link>
