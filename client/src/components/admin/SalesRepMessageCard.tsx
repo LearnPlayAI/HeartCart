@@ -57,19 +57,41 @@ export function SalesRepMessageCard({ className = '' }: SalesRepMessageCardProps
   };
 
   const handleReset = () => {
-    const defaultMessage = `🎯 Join the TeeMeYou Sales Representative Program!
+    const defaultMessage = `🎉 JOIN THE TeeMeYou SALES TEAM! 🎉
 
-💰 Earn 5% commission on every sale
-🏆 Be part of South Africa's fastest-growing e-commerce platform
-📈 Unlimited earning potential
-🎯 Easy registration process
+💎 Become a Sales Representative and start earning TODAY! 💎
 
-Ready to start earning? Register using your unique rep code:
-https://teemeyou.shop/auth?tab=register&repCode={REP_CODE}
+🌟 Why Choose Our Program?
+💰 Earn commissions on EVERY sale
+🚀 Work from anywhere, anytime  
+📱 No experience needed - we'll guide you
+💼 Perfect side hustle or full-time opportunity
 
-Questions? Contact us at sales@teemeyou.shop
+🔥 What You Get:
+✅ Personalized registration link 
+✅ Marketing support & training
+✅ Real-time commission tracking
+✅ Fast payments directly to your account
 
-#TeeMeYou #SalesRep #EarnMoney #SouthAfrica`;
+💡 How It Works:
+1️⃣ Share your unique link with friends & family
+2️⃣ They shop quality products on TeeMeYou 
+3️⃣ You earn commission on every purchase! 💸
+
+🎯 Perfect For:
+👥 Social media enthusiasts
+📢 People with large networks  
+💪 Go-getters wanting extra income
+🏠 Stay-at-home parents
+
+🚀 START EARNING NOW:
+👆 Register here: https://teemeyou.shop/auth?tab=register&repCode={REP_CODE}
+
+💬 Questions? We're here to help!
+📧 sales@teemeyou.shop
+🌐 https://teemeyou.shop
+
+#TeeMeYou #SalesRep #EarnMoney #SouthAfrica #WorkFromHome 🇿🇦`;
     
     setMessage(defaultMessage);
     setHasUnsavedChanges(true);

@@ -57,24 +57,31 @@ export function ProductSharingCard({ className = '' }: ProductSharingCardProps) 
   };
 
   const handleReset = () => {
-    const defaultMessage = `🛍️ JUST ARRIVED at Tee Me You!
+    const defaultMessage = `🔥 HOT DEAL ALERT! 🔥
 
-[PRODUCT_NAME]
+✨ [PRODUCT_NAME] ✨
 
-💰 Price: R[PRICE]
-📦 Free delivery available via PUDO lockers
+💸 SPECIAL PRICE: R[PRICE]
+🎯 Limited time offer - Don't miss out!
 
-✨ Why shop with TeeMeYou?
-• Quality products at great prices
-• Fast delivery across South Africa
-• Secure EFT payments
-• Trusted online store
+🌟 Why You'll LOVE This:
+💎 Premium quality guaranteed
+🚚 FREE delivery across South Africa  
+📦 Secure PUDO locker delivery
+💳 Easy EFT payment options
+⭐ Trusted by thousands of customers
 
-🛒 Shop now: [PRODUCT_URL]
+🎁 BONUS: Follow us for more exclusive deals!
 
-📱 More products: https://teemeyou.shop
+👆 GET YOURS NOW: [PRODUCT_URL]
 
-#TeeMeYou #OnlineShopping #SouthAfrica #QualityProducts`;
+🛍️ Browse more amazing products: https://teemeyou.shop
+
+💬 Questions? DM us anytime!
+
+#TeeMeYou #DealsOfTheDay #SouthAfricaShopping #QualityProducts #PUDO #OnlineStore #SouthAfrica 🇿🇦
+
+Tag a friend who needs this! 👇`;
     
     setMessage(defaultMessage);
     setHasUnsavedChanges(true);
