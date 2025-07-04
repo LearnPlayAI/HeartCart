@@ -744,6 +744,13 @@ Changelog:
   * Removed dependency on "Save details" checkbox for address information persistence
   * All shipping address fields (street, city, province, postal code) now automatically saved to user profile
   * Ensures users never lose address information and eliminates need to re-enter on future orders
+- July 4, 2025. Authentication page tab switching issue resolved:
+  * Fixed critical tab switching bug where URL parameter detection wasn't working properly with wouter router
+  * Updated useEffect to use window.location.search directly instead of parsing from wouter location
+  * Login and Register header buttons now correctly switch between Sign In and Register tabs
+  * Added comprehensive debugging that confirmed proper URL parameter handling (?tab=login, ?tab=register)
+  * Enhanced registration form to properly handle repCode URLs for sales representative commission system
+  * Tab switching system fully functional with automatic user authentication after successful registration
 ```
 
 ## User Preferences

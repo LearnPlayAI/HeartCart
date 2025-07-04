@@ -126,14 +126,10 @@ export default function AuthPage() {
     const tabFromUrl = urlParams.get('tab');
     const repCodeFromCurrentUrl = urlParams.get('repCode');
     
-    console.log('Auth page location change:', location, 'search:', window.location.search, 'tabFromUrl:', tabFromUrl, 'repCode:', repCodeFromCurrentUrl);
-    
     // Determine the correct tab based on URL parameters
     if (tabFromUrl === 'register' || repCodeFromCurrentUrl) {
-      console.log('Setting active tab to register');
       setActiveTab('register');
     } else if (tabFromUrl === 'login') {
-      console.log('Setting active tab to login');
       setActiveTab('login');
     }
   }, [location]); // This will trigger when the location changes
