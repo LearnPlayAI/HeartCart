@@ -5,6 +5,7 @@ import { Share2, Copy, MessageCircle, Mail, Send, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { FaFacebook, FaTwitter } from "react-icons/fa";
 import { useQuery } from "@tanstack/react-query";
+import { ensureValidImageUrl } from "@/utils/file-utils";
 
 interface ShareProductDialogProps {
   productId: number;
@@ -210,10 +211,12 @@ ${productUrl}`;
           <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-pink-50 to-purple-50 rounded-lg border border-pink-100">
             {productImage && (
               <img 
-                src={productImage} 
+                src={ensureValidImageUrl(productImage)} 
                 alt={productTitle}
                 className="w-12 h-12 object-cover rounded border border-pink-200"
                 onError={(e) => {
+                  console.error('ShareProductDialog: Failed to load product image:', productImage);
+                  console.log('ShareProductDialog: Processed URL:', ensureValidImageUrl(productImage));
                   e.currentTarget.style.display = 'none';
                 }}
               />
