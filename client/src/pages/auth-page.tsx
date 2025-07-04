@@ -118,6 +118,20 @@ export default function AuthPage() {
       navigate("/");
     }
   }, [user]);
+
+  // Listen for URL parameter changes and update active tab accordingly
+  React.useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabFromUrl = urlParams.get('tab');
+    const repCodeFromCurrentUrl = urlParams.get('repCode');
+    
+    // Determine the correct tab based on URL parameters
+    if (tabFromUrl === 'register' || repCodeFromCurrentUrl) {
+      setActiveTab('register');
+    } else if (tabFromUrl === 'login') {
+      setActiveTab('login');
+    }
+  }, [location]); // This will trigger when the location changes
   
   // Validate rep code on initial load if provided via URL
   React.useEffect(() => {
