@@ -323,15 +323,43 @@ export function setupAuth(app: Express): void {
         });
       }
 
-      // Return registration success without auto-login when email verification is required
-      // Users should only be logged in after they verify their email
-      const { password: userPassword, ...userData } = user;
-      res.status(201); // Set status code for created
-      return {
-        ...userData,
-        emailVerificationSent: true,
-        message: "Registration successful! Please check your email to verify your account."
-      };
+      // Automatically log in the user after successful registration
+      // Email verification can happen in the background
+      return new Promise((resolve, reject) => {
+        req.login(user, (err) => {
+          if (err) {
+            logger.error('Session creation error on registration', { 
+              error: err,
+              userId: user.id,
+              email,
+              ip: req.ip
+            });
+            reject(new AppError(
+              "Registration successful but failed to log in. Please try logging in manually.",
+              ErrorCode.SESSION_ERROR,
+              500,
+              { originalError: err }
+            ));
+            return;
+          }
+          
+          // Successful login after registration
+          logger.info('User automatically logged in after registration', { 
+            userId: user.id, 
+            username,
+            email,
+            ip: req.ip 
+          });
+          
+          const { password: userPassword, ...userData } = user;
+          res.status(201); // Set status code for created
+          resolve({
+            ...userData,
+            emailVerificationSent: true,
+            message: "Registration successful! You are now logged in. Please check your email to verify your account."
+          });
+        });
+      });
     } catch (error) {
       // Handle specific error types from validation
       if (error instanceof AppError) {

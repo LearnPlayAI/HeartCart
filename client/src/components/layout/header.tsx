@@ -228,7 +228,7 @@ const Header = () => {
               // Non-authenticated user - show login and register buttons
               <>
                 <Button variant="outline" className="flex items-center space-x-1 border-[#FF69B4] text-[#FF69B4] hover:bg-pink-50 hover:border-[#FF1493] hover:text-[#FF1493] font-medium transition-all duration-200 shadow-sm hover:shadow-md" asChild>
-                  <Link href="/auth">
+                  <Link href="/auth?tab=login">
                     <LogIn className="h-4 w-4 mr-1" />
                     <span>Login</span>
                   </Link>

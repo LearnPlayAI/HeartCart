@@ -161,13 +161,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Handle direct response format (fallback)
       return data;
     },
-    onSuccess: (response: any) => {
-      // Only set user as authenticated if email verification was NOT sent
-      // If emailVerificationSent is true, user should remain unauthenticated until they verify
-      if (!response?.emailVerificationSent) {
-        queryClient.setQueryData(["/api/user"], { success: true, data: response });
+    onSuccess: async (response: any) => {
+      // Always authenticate user immediately after successful registration
+      // Email verification can happen in the background
+      const userData = response?.user || response;
+      queryClient.setQueryData(["/api/user"], { success: true, data: userData });
+      
+      // Force refetch to ensure components re-render with fresh data
+      await refetch();
+      
+      // Log registration success (dev only)
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Registration successful, user authenticated immediately');
       }
-      // If email verification was sent, don't authenticate user - let the auth page handle the verification flow
     },
     onError: (error: Error) => {
       toast({
