@@ -44,8 +44,7 @@ export function useCatalogs() {
   // Create a new catalog
   const createCatalog = useMutation({
     mutationFn: async (data: z.infer<typeof catalogSchema>) => {
-      const response = await apiRequest("POST", "/api/catalogs", data);
-      return await response.json();
+      return await apiRequest("POST", "/api/catalogs", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/catalogs"] });
@@ -63,8 +62,7 @@ export function useCatalogs() {
   // Update a catalog
   const updateCatalog = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: z.infer<typeof catalogSchema> }) => {
-      const response = await apiRequest("PUT", `/api/catalogs/${id}`, data);
-      return await response.json();
+      return await apiRequest("PUT", `/api/catalogs/${id}`, data);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/catalogs"] });
@@ -88,8 +86,7 @@ export function useCatalogs() {
   // Delete a catalog
   const deleteCatalog = useMutation({
     mutationFn: async (id: number) => {
-      const response = await apiRequest("DELETE", `/api/catalogs/${id}`);
-      return await response.json();
+      return await apiRequest("DELETE", `/api/catalogs/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/catalogs"] });

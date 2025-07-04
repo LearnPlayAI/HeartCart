@@ -24,13 +24,7 @@ export default function AddCatalog() {
         endDate: data.endDate ? new Date(data.endDate).toISOString() : null
       };
       
-      const response = await apiRequest("POST", "/api/catalogs", processedData);
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || "Failed to create catalog");
-      }
-      
-      const result = await response.json();
+      const result = await apiRequest("POST", "/api/catalogs", processedData);
       if (!result.success) {
         throw new Error(result.error?.message || "Failed to create catalog");
       }

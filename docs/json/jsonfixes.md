@@ -63,6 +63,29 @@ return await apiRequest('GET', '/api/endpoint');
    - Removed incorrect `.json()` calls on apiRequest responses
    - Fixed supplier delete and deactivate functionality
 
+5. **client/src/pages/admin/add-catalog.tsx**
+   - Fixed createCatalog mutation function
+   - Removed incorrect `.json()` calls on apiRequest response
+   - Fixed catalog creation functionality
+
+6. **client/src/pages/admin/edit-catalog.tsx**
+   - Fixed updateCatalog mutation function
+   - Removed incorrect `.json()` calls on apiRequest response
+   - Fixed catalog editing functionality
+
+7. **client/src/pages/admin/catalogs.tsx**
+   - Fixed deleteCatalog mutation function
+   - Fixed toggleCatalogStatus mutation function
+   - Removed incorrect `.json()` calls on apiRequest responses
+   - Fixed catalog delete and status toggle functionality
+
+8. **client/src/hooks/use-catalogs.tsx**
+   - Fixed createCatalog mutation function
+   - Fixed updateCatalog mutation function
+   - Fixed deleteCatalog mutation function
+   - Removed incorrect `.json()` calls on all catalog-related mutations
+   - Fixed all catalog CRUD operations in the hook
+
 ### Files Still Using Native Fetch (Intentionally)
 - **client/src/components/admin/product-wizard/steps/ImageStep.tsx**
   - Uses native `fetch()` for file uploads with FormData
@@ -179,11 +202,11 @@ grep -r "response\.json()" client/src/ --include="*.tsx" --include="*.ts"
 
 ## Resolution Summary
 
-**Date**: July 3, 2025
-**Files Fixed**: 2 primary components
+**Date**: July 3-4, 2025
+**Files Fixed**: 8 components (4 catalog-related files added on July 4, 2025)
 **Method**: Systematic search and replace of problematic patterns
 **Verification**: Manual testing of admin interface functionality
-**Result**: Complete elimination of JSON parsing errors in admin components
+**Result**: Complete elimination of JSON parsing errors in admin components and catalog management system
 
 ## Future Reference
 

@@ -132,17 +132,11 @@ export default function AdminCatalogs() {
         { isActive: !catalog.isActive }
       );
       
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || "Failed to update catalog status");
+      if (!response.success) {
+        throw new Error(response.error?.message || "Failed to update catalog status");
       }
       
-      const result = await response.json();
-      if (!result.success) {
-        throw new Error(result.error?.message || "Failed to update catalog status");
-      }
-      
-      return result;
+      return response;
     },
     onSuccess: (result, catalog) => {
       
@@ -162,17 +156,11 @@ export default function AdminCatalogs() {
       const response = await apiRequest("POST", `/api/catalogs/${id}`, {
         _method: 'DELETE'
       });
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || "Failed to delete catalog");
+      if (!response.success) {
+        throw new Error(response.error?.message || "Failed to delete catalog");
       }
       
-      const result = await response.json();
-      if (!result.success) {
-        throw new Error(result.error?.message || "Failed to delete catalog");
-      }
-      
-      return result;
+      return response;
     },
     onSuccess: () => {
       

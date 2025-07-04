@@ -60,13 +60,7 @@ export default function EditCatalog() {
         endDate: data.endDate ? new Date(data.endDate).toISOString() : null
       };
       
-      const response = await apiRequest("PUT", `/api/catalogs/${catalogId}`, processedData);
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || "Failed to update catalog");
-      }
-      
-      const result = await response.json();
+      const result = await apiRequest("PUT", `/api/catalogs/${catalogId}`, processedData);
       if (!result.success) {
         throw new Error(result.error?.message || "Failed to update catalog");
       }
