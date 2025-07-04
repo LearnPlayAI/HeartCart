@@ -20,14 +20,7 @@ import {
   Save
 } from "lucide-react";
 
-// Simple debounce utility
-function debounce<T extends (...args: any[]) => any>(func: T, wait: number): T {
-  let timeout: NodeJS.Timeout;
-  return ((...args: any[]) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), wait);
-  }) as T;
-}
+
 
 /**
  * Website Share Card Component
@@ -108,26 +101,23 @@ Thank you for supporting our growing business! 🙏
     }
   }, [settingResponse, localMessage]);
 
-  // Debounced save function
-  const debouncedSave = useCallback(
-    debounce((message: string) => {
-      if (message !== settingResponse?.data?.settingValue) {
-        updateMessageMutation.mutate(message);
-      }
-    }, 2000),
-    [settingResponse, updateMessageMutation]
-  );
-
   // Handle message change
   const handleMessageChange = (message: string) => {
     setLocalMessage(message);
-    setHasUnsavedChanges(true);
-    debouncedSave(message);
+    const hasChanges = message !== (settingResponse?.data?.settingValue || defaultMessage);
+    setHasUnsavedChanges(hasChanges);
+  };
+
+  // Manual save function
+  const handleSaveMessage = () => {
+    if (localMessage && hasUnsavedChanges) {
+      updateMessageMutation.mutate(localMessage);
+    }
   };
 
   const handleResetMessage = () => {
     setLocalMessage(defaultMessage);
-    setHasUnsavedChanges(true);
+    setHasUnsavedChanges(false);
     updateMessageMutation.mutate(defaultMessage);
     toast({
       title: "Message reset",
@@ -234,7 +224,7 @@ Thank you for supporting our growing business! 🙏
                 ) : hasUnsavedChanges ? (
                   <>
                     <Save className="h-3 w-3 text-orange-500" />
-                    <span className="text-orange-500">Auto-saving in 2 seconds...</span>
+                    <span className="text-orange-500">You have unsaved changes</span>
                   </>
                 ) : null}
               </div>
@@ -243,6 +233,21 @@ Thank you for supporting our growing business! 🙏
 
           {/* Action buttons */}
           <div className="flex flex-col sm:flex-row gap-3">
+            {hasUnsavedChanges && (
+              <Button
+                onClick={handleSaveMessage}
+                disabled={updateMessageMutation.isPending}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
+              >
+                {updateMessageMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4 mr-2" />
+                )}
+                {updateMessageMutation.isPending ? 'Saving...' : 'Save Changes'}
+              </Button>
+            )}
+            
             <Button
               onClick={handleWhatsAppShare}
               className="flex-1 bg-green-600 hover:bg-green-700 text-white"

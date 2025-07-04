@@ -790,6 +790,14 @@ Changelog:
   * Added mobile device detection and specialized error recovery for PWA registration failures
   * Mobile browsers now recognize site as secure and properly configured, eliminating "site is not private" errors
   * All existing functionality preserved while adding mobile-specific optimizations for WhatsApp and other mobile browsers
+- July 4, 2025. Admin UX improvement: Manual save control for WhatsApp invite messages:
+  * Replaced irritating auto-save functionality (every 2 seconds) with manual save button control
+  * Removed debounced auto-save system that was triggering automatic saves during message editing
+  * Added manual "Save Changes" button that appears only when there are unsaved changes
+  * Updated status indicator to show "You have unsaved changes" instead of "Auto-saving in 2 seconds..."
+  * Enhanced user control: admins can now edit messages without forced interruptions and save when ready
+  * Maintained all existing functionality: WhatsApp sharing, copy message, reset to default, and persistent storage
+  * Improved admin workflow by eliminating unwanted auto-save behavior while preserving data safety
 ```
 
 ## User Preferences
