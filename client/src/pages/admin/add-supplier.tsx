@@ -16,13 +16,7 @@ export default function AddSupplier() {
   // Create supplier mutation
   const { mutate: createSupplier, isPending } = useMutation({
     mutationFn: async (data: any) => {
-      const response = await apiRequest("POST", "/api/suppliers", data);
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || "Failed to create supplier");
-      }
-      
-      const result = await response.json();
+      const result = await apiRequest("POST", "/api/suppliers", data);
       if (!result.success) {
         throw new Error(result.error?.message || "Failed to create supplier");
       }

@@ -52,6 +52,17 @@ return await apiRequest('GET', '/api/endpoint');
    - Fixed assignment statistics query
    - Fixed user assignment mutations (assign, remove, reassign)
 
+3. **client/src/pages/admin/add-supplier.tsx**
+   - Fixed createSupplier mutation function
+   - Removed incorrect `.json()` calls on apiRequest response
+   - Fixed supplier creation functionality
+
+4. **client/src/pages/admin/suppliers.tsx**
+   - Fixed deleteSupplier mutation function
+   - Fixed deactivateSupplier mutation function
+   - Removed incorrect `.json()` calls on apiRequest responses
+   - Fixed supplier delete and deactivate functionality
+
 ### Files Still Using Native Fetch (Intentionally)
 - **client/src/components/admin/product-wizard/steps/ImageStep.tsx**
   - Uses native `fetch()` for file uploads with FormData

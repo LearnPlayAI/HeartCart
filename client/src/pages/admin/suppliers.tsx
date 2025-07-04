@@ -114,13 +114,7 @@ export default function AdminSuppliers() {
 
   const { mutate: deleteSupplier, isPending: isDeleting } = useMutation({
     mutationFn: async (id: number) => {
-      const response = await apiRequest("DELETE", `/api/suppliers/${id}`);
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || "Failed to delete supplier");
-      }
-      
-      const result = await response.json();
+      const result = await apiRequest("DELETE", `/api/suppliers/${id}`);
       if (!result.success) {
         throw new Error(result.error?.message || "Failed to delete supplier");
       }
@@ -155,13 +149,7 @@ export default function AdminSuppliers() {
 
   const { mutate: deactivateSupplier, isPending: isDeactivating } = useMutation({
     mutationFn: async (id: number) => {
-      const response = await apiRequest("PATCH", `/api/suppliers/${id}/deactivate`);
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || "Failed to deactivate supplier");
-      }
-      
-      const result = await response.json();
+      const result = await apiRequest("PATCH", `/api/suppliers/${id}/deactivate`);
       if (!result.success) {
         throw new Error(result.error?.message || "Failed to deactivate supplier");
       }
