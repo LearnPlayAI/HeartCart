@@ -121,13 +121,12 @@ export default function AuthPage() {
 
   // Listen for URL parameter changes and update active tab accordingly
   React.useEffect(() => {
-    // Extract query parameters from current location
-    const [, search] = location.split('?');
-    const urlParams = new URLSearchParams(search || '');
+    // Use window.location.search to get current query parameters
+    const urlParams = new URLSearchParams(window.location.search);
     const tabFromUrl = urlParams.get('tab');
     const repCodeFromCurrentUrl = urlParams.get('repCode');
     
-    console.log('Auth page location change:', location, 'tabFromUrl:', tabFromUrl, 'repCode:', repCodeFromCurrentUrl);
+    console.log('Auth page location change:', location, 'search:', window.location.search, 'tabFromUrl:', tabFromUrl, 'repCode:', repCodeFromCurrentUrl);
     
     // Determine the correct tab based on URL parameters
     if (tabFromUrl === 'register' || repCodeFromCurrentUrl) {
