@@ -11393,7 +11393,7 @@ export class DatabaseStorage implements IStorage {
       const settings = await db
         .select()
         .from(systemSettings)
-        .orderBy(asc(systemSettings.key));
+        .orderBy(asc(systemSettings.settingKey));
       
       return settings;
     } catch (error) {
@@ -11428,7 +11428,7 @@ export class DatabaseStorage implements IStorage {
         .values(setting)
         .returning();
 
-      logger.info('System setting created', { key: setting.key, value: setting.value });
+      logger.info('System setting created', { key: setting.settingKey, value: setting.settingValue });
       return createdSetting;
     } catch (error) {
       logger.error('Error creating system setting', { error, setting });

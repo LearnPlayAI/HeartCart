@@ -1,278 +1,169 @@
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
-import { 
-  Share2, 
-  MessageCircle, 
-  Copy, 
-  Check,
-  Users,
-  Briefcase,
-  ExternalLink,
-  RotateCcw,
-  Edit3,
-  Loader2,
-  Save,
-  DollarSign
-} from "lucide-react";
+import { useState, useRef, useEffect } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { MessageSquare, Save, RotateCcw, Users, DollarSign, CheckCircle } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { apiRequest } from '@/lib/queryClient';
 
-/**
- * Sales Rep Message Card Component
- * Allows admins to customize text for sales rep recruitment messages including repCode URLs
- * Uses systemSettings for persistent storage
- */
-export function SalesRepMessageCard() {
-  const [copied, setCopied] = useState(false);
-  const [localMessage, setLocalMessage] = useState("");
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+interface SalesRepMessageCardProps {
+  className?: string;
+}
+
+export function SalesRepMessageCard({ className = '' }: SalesRepMessageCardProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  
+  const [message, setMessage] = useState('');
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  // Default sales rep message with repCode placeholder
-  const defaultMessage = `🚀 Exciting Sales Rep Opportunity! 🚀
-
-Hi [NAME]! I'd love to invite you to become a TeeMeYou Sales Representative and start earning commission on every sale!
-
-💰 What you'll earn:
-• Up to 10% commission on profit margins
-• Passive income from your network
-• No investment required - completely FREE to join
-
-🔗 Your special registration link: https://teemeyou.shop/auth?tab=register&repCode=[REPCODE]
-
-📱 How it works:
-1. Share your unique registration link with friends and family
-2. When they register and make purchases, you earn commission
-3. Track your earnings in the admin dashboard
-
-✨ Why TeeMeYou?
-• Quality products at great prices
-• Fast delivery across South Africa (PUDO)
-• Growing online business with great potential
-
-🆘 Questions? Contact us:
-📱 WhatsApp: +27712063084
-📧 Email: sales@teemeyou.shop
-
-Ready to start earning? Click your link above and let's grow together! 💪
-
-[TeeMeYou Team]`;
-
-  // Fetch message from systemSettings
-  const { data: settingResponse, isLoading: isLoadingSetting } = useQuery({
+  // Fetch current sales rep message
+  const { data: settingData, isLoading } = useQuery({
     queryKey: ['/api/admin/settings/sales_rep_message'],
-    queryFn: async () => {
-      const response = await fetch('/api/admin/settings/sales_rep_message', {
-        credentials: 'include'
-      });
-      if (!response.ok) throw new Error('Failed to fetch setting');
-      return response.json();
-    }
+    queryFn: () => apiRequest('GET', '/api/admin/settings/sales_rep_message')
   });
 
-  // Update message mutation
-  const updateMessageMutation = useMutation({
-    mutationFn: async (message: string) => {
-      return apiRequest('PATCH', '/api/admin/settings/sales_rep_message', {
-        value: message
-      });
-    },
+  // Save message mutation
+  const saveMutation = useMutation({
+    mutationFn: (value: string) => 
+      apiRequest('PATCH', '/api/admin/settings/sales_rep_message', { value }),
     onSuccess: () => {
       setHasUnsavedChanges(false);
       toast({
-        title: "Sales rep message saved",
-        description: "Your sales rep recruitment message has been saved successfully.",
+        title: "Success",
+        description: "Sales rep message saved successfully",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/settings/sales_rep_message'] });
     },
-    onError: (error) => {
+    onError: () => {
       toast({
-        title: "Save failed",
-        description: "Failed to save your sales rep message. Please try again.",
+        title: "Error",
+        description: "Failed to save sales rep message",
         variant: "destructive",
       });
     }
   });
 
-  // Get the current message (from API or local state)
-  const salesRepMessage = localMessage || settingResponse?.data?.settingValue || defaultMessage;
-
-  // Initialize local message when data loads
-  useEffect(() => {
-    if (settingResponse?.data?.settingValue && !localMessage) {
-      setLocalMessage(settingResponse.data.settingValue);
-    }
-  }, [settingResponse, localMessage]);
-
-  // Handle message change
-  const handleMessageChange = (message: string) => {
-    setLocalMessage(message);
-    const hasChanges = message !== (settingResponse?.data?.settingValue || defaultMessage);
-    setHasUnsavedChanges(hasChanges);
-  };
-
-  // Manual save function
-  const handleSaveMessage = () => {
-    if (localMessage && hasUnsavedChanges) {
-      updateMessageMutation.mutate(localMessage);
-    }
-  };
-
-  // Reset to default
-  const handleResetMessage = () => {
-    setLocalMessage(defaultMessage);
+  const handleMessageChange = (value: string) => {
+    setMessage(value);
     setHasUnsavedChanges(true);
   };
 
-  // Copy message to clipboard
-  const handleCopyMessage = async () => {
-    try {
-      await navigator.clipboard.writeText(salesRepMessage);
-      setCopied(true);
-      toast({
-        title: "Copied!",
-        description: "Sales rep message copied to clipboard",
-      });
-      setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
-      toast({
-        title: "Copy failed",
-        description: "Failed to copy message to clipboard",
-        variant: "destructive",
-      });
-    }
+  const handleSave = () => {
+    saveMutation.mutate(message);
   };
 
-  // Generate sample WhatsApp URL for testing
-  const handleWhatsAppShare = () => {
-    const sampleMessage = salesRepMessage
-      .replace(/\[NAME\]/g, 'John')
-      .replace(/\[REPCODE\]/g, 'SAMPLE123');
+  const handleReset = () => {
+    const defaultMessage = `🎯 Join the TeeMeYou Sales Representative Program!
+
+💰 Earn 5% commission on every sale
+🏆 Be part of South Africa's fastest-growing e-commerce platform
+📈 Unlimited earning potential
+🎯 Easy registration process
+
+Ready to start earning? Register using your unique rep code:
+https://teemeyou.shop/auth?tab=register&repCode={REP_CODE}
+
+Questions? Contact us at sales@teemeyou.shop
+
+#TeeMeYou #SalesRep #EarnMoney #SouthAfrica`;
     
-    const encodedMessage = encodeURIComponent(sampleMessage);
-    const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;
-    window.open(whatsappUrl, '_blank');
+    setMessage(defaultMessage);
+    setHasUnsavedChanges(true);
   };
+
+  // Initialize message when data loads
+  useEffect(() => {
+    if (settingData?.settingValue && !isLoading) {
+      setMessage(settingData.settingValue);
+    }
+  }, [settingData?.settingValue, isLoading]);
 
   return (
-    <Card className="border-blue-200 shadow-lg">
-      <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-500 rounded-full">
-              <Briefcase className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <CardTitle className="text-blue-700 flex items-center gap-2">
-                Sales Rep Communications
-                <Badge className="bg-blue-500 text-white text-xs">CUSTOMIZE</Badge>
-              </CardTitle>
-              <CardDescription className="text-blue-600">
-                Customize recruitment messages for sales representatives with repCode URLs
-              </CardDescription>
-            </div>
+    <Card className={`${className}`}>
+      <CardHeader>
+        <div className="flex items-center gap-2">
+          <div className="p-2 rounded-lg bg-gradient-to-r from-pink-500 to-rose-500 text-white">
+            <MessageSquare className="h-5 w-5" />
           </div>
-          <DollarSign className="h-8 w-8 text-blue-400" />
+          <div>
+            <CardTitle className="text-xl font-semibold">Sales Rep Recruitment Message</CardTitle>
+            <CardDescription>
+              Customize the message used to recruit new sales representatives
+            </CardDescription>
+          </div>
         </div>
       </CardHeader>
       
-      <CardContent className="p-6">
-        <div className="space-y-4">
-          {/* Placeholder Information */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h4 className="font-semibold text-sm text-blue-700 mb-2">Template Placeholders:</h4>
-            <div className="text-sm text-blue-600 space-y-1">
-              <div><code className="bg-blue-100 px-2 py-1 rounded">[NAME]</code> - Sales rep's name</div>
-              <div><code className="bg-blue-100 px-2 py-1 rounded">[REPCODE]</code> - Sales rep's unique code for URL</div>
-            </div>
-          </div>
+      <CardContent className="space-y-4">
+        <div className="flex items-center gap-2 mb-4">
+          <Badge variant="secondary" className="flex items-center gap-1">
+            <Users className="h-3 w-3" />
+            Rep Recruitment
+          </Badge>
+          <Badge variant="outline" className="flex items-center gap-1">
+            <DollarSign className="h-3 w-3" />
+            Commission-based
+          </Badge>
+        </div>
 
-          {/* Editable sales rep message */}
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h4 className="font-semibold text-sm text-gray-700 flex items-center gap-2">
-                <Edit3 className="h-4 w-4" />
-                Edit Sales Rep Message:
-              </h4>
-              <Button
-                onClick={handleResetMessage}
-                variant="ghost"
-                size="sm"
-                className="text-gray-500 hover:text-gray-700 h-8 px-2"
-              >
-                <RotateCcw className="h-3 w-3 mr-1" />
-                Reset
-              </Button>
-            </div>
-            {isLoadingSetting ? (
-              <div className="min-h-[200px] bg-white border border-gray-300 rounded-md flex items-center justify-center">
-                <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
-              </div>
-            ) : (
-              <Textarea
-                value={salesRepMessage}
-                onChange={(e) => handleMessageChange(e.target.value)}
-                className="min-h-[200px] text-sm font-mono resize-none bg-white border-gray-300 focus:border-blue-400 focus:ring-blue-400"
-                placeholder="Enter your sales rep recruitment message..."
-                disabled={updateMessageMutation.isPending}
-              />
-            )}
-            
-            {/* Save status indicator */}
-            {(hasUnsavedChanges || updateMessageMutation.isPending) && (
-              <div className="flex items-center gap-2 mt-2 text-sm">
-                {updateMessageMutation.isPending ? (
-                  <>
-                    <Loader2 className="h-3 w-3 animate-spin text-blue-500" />
-                    <span className="text-blue-500">Saving...</span>
-                  </>
-                ) : hasUnsavedChanges ? (
-                  <>
-                    <Save className="h-3 w-3 text-orange-500" />
-                    <span className="text-orange-500">You have unsaved changes</span>
-                  </>
-                ) : null}
-              </div>
-            )}
-          </div>
+        <div className="space-y-2">
+          <label htmlFor="sales-rep-message" className="text-sm font-medium">
+            Recruitment Message
+          </label>
+          <Textarea
+            ref={textareaRef}
+            id="sales-rep-message"
+            value={message}
+            onChange={(e) => handleMessageChange(e.target.value)}
+            placeholder="Enter your sales rep recruitment message..."
+            className="min-h-[300px] resize-none"
+            disabled={isLoading || saveMutation.isPending}
+          />
+          <p className="text-xs text-gray-500">
+            Use {"{REP_CODE}"} as a placeholder that will be replaced with the actual rep code
+          </p>
+        </div>
 
-          {/* Action buttons */}
-          <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
             {hasUnsavedChanges && (
-              <Button
-                onClick={handleSaveMessage}
-                disabled={updateMessageMutation.isPending}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
-              >
-                {updateMessageMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Save className="h-4 w-4 mr-2" />
-                )}
-                {updateMessageMutation.isPending ? 'Saving...' : 'Save Changes'}
-              </Button>
+              <div className="flex items-center gap-1 text-sm text-orange-600">
+                <div className="w-2 h-2 bg-orange-600 rounded-full" />
+                You have unsaved changes
+              </div>
             )}
-            
+            {!hasUnsavedChanges && !isLoading && message && (
+              <div className="flex items-center gap-1 text-sm text-green-600">
+                <CheckCircle className="w-3 h-3" />
+                Saved
+              </div>
+            )}
+          </div>
+          
+          <div className="flex gap-2">
             <Button
-              onClick={handleWhatsAppShare}
-              className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+              variant="outline"
+              size="sm"
+              onClick={handleReset}
+              disabled={isLoading || saveMutation.isPending}
+              className="flex items-center gap-1"
             >
-              <MessageCircle className="h-4 w-4 mr-2" />
-              Test WhatsApp Share
+              <RotateCcw className="h-3 w-3" />
+              Reset to Default
             </Button>
             
             <Button
-              onClick={handleCopyMessage}
-              variant="outline"
-              className="flex-1 border-blue-200 text-blue-600 hover:bg-blue-50"
+              size="sm"
+              onClick={handleSave}
+              disabled={!hasUnsavedChanges || isLoading || saveMutation.isPending}
+              className="flex items-center gap-1 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600"
             >
-              {copied ? <Check className="h-4 w-4 mr-2" /> : <Copy className="h-4 w-4 mr-2" />}
-              {copied ? 'Copied!' : 'Copy Message'}
+              <Save className="h-3 w-3" />
+              {saveMutation.isPending ? 'Saving...' : 'Save Changes'}
             </Button>
           </div>
         </div>

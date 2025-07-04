@@ -937,6 +937,59 @@ router.delete("/users/:id", isAuthenticated, asyncHandler(async (req: Request, r
   }
 }));
 
+// Helper function to get default values for system settings
+function getDefaultSettingValue(key: string): string {
+  const defaults: Record<string, string> = {
+    'website_share_message': `🚀 Check out TeeMeYou - South Africa's premier online shopping destination!
+
+🛒 Discover amazing products at unbeatable prices
+📦 Free delivery via PUDO lockers nationwide  
+💳 Secure EFT payments
+⭐ Quality guaranteed
+
+Shop now: https://teemeyou.shop
+
+Join thousands of happy customers across South Africa!
+
+#TeeMeYou #OnlineShopping #SouthAfrica #QualityProducts`,
+
+    'sales_rep_message': `🎯 Join the TeeMeYou Sales Representative Program!
+
+💰 Earn 5% commission on every sale
+🏆 Be part of South Africa's fastest-growing e-commerce platform
+📈 Unlimited earning potential
+🎯 Easy registration process
+
+Ready to start earning? Register using your unique rep code:
+https://teemeyou.shop/auth?tab=register&repCode={REP_CODE}
+
+Questions? Contact us at sales@teemeyou.shop
+
+#TeeMeYou #SalesRep #EarnMoney #SouthAfrica`,
+
+    'product_sharing_message': `🛍️ JUST ARRIVED at Tee Me You!
+
+[PRODUCT_NAME]
+
+💰 Price: R[PRICE]
+📦 Free delivery available via PUDO lockers
+
+✨ Why shop with TeeMeYou?
+• Quality products at great prices
+• Fast delivery across South Africa
+• Secure EFT payments
+• Trusted online store
+
+🛒 Shop now: [PRODUCT_URL]
+
+📱 More products: https://teemeyou.shop
+
+#TeeMeYou #OnlineShopping #SouthAfrica #QualityProducts`
+  };
+
+  return defaults[key] || `Default value for ${key}`;
+}
+
 // System Settings routes for admin configuration
 router.get("/settings", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
   try {
@@ -957,10 +1010,22 @@ router.get("/settings/:key", isAuthenticated, asyncHandler(async (req: Request, 
     // TODO: Add admin role check here
     const { key } = req.params;
     
-    const setting = await storage.getSystemSetting(key);
+    let setting = await storage.getSystemSetting(key);
     
+    // If setting doesn't exist, create it with default value
     if (!setting) {
-      return sendError(res, "Setting not found", 404);
+      const defaultValue = getDefaultSettingValue(key);
+      
+      setting = await storage.createSystemSetting({
+        settingKey: key,
+        settingValue: defaultValue,
+        description: `Auto-generated setting for ${key}`,
+        isActive: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+      
+      logger.info("Created default system setting", { key, value: defaultValue });
     }
 
     return sendSuccess(res, setting);
@@ -981,17 +1046,23 @@ router.patch("/settings/:key", isAuthenticated, asyncHandler(async (req: Request
       return sendError(res, "Value is required", 400);
     }
 
-    const updatedSetting = await storage.updateSystemSetting(key, String(value));
+    let updatedSetting = await storage.updateSystemSetting(key, String(value));
     
+    // If setting doesn't exist, create it
     if (!updatedSetting) {
-      return sendError(res, "Setting not found", 404);
+      updatedSetting = await storage.createSystemSetting({
+        settingKey: key,
+        settingValue: String(value),
+        description: `Auto-generated setting for ${key}`,
+        isActive: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+      
+      logger.info("Created new system setting", { key, value });
+    } else {
+      logger.info("System setting updated successfully", { key, value, adminUserId: req.user?.id });
     }
-
-    logger.info("System setting updated successfully", { 
-      key,
-      value,
-      adminUserId: req.user?.id
-    });
 
     return sendSuccess(res, updatedSetting);
   } catch (error) {
