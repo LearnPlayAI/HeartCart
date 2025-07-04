@@ -568,8 +568,8 @@ const ProductDetailView = ({
         <meta property="og:title" content={`${product.name} - R${displayPrice.toLocaleString()}`} />
         <meta property="og:description" content={product.description || `${product.name} - R${displayPrice.toLocaleString()} | Shop on TeeMeYou - South Africa's trusted online marketplace for quality products with fast delivery.`} />
         <meta property="og:url" content={`https://teemeyou.shop/product/id/${product.id}`} />
-        <meta property="og:image" content={product.imageUrl ? `https://teemeyou.shop${product.imageUrl}` : `https://teemeyou.shop/api/files/default-product-image.jpg`} />
-        <meta property="og:image:secure_url" content={product.imageUrl ? `https://teemeyou.shop${product.imageUrl}` : `https://teemeyou.shop/api/files/default-product-image.jpg`} />
+        <meta property="og:image" content={product.imageUrl ? `https://teemeyou.shop/api/files/${product.imageUrl.replace(/^\/api\/files\//, '').replace(/^api\/files\//, '')}` : `https://teemeyou.shop/api/files/default-product-image.jpg`} />
+        <meta property="og:image:secure_url" content={product.imageUrl ? `https://teemeyou.shop/api/files/${product.imageUrl.replace(/^\/api\/files\//, '').replace(/^api\/files\//, '')}` : `https://teemeyou.shop/api/files/default-product-image.jpg`} />
         <meta property="og:image:type" content="image/jpeg" />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />

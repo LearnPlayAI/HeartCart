@@ -99,10 +99,10 @@ export function SalesRepMessageCard({ className = '' }: SalesRepMessageCardProps
 
   // Initialize message when data loads
   useEffect(() => {
-    if (settingData?.settingValue && !isLoading) {
-      setMessage(settingData.settingValue);
+    if (settingData?.data?.settingValue && !isLoading) {
+      setMessage(settingData.data.settingValue);
     }
-  }, [settingData?.settingValue, isLoading]);
+  }, [settingData?.data?.settingValue, isLoading]);
 
   return (
     <Card className={`${className}`}>
