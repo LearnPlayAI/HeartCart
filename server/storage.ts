@@ -1507,21 +1507,23 @@ export class DatabaseStorage implements IStorage {
       // Build final conditions for both count and data queries
       const allConditions = [...conditions];
       
-      // Add comprehensive search condition if provided
+      // Add comprehensive case-insensitive search condition if provided
       if (search) {
-        const searchTerm = `%${search}%`;
+        const searchTerm = `%${search.toLowerCase()}%`;
         const searchConditions = or(
-          like(products.name, searchTerm),
-          like(products.description || "", searchTerm),
-          like(products.sku || "", searchTerm),
-          like(products.brand || "", searchTerm),
-          like(products.supplier || "", searchTerm),
-          like(products.metaTitle || "", searchTerm),
-          like(products.metaDescription || "", searchTerm),
-          like(products.metaKeywords || "", searchTerm),
-          like(products.dimensions || "", searchTerm),
-          like(products.specialSaleText || "", searchTerm),
-          like(products.discountLabel || "", searchTerm)
+          ilike(products.name, searchTerm),
+          sql`COALESCE(${products.description}, '') ILIKE ${searchTerm}`,
+          sql`COALESCE(${products.sku}, '') ILIKE ${searchTerm}`,
+          sql`COALESCE(${products.brand}, '') ILIKE ${searchTerm}`,
+          sql`COALESCE(${products.supplier}, '') ILIKE ${searchTerm}`,
+          sql`COALESCE(${products.metaTitle}, '') ILIKE ${searchTerm}`,
+          sql`COALESCE(${products.metaDescription}, '') ILIKE ${searchTerm}`,
+          sql`COALESCE(${products.metaKeywords}, '') ILIKE ${searchTerm}`,
+          sql`COALESCE(${products.dimensions}, '') ILIKE ${searchTerm}`,
+          sql`COALESCE(${products.specialSaleText}, '') ILIKE ${searchTerm}`,
+          sql`COALESCE(${products.discountLabel}, '') ILIKE ${searchTerm}`,
+          sql`COALESCE(${products.slug}, '') ILIKE ${searchTerm}`,
+          sql`array_to_string(${products.tags}, ' ') ILIKE ${searchTerm}`
         );
         allConditions.push(searchConditions);
       }
