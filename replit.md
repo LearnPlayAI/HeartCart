@@ -767,6 +767,19 @@ Changelog:
   * All supplier CRUD operations now working correctly: create, read, update, delete, and deactivate
   * Updated comprehensive documentation in docs/json/jsonfixes.md for future reference
   * Admin interface fully functional for supplier management with proper error handling
+- July 4, 2025. Complete catalog management JSON bug fix - System fully operational:
+  * RESOLVED CRITICAL ISSUE: Fixed JSON response handling errors preventing catalog create/edit/delete operations  
+  * Applied same fix pattern from supplier management to catalog management system
+  * Fixed JSON errors in: client/src/pages/admin/catalogs.tsx, client/src/hooks/use-catalogs.tsx, client/src/pages/admin/add-catalog.tsx, client/src/pages/admin/edit-catalog.tsx
+  * All catalog CRUD operations now working correctly: create, edit, delete, toggle status
+  * Comprehensive documentation updated in docs/json/jsonfixes.md tracking all 8 components fixed
+  * Complete admin interface JSON response handling system now fully operational
+- July 4, 2025. Product detail page business requirements update:
+  * REMOVED: Order timeline conditions section from all product detail pages per business requirements
+  * UPDATED: Product warranty policy to match current business terms (5 days for products < R500, 15 days for products ≥ R500)
+  * Changed from previous policy: 7 days for products < R500, 30 days for products ≥ R500
+  * Modified client/src/pages/product-detail-new.tsx removing order timeline collapsible section and updating warranty text
+  * All product pages now reflect accurate business warranty terms without confusing supplier ordering information
 ```
 
 ## User Preferences

@@ -1033,22 +1033,6 @@ const ProductDetailView = ({
 
             {/* Disclaimers Section */}
             <div className="mt-8 space-y-2">
-              {/* Order Timeline Disclaimer */}
-              <Collapsible>
-                <CollapsibleTrigger className="flex items-center justify-between w-full p-3 text-left text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-lg border border-gray-200">
-                  <div className="flex items-center">
-                    <Clock className="h-4 w-4 mr-2 text-[#FF69B4]" />
-                    Order timeline
-                  </div>
-                  <ChevronDown className="h-4 w-4" />
-                </CollapsibleTrigger>
-                <CollapsibleContent className="px-3 pb-3 text-sm text-gray-600">
-                  <div className="pt-2 border-t border-gray-100">
-                    Although we keep stock of certain items, we promote a huge range of products. For that reason, we need to pre-order stock as needed from our supplier. In order to do this as efficiently as possible, we consolidate weekly orders by a Monday, 20:00.
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
-
               {/* Product Warranty Disclaimer */}
               <Collapsible>
                 <CollapsibleTrigger className="flex items-center justify-between w-full p-3 text-left text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-lg border border-gray-200">
@@ -1060,8 +1044,8 @@ const ProductDetailView = ({
                 </CollapsibleTrigger>
                 <CollapsibleContent className="px-3 pb-3 text-sm text-gray-600">
                   <div className="pt-2 border-t border-gray-100 space-y-2">
-                    <p>• Products with a purchase price less than R500, has a 7 day warranty</p>
-                    <p>• Products with a purchase price of R500 or more, has a 30 day warranty</p>
+                    <p>• Products with a purchase price less than R500, has a 5 day warranty</p>
+                    <p>• Products with a purchase price of R500 or more, has a 15 day warranty</p>
                     <p>• In cases where products need to be returned, follow the steps detailed under Damages and Returns in the general Terms & Conditions.</p>
                   </div>
                 </CollapsibleContent>
