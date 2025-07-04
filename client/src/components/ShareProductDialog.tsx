@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Share2, Copy, MessageCircle, Mail, Send, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { FaFacebook, FaTwitter } from "react-icons/fa";
+import { useQuery } from "@tanstack/react-query";
 
 interface ShareProductDialogProps {
   productId: number;
@@ -35,8 +36,15 @@ export default function ShareProductDialog({
   // For WhatsApp sharing, use social preview URL to ensure rich card display
   const socialPreviewUrl = `https://teemeyou.shop/api/social-preview/product/${productId}`;
   
-  // Format rich sharing text for WhatsApp and other platforms with TeeMeYou branding
-  const shareText = `🎯 *${productTitle}* 🎯
+  // Fetch dynamic product sharing template from system settings
+  const { data: sharingTemplate } = useQuery({
+    queryKey: ['/api/admin/settings/product_sharing_message'],
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+  });
+
+  // Fallback hardcoded template if system settings fail
+  const fallbackTemplate = `🎯 *${productTitle}* 🎯
 
 💰 *Price: R${displayPrice.toLocaleString()}*
 ${salePrice && productPrice !== salePrice ? `~~R${productPrice.toLocaleString()}~~ *SAVE R${(productPrice - salePrice).toLocaleString()}!*` : ''}
@@ -51,6 +59,15 @@ ${salePrice && productPrice !== salePrice ? `~~R${productPrice.toLocaleString()}
 🤝 Bringing people together 🎯 Trusted community 📍 Local connections
 
 👆 Tap to view full details and photos`;
+
+  // Use dynamic template with placeholder replacement, fallback to hardcoded
+  const templateText = sharingTemplate?.data?.value || fallbackTemplate;
+  
+  // Replace placeholders with actual product data
+  const shareText = templateText
+    .replace(/\[PRODUCT_NAME\]/g, productTitle)
+    .replace(/\[PRICE\]/g, displayPrice.toLocaleString())
+    .replace(/\[PRODUCT_URL\]/g, productUrl);
 
   const shareData = {
     title: `${productTitle} - R${displayPrice.toLocaleString()} | TeeMeYou`,
