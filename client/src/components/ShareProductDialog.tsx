@@ -37,7 +37,7 @@ export default function ShareProductDialog({
   const socialPreviewUrl = `https://teemeyou.shop/api/social-preview/product/${productId}`;
   
   // Fetch dynamic product sharing template from system settings
-  const { data: sharingTemplate } = useQuery({
+  const { data: sharingTemplate, isLoading: templateLoading, error: templateError } = useQuery({
     queryKey: ['/api/admin/settings/product_sharing_message'],
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
@@ -61,13 +61,31 @@ ${salePrice && productPrice !== salePrice ? `~~R${productPrice.toLocaleString()}
 👆 Tap to view full details and photos`;
 
   // Use dynamic template with placeholder replacement, fallback to hardcoded
-  const templateText = sharingTemplate?.data?.value || fallbackTemplate;
+  // Access the correct field: settingValue from the API response
+  const dynamicTemplate = sharingTemplate?.data?.settingValue;
+  const templateText = dynamicTemplate || fallbackTemplate;
   
-  // Replace placeholders with actual product data
-  const shareText = templateText
-    .replace(/\[PRODUCT_NAME\]/g, productTitle)
-    .replace(/\[PRICE\]/g, displayPrice.toLocaleString())
-    .replace(/\[PRODUCT_URL\]/g, productUrl);
+  // Replace placeholders with actual product data, handling promotional pricing
+  let shareText = templateText;
+  
+  // Product name replacement
+  shareText = shareText.replace(/\[PRODUCT_NAME\]/g, productTitle);
+  
+  // Smart price replacement - if product has sale price, show both original and sale price
+  if (salePrice && productPrice !== salePrice) {
+    const savingsAmount = productPrice - salePrice;
+    const discountPercentage = Math.round((savingsAmount / productPrice) * 100);
+    
+    // For promotional products, replace [PRICE] with "R199 (was R299) - SAVE R100 (33% OFF)!"
+    const promotionalPricing = `${displayPrice.toLocaleString()} (was R${productPrice.toLocaleString()}) - SAVE R${savingsAmount.toLocaleString()} (${discountPercentage}% OFF)!`;
+    shareText = shareText.replace(/\[PRICE\]/g, promotionalPricing);
+  } else {
+    // For regular products, just show the price
+    shareText = shareText.replace(/\[PRICE\]/g, displayPrice.toLocaleString());
+  }
+  
+  // Product URL replacement
+  shareText = shareText.replace(/\[PRODUCT_URL\]/g, productUrl);
 
   const shareData = {
     title: `${productTitle} - R${displayPrice.toLocaleString()} | TeeMeYou`,
@@ -131,41 +149,36 @@ ${salePrice && productPrice !== salePrice ? `~~R${productPrice.toLocaleString()}
   };
 
   const handleTwitterShare = () => {
-    const twitterText = `🎯 ${productTitle} - R${displayPrice.toLocaleString()}
-
-🛍️ Shop on TeeMeYou - South Africa's trusted online marketplace
-🚚 Fast delivery • 💳 Secure payments • ⭐ Quality guaranteed`;
-
-    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(twitterText)}&url=${encodeURIComponent(productUrl)}`;
+    // Use dynamic template for consistent messaging across all platforms
+    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(productUrl)}`;
     window.open(twitterUrl, '_blank', 'width=600,height=400');
     setOpen(false);
   };
 
   const handleEmailShare = () => {
     const subject = encodeURIComponent(`Check out this ${productTitle} on TeeMeYou`);
-    const body = encodeURIComponent(`Hi,
+    // Use dynamic template with additional product URL for email format
+    const emailBody = `Hi,
 
 I found this interesting product on TeeMeYou that you might like:
 
-${productTitle}
-Price: R${displayPrice.toLocaleString()}
-${salePrice && productPrice !== salePrice ? `Regular Price: R${productPrice.toLocaleString()} - Save R${(productPrice - salePrice).toLocaleString()}!` : ''}
-
-TeeMeYou is South Africa's trusted online marketplace with:
-✓ Fast delivery across SA
-✓ Secure payment options  
-✓ Quality guaranteed products
+${shareText}
 
 View it here: ${productUrl}
 
-Best regards`);
+Best regards`;
+    
+    const body = encodeURIComponent(emailBody);
     const mailtoUrl = `mailto:?subject=${subject}&body=${body}`;
     window.open(mailtoUrl);
     setOpen(false);
   };
 
   const handleSMSShare = () => {
-    const smsText = `🎯 ${productTitle} - R${displayPrice.toLocaleString()} on TeeMeYou 🛍️ ${productUrl}`;
+    // Use dynamic template with product URL for SMS
+    const smsText = `${shareText}
+
+${productUrl}`;
     const smsUrl = `sms:?body=${encodeURIComponent(smsText)}`;
     window.open(smsUrl);
     setOpen(false);
