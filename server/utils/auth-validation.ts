@@ -125,8 +125,8 @@ export const loginSchema = z.object({
  * Schema for user registration with comprehensive validation
  */
 export const registrationSchema = z.object({
-  username: z.string().trim().min(3, "Username must be at least 3 characters").max(20, "Username must be at most 20 characters")
-    .regex(/^[a-zA-Z0-9_]+$/, "Username can only contain letters, numbers, and underscores"),
+  username: z.string().trim().min(3, "Display name must be at least 3 characters").max(30, "Display name must be at most 30 characters")
+    .regex(/^[a-zA-Z0-9_\s]+$/, "Display name can only contain letters, numbers, spaces, and underscores"),
   email: z.string().trim().min(1, "Email is required").email("Invalid email format"),
   password: z.string().min(MIN_PASSWORD_LENGTH, `Password must be at least ${MIN_PASSWORD_LENGTH} characters`)
     .refine(password => REQUIRES_UPPERCASE ? /[A-Z]/.test(password) : true, {

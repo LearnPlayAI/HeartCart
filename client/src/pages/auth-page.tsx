@@ -40,11 +40,23 @@ const resetPasswordSchema = z.object({
 
 // Define the registration form schema
 const registerSchema = z.object({
-  username: z.string().min(3, "Username must be at least 3 characters")
-    .regex(/^[a-zA-Z0-9_]+$/, "Username can only contain letters, numbers, and underscores"),
+  username: z.string().trim().min(3, "Display name must be at least 3 characters").max(30, "Display name must be at most 30 characters")
+    .regex(/^[a-zA-Z0-9_\s]+$/, "Display name can only contain letters, numbers, spaces, and underscores"),
   email: z.string().email("Please enter a valid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  confirmPassword: z.string().min(6, "Password must be at least 6 characters"),
+  password: z.string().min(8, "Password must be at least 8 characters")
+    .refine(password => /[A-Z]/.test(password), {
+      message: "Password must include at least one uppercase letter"
+    })
+    .refine(password => /[a-z]/.test(password), {
+      message: "Password must include at least one lowercase letter"
+    })
+    .refine(password => /[0-9]/.test(password), {
+      message: "Password must include at least one number"
+    })
+    .refine(password => /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password), {
+      message: "Password must include at least one special character"
+    }),
+  confirmPassword: z.string().min(8, "Password must be at least 8 characters"),
   repCode: z.string().trim().optional().transform(val => val === "" ? undefined : val), // Optional sales rep code, convert empty string to undefined
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords do not match",
@@ -526,14 +538,14 @@ export default function AuthPage() {
                         name="username"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Alias Display Name</FormLabel>
+                            <FormLabel>Display Name</FormLabel>
                             <FormControl>
                               <div className="relative">
                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
                                   <User size={16} />
                                 </span>
                                 <Input
-                                  placeholder="Choose an Alias or Display Name"
+                                  placeholder="Enter your name (spaces allowed)"
                                   className="pl-10"
                                   {...field}
                                 />
@@ -587,6 +599,9 @@ export default function AuthPage() {
                                 />
                               </div>
                             </FormControl>
+                            <div className="text-sm text-muted-foreground">
+                              Password must be at least 8 characters with uppercase, lowercase, number, and special character
+                            </div>
                             <FormMessage />
                           </FormItem>
                         )}
