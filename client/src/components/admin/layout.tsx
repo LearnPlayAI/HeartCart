@@ -124,8 +124,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
               )}
             </Button>
           </div>
-          <div className="flex-1 flex flex-col overflow-y-auto pt-5 pb-4">
-            <ScrollArea className={cn("px-3", isCollapsed && "px-1")}>
+          <div className="flex-1 flex flex-col overflow-hidden pt-5 pb-4">
+            <ScrollArea className={cn("flex-1 px-3", isCollapsed && "px-1")}>
               <Navigation isCollapsed={isCollapsed} onNavigate={handleNavigationClick} />
             </ScrollArea>
           </div>
