@@ -684,6 +684,13 @@ Changelog:
   * Comprehensive deletion now removes: main product, all product drafts, database image records, actual image files from object storage, product attributes, and promotional relationships
   * Database function properly handles deletion order: attributes → images → promotions → drafts → main product
   * Product deletion system fully operational with complete cleanup of all related data and files
+- July 6, 2025. Admin sidebar accessibility improvements implemented:
+  * Fixed mobile sidebar (Sheet) height constraints preventing all navigation items from displaying
+  * Removed ScrollArea wrapper that was limiting menu height and replaced with simple flex container
+  * Enhanced SheetContent with full height layout (h-full flex flex-col) for proper space allocation
+  * All 18 navigation items plus logout now accessible without internal menu scrolling
+  * Mobile sidebar extends to full available height showing complete navigation menu
+  * Desktop sidebar scrolling functionality maintained with proper ScrollArea implementation
 - July 3, 2025. Fixed critical promotion edit form hydration bug:
   * Resolved TanStack Query configuration issue where queryKey format prevented proper API calls to individual promotion endpoints
   * Changed queryKey from `['/api/promotions', promotionId]` to `['/api/promotions/${promotionId}']` for correct URL generation

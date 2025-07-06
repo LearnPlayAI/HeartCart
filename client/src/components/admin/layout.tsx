@@ -163,16 +163,16 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             </Button>
           </SheetTrigger>
           
-          <SheetContent side="left" className="w-[85%] sm:w-[350px] p-0">
+          <SheetContent side="left" className="w-[85%] sm:w-[350px] p-0 h-full flex flex-col">
             <div className="flex items-center h-16 flex-shrink-0 px-4 bg-pink-600">
               <span className="text-xl font-bold text-white">
                 TEE ME YOU Admin
               </span>
             </div>
-            <div className="flex-1 flex flex-col overflow-y-auto pt-5 pb-4">
-              <ScrollArea className="px-3">
+            <div className="flex-1 overflow-y-auto pt-5 pb-4">
+              <div className="px-3">
                 <Navigation onNavigate={() => setOpen(false)} />
-              </ScrollArea>
+              </div>
             </div>
             <div className="flex-shrink-0 flex border-t border-gray-200 p-4">
               <div className="flex items-center">
