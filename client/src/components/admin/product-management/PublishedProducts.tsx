@@ -441,8 +441,10 @@ export const PublishedProducts: React.FC = () => {
         </div>
       </div>
       
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1">
+      {/* Search and Filters - Mobile Responsive */}
+      <div className="space-y-4">
+        {/* Search Bar - Full Width on Mobile */}
+        <div className="relative">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search products..."
@@ -452,64 +454,67 @@ export const PublishedProducts: React.FC = () => {
           />
         </div>
         
-        {/* Category Filters */}
-        <Select value={selectedParentCategory} onValueChange={handleParentCategoryChange}>
-          <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="All Parent Categories" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Parent Categories</SelectItem>
-            {parentCategories.map((category: any) => (
-              <SelectItem key={category.id} value={category.id.toString()}>
-                {category.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        
-        <Select 
-          value={selectedChildCategory} 
-          onValueChange={setSelectedChildCategory}
-          disabled={!selectedParentCategory || childCategories.length === 0}
-        >
-          <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="All Child Categories" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Child Categories</SelectItem>
-            {childCategories.map((category: any) => (
-              <SelectItem key={category.id} value={category.id.toString()}>
-                {category.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {/* Filters - Responsive Layout */}
+        <div className="flex flex-col sm:flex-row gap-2">
+          {/* Category Filters */}
+          <Select value={selectedParentCategory} onValueChange={handleParentCategoryChange}>
+            <SelectTrigger className="w-full sm:w-[200px]">
+              <SelectValue placeholder="All Parent Categories" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Parent Categories</SelectItem>
+              {parentCategories.map((category: any) => (
+                <SelectItem key={category.id} value={category.id.toString()}>
+                  {category.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          
+          <Select 
+            value={selectedChildCategory} 
+            onValueChange={setSelectedChildCategory}
+            disabled={!selectedParentCategory || childCategories.length === 0}
+          >
+            <SelectTrigger className="w-full sm:w-[200px]">
+              <SelectValue placeholder="All Child Categories" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Child Categories</SelectItem>
+              {childCategories.map((category: any) => (
+                <SelectItem key={category.id} value={category.id.toString()}>
+                  {category.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-        {/* Min. TMY % Filter */}
-        <div className="relative">
-          <Input
-            placeholder="Min. TMY %"
-            className="w-[120px]"
-            value={maxTmyFilter}
-            onChange={(e) => handleTmyFilterChange(e.target.value)}
-            type="number"
-            min="0"
-            max="100"
-            step="0.1"
-          />
+          {/* Min. TMY % Filter */}
+          <div className="relative">
+            <Input
+              placeholder="Min. TMY %"
+              className="w-full sm:w-[120px]"
+              value={maxTmyFilter}
+              onChange={(e) => handleTmyFilterChange(e.target.value)}
+              type="number"
+              min="0"
+              max="100"
+              step="0.1"
+            />
+          </div>
+
+          {/* Status Filter */}
+          <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
+            <SelectTrigger className="w-full sm:w-[140px]">
+              <SelectValue placeholder="All Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-
-        {/* Status Filter */}
-        <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
-          <SelectTrigger className="w-[140px]">
-            <SelectValue placeholder="All Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="inactive">Inactive</SelectItem>
-          </SelectContent>
-        </Select>
       </div>
       
       <Card>
