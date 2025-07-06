@@ -1138,12 +1138,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         const deletionResult = result.rows[0]?.result;
         
-        if (deletionResult === true) {
+        // Handle both boolean true and string 't' (PostgreSQL boolean representation)
+        if (deletionResult === true || deletionResult === 't' || deletionResult === 'true') {
           res.json({ 
             success: true, 
-            message: `Product "${existingProduct.name}" was successfully deleted along with all associated data.`
+            message: `Product "${existingProduct.name}" was successfully deleted along with all associated data including any related drafts.`
           });
         } else {
+          logger.error('Product deletion failed:', { 
+            productId, 
+            deletionResult, 
+            resultType: typeof deletionResult 
+          });
           throw new AppError(
             "Failed to delete product completely",
             ErrorCode.INTERNAL_SERVER_ERROR,
