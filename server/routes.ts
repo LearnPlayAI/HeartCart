@@ -3328,51 +3328,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }));
 
   // Get active promotions with their products (for flash deals display)
-  app.get("/api/promotions/active-with-products", withStandardResponse(async (req: Request, res: Response) => {
-    const activePromotions = await storage.getActivePromotions();
-    const promotionsWithProducts = [];
-    
-    for (const promotion of activePromotions) {
-      const products = await storage.getPromotionProducts(promotion.id);
+  app.get("/api/promotions/active-with-products", 
+    withStandardResponse(async (req: Request, res: Response) => {
+      // Set cache-busting headers to prevent stale cached responses
+      res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
       
-      // Enhance products with calculated promotional pricing information
-      const enhancedProducts = products.map(productPromotion => {
-        const product = productPromotion.product;
-        let calculatedPromotionalPrice = productPromotion.promotionalPrice;
-        let extraDiscountPercentage = 0;
+      const activePromotions = await storage.getActivePromotions();
+      const promotionsWithProducts = [];
+      
+      // First, collect all promotional products from all active promotions
+      const allPromotionalProducts = [];
+      
+      for (const promotion of activePromotions) {
+        const products = await storage.getPromotionProducts(promotion.id);
         
-        // If promotional price is set, calculate extra discount from sale price
-        if (calculatedPromotionalPrice && product.salePrice) {
-          const salePrice = parseFloat(product.salePrice.toString());
-          const promotionalPrice = parseFloat(calculatedPromotionalPrice.toString());
+        // Enhance products with calculated promotional pricing information
+        const enhancedProducts = products.map(productPromotion => {
+          const product = productPromotion.product;
+          let calculatedPromotionalPrice = productPromotion.promotionalPrice;
+          let extraDiscountPercentage = 0;
           
-          if (salePrice > promotionalPrice) {
-            extraDiscountPercentage = Math.round(((salePrice - promotionalPrice) / salePrice) * 100);
+          // If promotional price is set, calculate extra discount from sale price
+          if (calculatedPromotionalPrice && product.salePrice) {
+            const salePrice = parseFloat(product.salePrice.toString());
+            const promotionalPrice = parseFloat(calculatedPromotionalPrice.toString());
+            
+            if (salePrice > promotionalPrice) {
+              extraDiscountPercentage = Math.round(((salePrice - promotionalPrice) / salePrice) * 100);
+            }
           }
-        }
-        // If no promotional price is set but there's a promotion discount, calculate it
-        else if (!calculatedPromotionalPrice && promotion.discountValue && product.salePrice) {
-          const discountPercentage = parseFloat(promotion.discountValue.toString());
-          const salePrice = parseFloat(product.salePrice.toString());
-          calculatedPromotionalPrice = Math.round(salePrice * (1 - discountPercentage / 100));
-          extraDiscountPercentage = discountPercentage;
-        }
+          // If no promotional price is set but there's a promotion discount, calculate it
+          else if (!calculatedPromotionalPrice && promotion.discountValue && product.salePrice) {
+            const discountPercentage = parseFloat(promotion.discountValue.toString());
+            const salePrice = parseFloat(product.salePrice.toString());
+            calculatedPromotionalPrice = Math.round(salePrice * (1 - discountPercentage / 100));
+            extraDiscountPercentage = discountPercentage;
+          }
+          
+          return {
+            ...productPromotion,
+            promotionalPrice: calculatedPromotionalPrice,
+            extraDiscountPercentage: extraDiscountPercentage,
+            promotion: promotion // Add promotion details to each product
+          };
+        });
         
-        return {
-          ...productPromotion,
-          promotionalPrice: calculatedPromotionalPrice,
-          extraDiscountPercentage: extraDiscountPercentage
-        };
-      });
+        // Add products to the combined list
+        allPromotionalProducts.push(...enhancedProducts);
+      }
       
-      promotionsWithProducts.push({
-        ...promotion,
-        products: enhancedProducts
-      });
-    }
-    
-    return promotionsWithProducts;
-  }));
+      // Apply randomization to the combined list using PostgreSQL RANDOM()
+      const randomizedProducts = await storage.getRandomizedPromotionalProducts(allPromotionalProducts);
+      
+      // Group the randomized products back by promotion for display
+      for (const promotion of activePromotions) {
+        const promotionProducts = randomizedProducts.filter(
+          product => product.promotion.id === promotion.id
+        );
+        
+        promotionsWithProducts.push({
+          ...promotion,
+          products: promotionProducts
+        });
+      }
+      
+      return promotionsWithProducts;
+    })
+  );
 
   // Validate cart items against promotion requirements
   app.post("/api/promotions/validate-cart", withStandardResponse(async (req: Request, res: Response) => {

@@ -2085,6 +2085,10 @@ export class DatabaseStorage implements IStorage {
   private featuredProductsOrder: number[] | null = null;
   private featuredProductsOrderTimestamp: number = 0;
   
+  // Store randomized promotional product IDs in memory (cleared on server restart)
+  private promotionalProductsOrder: number[] | null = null;
+  private promotionalProductsOrderTimestamp: number = 0;
+  
   /**
    * Clear the cached featured products order to force re-randomization on next request
    * Useful for testing or when new featured products are added
@@ -2092,6 +2096,112 @@ export class DatabaseStorage implements IStorage {
   public clearFeaturedProductsCache(): void {
     this.featuredProductsOrder = null;
     this.featuredProductsOrderTimestamp = 0;
+  }
+  
+  /**
+   * Clear the cached promotional products order to force re-randomization on next request
+   * Useful for testing or when new promotional products are added
+   */
+  public clearPromotionalProductsCache(): void {
+    this.promotionalProductsOrder = null;
+    this.promotionalProductsOrderTimestamp = 0;
+  }
+  
+  /**
+   * Apply randomization to promotional products array
+   * Uses the same caching strategy as featured products for session consistency
+   */
+  public async getRandomizedPromotionalProducts(products: any[]): Promise<any[]> {
+    // Cache randomized order for 10 minutes to maintain consistency during pagination
+    const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
+    const now = Date.now();
+    
+    // Generate a cache key based on product IDs to detect changes
+    const productIds = products.map(p => p.productId).sort();
+    const cacheKey = productIds.join(',');
+    
+    // Check if we have a valid cached order for the current product set
+    if (this.promotionalProductsOrder && 
+        (now - this.promotionalProductsOrderTimestamp) < CACHE_DURATION &&
+        this.promotionalProductsOrder.length === products.length) {
+      
+      // Apply the cached order to the products
+      const orderedProducts = [];
+      for (const productId of this.promotionalProductsOrder) {
+        const product = products.find(p => p.productId === productId);
+        if (product) {
+          orderedProducts.push(product);
+        }
+      }
+      
+      // If we found all products in the cached order, return them
+      if (orderedProducts.length === products.length) {
+        return orderedProducts;
+      }
+    }
+    
+    // Create a randomized order using Fisher-Yates shuffle
+    const shuffledProducts = [...products];
+    for (let i = shuffledProducts.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffledProducts[i], shuffledProducts[j]] = [shuffledProducts[j], shuffledProducts[i]];
+    }
+    
+    // Cache the randomized product IDs order
+    this.promotionalProductsOrder = shuffledProducts.map(p => p.productId);
+    this.promotionalProductsOrderTimestamp = now;
+    
+    return shuffledProducts;
+  }
+  
+  /**
+   * Get all promotional product IDs in randomized order (cached for session consistency)
+   * This ensures pagination maintains the same random order throughout the session
+   */
+  private async getPromotionalProductIds(): Promise<number[]> {
+    // Cache randomized order for 10 minutes to maintain consistency during pagination
+    const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
+    const now = Date.now();
+    
+    if (this.promotionalProductsOrder && (now - this.promotionalProductsOrderTimestamp) < CACHE_DURATION) {
+      return this.promotionalProductsOrder;
+    }
+
+    try {
+      const currentTime = new Date().toISOString();
+      
+      // Get all active promotional product IDs, randomized once
+      const query = db
+        .select({ 
+          productId: productPromotions.productId 
+        })
+        .from(productPromotions)
+        .innerJoin(promotions, eq(productPromotions.promotionId, promotions.id))
+        .innerJoin(products, eq(productPromotions.productId, products.id))
+        .innerJoin(categories, eq(products.categoryId, categories.id))
+        .where(
+          and(
+            eq(promotions.isActive, true),
+            eq(products.isActive, true),
+            eq(categories.isActive, true),
+            lte(promotions.startDate, currentTime),
+            gte(promotions.endDate, currentTime)
+          )
+        )
+        .orderBy(sql`RANDOM()`);
+
+      const result = await query;
+      const productIds = result.map((row) => row.productId);
+
+      // Cache the randomized order
+      this.promotionalProductsOrder = productIds;
+      this.promotionalProductsOrderTimestamp = now;
+      
+      return productIds;
+    } catch (error) {
+      console.error("Error getting promotional product IDs:", error);
+      return [];
+    }
   }
   
   /**
