@@ -13,7 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useLocation, useParams } from "wouter";
-import { AtSign, KeyRound, User, ShoppingBag, Loader2, Mail, CheckCircle, Lock as LockIcon } from "lucide-react";
+import { AtSign, KeyRound, User, ShoppingBag, Loader2, Mail, CheckCircle, Lock as LockIcon, Eye, EyeOff } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { TermsModal } from "@/components/TermsModal";
@@ -86,6 +86,14 @@ export default function AuthPage() {
   const [resetTokenData, setResetTokenData] = useState<{email: string} | null>(null);
   const [verificationEmailData, setVerificationEmailData] = useState<{email: string, username: string} | null>(null);
   const [currentResetToken, setCurrentResetToken] = useState<string | null>(resetToken);
+  
+  // Password visibility state
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showRegisterPassword, setShowRegisterPassword] = useState(false);
+  const [showRegisterConfirmPassword, setShowRegisterConfirmPassword] = useState(false);
+  const [showResetPassword, setShowResetPassword] = useState(false);
+  const [showResetConfirmPassword, setShowResetConfirmPassword] = useState(false);
+  
   const { toast } = useToast();
   const [location, setLocation] = useLocation();
   const { user, loginMutation, registerMutation } = useAuth();
@@ -429,11 +437,18 @@ export default function AuthPage() {
                                   <KeyRound size={16} />
                                 </span>
                                 <Input
-                                  type="password"
+                                  type={showLoginPassword ? "text" : "password"}
                                   placeholder="••••••••"
-                                  className="pl-10"
+                                  className="pl-10 pr-10"
                                   {...field}
                                 />
+                                <button
+                                  type="button"
+                                  onClick={() => setShowLoginPassword(!showLoginPassword)}
+                                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                >
+                                  {showLoginPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                </button>
                               </div>
                             </FormControl>
                             <FormMessage />
@@ -607,11 +622,18 @@ export default function AuthPage() {
                                   <KeyRound size={16} />
                                 </span>
                                 <Input
-                                  type="password"
+                                  type={showRegisterPassword ? "text" : "password"}
                                   placeholder="••••••••"
-                                  className="pl-10"
+                                  className="pl-10 pr-10"
                                   {...field}
                                 />
+                                <button
+                                  type="button"
+                                  onClick={() => setShowRegisterPassword(!showRegisterPassword)}
+                                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                >
+                                  {showRegisterPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                </button>
                               </div>
                             </FormControl>
                             <div className="text-sm text-muted-foreground">
@@ -634,11 +656,18 @@ export default function AuthPage() {
                                   <KeyRound size={16} />
                                 </span>
                                 <Input
-                                  type="password"
+                                  type={showRegisterConfirmPassword ? "text" : "password"}
                                   placeholder="••••••••"
-                                  className="pl-10"
+                                  className="pl-10 pr-10"
                                   {...field}
                                 />
+                                <button
+                                  type="button"
+                                  onClick={() => setShowRegisterConfirmPassword(!showRegisterConfirmPassword)}
+                                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                >
+                                  {showRegisterConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                </button>
                               </div>
                             </FormControl>
                             <FormMessage />
@@ -803,11 +832,21 @@ export default function AuthPage() {
                   <FormItem>
                     <FormLabel>New Password</FormLabel>
                     <FormControl>
-                      <Input
-                        type="password"
-                        placeholder="Enter your new password"
-                        {...field}
-                      />
+                      <div className="relative">
+                        <Input
+                          type={showResetPassword ? "text" : "password"}
+                          placeholder="Enter your new password"
+                          className="pr-10"
+                          {...field}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowResetPassword(!showResetPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        >
+                          {showResetPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -820,11 +859,21 @@ export default function AuthPage() {
                   <FormItem>
                     <FormLabel>Confirm Password</FormLabel>
                     <FormControl>
-                      <Input
-                        type="password"
-                        placeholder="Confirm your new password"
-                        {...field}
-                      />
+                      <div className="relative">
+                        <Input
+                          type={showResetConfirmPassword ? "text" : "password"}
+                          placeholder="Confirm your new password"
+                          className="pr-10"
+                          {...field}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowResetConfirmPassword(!showResetConfirmPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        >
+                          {showResetConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
