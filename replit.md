@@ -678,6 +678,12 @@ Changelog:
   * Admin always sees latest commission data without manual page refresh through automatic query invalidation
   * Complete payment workflow now properly handles both payment methods with accurate debt clearing logic
   * Production-ready commission system with proper banking details validation and automated reference number generation
+- July 6, 2025. Complete product deletion system with comprehensive cleanup:
+  * CRITICAL FIX: Fixed database function delete_product_completely() to properly handle foreign key constraints by deleting product drafts BEFORE main product
+  * Enhanced storage.deleteProduct() to delete actual image files from object storage before database cleanup
+  * Comprehensive deletion now removes: main product, all product drafts, database image records, actual image files from object storage, product attributes, and promotional relationships
+  * Database function properly handles deletion order: attributes → images → promotions → drafts → main product
+  * Product deletion system fully operational with complete cleanup of all related data and files
 - July 3, 2025. Fixed critical promotion edit form hydration bug:
   * Resolved TanStack Query configuration issue where queryKey format prevented proper API calls to individual promotion endpoints
   * Changed queryKey from `['/api/promotions', promotionId]` to `['/api/promotions/${promotionId}']` for correct URL generation

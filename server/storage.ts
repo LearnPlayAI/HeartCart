@@ -4879,12 +4879,40 @@ export class DatabaseStorage implements IStorage {
 
   async deleteProduct(id: number): Promise<boolean> {
     try {
-      // Use the database function that handles all the complex deletion logic
+      // First, get all product images and delete them from object storage
+      const productImages = await this.getProductImages(id);
+      
+      // Delete each image file from object storage
+      for (const image of productImages) {
+        try {
+          // Delete the original image
+          if (image.objectKey) {
+            await objectStore.deleteFile(image.objectKey);
+            logger.debug(`Deleted original image from object storage: ${image.objectKey}`);
+          }
+          
+          // Delete the background-removed image if it exists
+          if (image.hasBgRemoved && image.bgRemovedObjectKey) {
+            await objectStore.deleteFile(image.bgRemovedObjectKey);
+            logger.debug(`Deleted background-removed image from object storage: ${image.bgRemovedObjectKey}`);
+          }
+        } catch (imageError) {
+          logger.error(`Error deleting product image from object storage`, {
+            error: imageError,
+            productId: id,
+            imageId: image.id,
+            objectKey: image.objectKey
+          });
+          // Continue with other images even if one fails
+        }
+      }
+      
+      // Now use the database function to handle all database deletions
       const result = await db.execute(sql`SELECT delete_product_completely(${id}) as success`);
       const success = result.rows[0]?.success;
       
       if (success) {
-        logger.info(`Product ${id} successfully deleted using database function`);
+        logger.info(`Product ${id} successfully deleted including ${productImages.length} images from object storage`);
         return true;
       } else {
         logger.warn(`Product ${id} deletion returned false - may not exist`);
