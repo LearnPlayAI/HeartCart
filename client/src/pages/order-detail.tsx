@@ -339,7 +339,7 @@ const OrderDetail: React.FC = () => {
     console.log('Starting invoice download for order:', order.id);
     
     try {
-      const response = await fetch(`/api/order/${order.orderNumber}/invoice`, {
+      const response = await fetch(`/api/orders/${order.id}/invoice`, {
         method: 'GET',
         credentials: 'include',
       });
