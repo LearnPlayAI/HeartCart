@@ -70,7 +70,8 @@ export function VATSettingsCard() {
         // Verify all requests succeeded
         results.forEach((result, index) => {
           const settingNames = ['vatRate', 'vatRegistrationNumber', 'vatRegistered'];
-          if (!result?.success) {
+          if (!result || typeof result !== 'object' || result.success !== true) {
+            console.log(`VAT setting ${settingNames[index]} result:`, result);
             throw new Error(`Failed to save ${settingNames[index]} setting`);
           }
         });

@@ -52,7 +52,7 @@ export function formatVATAmount(amount: number): string {
 }
 
 /**
- * Format VAT rate for display
+ * Format VAT rate for display (e.g., "15%" or "0%")
  */
 export function formatVATRate(rate: number): string {
   return `${rate.toFixed(rate % 1 === 0 ? 0 : 2)}%`;
