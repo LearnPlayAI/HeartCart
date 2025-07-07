@@ -93,12 +93,25 @@ export default function CartPage() {
   const vatRate = parseFloat(vatRateSettings?.data?.settingValue || '0');
   const vatRegistered = vatRegisteredSettings?.data?.settingValue === 'true';
 
+  // Debug VAT settings - TODO: Remove after testing
+  console.log('VAT Debug Cart:', {
+    vatRateSettings: vatRateSettings?.data,
+    vatRegisteredSettings: vatRegisteredSettings?.data,
+    vatRate,
+    vatRegistered,
+    subtotal,
+    shippingCost
+  });
+
   // Calculate VAT using shared utilities
   const vatCalculation = calculateVAT({
     subtotal: subtotal,
     shippingCost: shippingCost,
     vatRate: vatRate
   });
+
+  // Debug VAT calculation - TODO: Remove after testing
+  console.log('VAT Calculation Result:', vatCalculation);
 
   const isEmpty = !cartItems || cartItems.length === 0;
 

@@ -273,12 +273,27 @@ export default function CheckoutPage() {
   const vatRegistered = vatRegisteredSettings?.data?.settingValue === 'true';
   const vatRegistrationNumber = vatRegNumberSettings?.data?.settingValue || '';
   
+  // Debug VAT settings - TODO: Remove after testing
+  console.log('VAT Debug Checkout:', {
+    vatRateSettings: vatRateSettings?.data,
+    vatRegisteredSettings: vatRegisteredSettings?.data,
+    vatRegNumberSettings: vatRegNumberSettings?.data,
+    vatRate,
+    vatRegistered,
+    vatRegistrationNumber,
+    subtotal,
+    shippingCost: safeShippingCost
+  });
+  
   // Calculate VAT using shared utilities
   const vatCalculation = calculateVAT({
     subtotal: subtotal,
     shippingCost: safeShippingCost,
     vatRate: vatRate
   });
+
+  // Debug VAT calculation - TODO: Remove after testing
+  console.log('VAT Calculation Checkout:', vatCalculation);
   
   const orderTotalWithVAT = vatCalculation.totalAmount;
   const autoCreditAmount = Math.min(availableCredit, orderTotalWithVAT);
