@@ -6,7 +6,6 @@
 import { Router, Request, Response } from 'express';
 import asyncHandler from 'express-async-handler';
 import { yocoService } from './yoco-service.js';
-import { storage } from './storage.js';
 import { isAuthenticated } from './auth-middleware.js';
 
 const router = Router();
@@ -38,6 +37,7 @@ router.post('/card/checkout', isAuthenticated, asyncHandler(async (req: Request,
     // CRITICAL FIX: Fetch customer's fullName from users table for proper order creation
     let customerFullName = '';
     try {
+      const { storage } = await import('./storage.js');
       const customer = await storage.getUserById(customerId);
       customerFullName = customer?.fullName || `${customer?.firstName || ''} ${customer?.lastName || ''}`.trim() || 'Unknown Customer';
       console.log('✅ Customer fullName fetched from database:', {
@@ -242,6 +242,7 @@ router.get('/status/:orderId', isAuthenticated, asyncHandler(async (req: Request
       return res.status(400).json({ error: 'Invalid order ID' });
     }
 
+    const { storage } = await import('./storage.js');
     const order = await storage.getOrderById(orderId);
     if (!order) {
       return res.status(404).json({ error: 'Order not found' });

@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { db } from './db';
 import { users, mailTokens, emailLogs } from '@shared/schema';
 import { eq, and, lt, desc } from 'drizzle-orm';
+import { SASTTimezone, sastAddHours, isExpiredSAST, formatSASTLog } from './timezone-utils';
 
 // TeeMeYou hot pink styling and company branding
 const TEEMEYOU_COLORS = {
@@ -57,24 +58,31 @@ export class UnifiedEmailService {
 
   async createPasswordResetToken(userId: number, email: string): Promise<{ token: string; expires: Date }> {
     const token = this.generateSecureToken();
-    const expiresAt = new Date(Date.now() + 3 * 60 * 60 * 1000); // 3 hours for SAST timezone
+    // Create token that expires in 1 hour SAST time, but store as UTC in database
+    const sastExpiresAt = sastAddHours(1);
+    const utcExpiresAt = SASTTimezone.toUTC(sastExpiresAt);
+
+    console.log(`🔑 Creating password reset token - SAST expires: ${formatSASTLog(sastExpiresAt)}, UTC stored: ${utcExpiresAt.toISOString()}`);
 
     await db.insert(mailTokens).values({
       token: token,
       tokenType: 'password_reset',
       userId,
       email,
-      expiresAt
+      expiresAt: utcExpiresAt
     });
 
-    return { token, expires: expiresAt };
+    return { token, expires: sastExpiresAt };
   }
 
   async createVerificationToken(userId: number, email: string): Promise<{ token: string; expires: Date }> {
     const token = this.generateSecureToken();
-    const expiresAt = new Date(Date.now() + 3 * 60 * 60 * 1000); // 3 hours for SAST timezone
+    // Create token that expires in 1 hour SAST time, but store as UTC in database
+    const sastExpiresAt = sastAddHours(1);
+    const utcExpiresAt = SASTTimezone.toUTC(sastExpiresAt);
 
     console.log(`🔑 Creating verification token for user ${userId}: ${token ? token.substring(0, 16) + '...' : 'NULL TOKEN'}`);
+    console.log(`🔑 Creating verification token - SAST expires: ${formatSASTLog(sastExpiresAt)}, UTC stored: ${utcExpiresAt.toISOString()}`);
 
     if (!token) {
       throw new Error('Failed to generate secure token');
@@ -86,11 +94,11 @@ export class UnifiedEmailService {
         tokenType: 'verification',
         userId,
         email,
-        expiresAt
+        expiresAt: utcExpiresAt
       });
 
       console.log(`✅ Verification token successfully stored in database`);
-      return { token, expires: expiresAt };
+      return { token, expires: sastExpiresAt };
     } catch (error: any) {
       console.error('❌ Error creating mail token:', error);
       throw error;
@@ -346,12 +354,16 @@ export class UnifiedEmailService {
       }
 
       const record = tokenRecord[0];
-      const now = new Date();
-      const expiresAt = new Date(record.expiresAt);
+      const utcExpiresAt = new Date(record.expiresAt);
+      
+      // Check expiration using SAST timezone logic
+      const isExpired = isExpiredSAST(utcExpiresAt);
 
-      console.log(`🔍 Token expires at: ${expiresAt}, current time: ${now}`);
+      console.log(`🔍 Password Reset Token expires at: ${formatSASTLog(utcExpiresAt)} (stored as UTC: ${utcExpiresAt.toISOString()})`);
+      console.log(`🔍 Current SAST time: ${formatSASTLog()}`);
+      console.log(`🔍 Token expired: ${isExpired}`);
 
-      if (now > expiresAt) {
+      if (isExpired) {
         return { valid: false, error: 'Token has expired' };
       }
 
@@ -402,12 +414,16 @@ export class UnifiedEmailService {
       }
 
       const record = tokenRecord[0];
-      const now = new Date();
-      const expiresAt = new Date(record.expiresAt);
+      const utcExpiresAt = new Date(record.expiresAt);
+      
+      // Check expiration using SAST timezone logic
+      const isExpired = isExpiredSAST(utcExpiresAt);
 
-      console.log(`🔍 Token expires at: ${expiresAt}, current time: ${now}`);
+      console.log(`🔍 ${tokenType} Token expires at: ${formatSASTLog(utcExpiresAt)} (stored as UTC: ${utcExpiresAt.toISOString()})`);
+      console.log(`🔍 Current SAST time: ${formatSASTLog()}`);
+      console.log(`🔍 Token expired: ${isExpired}`);
 
-      if (now > expiresAt) {
+      if (isExpired) {
         return { valid: false, error: 'Token has expired' };
       }
 
@@ -428,7 +444,7 @@ export class UnifiedEmailService {
     await db.update(mailTokens)
       .set({ 
         isActive: false,
-        usedAt: new Date()
+        usedAt: SASTTimezone.toUTC(SASTTimezone.now()) // Store as UTC but from SAST time
       })
       .where(eq(mailTokens.token, token));
   }
