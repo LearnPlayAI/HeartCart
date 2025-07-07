@@ -4267,21 +4267,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  // Method not shown completely - updateOrderStatus
-  // The next catch block belongs to a different method
-  async updateOrderStatus(id: number, status: string): Promise<Order | undefined> {
-    try {
-      // Function implementation would be here
-      throw new Error("Implementation needed");
-    } catch (error) {
-      logger.error(`Error in order status update process`, {
-        error,
-        orderId: id,
-        newStatus: status,
-      });
-      throw error; // Rethrow so the route handler can catch it and send a proper error response
-    }
-  }
+
 
   async updateOrderInvoicePath(
     id: number,
