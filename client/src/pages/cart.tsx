@@ -9,7 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { calculateProductPricing, getPromotionalBadgeText } from "@/utils/pricing";
-import { calculateVAT, formatVATAmount, formatVATRate } from "@shared/vat-utils";
+
 import { 
   ShoppingCart, 
   Plus, 
@@ -40,15 +40,11 @@ export default function CartPage() {
     gcTime: 0,
   });
 
-  // Fetch VAT settings for order calculation and display
-  const { data: vatRateSettings, isLoading: vatRateLoading, error: vatRateError } = useQuery({
-    queryKey: ['/api/admin/settings/vatRate'],
-    staleTime: 5 * 60 * 1000,
-  });
-
-  const { data: vatRegisteredSettings, isLoading: vatRegisteredLoading, error: vatRegisteredError } = useQuery({
-    queryKey: ['/api/admin/settings/vatRegistered'],
-    staleTime: 5 * 60 * 1000,
+  // Fetch cart totals with VAT calculations from server-side
+  const { data: cartTotalsResponse, isLoading: totalsLoading, error: totalsError } = useQuery({
+    queryKey: ["/api/cart/totals"],
+    staleTime: 0,
+    gcTime: 0,
   });
 
   const cartItems = cartResponse?.data || [];
@@ -69,30 +65,12 @@ export default function CartPage() {
     }
   });
 
-  // Calculate subtotal with promotions
-  const subtotal = Array.isArray(cartItems) ? cartItems.reduce((sum: number, item: any) => {
-    let currentPrice = 0;
-    if (item.product) {
-      const promotionInfo = promotionMap.get(item.product.id) || null;
-      const pricing = calculateProductPricing(
-        item.product.price || 0,
-        item.product.salePrice,
-        promotionInfo
-      );
-      currentPrice = pricing.displayPrice;
-    } else {
-      currentPrice = parseFloat(item.itemPrice || 0);
-    }
-    
-    const quantity = item.quantity || 0;
-    return sum + (currentPrice * quantity);
-  }, 0) : 0;
-
-  const shippingCost = 85; // Standard PUDO shipping
-
   const isEmpty = !cartItems || cartItems.length === 0;
 
-  if (cartLoading) {
+  // Get server-side calculated totals
+  const cartTotals = cartTotalsResponse?.data;
+
+  if (cartLoading || totalsLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
@@ -102,57 +80,12 @@ export default function CartPage() {
     );
   }
 
-  // FORCED DEBUG - This MUST appear in console
-  console.log('CART PAGE LOADED - CHECKING VAT');
-  
-  // Get VAT settings from API response
-  let vatRate = 0;
-  let vatRegistered = false;
-  let vatCalculation = null;
-  
-  try {
-    console.log('========== VAT DEBUG CART ==========');
-    
-    vatRate = parseFloat(vatRateSettings?.data?.settingValue || '0');
-    vatRegistered = vatRegisteredSettings?.data?.settingValue === 'true';
-    
-    console.log('VAT Debug Cart:', {
-      cartItemsLength: cartItems?.length,
-      vatRateSettings: vatRateSettings?.data,
-      vatRegisteredSettings: vatRegisteredSettings?.data,
-      vatRateLoading,
-      vatRegisteredLoading,
-      vatRateError,
-      vatRegisteredError,
-      vatRate,
-      vatRegistered,
-      subtotal,
-      shippingCost
-    });
-
-    // Calculate VAT using shared utilities
-    vatCalculation = calculateVAT({
-      subtotal: subtotal,
-      shippingCost: shippingCost,
-      vatRate: vatRate
-    });
-
-    console.log('VAT Calculation Result:', vatCalculation);
-    console.log('========== END VAT DEBUG ==========');
-    
-  } catch (error) {
-    console.error('VAT CALCULATION ERROR:', error);
-    // Fallback calculation if VAT function fails
-    vatCalculation = {
-      subtotal: subtotal,
-      shippingCost: shippingCost,
-      vatableAmount: subtotal + shippingCost,
-      vatRate: vatRate,
-      vatAmount: (subtotal + shippingCost) * (vatRate / 100),
-      totalAmount: subtotal + shippingCost + ((subtotal + shippingCost) * (vatRate / 100))
-    };
-    console.log('FALLBACK VAT Calculation:', vatCalculation);
-  }
+  // Server-side VAT calculation debug
+  console.log('🛒 CART PAGE COMPONENT STARTED');
+  console.log('========== SERVER-SIDE VAT DEBUG CART ==========');
+  console.log('Cart Totals from Server:', cartTotals);
+  console.log('Cart Items Length:', cartItems?.length);
+  console.log('========== END SERVER-SIDE VAT DEBUG ==========');
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -291,27 +224,27 @@ export default function CartPage() {
                   {/* Pricing Breakdown */}
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span>Subtotal ({cartItems.length} items):</span>
-                      <span>R{subtotal.toFixed(2)}</span>
+                      <span>Subtotal ({cartTotals?.itemCount || 0} items):</span>
+                      <span>R{cartTotals ? cartTotals.subtotal.toFixed(2) : '0.00'}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span>Shipping:</span>
-                      <span>R{shippingCost.toFixed(2)}</span>
+                      <span>R{cartTotals ? cartTotals.shippingCost.toFixed(2) : '85.00'}</span>
                     </div>
                     
-                    {/* VAT Line Item - Always show for transparency */}
+                    {/* Server-side VAT Line Item - Always show for transparency */}
                     <div className="flex justify-between text-sm items-center">
                       <div className="flex items-center gap-1">
                         <Calculator className="h-3 w-3 text-orange-500" />
-                        <span>VAT ({formatVATRate(vatRate)}):</span>
+                        <span>VAT ({cartTotals ? cartTotals.vatRate : 0}%):</span>
                       </div>
-                      <span>{formatVATAmount(vatCalculation.vatAmount)}</span>
+                      <span>R{cartTotals ? cartTotals.vatAmount.toFixed(2) : '0.00'}</span>
                     </div>
                     
                     <Separator />
                     <div className="flex justify-between font-bold text-lg">
                       <span>Total:</span>
-                      <span>R{vatCalculation.totalAmount.toFixed(2)}</span>
+                      <span>R{cartTotals ? cartTotals.totalAmount.toFixed(2) : '85.00'}</span>
                     </div>
                   </div>
 

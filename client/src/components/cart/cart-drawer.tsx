@@ -43,6 +43,15 @@ const CartDrawer = () => {
   const { creditBalance, formattedBalance, transactions } = useCredits();
   const [location, setLocation] = useLocation();
 
+  // Fetch cart totals with VAT calculations from server-side
+  const { data: cartTotalsResponse, isLoading: totalsLoading } = useQuery({
+    queryKey: ["/api/cart/totals"],
+    staleTime: 0,
+    gcTime: 0,
+  });
+
+  const cartTotals = cartTotalsResponse?.data;
+
   // Validate cart items for promotion rules
   const validateCartForCheckout = async (): Promise<boolean> => {
     if (cartItems.length === 0) return true;
@@ -110,12 +119,14 @@ const CartDrawer = () => {
   
   const userOrders = ordersResponse?.success ? ordersResponse.data : [];
   
-  // Use the cart summary data which already includes all calculations
-  const { subtotal, finalTotal, totalDiscount } = cartSummary;
+  // Use server-side calculated totals with VAT
+  const subtotal = cartTotals?.subtotal || 0;
+  const finalTotal = cartTotals?.subtotal || 0; // Before VAT
+  const totalDiscount = 0; // No discounts in simplified system
   
-  // Calculate shipping with exemption logic
+  // Calculate shipping with exemption logic using server-side data
   const availableCredit = creditBalance?.availableCredits ? parseFloat(creditBalance.availableCredits) : 0;
-  const baseShipping = subtotal > 0 ? 85 : 0;
+  const baseShipping = cartTotals?.shippingCost || 85;
   const { shippingCost: shipping, isShippingWaived, reasonForWaiver } = calculateShippingCost(
     baseShipping,
     transactions || [],
@@ -123,7 +134,8 @@ const CartDrawer = () => {
     userOrders
   );
   
-  const cartTotal = finalTotal + shipping;
+  // Use server-side total amount that includes VAT
+  const cartTotal = cartTotals?.totalAmount || (finalTotal + shipping);
   
   // Automatically apply maximum available credits
   const autoCreditAmount = Math.min(availableCredit, cartTotal);
@@ -361,6 +373,13 @@ const CartDrawer = () => {
                   )}
                 </div>
               </div>
+              
+              {/* VAT Display - Server-side calculated for transparency */}
+              <div className="flex justify-between mb-2 text-sm">
+                <span className="text-gray-600">VAT ({cartTotals?.vatRate || 0}%):</span>
+                <span className="font-medium">{formatCurrency(cartTotals?.vatAmount || 0)}</span>
+              </div>
+              
               <Separator className="my-2" />
               <div className="flex justify-between mb-2 text-sm font-bold">
                 <span>Cart Total</span>

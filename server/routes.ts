@@ -3941,6 +3941,134 @@ export async function registerRoutes(app: Express): Promise<Server> {
     })
   );
 
+  // CART TOTALS WITH VAT - Server-side calculation endpoint
+  app.get(
+    "/api/cart/totals",
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        if (!req.isAuthenticated()) {
+          // For non-authenticated users, return empty totals
+          return res.json({
+            success: true,
+            data: {
+              subtotal: 0,
+              shippingCost: 85, // Standard PUDO shipping
+              vatRate: 0,
+              vatAmount: 0,
+              totalAmount: 85,
+              itemCount: 0,
+              vatBreakdown: {
+                vatableAmount: 0,
+                vatRegistered: false,
+                vatRegistrationNumber: ""
+              }
+            }
+          });
+        }
+        
+        const user = req.user as any;
+        const cartItems = await storage.getCartItemsWithProducts(user.id);
+        
+        // Get VAT settings from systemSettings
+        const vatRateSettings = await storage.getSystemSetting('vatRate');
+        const vatRegisteredSettings = await storage.getSystemSetting('vatRegistered');
+        const vatRegistrationNumberSettings = await storage.getSystemSetting('vatRegistrationNumber');
+        
+        const vatRate = parseFloat(vatRateSettings?.settingValue || '0');
+        const vatRegistered = vatRegisteredSettings?.settingValue === 'true';
+        const vatRegistrationNumber = vatRegistrationNumberSettings?.settingValue || '';
+        
+        // Get active promotions for pricing calculations
+        const activePromotions = await storage.getActivePromotionsWithProducts();
+        
+        // Create promotion map
+        const promotionMap = new Map();
+        activePromotions.forEach((promotion: any) => {
+          if (promotion.products) {
+            promotion.products.forEach((pp: any) => {
+              promotionMap.set(pp.productId, {
+                promotionName: promotion.promotionName,
+                promotionDiscount: promotion.discountValue ? promotion.discountValue.toString() : '0',
+                promotionEndDate: promotion.endDate,
+                promotionalPrice: pp.promotionalPrice ? parseFloat(pp.promotionalPrice) : null
+              });
+            });
+          }
+        });
+        
+        // Calculate subtotal with current pricing and promotions
+        const subtotal = cartItems.reduce((sum: number, item: any) => {
+          let currentPrice = 0;
+          if (item.product) {
+            const promotionInfo = promotionMap.get(item.product.id) || null;
+            // Use same pricing logic as frontend
+            const basePrice = item.product.price || 0;
+            const salePrice = item.product.salePrice;
+            
+            if (promotionInfo && promotionInfo.promotionalPrice) {
+              currentPrice = promotionInfo.promotionalPrice;
+            } else if (salePrice && salePrice < basePrice) {
+              currentPrice = salePrice;
+            } else {
+              currentPrice = basePrice;
+            }
+          } else {
+            currentPrice = parseFloat(item.itemPrice || 0);
+          }
+          
+          const quantity = item.quantity || 0;
+          return sum + (currentPrice * quantity);
+        }, 0);
+        
+        const shippingCost = 85; // Standard PUDO shipping
+        
+        // Calculate VAT using shared utilities
+        const vatableAmount = subtotal + shippingCost;
+        const vatAmount = vatableAmount * (vatRate / 100);
+        const totalAmount = vatableAmount + vatAmount;
+        
+        const totals = {
+          subtotal: Math.round(subtotal * 100) / 100,
+          shippingCost,
+          vatRate,
+          vatAmount: Math.round(vatAmount * 100) / 100,
+          totalAmount: Math.round(totalAmount * 100) / 100,
+          itemCount: cartItems.length,
+          totalItemQuantity: cartItems.reduce((sum, item) => sum + (item.quantity || 0), 0),
+          vatBreakdown: {
+            vatableAmount: Math.round(vatableAmount * 100) / 100,
+            vatRegistered,
+            vatRegistrationNumber
+          }
+        };
+        
+        logger.info('Cart totals calculated server-side', { 
+          userId: user.id, 
+          totals,
+          cartItemCount: cartItems.length 
+        });
+        
+        return res.json({
+          success: true,
+          data: totals
+        });
+        
+      } catch (error) {
+        logger.error('Error calculating cart totals', { 
+          error, 
+          userId: req.user ? (req.user as any).id : 'unauthenticated' 
+        });
+        
+        throw new AppError(
+          "Failed to calculate cart totals.",
+          ErrorCode.INTERNAL_SERVER_ERROR,
+          500,
+          { originalError: error }
+        );
+      }
+    })
+  );
+
   app.post(
     "/api/cart", 
     isAuthenticated,

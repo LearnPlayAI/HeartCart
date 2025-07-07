@@ -13,7 +13,7 @@ import ProductDetail from "@/pages/product-detail-new";
 import Category from "@/pages/category";
 import ProductListing from "@/pages/product-listing";
 import ProductsExample from "@/pages/products-example";
-import Cart from "@/pages/cart";
+import CartPage from "@/pages/cart";
 import Checkout from "@/pages/checkout";
 import OrderDetail from "@/pages/order-detail";
 import OrderConfirmation from "@/pages/order-confirmation";
@@ -280,6 +280,7 @@ function App() {
                           <Route path="/featured"><FeaturedPage /></Route>
                           <Route path="/products"><ProductListing /></Route>
                           <Route path="/products-example"><ProductsExample /></Route>
+                          <ProtectedRoute path="/cart" component={CartPage} />
                           <ProtectedRoute path="/checkout" component={Checkout} />
                           <ProtectedRoute path="/payment-confirmation" component={PaymentConfirmation} />
                           <ProtectedRoute path="/order-confirmation/:id" component={OrderConfirmation} />
