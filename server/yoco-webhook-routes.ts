@@ -43,10 +43,49 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
 
     const event: YocoPaymentEvent = req.body;
 
-    // Only process successful payments
-    if (event.type !== 'payment.succeeded') {
-      console.log('Ignoring non-payment event:', event.type);
-      return res.status(200).json({ received: true });
+    // Handle different YoCo webhook event types as per documentation requirements
+    switch (event.type) {
+      case 'payment.succeeded':
+        // Continue processing successful payment
+        break;
+      
+      case 'payment.failed':
+        console.log('Processing failed payment event:', {
+          paymentId: event.payload.id,
+          checkoutId: event.payload.metadata?.checkoutId,
+          amount: event.payload.amount,
+          reason: event.payload.status
+        });
+        // For failed payments, no order should exist (which is correct behavior)
+        return res.status(200).json({ 
+          received: true, 
+          eventType: 'payment.failed',
+          message: 'Payment failure processed - no order created' 
+        });
+      
+      case 'payment.refunded':
+        console.log('Processing refund event:', {
+          paymentId: event.payload.id,
+          checkoutId: event.payload.metadata?.checkoutId,
+          amount: event.payload.amount
+        });
+        // TODO: Implement refund handling when needed
+        return res.status(200).json({ 
+          received: true, 
+          eventType: 'payment.refunded',
+          message: 'Refund event acknowledged' 
+        });
+      
+      default:
+        console.log('Processing unhandled webhook event type:', {
+          eventType: event.type,
+          paymentId: event.payload?.id
+        });
+        return res.status(200).json({ 
+          received: true, 
+          eventType: event.type,
+          message: 'Event acknowledged but not processed' 
+        });
     }
 
     const payment = event.payload;
@@ -88,10 +127,18 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
 
     console.log('Creating order after successful payment:', { checkoutId, customerId });
 
-    // Calculate transaction fees
+    // YoCo compliance: Calculate transaction fees for profit tracking (absorbed by company, not charged to customer)
     const fees = yocoService.calculateTransactionFees(payment.amount);
     
-    // Create order with payment information included
+    console.log('YoCo transaction fees calculated for profit tracking:', {
+      orderAmount: payment.amount / 100,
+      feeAmount: fees.feeAmount,
+      feePercentage: fees.feePercentage,
+      netRevenue: (payment.amount / 100) - fees.feeAmount,
+      checkoutId
+    });
+    
+    // Create order with payment information included (camelCase naming convention)
     const orderData = {
       ...cartData,
       userId: customerId,
@@ -141,15 +188,20 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
       // Don't fail the webhook for email errors
     }
 
-    // Respond quickly to YoCo (within 15 seconds as required)
-    res.status(200).json({ 
+    // YoCo compliance: Respond quickly (within 15 seconds as required by documentation)
+    const webhookResponse = { 
       received: true, 
       orderId: order.id,
       orderNumber: order.orderNumber,
       checkoutId,
       tempCheckoutId,
-      status: 'order_created_and_paid' 
-    });
+      status: 'order_created_and_paid',
+      timestamp: new Date().toISOString(),
+      processingTime: Date.now() - (event.payload.createdDate ? new Date(event.payload.createdDate).getTime() : Date.now())
+    };
+    
+    console.log('YoCo webhook processed successfully:', webhookResponse);
+    res.status(200).json(webhookResponse);
 
   } catch (error) {
     console.error('YoCo webhook processing error:', error);

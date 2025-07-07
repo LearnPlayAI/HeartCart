@@ -24,10 +24,11 @@ interface YocoCheckoutRequest {
   successUrl: string;
   failureUrl: string;
   metadata: {
-    orderId: string;
-    orderNumber: string;
+    checkoutId: string; // YoCo compliance: proper checkout reference
+    tempCheckoutId?: string; // Backward compatibility
     customerId: string;
     customerEmail: string;
+    cartData: string; // JSON string of cart data for order creation
   };
   totalTaxAmount?: number; // VAT amount in cents
   subtotalAmount?: number; // Subtotal in cents
@@ -102,14 +103,43 @@ class YocoService {
       body: JSON.stringify(checkoutData),
     });
 
+    // YoCo compliance: Handle specific error codes as per documentation
     if (!response.ok) {
       const errorData = await response.text();
-      console.error('YoCo checkout creation failed:', response.status, errorData);
-      throw new Error(`YoCo API Error: ${response.status} - ${errorData}`);
+      let errorMessage = `YoCo API Error: ${response.status} - ${errorData}`;
+      
+      switch (response.status) {
+        case 403:
+          errorMessage = 'YoCo authentication failed: Invalid or missing secret key';
+          break;
+        case 409:
+          errorMessage = 'YoCo conflict: Request with same idempotency key is being processed';
+          break;
+        case 422:
+          errorMessage = 'YoCo validation error: Request payload does not match original request for this idempotency key';
+          break;
+        default:
+          errorMessage = `YoCo API Error: ${response.status} - ${errorData}`;
+      }
+      
+      console.error('YoCo checkout creation failed:', {
+        status: response.status,
+        error: errorData,
+        idempotencyKey,
+        amount: checkoutData.amount
+      });
+      
+      throw new Error(errorMessage);
     }
 
     const result = await response.json();
-    console.log('YoCo checkout created successfully:', result.id);
+    console.log('YoCo checkout created successfully:', {
+      checkoutId: result.id,
+      redirectUrl: result.redirectUrl,
+      amount: result.amount,
+      currency: result.currency,
+      processingMode: result.processingMode
+    });
     
     return result;
   }
@@ -176,13 +206,41 @@ class YocoService {
 
   /**
    * Validate webhook timestamp to prevent replay attacks
+   * YoCo compliance: Implement proper timestamp validation as per security requirements
    */
   isValidTimestamp(timestamp: string, toleranceInMinutes: number = 3): boolean {
-    const webhookTime = parseInt(timestamp) * 1000; // Convert to milliseconds
-    const currentTime = Date.now();
-    const tolerance = toleranceInMinutes * 60 * 1000; // Convert to milliseconds
+    if (!timestamp) {
+      console.warn('YoCo webhook timestamp validation: No timestamp provided');
+      return false;
+    }
     
-    return Math.abs(currentTime - webhookTime) <= tolerance;
+    try {
+      const webhookTime = parseInt(timestamp) * 1000; // Convert to milliseconds
+      if (isNaN(webhookTime)) {
+        console.warn('YoCo webhook timestamp validation: Invalid timestamp format');
+        return false;
+      }
+      
+      const currentTime = Date.now();
+      const tolerance = toleranceInMinutes * 60 * 1000; // Convert to milliseconds
+      const timeDifference = Math.abs(currentTime - webhookTime);
+      
+      if (timeDifference > tolerance) {
+        console.warn('YoCo webhook timestamp validation: Timestamp outside tolerance window', {
+          webhookTime: new Date(webhookTime).toISOString(),
+          currentTime: new Date(currentTime).toISOString(),
+          differenceMs: timeDifference,
+          toleranceMs: tolerance,
+          toleranceMinutes: toleranceInMinutes
+        });
+        return false;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('YoCo webhook timestamp validation error:', error);
+      return false;
+    }
   }
 
   /**

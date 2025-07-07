@@ -37,6 +37,28 @@ router.post('/card/checkout', isAuthenticated, asyncHandler(async (req: Request,
     const tempCheckoutId = `temp_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
     
     // Prepare checkout data with cart information (NO ORDER CREATED YET)
+    // Get product details for proper line items display (YoCo compliance)
+    const enrichedLineItems = [];
+    if (cartData.orderItems) {
+      for (const item of cartData.orderItems) {
+        try {
+          const product = await storage.getProductById(item.productId);
+          enrichedLineItems.push({
+            displayName: product ? product.name : `Product ${item.productId}`,
+            quantity: item.quantity,
+            priceCents: Math.round(item.unitPrice * 100),
+          });
+        } catch (error) {
+          console.error(`Failed to get product ${item.productId} for line items:`, error);
+          enrichedLineItems.push({
+            displayName: `Product ${item.productId}`,
+            quantity: item.quantity,
+            priceCents: Math.round(item.unitPrice * 100),
+          });
+        }
+      }
+    }
+
     const checkoutData = {
       amount: amountInCents,
       currency: 'ZAR',
@@ -44,7 +66,8 @@ router.post('/card/checkout', isAuthenticated, asyncHandler(async (req: Request,
       successUrl: `${process.env.FRONTEND_URL || 'https://teemeyou.shop'}/payment-success?checkoutId=${tempCheckoutId}`,
       failureUrl: `${process.env.FRONTEND_URL || 'https://teemeyou.shop'}/payment-failed?checkoutId=${tempCheckoutId}`,
       metadata: {
-        tempCheckoutId,
+        checkoutId: tempCheckoutId, // YoCo compliance: proper checkout reference
+        tempCheckoutId, // Keep for backward compatibility
         customerId: customerId.toString(),
         customerEmail: customerEmail,
         // Store complete cart data for order creation after successful payment
@@ -52,11 +75,7 @@ router.post('/card/checkout', isAuthenticated, asyncHandler(async (req: Request,
       },
       totalTaxAmount: vatAmountInCents,
       subtotalAmount: subtotalInCents,
-      lineItems: cartData.orderItems?.map((item: any) => ({
-        displayName: `Product ${item.productId}`, // Will be enriched in webhook
-        quantity: item.quantity,
-        priceCents: Math.round(item.unitPrice * 100),
-      })) || [],
+      lineItems: enrichedLineItems,
     };
 
     console.log('Creating YoCo checkout session with cart data:', {
