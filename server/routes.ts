@@ -3967,7 +3967,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         const user = req.user as any;
-        const cartItems = await storage.getCartItemsWithProducts(user.id);
+        
+        // SIMPLIFIED: Direct cart items calculation without complex product enrichment
+        // This should be more reliable and matches exactly what's in the database
+        const cartItemsResult = await db
+          .select({
+            id: cartItems.id,
+            userId: cartItems.userId,
+            productId: cartItems.productId,
+            quantity: cartItems.quantity,
+            itemPrice: cartItems.itemPrice
+          })
+          .from(cartItems)
+          .where(eq(cartItems.userId, user.id));
+        
+        // DEBUG: Log cart items retrieval directly from database
+        logger.info('Cart totals - direct cart items from database', { 
+          userId: user.id, 
+          cartItemsCount: cartItemsResult.length,
+          cartItems: cartItemsResult.map(item => ({
+            id: item.id,
+            productId: item.productId,
+            quantity: item.quantity,
+            itemPrice: item.itemPrice
+          }))
+        });
         
         // Get VAT settings from systemSettings
         const vatRateSettings = await storage.getSystemSetting('vatRate');
@@ -3981,12 +4005,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const vatRateActive = vatRateSettings?.isActive === true;
         const vatRegisteredActive = vatRegisteredSettings?.isActive === true;
         
-        // Calculate subtotal using stored cart item prices
-        const subtotal = cartItems.reduce((sum: number, item: any) => {
+        // Calculate subtotal using stored cart item prices directly from database
+        const subtotal = cartItemsResult.reduce((sum: number, item: any) => {
           const currentPrice = parseFloat(item.itemPrice || '0');
           const quantity = item.quantity || 0;
-          return sum + (currentPrice * quantity);
+          const itemTotal = currentPrice * quantity;
+          
+          // DEBUG: Log each item calculation
+          logger.info('Cart subtotal calculation - item', {
+            itemId: item.id,
+            productId: item.productId,
+            itemPrice: item.itemPrice,
+            parsedPrice: currentPrice,
+            quantity,
+            itemTotal,
+            runningSum: sum + itemTotal
+          });
+          
+          return sum + itemTotal;
         }, 0);
+        
+        // DEBUG: Log final subtotal calculation
+        logger.info('Cart totals - subtotal calculated', {
+          userId: user.id,
+          cartItemsCount: cartItemsResult.length,
+          calculatedSubtotal: subtotal
+        });
         
         const shippingCost = 85; // Standard PUDO shipping
         
@@ -4004,8 +4048,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           vatRate: effectiveVATRate,
           vatAmount: Math.round(vatAmount * 100) / 100,
           totalAmount: Math.round(totalAmount * 100) / 100,
-          itemCount: cartItems.length,
-          totalItemQuantity: cartItems.reduce((sum, item) => sum + (item.quantity || 0), 0),
+          itemCount: cartItemsResult.length,
+          totalItemQuantity: cartItemsResult.reduce((sum, item) => sum + (item.quantity || 0), 0),
           vatBreakdown: {
             vatableAmount: Math.round(vatableAmount * 100) / 100,
             vatRegistered,

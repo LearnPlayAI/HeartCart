@@ -37,7 +37,10 @@ const defaultCartContext: CartContextType = {
     itemCount: 0,
     subtotal: 0,
     totalDiscount: 0,
-    finalTotal: 0
+    finalTotal: 0,
+    shippingCost: 85,
+    vatAmount: 0,
+    vatRate: 0
   },
   isLoading: false,
   recentlyAddedItemId: null
@@ -67,24 +70,38 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   
   // Calculate cart summary with simplified approach
   // Since we're using database persistence, the pricing calculations are done server-side
-  // Here we simply aggregate the information that was calculated and stored in the database
+  // SERVER-SIDE CART TOTALS: Use database calculations instead of client-side
+  const { data: serverCartTotals, isLoading: totalsLoading } = useQuery({
+    queryKey: ['/api/cart/totals'],
+    staleTime: 0, // Always fetch fresh data
+    gcTime: 0,    // Don't cache
+  });
+
   const cartSummary = useMemo<CartSummary>(() => {
-    return cartItems.reduce((summary, item) => {
-      // For each item, accumulate total items and price
-      const itemPrice = Number(item.itemPrice) || 0;
+    if (serverCartTotals?.data) {
+      // Use server-side calculated totals from database
       return {
-        itemCount: summary.itemCount + item.quantity,
-        subtotal: summary.subtotal + (itemPrice * item.quantity),
-        totalDiscount: 0, // No discounts in simplified cart
-        finalTotal: summary.finalTotal + (itemPrice * item.quantity)
+        itemCount: serverCartTotals.data.itemCount || 0,
+        subtotal: serverCartTotals.data.subtotal || 0,
+        totalDiscount: 0,
+        finalTotal: serverCartTotals.data.totalAmount || 0,
+        shippingCost: serverCartTotals.data.shippingCost || 85,
+        vatAmount: serverCartTotals.data.vatAmount || 0,
+        vatRate: serverCartTotals.data.vatRate || 0
       };
-    }, {
+    }
+    
+    // Fallback to empty cart if server data not available
+    return {
       itemCount: 0,
       subtotal: 0,
       totalDiscount: 0,
-      finalTotal: 0
-    });
-  }, [cartItems]);
+      finalTotal: 0,
+      shippingCost: 85,
+      vatAmount: 0,
+      vatRate: 0
+    };
+  }, [serverCartTotals]);
   
   // Clean cart mutation implementation for attribute selections
   const addToCartMutation = useMutation({
@@ -121,6 +138,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       // Only invalidate queries if not redirected for auth
       if (!data?.redirected) {
         queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/cart/totals'] });
         
         // Auto-open cart and highlight the newly added item
         setIsOpen(true);
@@ -166,6 +184,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/cart/totals'] });
     },
     onError: (error) => {
       toast({
@@ -198,6 +217,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/cart/totals'] });
     },
     onError: (error) => {
       toast({
@@ -230,7 +250,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
-      
+      queryClient.invalidateQueries({ queryKey: ['/api/cart/totals'] });
     },
     onError: (error) => {
       toast({
@@ -266,6 +286,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/cart/totals'] });
     },
     onError: (error) => {
       toast({

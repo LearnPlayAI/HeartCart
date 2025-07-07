@@ -3066,9 +3066,15 @@ export class DatabaseStorage implements IStorage {
         .from(cartItems)
         .where(eq(cartItems.userId, userId));
 
-      logger.debug(`Retrieved cart items for retrieval with products`, {
+      logger.info(`Retrieved cart items for retrieval with products`, {
         userId,
         itemCount: items.length,
+        rawItems: items.map(item => ({
+          id: item.id,
+          productId: item.productId,
+          quantity: item.quantity,
+          itemPrice: item.itemPrice
+        }))
       });
 
       const result: (CartItem & { product: Product })[] = [];
@@ -3079,6 +3085,13 @@ export class DatabaseStorage implements IStorage {
             .select()
             .from(products)
             .where(eq(products.id, item.productId));
+
+          logger.debug(`Product lookup for cart item`, {
+            cartItemId: item.id,
+            productId: item.productId,
+            foundProduct: !!product,
+            productName: product?.name
+          });
 
           if (product) {
             try {
@@ -3092,18 +3105,23 @@ export class DatabaseStorage implements IStorage {
                 product: enrichedProducts[0],
               });
 
-              logger.debug(`Added product to cart results`, {
+              logger.info(`Added product to cart results - SUCCESS`, {
                 cartItemId: item.id,
                 productId: product.id,
                 productName: product.name,
+                itemPrice: item.itemPrice,
+                quantity: item.quantity,
+                resultLength: result.length
               });
             } catch (enrichError) {
               logger.error(
-                `Error enriching product with images for cart item`,
+                `Error enriching product with images for cart item - SKIPPING ITEM`,
                 {
                   error: enrichError,
                   productId: product.id,
                   cartItemId: item.id,
+                  itemPrice: item.itemPrice,
+                  quantity: item.quantity
                 },
               );
               // Continue to next item but don't rethrow as we want to return whatever items we successfully retrieved
