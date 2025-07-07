@@ -186,8 +186,8 @@ export default function PaymentFailedPage() {
               </p>
               <p>
                 <span className="font-medium">Phone:</span>{' '}
-                <a href="tel:+27123456789" className="text-pink-600 hover:underline">
-                  +27 12 345 6789
+                <a href="tel:+27712063084" className="text-pink-600 hover:underline">
+                  +27 71 206 3084
                 </a>
               </p>
             </div>
