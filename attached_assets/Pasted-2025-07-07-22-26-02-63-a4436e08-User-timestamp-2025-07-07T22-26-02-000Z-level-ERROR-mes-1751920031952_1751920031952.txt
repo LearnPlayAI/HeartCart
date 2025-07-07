@@ -1,0 +1,76 @@
+2025-07-07 22:26:02.63
+a4436e08
+User
+{"timestamp":"2025-07-07T22:26:02.000Z","level":"ERROR","message":"Error in order creation process","context":{"error":"null value in column \"subtotalAmount\" of relation \"orders\" violates not-null constraint","stack":"error: null value in column \"subtotalAmount\" of relation \"orders\" violates not-null constraint\n at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74\n at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n at async NeonPreparedQuery.execute (file:///home/runner/workspace/node_modules/drizzle-orm/neon-serverless/session.js:76:20)\n at async DatabaseStorage.createOrder (file:///home/runner/workspace/dist/index.js:6190:30)\n at async file:///home/runner/workspace/dist/index.js:26312:22","userId":8}}
+2025-07-07 22:26:02.63
+a4436e08
+User
+YoCo webhook processing error: error: null value in column "subtotalAmount" of relation "orders" violates not-null constraint
+2025-07-07 22:26:02.63
+a4436e08
+User
+at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+2025-07-07 22:26:02.63
+a4436e08
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-07-07 22:26:02.63
+a4436e08
+User
+at async NeonPreparedQuery.execute (file:///home/runner/workspace/node_modules/drizzle-orm/neon-serverless/session.js:76:20)
+2025-07-07 22:26:02.63
+a4436e08
+User
+at async DatabaseStorage.createOrder (file:///home/runner/workspace/dist/index.js:6190:30)
+2025-07-07 22:26:02.63
+a4436e08
+User
+at async file:///home/runner/workspace/dist/index.js:26312:22 {
+2025-07-07 22:26:02.63
+a4436e08
+User
+length: 696,
+2025-07-07 22:26:02.63
+a4436e08
+User
+severity: 'ERROR',
+2025-07-07 22:26:02.63
+a4436e08
+User
+code: '23502',
+2025-07-07 22:26:02.63
+a4436e08
+User
+detail: 'Failing row contains (39, 8, TMY-TEMP-1751919962596, confirmed, Jan Coetzee, admin@teemeyou.shop, +27712063084, 12 Ebbehout Street, Randburg, 2022, pudo, 85, card, payment_received, null, null, null, null, null, 2025-07-07T20:26:02.596Z, 2025-07-07T20:26:02.596Z, null, null, null, 2025-07-07T20:26:02.594Z, 0.00, null, 146, null, null, null, {"code": "CG76", "name": "Banbury Cross Village", "address": "Hu..., null, null, 0, 0, 4567890123, ch_aEqGRkl0wY2ilYnTWyh1a2xD, p_ZgnM2enQwRyCp1SVq2hD6bEn, 10.63, 2.95).',
+2025-07-07 22:26:02.63
+a4436e08
+User
+hint: undefined,
+2025-07-07 22:26:02.63
+a4436e08
+User
+position: undefined,
+2025-07-07 22:26:02.63
+a4436e08
+User
+internalPosition: undefined,
+2025-07-07 22:26:02.63
+a4436e08
+User
+internalQuery: undefined,
+2025-07-07 22:26:02.63
+a4436e08
+User
+table: 'orders',
+2025-07-07 22:26:02.63
+a4436e08
+User
+column: 'subtotalAmount',
+2025-07-07 22:26:02.63
+a4436e08
+User
+routine: 'ExecConstraints'
+2025-07-07 22:26:02.63
+a4436e08
+User
+}

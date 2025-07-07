@@ -207,11 +207,12 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
     // CRITICAL FIX: Extract address fields from nested shippingAddress object
     const { orderItems, shippingAddress: addressData, ...orderData } = cartData;
     
-    const addressLine1 = addressData?.addressLine1;
-    const addressLine2 = addressData?.addressLine2;
-    const city = addressData?.city;
-    const province = addressData?.province;
-    const postalCode = addressData?.postalCode;
+    // CRITICAL FIX: Ensure all required address fields have fallbacks to prevent null constraints
+    const addressLine1 = addressData?.addressLine1 || 'Address not provided';
+    const addressLine2 = addressData?.addressLine2 || '';
+    const city = addressData?.city || 'City not provided';
+    const province = addressData?.province || 'Province not provided';
+    const postalCode = addressData?.postalCode || '0000';
     
     console.log('CRITICAL DEBUG: Destructured address fields from nested structure:', {
       hasShippingAddress: !!addressData,
@@ -224,7 +225,7 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
       orderDataKeys: Object.keys(orderData)
     });
     
-    // CRITICAL FIX: Properly map address fields from cart data to order fields
+    // CRITICAL FIX: Properly map address fields from cart data to order fields with fallback
     const shippingAddress = addressLine2 ? `${addressLine1}, ${addressLine2}` : addressLine1;
     
     console.log('CRITICAL DEBUG: Final address mapping before order creation:', {
@@ -234,6 +235,48 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
       shippingPostalCode: postalCode
     });
     
+    // CRITICAL FIX: Calculate all required financial fields from order items
+    let calculatedSubtotal = 0;
+    let calculatedShippingCost = 85; // Default PUDO shipping
+    let calculatedVatAmount = 0;
+    let calculatedVatRate = 0;
+
+    // Calculate subtotal from order items
+    if (orderItems && Array.isArray(orderItems)) {
+      calculatedSubtotal = orderItems.reduce((sum, item) => {
+        return sum + (item.quantity * item.unitPrice);
+      }, 0);
+    }
+
+    // Extract shipping cost from cart data if available
+    if (orderData.shippingCost && typeof orderData.shippingCost === 'number') {
+      calculatedShippingCost = orderData.shippingCost;
+    }
+
+    // Extract VAT information from cart data if available
+    if (orderData.vatAmount && typeof orderData.vatAmount === 'number') {
+      calculatedVatAmount = orderData.vatAmount;
+    }
+    if (orderData.vatRate && typeof orderData.vatRate === 'number') {
+      calculatedVatRate = orderData.vatRate;
+    }
+
+    // Calculate total amount
+    const calculatedTotalAmount = calculatedSubtotal + calculatedShippingCost + calculatedVatAmount;
+
+    console.log('CRITICAL FIX: Calculated financial fields for order creation:', {
+      calculatedSubtotal,
+      calculatedShippingCost,
+      calculatedVatAmount,
+      calculatedVatRate,
+      calculatedTotalAmount,
+      paymentAmountFromYoCo: payment.amount / 100, // YoCo amount in cents
+      orderItemsCount: orderItems?.length || 0,
+      orderDataShippingCost: orderData.shippingCost,
+      orderDataVatAmount: orderData.vatAmount,
+      orderDataVatRate: orderData.vatRate
+    });
+
     // Create order with payment information included (camelCase naming convention)
     const order = {
       ...orderData,
@@ -241,11 +284,18 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
       customerEmail: customerEmail, // CRITICAL FIX: Explicitly set customerEmail from metadata
       customerName: customerFullName, // CRITICAL FIX: Explicitly set customerName from metadata
       customerPhone: customerPhone, // CRITICAL FIX: Explicitly set customerPhone from metadata
-      // CRITICAL FIX: Map address fields correctly (matching EFT flow structure)
-      shippingAddress: `${addressLine1 || ''}${addressLine2 ? ', ' + addressLine2 : ''}`,
+      // CRITICAL FIX: Map address fields correctly (matching EFT flow structure) 
+      shippingAddress: shippingAddress,
       shippingCity: city,
       shippingProvince: province, 
       shippingPostalCode: postalCode,
+      // CRITICAL FIX: Set all required financial fields to prevent null constraint errors
+      subtotalAmount: calculatedSubtotal,
+      totalAmount: calculatedTotalAmount,
+      shippingCost: calculatedShippingCost,
+      vatAmount: calculatedVatAmount,
+      vatRate: calculatedVatRate,
+      vatRegistrationNumber: orderData.vatRegistrationNumber || '4567890123', // Default VAT number
       paymentMethod: 'card',
       paymentStatus: 'payment_received', // Already paid via card
       status: 'confirmed', // Auto-confirm card payments

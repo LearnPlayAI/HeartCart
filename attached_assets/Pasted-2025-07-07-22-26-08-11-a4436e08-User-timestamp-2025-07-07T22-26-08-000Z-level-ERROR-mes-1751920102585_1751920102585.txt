@@ -1,0 +1,124 @@
+2025-07-07 22:26:08.11
+a4436e08
+User
+{"timestamp":"2025-07-07T22:26:08.000Z","level":"ERROR","message":"Error in order creation process","context":{"error":"null value in column \"subtotalAmount\" of relation \"orders\" violates not-null constraint","stack":"error: null value in column \"subtotalAmount\" of relation \"orders\" violates not-null constraint\n at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74\n at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n at async NeonPreparedQuery.execute (file:///home/runner/workspace/node_modules/drizzle-orm/neon-serverless/session.js:76:20)\n at async DatabaseStorage.createOrder (file:///home/runner/workspace/dist/index.js:6190:30)\n at async file:///home/runner/workspace/dist/index.js:26312:22","userId":8}}
+2025-07-07 22:26:08.11
+a4436e08
+User
+YoCo webhook processing error: error: null value in column "subtotalAmount" of relation "orders" violates not-null constraint
+2025-07-07 22:26:08.11
+a4436e08
+User
+at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+2025-07-07 22:26:08.11
+a4436e08
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-07-07 22:26:08.11
+a4436e08
+User
+at async NeonPreparedQuery.execute (file:///home/runner/workspace/node_modules/drizzle-orm/neon-serverless/session.js:76:20)
+2025-07-07 22:26:08.11
+a4436e08
+User
+at async DatabaseStorage.createOrder (file:///home/runner/workspace/dist/index.js:6190:30)
+2025-07-07 22:26:08.11
+a4436e08
+User
+at async file:///home/runner/workspace/dist/index.js:26312:22 {
+2025-07-07 22:26:08.11
+a4436e08
+User
+length: 696,
+2025-07-07 22:26:08.11
+a4436e08
+User
+severity: 'ERROR',
+2025-07-07 22:26:08.11
+a4436e08
+User
+code: '23502',
+2025-07-07 22:26:08.11
+a4436e08
+User
+detail: 'Failing row contains (40, 8, TMY-TEMP-1751919968077, confirmed, Jan Coetzee, admin@teemeyou.shop, +27712063084, 12 Ebbehout Street, Randburg, 2022, pudo, 85, card, payment_received, null, null, null, null, null, 2025-07-07T20:26:08.077Z, 2025-07-07T20:26:08.077Z, null, null, null, 2025-07-07T20:26:08.077Z, 0.00, null, 146, null, null, null, {"code": "CG76", "name": "Banbury Cross Village", "address": "Hu..., null, null, 0, 0, 4567890123, ch_aEqGRkl0wY2ilYnTWyh1a2xD, p_ZgnM2enQwRyCp1SVq2hD6bEn, 10.63, 2.95).',
+2025-07-07 22:26:08.11
+a4436e08
+User
+hint: undefined,
+2025-07-07 22:26:08.11
+a4436e08
+User
+position: undefined,
+2025-07-07 22:26:08.11
+a4436e08
+User
+internalQuery: undefined,
+2025-07-07 22:26:08.11
+a4436e08
+User
+where: undefined,
+2025-07-07 22:26:08.11
+a4436e08
+User
+schema: 'public',
+2025-07-07 22:26:08.11
+a4436e08
+User
+table: 'orders',
+2025-07-07 22:26:08.11
+a4436e08
+User
+column: 'subtotalAmount',
+2025-07-07 22:26:08.11
+a4436e08
+User
+dataType: undefined,
+2025-07-07 22:26:08.11
+a4436e08
+User
+constraint: undefined,
+2025-07-07 22:26:08.11
+a4436e08
+User
+file: 'execMain.c',
+2025-07-07 22:26:08.11
+a4436e08
+User
+line: '2006',
+2025-07-07 22:26:08.11
+a4436e08
+User
+}
+2025-07-07 22:26:08.12
+a4436e08
+User
+{"timestamp":"2025-07-07T22:26:08.000Z","level":"ERROR","message":"API Error: POST /api/webhooks/yoco 500 in 241ms","context":{"method":"POST","path":"/api/webhooks/yoco","statusCode":500,"duration":"241ms","requestId":"039cc578-f49a-4efa-a0cb-663796044b2c"}}
+2025-07-07 22:26:08.12
+a4436e08
+User
+8:26:08 PM [express] POST /api/webhooks/yoco 500 in 241ms :: {"success":false,"data":{"error":"Inter…
+2025-07-07 22:26:08.76
+a4436e08
+User
+8:26:08 PM [express] GET /api/categories 304 in 317ms :: {"success":true,"data":[{"id":223,"name":"3…
+2025-07-07 22:26:08.99
+a4436e08
+User
+{"timestamp":"2025-07-07T22:26:08.000Z","level":"INFO","message":"Calculated user credit balance from transactions","context":{"userId":8,"totalEarned":0,"totalUsed":0,"totalCreditAmount":0,"availableCreditAmount":0,"transactionCount":0}}
+2025-07-07 22:26:10.38
+a4436e08
+User
+{"timestamp":"2025-07-07T22:26:10.000Z","level":"INFO","message":"Cart totals calculated server-side","context":{"userId":8,"totals":{"subtotal":207.5,"shippingCost":85,"vatRate":0,"vatAmount":0,"totalAmount":292.5,"itemCount":4,"totalItemQuantity":4,"vatBreakdown":{"vatableAmount":292.5,"vatRegistered":false,"vatRegistrationNumber":"4567890123","vatActive":false,"configuredVATRate":0}},"cartItemCount":4,"vatSettings":{"vatRateValue":0,"vatRegistered":false,"vatRateActive":true,"vatRegisteredActive":true,"shouldApplyVAT":false,"effectiveVATRate":0}}}
+2025-07-07 22:26:10.42
+a4436e08
+User
+8:26:10 PM [express] GET /api/cart/totals 304 in 722ms :: {"success":true,"data":{"subtotal":207.5,"…
+2025-07-07 22:26:13.63
+a4436e08
+User
+8:26:13 PM [express] GET /api/user 200 in 3ms :: {"success":true,"data":null}
+2025-07-07 22:26:13.63
+a4436e08
+User
+8:26:13 PM [express] GET /api/recommendations 200 in 16ms

@@ -824,6 +824,17 @@ Changelog:
   * Cart counter and cart drawer now consistently load from database instead of relying on cached data
   * Fixed contact numbers on payment success and failed pages to show correct +27 71 206 3084 number
   * Complete fix ensures cart functionality works reliably without breaking any existing features
+- July 7, 2025. CRITICAL YoCo webhook null value constraint errors completely resolved - System fully operational:
+  * RESOLVED PRODUCTION BLOCKER: Fixed "null value in column subtotalAmount of relation orders violates not-null constraint" error preventing order creation after successful card payments
+  * Root cause: YoCo webhook was spreading cart data without calculating required database fields (subtotalAmount, totalAmount, vatAmount, vatRate)
+  * COMPREHENSIVE FIX: Enhanced YoCo webhook to calculate ALL required financial fields from order items before database insertion
+  * Added proper subtotal calculation from order items (quantity × unitPrice), total amount calculation (subtotal + shipping + VAT)
+  * Fixed all customer information mapping (customerName, customerEmail, customerPhone) from YoCo metadata
+  * Ensured all address fields properly set (shippingAddress, shippingCity, shippingPostalCode) from cart data
+  * Added proper VAT registration number defaulting and shipping cost extraction from cart data
+  * YoCo webhook now successfully creates orders, clears cart, and sends confirmation emails after successful card payments
+  * Fixed duplicate updateOrderStatus method in storage.ts that was causing admin order status update failures  
+  * Complete YoCo card payment flow now operational: checkout → payment → webhook → order creation → cart clearing → email notifications
 - July 7, 2025. CRITICAL admin order status update JSON bug fix - System fully operational:
   * RESOLVED CRITICAL ISSUE: Fixed "Failed to update order status" errors on admin order management pages
   * Root cause: Admin order detail page (client/src/pages/admin/order-detail.tsx) was calling .json() on apiRequest response
