@@ -7518,14 +7518,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const orderNumber = req.params.orderNumber;
         const userId = req.user!.id;
 
-        // Get order by order number and verify ownership
-        const order = await storage.getOrderByNumber(orderNumber);
+        // Extract order ID from order number format (TMY-{id}-{date})
+        const orderIdMatch = orderNumber.match(/^TMY-(\d+)-/);
+        if (!orderIdMatch) {
+          return sendError(res, "Invalid order number format", 400);
+        }
+
+        const orderId = parseInt(orderIdMatch[1], 10);
+        
+        // Get order by ID with items (same method as admin endpoint)
+        const order = await storage.getOrderById(orderId, userId);
         
         if (!order) {
           return sendError(res, "Order not found", 404);
         }
 
-        // Verify the order belongs to the current user
+        // Verify the order belongs to the current user (double check)
         if (order.userId !== userId) {
           return sendError(res, "Access denied", 403);
         }
