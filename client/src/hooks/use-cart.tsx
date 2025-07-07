@@ -120,7 +120,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     onSuccess: (data, variables) => {
       // Only invalidate queries if not redirected for auth
       if (!data?.redirected) {
+        // Invalidate both cart items and cart totals to trigger VAT recalculation
         queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/cart/totals'] });
         
         // Auto-open cart and highlight the newly added item
         setIsOpen(true);
@@ -165,7 +167,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
     },
     onSuccess: () => {
+      // Invalidate both cart items and cart totals to trigger VAT recalculation
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/cart/totals'] });
     },
     onError: (error) => {
       toast({
@@ -197,7 +201,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
     },
     onSuccess: () => {
+      // Invalidate both cart items and cart totals to trigger VAT recalculation
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/cart/totals'] });
     },
     onError: (error) => {
       toast({
@@ -229,8 +235,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
     },
     onSuccess: () => {
+      // Invalidate both cart items and cart totals to trigger VAT recalculation
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
-      
+      queryClient.invalidateQueries({ queryKey: ['/api/cart/totals'] });
     },
     onError: (error) => {
       toast({
@@ -265,7 +272,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
     },
     onSuccess: () => {
+      // Invalidate both cart items and cart totals to trigger VAT recalculation
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/cart/totals'] });
     },
     onError: (error) => {
       toast({
