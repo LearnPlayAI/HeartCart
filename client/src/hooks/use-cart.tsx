@@ -75,7 +75,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     queryKey: ['/api/cart/totals'],
     staleTime: 0, // Always fetch fresh data
     gcTime: 0,    // Don't cache
+    retry: (failureCount, error) => {
+      console.log('🔍 CART TOTALS QUERY ERROR:', error);
+      return failureCount < 3;
+    }
   });
+  
+  // DEBUG: Log the server cart totals response
+  console.log('🔍 CLIENT CART TOTALS:', { serverCartTotals, totalsLoading });
 
   const cartSummary = useMemo<CartSummary>(() => {
     if (serverCartTotals?.data) {

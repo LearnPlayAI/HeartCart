@@ -3946,7 +3946,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     "/api/cart/totals",
     asyncHandler(async (req: Request, res: Response) => {
       try {
+        console.log('🔍 CART TOTALS DEBUG - Request received');
+        console.log('🔍 CART TOTALS DEBUG - Is authenticated:', req.isAuthenticated());
+        console.log('🔍 CART TOTALS DEBUG - User object:', req.user);
+        
         if (!req.isAuthenticated()) {
+          console.log('🔍 CART TOTALS DEBUG - User not authenticated, returning empty cart');
           // For non-authenticated users, return empty totals
           return res.json({
             success: true,
@@ -3993,6 +3998,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }))
         });
         
+        // CRITICAL DEBUG: Add console.log for immediate visibility
+        console.log('🔍 CART TOTALS DEBUG - User ID:', user.id);
+        console.log('🔍 CART TOTALS DEBUG - Cart items found:', cartItemsResult.length);
+        console.log('🔍 CART TOTALS DEBUG - Items:', cartItemsResult.map(item => ({
+          id: item.id,
+          productId: item.productId,
+          quantity: item.quantity,
+          itemPrice: item.itemPrice
+        })));
+        console.log('🔍 CART TOTALS DEBUG - Authentication check passed');
+        
         // Get VAT settings from systemSettings
         const vatRateSettings = await storage.getSystemSetting('vatRate');
         const vatRegisteredSettings = await storage.getSystemSetting('vatRegistered');
@@ -4006,23 +4022,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const vatRegisteredActive = vatRegisteredSettings?.isActive === true;
         
         // Calculate subtotal using stored cart item prices directly from database
+        console.log('🔍 CART TOTALS DEBUG - Starting subtotal calculation');
+        console.log('🔍 CART TOTALS DEBUG - VAT settings:', { vatRateValue, vatRegistered, vatRateActive, vatRegisteredActive });
+        
         const subtotal = cartItemsResult.reduce((sum: number, item: any) => {
-          const currentPrice = parseFloat(item.itemPrice || '0');
-          const quantity = item.quantity || 0;
-          const itemTotal = currentPrice * quantity;
-          
-          // DEBUG: Log each item calculation
-          logger.info('Cart subtotal calculation - item', {
-            itemId: item.id,
-            productId: item.productId,
-            itemPrice: item.itemPrice,
-            parsedPrice: currentPrice,
-            quantity,
-            itemTotal,
-            runningSum: sum + itemTotal
-          });
-          
-          return sum + itemTotal;
+          try {
+            const currentPrice = parseFloat(item.itemPrice || '0');
+            const quantity = item.quantity || 0;
+            const itemTotal = currentPrice * quantity;
+            
+            // DEBUG: Log each item calculation
+            console.log('🔍 CART TOTALS DEBUG - Item calculation:', {
+              itemId: item.id,
+              productId: item.productId,
+              itemPrice: item.itemPrice,
+              parsedPrice: currentPrice,
+              quantity,
+              itemTotal,
+              runningSum: sum + itemTotal
+            });
+            
+            logger.info('Cart subtotal calculation - item', {
+              itemId: item.id,
+              productId: item.productId,
+              itemPrice: item.itemPrice,
+              parsedPrice: currentPrice,
+              quantity,
+              itemTotal,
+              runningSum: sum + itemTotal
+            });
+            
+            return sum + itemTotal;
+          } catch (error) {
+            console.error('🔍 CART TOTALS DEBUG - Error calculating item:', item, error);
+            throw error;
+          }
         }, 0);
         
         // DEBUG: Log final subtotal calculation
@@ -4079,6 +4113,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         
       } catch (error) {
+        console.error('🔍 CART TOTALS DEBUG - CATCH ERROR:', error);
+        console.error('🔍 CART TOTALS DEBUG - Error stack:', error.stack);
+        
         logger.error('Error calculating cart totals', { 
           error, 
           userId: req.user ? (req.user as any).id : 'unauthenticated' 
