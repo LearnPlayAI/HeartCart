@@ -484,7 +484,7 @@ export default function CheckoutPage() {
         total: finalTotal,
         // VAT information for server-side processing
         vatAmount: vatCalculation.vatAmount,
-        vatRate: vatRate,
+        vatRate: effectiveVATRate,
         vatRegistrationNumber: vatRegistrationNumber,
         creditUsed: autoCreditAmount,
         selectedLockerId: selectedLocker?.id,

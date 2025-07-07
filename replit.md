@@ -836,6 +836,15 @@ Changelog:
   * Admin changes in /admin/settings ProductSharingCard now immediately affect all product sharing across the platform
   * Complete integration: admin settings changes → ShareProductDialog updates → social media sharing with dynamic content
   * Production-ready with 5-minute cache duration and comprehensive error handling for seamless user experience
+- July 7, 2025. CRITICAL VAT checkout page bug fix - System fully operational:
+  * RESOLVED CRITICAL ISSUE: Fixed "vatRate is not defined" runtime error preventing order placement on checkout page
+  * Root cause: Checkout page was using undefined vatRate variable instead of effectiveVATRate in order submission data
+  * Fixed VAT calculation logic to properly check isActive status from systemSettings before applying VAT
+  * VAT now only applies when settings are ACTIVE AND company is VAT registered, otherwise uses 0% rate
+  * Updated all variable references from vatRate/vatRegistered to vatRateValue/vatRegisteredValue for clarity
+  * Checkout page VAT display now matches server-side cart totals endpoint logic exactly
+  * Complete end-to-end VAT system operational: shows VAT (0%): R0.00 when inactive, VAT (15%): amount when active and registered
+  * Order placement system fully functional with proper VAT calculation and no runtime errors
 - July 7, 2025. CRITICAL JSON error prevention system implemented across all systemSettings components:
   * RESOLVED CRITICAL ISSUE: Fixed "Unexpected token '<!DOCTYPE html>' is not valid JSON" errors in VATSettingsCard and all systemSettings components
   * Root cause: Server returning HTML error pages instead of JSON when authentication or server errors occur
