@@ -694,10 +694,35 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
       try {
         const orderWithDetails = await storage.getOrderById(newOrder.id);
         if (orderWithDetails) {
-          // Send both order confirmation and payment confirmation emails
+          // Send order confirmation email
           await unifiedEmailService.sendOrderConfirmationEmail(orderWithDetails);
-          await unifiedEmailService.sendPaymentConfirmationEmail(orderWithDetails);
-          console.log('Order confirmation and payment confirmation emails sent for order:', newOrder.orderNumber);
+          
+          // Create properly structured payment confirmation email data with invoice attachment
+          const paymentConfirmationData = {
+            email: orderWithDetails.customerEmail,
+            customerName: orderWithDetails.customerName,
+            orderNumber: orderWithDetails.orderNumber,
+            orderId: orderWithDetails.id,
+            amount: orderWithDetails.totalAmount,
+            currency: 'R',
+            paymentMethod: 'Card Payment',
+            subtotalAmount: orderWithDetails.subtotalAmount,
+            shippingCost: orderWithDetails.shippingCost,
+            vatAmount: orderWithDetails.vatAmount || 0,
+            vatRate: orderWithDetails.vatRate || 0,
+            vatRegistered: orderWithDetails.vatRegistered || false,
+            vatRegistrationNumber: orderWithDetails.vatRegistrationNumber || '',
+            invoicePath: invoicePath // Include the generated invoice path for attachment
+          };
+          
+          // Send payment confirmation email with invoice attachment
+          await unifiedEmailService.sendPaymentConfirmationEmail(paymentConfirmationData);
+          
+          console.log('Order confirmation and payment confirmation emails sent for order:', {
+            orderNumber: newOrder.orderNumber,
+            hasInvoiceAttachment: !!invoicePath,
+            invoicePath: invoicePath
+          });
         }
       } catch (emailError) {
         console.error('Failed to send confirmation emails:', emailError);

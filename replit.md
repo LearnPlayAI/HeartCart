@@ -833,6 +833,12 @@ Changelog:
   * Removed 4 order items, 7 order status history records, and 3 email logs from test orders
   * Database confirmed clean with 0 remaining orders for admin@teemeyou.shop
   * System ready for live deployment testing with clean order data
+- July 8, 2025. YoCo card payment notification email system with invoice attachments completed:
+  * Fixed YoCo webhook to send payment confirmation emails with proper data structure including invoice path
+  * Card payments now automatically generate PDF invoices and send payment confirmation emails with invoice attachments
+  * System matches EFT functionality: successful card payment → PDF invoice generation → payment confirmation email with invoice attached
+  * Enhanced email data structure includes all payment details, VAT information, and generated invoice path for attachment
+  * Complete card payment flow now operational: checkout → YoCo payment → order creation → invoice generation → confirmation emails with attachments
 - July 7, 2025. CRITICAL YoCo webhook signature verification deployment fix - Production ready:
   * RESOLVED CRITICAL ISSUE: Fixed crypto module import error preventing webhook signature verification in deployed environment
   * Root cause: Dynamic require('crypto') not supported in production, replaced with proper ES6 import statement
