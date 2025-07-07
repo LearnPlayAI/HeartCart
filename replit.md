@@ -859,6 +859,12 @@ Changelog:
   * Production-ready VAT infrastructure supports easy switching between 0% (not registered) and 15% (VAT registered) modes
   * All VAT calculations performed server-side ensuring consistency across platform and preventing client-side manipulation
   * VAT system integrated with existing systemSettings architecture using camelCase naming convention throughout
+  * COMPLETED: Enhanced invoice generator to display VAT breakdown in PDF invoices with VAT rate, amount, and registration number
+  * COMPLETED: Updated email notification templates (payment confirmation and order confirmation) to include comprehensive VAT breakdown
+  * Email templates now show: subtotal, shipping, VAT (rate%), VAT registration number, and total amount with proper formatting
+  * Non-VAT registered businesses display "VAT (0%): Not VAT registered" message in both invoices and emails
+  * VAT information seamlessly integrated into existing TeeMeYou hot pink email branding without disrupting design consistency
+  * Complete end-to-end VAT transparency: cart → checkout → order → invoice → email notifications all display consistent VAT information
 ```
 
 ## User Preferences

@@ -27,6 +27,12 @@ export interface PaymentConfirmationEmailData {
   currency: string;
   paymentMethod: string;
   invoicePath?: string; // Optional path to PDF invoice in object storage
+  subtotalAmount?: number;
+  shippingCost?: number;
+  vatAmount?: number;
+  vatRate?: number;
+  vatRegistered?: boolean;
+  vatRegistrationNumber?: string;
 }
 
 export interface OrderStatusEmailData {
@@ -74,6 +80,10 @@ export interface OrderConfirmationEmailData {
   shippingAddress?: string;
   shippingCity?: string;
   shippingPostalCode?: string;
+  vatAmount?: number;
+  vatRate?: number;
+  vatRegistered?: boolean;
+  vatRegistrationNumber?: string;
 }
 
 /**
@@ -595,10 +605,44 @@ export class DatabaseEmailService {
                     <td style="padding: 12px 0; font-weight: bold; color: #E91E63;">Order Number:</td>
                     <td style="padding: 12px 0; color: #4A5568;">${data.orderNumber}</td>
                   </tr>
+                  ${data.subtotalAmount !== undefined ? `
+                  <tr>
+                    <td style="padding: 8px 0; color: #E91E63;">Subtotal:</td>
+                    <td style="padding: 8px 0; color: #4A5568;">${data.currency} ${data.subtotalAmount.toFixed(2)}</td>
+                  </tr>
+                  ${data.shippingCost !== undefined ? `
+                  <tr>
+                    <td style="padding: 8px 0; color: #E91E63;">Shipping:</td>
+                    <td style="padding: 8px 0; color: #4A5568;">${data.currency} ${data.shippingCost.toFixed(2)}</td>
+                  </tr>
+                  ` : ''}
+                  ${data.vatAmount !== undefined && data.vatAmount > 0 ? `
+                  <tr>
+                    <td style="padding: 8px 0; color: #E91E63;">VAT (${data.vatRate}%):</td>
+                    <td style="padding: 8px 0; color: #4A5568;">${data.currency} ${data.vatAmount.toFixed(2)}</td>
+                  </tr>
+                  ${data.vatRegistrationNumber ? `
+                  <tr>
+                    <td style="padding: 4px 0; font-size: 12px; color: #6B7280;">VAT Registration:</td>
+                    <td style="padding: 4px 0; font-size: 12px; color: #6B7280;">${data.vatRegistrationNumber}</td>
+                  </tr>
+                  ` : ''}
+                  ` : data.vatRegistered === false ? `
+                  <tr>
+                    <td style="padding: 8px 0; color: #E91E63;">VAT (0%):</td>
+                    <td style="padding: 8px 0; color: #6B7280; font-size: 14px;">Not VAT registered</td>
+                  </tr>
+                  ` : ''}
+                  <tr style="border-top: 2px solid #FF69B4;">
+                    <td style="padding: 12px 0; font-weight: bold; color: #E91E63; font-size: 16px;">Total Amount:</td>
+                    <td style="padding: 12px 0; color: #10B981; font-weight: bold; font-size: 18px;">${data.currency} ${data.amount.toFixed(2)}</td>
+                  </tr>
+                  ` : `
                   <tr>
                     <td style="padding: 12px 0; font-weight: bold; color: #E91E63;">Amount:</td>
                     <td style="padding: 12px 0; color: #10B981; font-weight: bold; font-size: 18px;">${data.currency} ${data.amount.toFixed(2)}</td>
                   </tr>
+                  `}
                   <tr>
                     <td style="padding: 12px 0; font-weight: bold; color: #E91E63;">Payment Method:</td>
                     <td style="padding: 12px 0; color: #4A5568;">${data.paymentMethod}</td>
@@ -1041,6 +1085,23 @@ export class DatabaseEmailService {
                       <td colspan="3" style="padding: 12px; text-align: right; font-weight: bold; color: #E91E63;">Shipping:</td>
                       <td style="padding: 12px; text-align: right; font-weight: bold; color: #4A5568;">R ${data.shippingCost.toFixed(2)}</td>
                     </tr>
+                    ${data.vatAmount !== undefined && data.vatAmount > 0 ? `
+                    <tr>
+                      <td colspan="3" style="padding: 12px; text-align: right; font-weight: bold; color: #E91E63;">VAT (${data.vatRate}%):</td>
+                      <td style="padding: 12px; text-align: right; font-weight: bold; color: #4A5568;">R ${data.vatAmount.toFixed(2)}</td>
+                    </tr>
+                    ${data.vatRegistrationNumber ? `
+                    <tr>
+                      <td colspan="3" style="padding: 8px 12px; text-align: right; font-size: 12px; color: #6B7280;">VAT Registration:</td>
+                      <td style="padding: 8px 12px; text-align: right; font-size: 12px; color: #6B7280;">${data.vatRegistrationNumber}</td>
+                    </tr>
+                    ` : ''}
+                    ` : data.vatRegistered === false ? `
+                    <tr>
+                      <td colspan="3" style="padding: 12px; text-align: right; font-weight: bold; color: #E91E63;">VAT (0%):</td>
+                      <td style="padding: 12px; text-align: right; color: #6B7280; font-size: 14px;">Not VAT registered</td>
+                    </tr>
+                    ` : ''}
                     <tr style="background: linear-gradient(135deg, #FFF0F6 0%, #FFE4E1 100%);">
                       <td colspan="3" style="padding: 15px 12px; text-align: right; font-weight: bold; font-size: 18px; color: #E91E63;">Total:</td>
                       <td style="padding: 15px 12px; text-align: right; font-weight: bold; font-size: 18px; color: #10B981;">R ${data.totalAmount.toFixed(2)}</td>
