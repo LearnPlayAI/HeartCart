@@ -882,6 +882,13 @@ Changelog:
   * Root cause: Recent invoice download system changes introduced mismatched imports - objectStore undefined, only objectStoreAdapter imported
   * Fixed 10+ references throughout server/routes.ts: changed objectStore.getFileAsBuffer(), objectStore.exists(), objectStore.uploadFromBuffer(), objectStore.getPublicUrl() to objectStoreAdapter equivalents
   * All product images now display correctly, file serving system fully operational
+- July 7, 2025. Complete NODE_ENV elimination from YoCo payment system:
+  * REMOVED ALL NODE_ENV REFERENCES: YoCo system now 100% controlled by admin settings only
+  * Cleaned up server/index.ts environment configuration logging that referenced NODE_ENV for YoCo keys
+  * Cleaned up server/payment-routes.ts debugging logs that included NODE_ENV references
+  * YoCo environment selection is now exclusively managed via /admin/settings toggle
+  * Replit deployment "Production" badge has NO IMPACT on YoCo key selection - only admin setting matters
+  * Complete architectural independence: NODE_ENV used only for Express/Vite behavior, never for YoCo keys
   * Complete system integrity restored: VAT calculations working + object storage serving files properly
 - July 7, 2025. Admin test order data cleanup completed:
   * Cleared all order-related data for admin@teemeyou.shop user (user ID 8) for clean testing environment

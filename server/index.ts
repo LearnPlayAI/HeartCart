@@ -9,15 +9,8 @@ import { handleProductSocialPreview, handleProductSocialImage } from "./social-p
 import { injectProductMetaTags } from "./product-meta-injection";
 import crypto from "crypto";
 
-// CRITICAL: Honor Replit NODE_ENV secret over npm script default
-// This ensures proper YoCo key selection based on your environment setting
-console.log('🔧 Environment Configuration Check:');
-console.log('- npm script NODE_ENV:', process.env.NODE_ENV);
-
-// The Replit secret takes precedence for key selection
-const effectiveNodeEnv = process.env.NODE_ENV || 'development';
-console.log('- Effective NODE_ENV for YoCo keys:', effectiveNodeEnv);
-console.log('- Will use:', effectiveNodeEnv === 'production' ? 'PROD YoCo keys' : 'TEST YoCo keys');
+// YoCo environment is now controlled via admin settings page
+// No longer dependent on NODE_ENV - see /admin/settings for YoCo environment toggle
 
 const app = express();
 app.use(express.json());
