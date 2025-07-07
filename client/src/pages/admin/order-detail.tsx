@@ -383,8 +383,7 @@ export default function AdminOrderDetail() {
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ orderId, status }: { orderId: number; status: string }) => {
-      const response = await apiRequest('PATCH', `/api/admin/orders/${orderId}/status`, { status });
-      return await response.json();
+      return await apiRequest('PATCH', `/api/admin/orders/${orderId}/status`, { status });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/orders', orderId] });

@@ -824,6 +824,14 @@ Changelog:
   * Cart counter and cart drawer now consistently load from database instead of relying on cached data
   * Fixed contact numbers on payment success and failed pages to show correct +27 71 206 3084 number
   * Complete fix ensures cart functionality works reliably without breaking any existing features
+- July 7, 2025. CRITICAL admin order status update JSON bug fix - System fully operational:
+  * RESOLVED CRITICAL ISSUE: Fixed "Failed to update order status" errors on admin order management pages
+  * Root cause: Admin order detail page (client/src/pages/admin/order-detail.tsx) was calling .json() on apiRequest response
+  * apiRequest already returns parsed JSON objects, so calling .json() caused mutation failures
+  * Fixed updateStatusMutation to return apiRequest response directly without additional .json() parsing
+  * Admin order status updates now work correctly on both /admin/orders and /admin/orders/{id} pages
+  * Part of systematic JSON response handling cleanup across admin interface components
+  * Admin interface fully functional for order status management with proper error handling
 - July 7, 2025. CRITICAL YoCo card payment order creation issue completely resolved - System fully operational:
   * RESOLVED CRITICAL ISSUE: Fixed "null value in column 'customerEmail'" error preventing card payment orders from being created
   * Root cause: Storage initialization timing and missing customer data validation in YoCo webhook processing
