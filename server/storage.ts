@@ -3571,20 +3571,9 @@ export class DatabaseStorage implements IStorage {
 
       for (const item of items) {
         try {
-          console.log('CRITICAL DEBUG: Attempting to insert order item:', {
-            orderId: orderToUse.id,
-            itemData: {
-              productId: item.productId,
-              productName: item.productName,
-              quantity: item.quantity,
-              unitPrice: item.unitPrice,
-              totalPrice: item.totalPrice,
-              selectedAttributes: item.selectedAttributes,
-              orderId: orderToUse.id,
-              createdAt: new Date().toISOString()
-            }
-          });
-
+          // Debug: Check productImageUrl before insertion
+          console.log(`📸 Item ${item.productId}: productImageUrl = "${item.productImageUrl}"`);
+          
           const [orderItem] = await db
             .insert(orderItems)
             .values({
@@ -3593,6 +3582,10 @@ export class DatabaseStorage implements IStorage {
               createdAt: new Date().toISOString(),
             })
             .returning();
+            
+          // Debug: Check what was actually saved
+          console.log(`💾 Saved ${orderItem.id}: productImageUrl = "${orderItem.productImageUrl}"`);
+          
 
           successfulItemInserts++;
 

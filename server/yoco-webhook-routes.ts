@@ -273,14 +273,14 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
           const product = await db
             .select({ 
               name: products.name,
-              image_url: products.image_url  // CRITICAL FIX: Also fetch product image URL
+              imageUrl: products.imageUrl  // Use imageUrl from schema (maps to image_url in database)
             })
             .from(products)
             .where(eq(products.id, item.productId))
             .limit(1);
 
           const productName = product[0]?.name || `Product ID ${item.productId}`;
-          const productImageUrl = product[0]?.image_url || null; // CRITICAL FIX: Use database image URL
+          const productImageUrl = product[0]?.imageUrl || null;
           
           // CRITICAL FIX: Ensure all required database fields are present
           const enrichedItem = {
@@ -295,15 +295,7 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
           
           orderItems.push(enrichedItem);
           
-          console.log('CRITICAL DEBUG: Enriched order item with productName AND image URL:', {
-            productId: item.productId,
-            productName: productName,
-            productImageUrl: productImageUrl,
-            databaseImageUrl: product[0]?.image_url,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            hasImageUrl: !!productImageUrl
-          });
+
         } catch (productFetchError) {
           console.error('Error fetching product name for order item:', {
             error: productFetchError,

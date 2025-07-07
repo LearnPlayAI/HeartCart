@@ -839,6 +839,17 @@ Changelog:
   * System matches EFT functionality: successful card payment → PDF invoice generation → payment confirmation email with invoice attached
   * Enhanced email data structure includes all payment details, VAT information, and generated invoice path for attachment
   * Complete card payment flow now operational: checkout → YoCo payment → order creation → invoice generation → confirmation emails with attachments
+- July 8, 2025. CRITICAL YoCo webhook database query fix for product images and names:
+  * Fixed Drizzle ORM error "Cannot convert undefined or null to object" caused by incorrect field name usage
+  * Updated YoCo webhook to use correct camelCase field names (imageUrl) instead of snake_case (image_url) matching database schema
+  * YoCo webhook now correctly fetches and saves product names and image URLs to orderItems table during order creation
+  * Product images will now display correctly in orders created through successful card payments
+  * Resolved TypeError preventing order item creation with proper product information from database
+- July 8, 2025. CRITICAL YoCo webhook productImageUrl database persistence issue identified:
+  * Confirmed products table contains valid image URLs but orderItems table shows empty productImageUrl values
+  * Issue identified in data flow between YoCo webhook product fetching and database insertion
+  * Added targeted debugging to trace exact point where productImageUrl is lost during order creation process
+  * Investigation ongoing to ensure product images are properly saved to orderItems table during card payments
 - July 7, 2025. CRITICAL YoCo webhook signature verification deployment fix - Production ready:
   * RESOLVED CRITICAL ISSUE: Fixed crypto module import error preventing webhook signature verification in deployed environment
   * Root cause: Dynamic require('crypto') not supported in production, replaced with proper ES6 import statement
