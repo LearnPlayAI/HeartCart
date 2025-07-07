@@ -160,7 +160,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get the PDF from object store
       logger.info(`PDF route: Retrieving PDF from object store`, { objectKey: order.eftPop });
-      const { data: fileData } = await objectStore.getFileAsBuffer(order.eftPop);
+      const { data: fileData } = await objectStoreAdapter.getFileAsBuffer(order.eftPop);
       logger.info(`PDF route: PDF retrieved successfully`, { size: fileData.length });
       
       // Set appropriate headers for PDF viewing
@@ -1751,7 +1751,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           
           // Upload to Object Storage with product ID in the path
-          const { url, objectKey } = await objectStore.uploadTempFile(
+          const { url, objectKey } = await objectStoreAdapter.uploadTempFile(
             optimizedBuffer,
             expectedFileName.replace(fileExt, '.webp'), // Use WebP extension
             productId, // Pass product ID to create correct folder structure
@@ -1763,7 +1763,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await new Promise(resolve => setTimeout(resolve, 300));
           
           // Verify the file exists in Object Storage before proceeding
-          const exists = await objectStore.exists(objectKey);
+          const exists = await objectStoreAdapter.exists(objectKey);
           if (!exists) {
             console.error(`File ${objectKey} was not found in Object Storage after upload`);
             throw new Error('File upload to Object Storage failed - verification failed');
@@ -1889,7 +1889,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Moving file from temporary storage: ${sourceKey} to product ${productId}`);
       
       // Verify that the source file exists first
-      const sourceExists = await objectStore.exists(sourceKey);
+      const sourceExists = await objectStoreAdapter.exists(sourceKey);
       if (!sourceExists) {
         return res.status(404).json({
           success: false,
@@ -1903,7 +1903,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Process the image before moving it (optimize and validate)
       try {
         // Get file buffer for processing
-        const { data: imageBuffer } = await objectStore.getFileAsBuffer(sourceKey);
+        const { data: imageBuffer } = await objectStoreAdapter.getFileAsBuffer(sourceKey);
         
         // Validate the image
         const validationResult = await imageService.validateImage(imageBuffer, path.basename(sourceKey));
@@ -1932,7 +1932,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const baseName = path.basename(sourceKey, ext);
             const newOptimizedKey = `${path.dirname(sourceKey)}/${baseName}.webp`;
             
-            await objectStore.uploadFromBuffer(newOptimizedKey, processedBuffer, { contentType: 'image/webp' });
+            await objectStoreAdapter.uploadFromBuffer(newOptimizedKey, processedBuffer, { contentType: 'image/webp' });
             
             console.log(`Created optimized version at ${newOptimizedKey}`);
             
@@ -1949,7 +1949,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Move file from temp to product folder
-      const result = await objectStore.moveFromTemp(optimizedKey, parseInt(productId));
+      const result = await objectStoreAdapter.moveFromTemp(optimizedKey, parseInt(productId));
       
       console.log(`Successfully moved file to ${result.objectKey}`);
       
@@ -2061,10 +2061,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const objectKey = `products/${productId}/${filename}`;
           
           // Upload to object storage
-          await objectStore.uploadFromBuffer(objectKey, buffer, { contentType });
+          await objectStoreAdapter.uploadFromBuffer(objectKey, buffer, { contentType });
           
           // Generate public URL
-          const publicUrl = objectStore.getPublicUrl(objectKey);
+          const publicUrl = objectStoreAdapter.getPublicUrl(objectKey);
           
           // Prepare the image data
           const imageData = {
@@ -2584,10 +2584,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const objectKey = `products/bg_removed/${filename}`;
         
         // Upload to object storage
-        await objectStore.uploadFromBuffer(objectKey, buffer, { contentType });
+        await objectStoreAdapter.uploadFromBuffer(objectKey, buffer, { contentType });
         
         // Generate public URL
-        const publicUrl = objectStore.getPublicUrl(objectKey);
+        const publicUrl = objectStoreAdapter.getPublicUrl(objectKey);
         
         // Check if the product image exists
         const imageExists = await storage.getProductImageById(productImageId);
@@ -6949,7 +6949,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // First check if the file exists
-      const fileExists = await objectStore.exists(objectKey);
+      const fileExists = await objectStoreAdapter.exists(objectKey);
       if (!fileExists) {
         throw new NotFoundError(`File not found: ${objectKey}`, "file");
       }
@@ -6968,7 +6968,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           
           // Get the file data and content type in one operation
-          const { data, contentType } = await objectStore.getFileAsBuffer(objectKey);
+          const { data, contentType } = await objectStoreAdapter.getFileAsBuffer(objectKey);
           
           // Validate the buffer has actual content
           if (!data || data.length === 0) {
