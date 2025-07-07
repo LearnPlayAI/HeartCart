@@ -109,16 +109,6 @@ export default function CheckoutPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedLocker, setSelectedLocker] = useState(null);
   const [savePreferredTrigger, setSavePreferredTrigger] = useState(false);
-  
-  // Debug logging for selectedLocker changes
-  useEffect(() => {
-    console.log("Checkout selectedLocker state changed:", {
-      selectedLocker: selectedLocker,
-      hasLocker: !!selectedLocker,
-      lockerId: selectedLocker?.id,
-      lockerName: selectedLocker?.name
-    });
-  }, [selectedLocker]);
 
   const { creditBalance, formattedBalance, balanceLoading, transactions } = useCredits();
 

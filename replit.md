@@ -763,6 +763,13 @@ Changelog:
   * ARCHITECTURAL COMPLIANCE: Confirmed orders only created AFTER successful payment, never before (critical YoCo requirement)
   * Complete system now 100% compliant with all YoCo developer documentation requirements for authentication, idempotency, checkout API, and webhook handling
   * Production-ready with comprehensive error handling, logging, and security measures for both test and live YoCo environments
+- July 7, 2025. CRITICAL PUDO locker auto-selection UX issue completely resolved:
+  * RESOLVED CRITICAL ISSUE: Fixed checkout button validation that prevented auto-selected preferred lockers from enabling payment progression
+  * Root cause: Button validation was too strict, requiring manual locker selection even when preferred locker was correctly auto-selected
+  * Updated button disabled condition to only require locker when shipping method is PUDO and no locker is selected
+  * Auto-selection system working correctly: preferred lockers auto-select immediately and enable checkout progression without manual intervention
+  * Complete UX flow now functional: preferred locker loads → auto-selects → enables checkout button → allows immediate YoCo payment processing
+  * System ready for deployment testing with both YoCo payment integration and seamless PUDO locker UX experience
 - July 4, 2025. Automatic shipping address data persistence in checkout system:
   * Modified checkout form to always save shipping address data when logged-in users place orders
   * Removed dependency on "Save details" checkbox for address information persistence
