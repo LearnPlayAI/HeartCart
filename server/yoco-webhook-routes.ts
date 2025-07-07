@@ -229,8 +229,22 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
     console.log('CRITICAL DEBUG: Raw order items before enrichment:', {
       rawOrderItems: rawOrderItems,
       itemCount: rawOrderItems?.length || 0,
-      sampleItem: rawOrderItems?.[0]
+      sampleItem: rawOrderItems?.[0],
+      isArray: Array.isArray(rawOrderItems),
+      typeOfRawOrderItems: typeof rawOrderItems
     });
+
+    // EMERGENCY DEBUG: If no order items found in any expected field, log all cart data fields
+    if (!rawOrderItems || !Array.isArray(rawOrderItems) || rawOrderItems.length === 0) {
+      console.error('CRITICAL ERROR: No order items found in cart data!', {
+        cartDataKeys: Object.keys(cartData),
+        cartDataValues: Object.entries(cartData).reduce((acc, [key, value]) => {
+          acc[key] = Array.isArray(value) ? `Array(${value.length})` : typeof value;
+          return acc;
+        }, {}),
+        fullCartDataSample: JSON.stringify(cartData, null, 2).substring(0, 2000) // Truncate for logs
+      });
+    }
 
     const orderItems = [];
     if (rawOrderItems && Array.isArray(rawOrderItems)) {
@@ -278,8 +292,25 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
     console.log('CRITICAL DEBUG: Final enriched order items:', {
       enrichedItemCount: orderItems.length,
       allItemsHaveProductName: orderItems.every(item => item.productName),
-      sampleEnrichedItem: orderItems[0]
+      sampleEnrichedItem: orderItems[0],
+      allItemDetails: orderItems.map(item => ({
+        productId: item.productId,
+        productName: item.productName,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        totalPrice: item.totalPrice
+      }))
     });
+
+    // EMERGENCY STOP: If no order items after enrichment, fail the webhook
+    if (!orderItems || orderItems.length === 0) {
+      console.error('CRITICAL FAILURE: No order items after enrichment process!');
+      return res.status(400).json({ 
+        error: 'No order items found in payment data',
+        checkoutId,
+        cartDataKeys: Object.keys(cartData)
+      });
+    }
     
     // CRITICAL FIX: Ensure all required address fields have fallbacks to prevent null constraints
     const addressLine1 = addressData?.addressLine1 || 'Address not provided';
@@ -399,14 +430,33 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
       status: order.status
     });
     
-    const newOrder = await storage.createOrder(order, orderItems);
-    
-    console.log('Order created successfully:', {
-      orderId: newOrder.id,
-      orderNumber: newOrder.orderNumber,
-      status: newOrder.status,
-      paymentStatus: newOrder.paymentStatus
-    });
+    try {
+      const newOrder = await storage.createOrder(order, orderItems);
+      
+      console.log('Order created successfully:', {
+        orderId: newOrder.id,
+        orderNumber: newOrder.orderNumber,
+        status: newOrder.status,
+        paymentStatus: newOrder.paymentStatus,
+        itemsPassedToCreate: orderItems.length,
+        orderCreationSuccess: true
+      });
+
+      // Verify order items were actually created in database
+      const verifyOrderItems = await storage.getOrderItems(newOrder.id);
+      console.log('Order items verification after creation:', {
+        orderId: newOrder.id,
+        orderNumber: newOrder.orderNumber,
+        orderItemsInDatabase: verifyOrderItems.length,
+        expectedOrderItems: orderItems.length,
+        orderItemsMatch: verifyOrderItems.length === orderItems.length,
+        orderItemsSample: verifyOrderItems.slice(0, 2).map(item => ({
+          id: item.id,
+          productId: item.productId,
+          productName: item.productName,
+          quantity: item.quantity
+        }))
+      });
 
     // Create order status history entry for the newly created order
     await storage.createOrderStatusHistory({
