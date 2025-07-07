@@ -48,7 +48,4 @@ export interface CartSummary {
   subtotal: number;
   totalDiscount: number;
   finalTotal: number;
-  shippingCost?: number;
-  vatAmount?: number;
-  vatRate?: number;
 }
