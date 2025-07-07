@@ -45,7 +45,7 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
     }
 
     // Verify webhook signature
-    if (!yocoService.verifyWebhookSignature(rawBody, signature, webhookId, timestamp)) {
+    if (!(await yocoService.verifyWebhookSignature(rawBody, signature, webhookId, timestamp))) {
       console.error('YoCo webhook signature verification failed');
       return res.status(403).json({ error: 'Invalid signature' });
     }

@@ -1119,29 +1119,44 @@ router.put("/settings/:key", isAuthenticated, asyncHandler(async (req: Request, 
   try {
     // TODO: Add admin role check here
     const { key } = req.params;
-    const { settingValue } = req.body;
+    const { settingValue, value } = req.body;
+    
+    // Support both settingValue and value properties for compatibility
+    const actualValue = settingValue !== undefined ? settingValue : value;
     
     // Allow empty string as a valid value, but not undefined/null
-    if (settingValue === undefined || settingValue === null) {
+    if (actualValue === undefined || actualValue === null) {
       return sendError(res, "Setting value is required", 400);
     }
     
-    let updatedSetting = await storage.updateSystemSetting(key, String(settingValue));
+    // Validate YoCo environment setting
+    if (key === 'yoco_environment') {
+      if (!['test', 'production'].includes(actualValue)) {
+        return sendError(res, "YoCo environment must be 'test' or 'production'", 400);
+      }
+      logger.info("YoCo environment setting updated", { 
+        newEnvironment: actualValue, 
+        adminUser: req.user?.email,
+        adminUserId: req.user?.id 
+      });
+    }
+    
+    let updatedSetting = await storage.updateSystemSetting(key, String(actualValue));
     
     // If setting doesn't exist, create it
     if (!updatedSetting) {
       updatedSetting = await storage.createSystemSetting({
         settingKey: key,
-        settingValue: String(settingValue),
+        settingValue: String(actualValue),
         description: `Auto-generated setting for ${key}`,
         isActive: true,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       });
       
-      logger.info("Created new system setting via PUT", { key, settingValue });
+      logger.info("Created new system setting via PUT", { key, settingValue: actualValue });
     } else {
-      logger.info("System setting updated successfully via PUT", { key, settingValue, adminUserId: req.user?.id });
+      logger.info("System setting updated successfully via PUT", { key, settingValue: actualValue, adminUserId: req.user?.id });
     }
     
     return sendSuccess(res, updatedSetting);

@@ -5,18 +5,34 @@
 
 import { v4 as uuidv4 } from 'uuid';
 
-// Environment-based YoCo configuration
-// NODE_ENV values: "test" = use TEST keys, "production" = use PROD keys
-const YOCO_CONFIG = {
-  publicKey: process.env.NODE_ENV === 'production' 
-    ? process.env.YOCO_PROD_PUBLIC_KEY 
-    : process.env.YOCO_TEST_PUBLIC_KEY, // TEST keys for "test" or "development"
-  secretKey: process.env.NODE_ENV === 'production'
-    ? process.env.YOCO_PROD_SECRET_KEY
-    : process.env.YOCO_TEST_SECRET_KEY, // TEST keys for "test" or "development"
-  apiUrl: 'https://payments.yoco.com/api',
-  webhookSecret: process.env.YOCO_WEBHOOK_SECRET || '',
-};
+// YoCo configuration function that reads from admin settings
+async function getYocoConfig() {
+  const { storage } = await import('./storage.js');
+  
+  // Get YoCo environment setting from admin (defaults to 'test' if not set)
+  let yocoEnvironment = 'test';
+  try {
+    const environmentSetting = await storage.getSystemSetting('yoco_environment');
+    yocoEnvironment = environmentSetting?.settingValue || 'test';
+  } catch (error) {
+    console.warn('Failed to get YoCo environment setting, defaulting to test:', error);
+  }
+  
+  const isProduction = yocoEnvironment === 'production';
+  
+  return {
+    publicKey: isProduction 
+      ? process.env.YOCO_PROD_PUBLIC_KEY 
+      : process.env.YOCO_TEST_PUBLIC_KEY,
+    secretKey: isProduction
+      ? process.env.YOCO_PROD_SECRET_KEY
+      : process.env.YOCO_TEST_SECRET_KEY,
+    apiUrl: 'https://payments.yoco.com/api',
+    webhookSecret: process.env.YOCO_WEBHOOK_SECRET || '',
+    environment: yocoEnvironment,
+    isProduction
+  };
+}
 
 interface YocoCheckoutRequest {
   amount: number; // Amount in cents (ZAR)
@@ -86,31 +102,32 @@ interface YocoPaymentEvent {
 }
 
 class YocoService {
-  private baseUrl = YOCO_CONFIG.apiUrl;
-  private secretKey = YOCO_CONFIG.secretKey;
-
   /**
    * Create a YoCo checkout session
    */
   async createCheckout(checkoutData: YocoCheckoutRequest): Promise<YocoCheckoutResponse> {
-    if (!this.secretKey) {
+    // Get dynamic YoCo configuration from admin settings
+    const config = await getYocoConfig();
+    
+    if (!config.secretKey) {
       throw new Error('YoCo secret key not configured');
     }
 
     // COMPREHENSIVE YoCo DEBUG LOGGING
-    console.log('🔑 YoCo API Configuration:', {
-      nodeEnv: process.env.NODE_ENV,
-      isProduction: process.env.NODE_ENV === 'production',
-      keyType: this.secretKey?.startsWith('sk_test_') ? 'TEST' : (this.secretKey?.startsWith('sk_live_') ? 'LIVE' : 'UNKNOWN'),
-      publicKey: YOCO_CONFIG.publicKey?.substring(0, 25) + '...',
-      secretKey: this.secretKey?.substring(0, 25) + '...',
-      fullPublicKey: YOCO_CONFIG.publicKey, // FULL KEY FOR DEBUGGING
-      fullSecretKey: this.secretKey?.substring(0, 15) + '...', // MORE CHARS FOR DEBUGGING
-      apiUrl: this.baseUrl,
+    console.log('🔑 YoCo API Configuration (Admin Settings):', {
+      adminEnvironmentSetting: config.environment,
+      isProduction: config.isProduction,
+      keyType: config.secretKey?.startsWith('sk_test_') ? 'TEST' : (config.secretKey?.startsWith('sk_live_') ? 'LIVE' : 'UNKNOWN'),
+      publicKey: config.publicKey?.substring(0, 25) + '...',
+      secretKey: config.secretKey?.substring(0, 25) + '...',
+      fullPublicKey: config.publicKey, // FULL KEY FOR DEBUGGING
+      fullSecretKey: config.secretKey?.substring(0, 15) + '...', // MORE CHARS FOR DEBUGGING
+      apiUrl: config.apiUrl,
       checkoutAmount: checkoutData.amount,
       currency: checkoutData.currency,
-      webhookSecret: YOCO_CONFIG.webhookSecret?.substring(0, 20) + '...',
+      webhookSecret: config.webhookSecret?.substring(0, 20) + '...',
       note: 'YoCo will set processingMode automatically based on key type',
+      configSource: 'ADMIN SETTINGS (not NODE_ENV)',
       availableEnvKeys: {
         YOCO_TEST_PUBLIC: !!process.env.YOCO_TEST_PUBLIC_KEY,
         YOCO_TEST_SECRET: !!process.env.YOCO_TEST_SECRET_KEY,
@@ -122,11 +139,11 @@ class YocoService {
 
     const idempotencyKey = uuidv4();
     
-    const response = await fetch(`${this.baseUrl}/checkouts`, {
+    const response = await fetch(`${config.apiUrl}/checkouts`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.secretKey}`,
+        'Authorization': `Bearer ${config.secretKey}`,
         'Idempotency-Key': idempotencyKey,
       },
       body: JSON.stringify(checkoutData),
@@ -168,10 +185,10 @@ class YocoService {
       amount: result.amount,
       currency: result.currency,
       yocoProcessingMode: result.processingMode, // YoCo's automatically set processing mode
-      environment: process.env.NODE_ENV || 'development',
-      keyType: this.secretKey?.startsWith('sk_test_') ? 'TEST' : 'LIVE',
-      usedSecretKey: this.secretKey?.substring(0, 15) + '...',
-      usedPublicKey: YOCO_CONFIG.publicKey?.substring(0, 25) + '...',
+      adminEnvironment: config.environment,
+      keyType: config.secretKey?.startsWith('sk_test_') ? 'TEST' : 'LIVE',
+      usedSecretKey: config.secretKey?.substring(0, 15) + '...',
+      usedPublicKey: config.publicKey?.substring(0, 25) + '...',
       idempotencyKey: idempotencyKey,
       requestPayload: {
         amount: checkoutData.amount,
@@ -205,13 +222,15 @@ class YocoService {
   /**
    * Verify webhook signature for security
    */
-  verifyWebhookSignature(
+  async verifyWebhookSignature(
     payload: string,
     signature: string,
     webhookId: string,
     timestamp: string
-  ): boolean {
-    if (!YOCO_CONFIG.webhookSecret) {
+  ): Promise<boolean> {
+    const config = await getYocoConfig();
+    
+    if (!config.webhookSecret) {
       console.warn('YoCo webhook secret not configured, skipping verification');
       return true; // Allow for development
     }
@@ -223,7 +242,7 @@ class YocoService {
       const signedContent = `${webhookId}.${timestamp}.${payload}`;
       
       // Remove whsec_ prefix from secret
-      const secretBytes = Buffer.from(YOCO_CONFIG.webhookSecret.split('_')[1], 'base64');
+      const secretBytes = Buffer.from(config.webhookSecret.split('_')[1], 'base64');
       
       // Calculate expected signature
       const expectedSignature = crypto

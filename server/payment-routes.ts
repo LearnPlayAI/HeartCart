@@ -93,19 +93,30 @@ router.post('/card/checkout', isAuthenticated, asyncHandler(async (req: Request,
       // - Live keys (sk_live_...) → YoCo sets processingMode: "live"
     };
 
-    // COMPREHENSIVE DEBUGGING: Check exact environment values at checkout creation
-    console.log('🔍 ENVIRONMENT DEBUG at checkout creation:', {
-      NODE_ENV: process.env.NODE_ENV,
-      isProduction: process.env.NODE_ENV === 'production',
-      keyTypeUsed: process.env.NODE_ENV === 'production' ? 'LIVE keys' : 'TEST keys',
-      expectedYoCoMode: process.env.NODE_ENV === 'production' ? 'live (set by YoCo)' : 'test (set by YoCo)',
+    // COMPREHENSIVE DEBUGGING: Check admin YoCo environment setting
+    const { storage } = await import('./storage.js');
+    let adminYocoEnvironment = 'test';
+    try {
+      const environmentSetting = await storage.getSystemSetting('yoco_environment');
+      adminYocoEnvironment = environmentSetting?.settingValue || 'test';
+    } catch (error) {
+      console.warn('Failed to get YoCo environment setting, defaulting to test:', error);
+    }
+    
+    console.log('🔍 ADMIN ENVIRONMENT DEBUG at checkout creation:', {
+      adminYocoSetting: adminYocoEnvironment,
+      isProductionMode: adminYocoEnvironment === 'production',
+      keyTypeUsed: adminYocoEnvironment === 'production' ? 'LIVE keys' : 'TEST keys',
+      expectedYoCoMode: adminYocoEnvironment === 'production' ? 'live (set by YoCo)' : 'test (set by YoCo)',
+      configSource: 'ADMIN SETTINGS (not NODE_ENV)',
+      nodeEnvForReference: process.env.NODE_ENV,
       YOCO_TEST_PUBLIC_KEY: process.env.YOCO_TEST_PUBLIC_KEY?.substring(0, 30) + '...',
       YOCO_TEST_SECRET_KEY: process.env.YOCO_TEST_SECRET_KEY?.substring(0, 20) + '...',
       YOCO_PROD_PUBLIC_KEY: process.env.YOCO_PROD_PUBLIC_KEY?.substring(0, 30) + '...',
       YOCO_PROD_SECRET_KEY: process.env.YOCO_PROD_SECRET_KEY?.substring(0, 20) + '...',
       YOCO_WEBHOOK_SECRET: process.env.YOCO_WEBHOOK_SECRET?.substring(0, 25) + '...',
-      actualSelectedPublic: process.env.NODE_ENV === 'production' ? process.env.YOCO_PROD_PUBLIC_KEY : process.env.YOCO_TEST_PUBLIC_KEY,
-      actualSelectedSecret: process.env.NODE_ENV === 'production' ? process.env.YOCO_PROD_SECRET_KEY?.substring(0, 20) + '...' : process.env.YOCO_TEST_SECRET_KEY?.substring(0, 20) + '...',
+      actualSelectedPublic: adminYocoEnvironment === 'production' ? process.env.YOCO_PROD_PUBLIC_KEY : process.env.YOCO_TEST_PUBLIC_KEY,
+      actualSelectedSecret: adminYocoEnvironment === 'production' ? process.env.YOCO_PROD_SECRET_KEY?.substring(0, 20) + '...' : process.env.YOCO_TEST_SECRET_KEY?.substring(0, 20) + '...',
     });
 
     console.log('🚀 Creating YoCo checkout session with cart data:', {
@@ -115,9 +126,11 @@ router.post('/card/checkout', isAuthenticated, asyncHandler(async (req: Request,
       amount: amountInCents,
       amountInRands: amountInCents / 100,
       currency: 'ZAR',
-      environment: process.env.NODE_ENV || 'development',
-      usingTestKeys: process.env.NODE_ENV !== 'production',
-      keyConfigurationUsed: process.env.NODE_ENV === 'production' ? 'PRODUCTION KEYS' : 'TEST KEYS',
+      adminEnvironment: adminYocoEnvironment,
+      nodeEnvironment: process.env.NODE_ENV || 'development',
+      usingTestKeys: adminYocoEnvironment !== 'production',
+      keyConfigurationUsed: adminYocoEnvironment === 'production' ? 'PRODUCTION KEYS' : 'TEST KEYS',
+      adminEnvironmentSetting: adminYocoEnvironment,
       note: 'processingMode will be set by YoCo based on API keys used',
       lineItemsCount: enrichedLineItems.length,
       vatAmount: vatAmountInCents,
@@ -147,13 +160,15 @@ router.post('/card/checkout', isAuthenticated, asyncHandler(async (req: Request,
       currency: checkoutResponse.currency,
       yocoProcessingMode: checkoutResponse.processingMode,
       keyTypeConfirmed: checkoutResponse.processingMode === 'test' ? 'TEST KEYS CONFIRMED' : 'LIVE KEYS CONFIRMED',
-      environmentMatch: (process.env.NODE_ENV !== 'production' && checkoutResponse.processingMode === 'test') || 
-                        (process.env.NODE_ENV === 'production' && checkoutResponse.processingMode === 'live'),
+      environmentMatch: (adminYocoEnvironment !== 'production' && checkoutResponse.processingMode === 'test') || 
+                        (adminYocoEnvironment === 'production' && checkoutResponse.processingMode === 'live'),
       debugInfo: {
-        expectedMode: process.env.NODE_ENV === 'production' ? 'live' : 'test',
+        expectedMode: adminYocoEnvironment === 'production' ? 'live' : 'test',
         actualMode: checkoutResponse.processingMode,
-        configurationCorrect: (process.env.NODE_ENV !== 'production' && checkoutResponse.processingMode === 'test') || 
-                              (process.env.NODE_ENV === 'production' && checkoutResponse.processingMode === 'live')
+        configurationCorrect: (adminYocoEnvironment !== 'production' && checkoutResponse.processingMode === 'test') || 
+                              (adminYocoEnvironment === 'production' && checkoutResponse.processingMode === 'live'),
+        adminSetting: adminYocoEnvironment,
+        settingSource: 'ADMIN_SETTINGS'
       }
     });
 

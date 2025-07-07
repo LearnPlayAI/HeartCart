@@ -3,6 +3,7 @@ import { WebsiteShareCard } from '@/components/admin/WebsiteShareCard';
 import { SalesRepMessageCard } from '@/components/admin/SalesRepMessageCard';
 import { ProductSharingCard } from '@/components/admin/ProductSharingCard';
 import { VATSettingsCard } from '@/components/admin/VATSettingsCard';
+import { YocoSettingsCard } from '@/components/admin/YocoSettingsCard';
 
 export default function AdminSettingsPage() {
   return (
@@ -17,6 +18,12 @@ export default function AdminSettingsPage() {
 
         {/* Settings Cards Grid */}
         <div className="grid grid-cols-1 gap-6">
+          {/* Payment Configuration Section */}
+          <div>
+            <h2 className="text-lg font-semibold mb-4 text-blue-700">Payment Configuration</h2>
+            <YocoSettingsCard />
+          </div>
+
           {/* VAT Configuration Section */}
           <div>
             <h2 className="text-lg font-semibold mb-4 text-orange-700">VAT Configuration</h2>
