@@ -88,6 +88,8 @@ router.post('/card/checkout', isAuthenticated, asyncHandler(async (req: Request,
       totalTaxAmount: vatAmountInCents,
       subtotalAmount: subtotalInCents,
       lineItems: enrichedLineItems,
+      // Enhanced 3D Secure configuration for test environment
+      processingMode: process.env.NODE_ENV === 'production' ? 'live' : 'test'
     };
 
     console.log('Creating YoCo checkout session with cart data:', {
@@ -95,6 +97,11 @@ router.post('/card/checkout', isAuthenticated, asyncHandler(async (req: Request,
       customerId,
       amount: amountInCents,
       currency: 'ZAR',
+      environment: process.env.NODE_ENV || 'development',
+      usingTestKeys: process.env.NODE_ENV !== 'production',
+      lineItemsCount: enrichedLineItems.length,
+      vatAmount: vatAmountInCents,
+      subtotal: subtotalInCents
     });
 
     // Create YoCo checkout session (NO ORDER CREATED)

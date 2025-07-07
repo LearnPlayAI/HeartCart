@@ -143,7 +143,9 @@ class YocoService {
       redirectUrl: result.redirectUrl,
       amount: result.amount,
       currency: result.currency,
-      processingMode: result.processingMode
+      processingMode: result.processingMode,
+      environment: process.env.NODE_ENV || 'development',
+      usingTestKeys: process.env.NODE_ENV !== 'production'
     });
     
     return result;
