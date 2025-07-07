@@ -167,13 +167,17 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
       // Continue with order creation even if check fails
     }
 
-    console.log('Creating order after successful payment:', { 
+    console.log('CRITICAL DEBUG: Cart data structure analysis:', {
+      cartDataKeys: Object.keys(cartData),
+      fullCartData: JSON.stringify(cartData, null, 2)
+    });
+
+    console.log('CRITICAL DEBUG: Address field extraction:', { 
       checkoutId, 
       customerId,
       customerEmail,
       customerFullName, // Debug customer name from metadata
       customerPhone, // CRITICAL FIX: Debug customer phone from metadata
-      cartDataKeys: Object.keys(cartData),
       hasOrderItems: !!cartData.orderItems,
       orderItemsCount: cartData.orderItems?.length || 0,
       cartDataCustomerName: cartData.customerName, // Debug customer name in cart data
@@ -183,7 +187,12 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
       addressLine2: cartData.addressLine2,
       city: cartData.city,
       province: cartData.province,
-      postalCode: cartData.postalCode
+      postalCode: cartData.postalCode,
+      // Check all possible address field variations
+      cartDataAddressLine1: cartData.addressLine1,
+      cartDataCity: cartData.city,
+      cartDataProvince: cartData.province,
+      cartDataPostalCode: cartData.postalCode
     });
 
     // YoCo compliance: Calculate transaction fees for profit tracking (absorbed by company, not charged to customer)
@@ -200,8 +209,24 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
     // Extract order and orderItems from cart data (like EFT flow)
     const { orderItems, addressLine1, addressLine2, city, province, postalCode, ...orderData } = cartData;
     
+    console.log('CRITICAL DEBUG: Destructured address fields:', {
+      addressLine1,
+      addressLine2, 
+      city,
+      province,
+      postalCode,
+      orderDataKeys: Object.keys(orderData)
+    });
+    
     // CRITICAL FIX: Properly map address fields from cart data to order fields
     const shippingAddress = addressLine2 ? `${addressLine1}, ${addressLine2}` : addressLine1;
+    
+    console.log('CRITICAL DEBUG: Final address mapping before order creation:', {
+      shippingAddress,
+      shippingCity: city,
+      shippingProvince: province,
+      shippingPostalCode: postalCode
+    });
     
     // Create order with payment information included (camelCase naming convention)
     const order = {
@@ -226,9 +251,11 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
     };
 
     // Use the exact same method signature as EFT flow: createOrder(order, orderItems)
-    console.log('Calling storage.createOrder with order and orderItems:', {
+    console.log('FINAL DEBUG: Complete order object before database insertion:', {
+      fullOrder: JSON.stringify(order, null, 2),
       orderKeys: Object.keys(order),
       orderItemsCount: orderItems?.length || 0,
+      // Specific fields that are failing
       customerId: order.userId,
       customerEmail: order.customerEmail,
       customerName: order.customerName,

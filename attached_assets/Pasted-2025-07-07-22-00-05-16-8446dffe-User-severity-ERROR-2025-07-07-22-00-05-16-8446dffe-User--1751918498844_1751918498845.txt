@@ -1,0 +1,124 @@
+2025-07-07 22:00:05.16
+8446dffe
+User
+severity: 'ERROR',
+2025-07-07 22:00:05.16
+8446dffe
+User
+code: '23502',
+2025-07-07 22:00:05.16
+8446dffe
+User
+detail: 'Failing row contains (33, 8, TMY-TEMP-1751918405126, confirmed, Jan Coetzee, admin@teemeyou.shop, +27712063084, {"addressLine1":"12 Ebbehout Street","addressLine2":"","city":"R..., null, null, pudo, 85, card, payment_received, null, null, null, null, null, 2025-07-07T20:00:05.126Z, 2025-07-07T20:00:05.126Z, null, null, null, 2025-07-07T20:00:05.126Z, 0.00, null, 146, null, null, null, {"code": "CG76", "name": "Banbury Cross Village", "address": "Hu..., null, null, 0, 0, 4567890123, ch_JL2n3K8Gz79fM3FqJZFoz0LZ, p_ZgnM2en5YbPtZbyHjjMc1A1E, 10.63, 2.95).',
+2025-07-07 22:00:05.16
+8446dffe
+User
+hint: undefined,
+2025-07-07 22:00:05.16
+8446dffe
+User
+position: undefined,
+2025-07-07 22:00:05.16
+8446dffe
+User
+internalPosition: undefined,
+2025-07-07 22:00:05.16
+8446dffe
+User
+internalQuery: undefined,
+2025-07-07 22:00:05.16
+8446dffe
+User
+where: undefined,
+2025-07-07 22:00:05.16
+8446dffe
+User
+schema: 'public',
+2025-07-07 22:00:05.16
+8446dffe
+User
+table: 'orders',
+2025-07-07 22:00:05.16
+8446dffe
+User
+column: 'shippingCity',
+2025-07-07 22:00:05.16
+8446dffe
+User
+dataType: undefined,
+2025-07-07 22:00:05.16
+8446dffe
+User
+constraint: undefined,
+2025-07-07 22:00:05.16
+8446dffe
+User
+file: 'execMain.c',
+2025-07-07 22:00:05.16
+8446dffe
+User
+line: '2006',
+2025-07-07 22:00:05.16
+8446dffe
+User
+routine: 'ExecConstraints'
+2025-07-07 22:00:05.16
+8446dffe
+User
+}
+2025-07-07 22:00:05.16
+8446dffe
+User
+{"timestamp":"2025-07-07T22:00:05.000Z","level":"ERROR","message":"API Error: POST /api/webhooks/yoco 500 in 108ms","context":{"method":"POST","path":"/api/webhooks/yoco","statusCode":500,"duration":"108ms","requestId":"49cbbfd3-d93e-4a0d-a2c3-4db86de7b4b4"}}
+2025-07-07 22:00:05.16
+8446dffe
+User
+8:00:05 PM [express] POST /api/webhooks/yoco 500 in 108ms :: {"success":false,"data":{"error":"Inter…
+2025-07-07 22:00:05.83
+8446dffe
+User
+8:00:05 PM [express] GET /api/user 304 in 108ms :: {"success":true,"data":{"id":8,"username":"TeeMee…
+2025-07-07 22:00:05.94
+8446dffe
+User
+8:00:05 PM [express] GET /api/categories 304 in 215ms :: {"success":true,"data":[{"id":223,"name":"3…
+2025-07-07 22:00:06.27
+8446dffe
+User
+8:00:06 PM [express] GET /api/credits/transactions 304 in 152ms :: {"success":true,"data":[],"meta":…
+2025-07-07 22:00:06.27
+8446dffe
+User
+8:00:06 PM [express] GET /api/favourites 304 in 154ms :: {"success":true,"data":[{"id":3,"userId":8,…
+2025-07-07 22:00:06.33
+8446dffe
+User
+{"timestamp":"2025-07-07T22:00:06.000Z","level":"ERROR","message":"API Error: Invalid order ID","context":{"statusCode":400}}
+2025-07-07 22:00:06.37
+8446dffe
+User
+{"timestamp":"2025-07-07T22:00:06.000Z","level":"WARN","message":"API Warning: GET /api/orders/by-checkout 400 in 216ms","context":{"method":"GET","path":"/api/orders/by-checkout","statusCode":400,"duration":"216ms","requestId":"32130545-ac9e-4943-8b7f-f5066be04f08"}}
+2025-07-07 22:00:06.37
+8446dffe
+User
+8:00:06 PM [express] GET /api/orders/by-checkout 400 in 216ms :: {"success":false,"error":{"message"…
+2025-07-07 22:00:06.45
+8446dffe
+User
+{"timestamp":"2025-07-07T22:00:06.000Z","level":"INFO","message":"Calculated user credit balance from transactions","context":{"userId":8,"totalEarned":0,"totalUsed":0,"totalCreditAmount":0,"availableCreditAmount":0,"transactionCount":0}}
+2025-07-07 22:00:06.48
+8446dffe
+User
+8:00:06 PM [express] GET /api/credits/balance 304 in 339ms :: {"success":true,"data":{"userId":8,"to…
+2025-07-07 22:00:06.73
+8446dffe
+User
+8:00:06 PM [express] GET /api/cart 304 in 589ms :: {"success":true,"data":[{"id":94,"userId":8,"prod…
+2025-07-07 22:00:06.87
+8446dffe
+User
+{"timestamp":"2025-07-07T22:00:06.000Z","level":"INFO","message":"Retrieved orders for user","context":{"userId":8,"count":0}}
+2025-07-07 22:00:06.91
+8446dffe
+User
+8:00:06 PM [express] GET /api/orders 304 in 153ms :: {"success":true,"data":[]}
