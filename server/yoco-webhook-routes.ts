@@ -5,7 +5,6 @@
 
 import { Router, Request, Response } from 'express';
 import asyncHandler from 'express-async-handler';
-import { storage } from './storage.js';
 import { yocoService, YocoPaymentEvent } from './yoco-service.js';
 import { unifiedEmailService } from './unified-email-service.js';
 
@@ -130,6 +129,20 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Invalid cart data format' });
     }
 
+    // CRITICAL FIX: Validate customer data before order creation
+    if (!customerEmail) {
+      console.error('CustomerEmail is null or missing from payment metadata');
+      return res.status(400).json({ error: 'Customer email missing from payment data' });
+    }
+    
+    if (!customerFullName) {
+      console.error('CustomerFullName is null or missing from payment metadata');
+      return res.status(400).json({ error: 'Customer name missing from payment data' });
+    }
+
+    // CRITICAL FIX: Import storage once for entire webhook processing
+    const { storage } = await import('./storage.js');
+
     // Check if order already exists for this checkout (prevent duplicates)
     try {
       const existingOrder = await storage.getOrderByYocoCheckoutId(checkoutId);
@@ -174,6 +187,8 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
     const order = {
       ...orderData,
       userId: customerId,
+      customerEmail: customerEmail, // CRITICAL FIX: Explicitly set customerEmail from metadata
+      customerName: customerFullName, // CRITICAL FIX: Explicitly set customerName from metadata
       paymentMethod: 'card',
       paymentStatus: 'payment_received', // Already paid via card
       status: 'confirmed', // Auto-confirm card payments
@@ -189,6 +204,8 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
       orderKeys: Object.keys(order),
       orderItemsCount: orderItems?.length || 0,
       customerId: order.userId,
+      customerEmail: order.customerEmail,
+      customerName: order.customerName,
       paymentMethod: order.paymentMethod,
       paymentStatus: order.paymentStatus,
       status: order.status

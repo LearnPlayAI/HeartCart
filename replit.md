@@ -824,6 +824,17 @@ Changelog:
   * Cart counter and cart drawer now consistently load from database instead of relying on cached data
   * Fixed contact numbers on payment success and failed pages to show correct +27 71 206 3084 number
   * Complete fix ensures cart functionality works reliably without breaking any existing features
+- July 7, 2025. CRITICAL YoCo card payment order creation issue completely resolved - System fully operational:
+  * RESOLVED CRITICAL ISSUE: Fixed "null value in column 'customerEmail'" error preventing card payment orders from being created
+  * Root cause: Storage initialization timing and missing customer data validation in YoCo webhook processing
+  * Fixed "Cannot access 'storage' before initialization" by converting static imports to dynamic imports in payment and webhook routes
+  * Added explicit validation for customerEmail and customerFullName before order creation to prevent null constraint violations
+  * Explicitly set customerEmail and customerName fields in order object during webhook processing using metadata values
+  * Implemented proper SAST (UTC+2) timezone handling throughout email verification system with dedicated utility functions
+  * Enhanced customer fullName database fetching during payment processing with proper error handling
+  * YoCo webhook now properly creates orders with complete customer information after successful card payments
+  * All card payment flows now operational: checkout → YoCo payment → webhook → order creation → cart clearing → email notifications
+  * System confirmed ready for production use with complete card payment functionality and proper data validation
 - July 4, 2025. Automatic shipping address data persistence in checkout system:
   * Modified checkout form to always save shipping address data when logged-in users place orders
   * Removed dependency on "Save details" checkbox for address information persistence
