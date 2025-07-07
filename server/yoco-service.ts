@@ -9,10 +9,10 @@ import { v4 as uuidv4 } from 'uuid';
 const YOCO_CONFIG = {
   publicKey: process.env.NODE_ENV === 'production' 
     ? process.env.YOCO_PROD_PUBLIC_KEY 
-    : process.env.YOCO_TEST_PUBLIC_KEY,
+    : process.env.YOCO_OFFICIAL_TEST_PUBLIC, // Using official YoCo test keys for guaranteed 3D Secure compatibility
   secretKey: process.env.NODE_ENV === 'production'
     ? process.env.YOCO_PROD_SECRET_KEY
-    : process.env.YOCO_TEST_SECRET_KEY,
+    : process.env.YOCO_OFFICIAL_TEST_SECRET, // Using official YoCo test keys for guaranteed 3D Secure compatibility
   apiUrl: 'https://payments.yoco.com/api',
   webhookSecret: process.env.YOCO_WEBHOOK_SECRET || '',
 };
@@ -95,6 +95,16 @@ class YocoService {
     if (!this.secretKey) {
       throw new Error('YoCo secret key not configured');
     }
+
+    // Debug: Log YoCo configuration for verification
+    console.log('🔑 YoCo API Configuration:', {
+      publicKey: YOCO_CONFIG.publicKey?.substring(0, 20) + '...',
+      secretKey: this.secretKey?.substring(0, 20) + '...',
+      apiUrl: this.baseUrl,
+      environment: process.env.NODE_ENV || 'development',
+      checkoutAmount: checkoutData.amount,
+      currency: checkoutData.currency
+    });
 
     const idempotencyKey = uuidv4();
     

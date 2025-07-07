@@ -944,7 +944,7 @@ export default function CheckoutPage() {
               type="submit"
               size="lg"
               className="w-full bg-gradient-to-r from-pink-600 to-pink-700 hover:from-pink-700 hover:to-pink-800"
-              disabled={isProcessing || (selectedShippingMethod === "pudo" && !selectedLocker) || !form.formState.isValid || Object.keys(form.formState.errors).length > 0}
+              disabled={isProcessing || (selectedShippingMethod === "pudo" && !selectedLocker?.id) || !form.formState.isValid || Object.keys(form.formState.errors).length > 0}
             >
               {isProcessing ? (
                 <>
