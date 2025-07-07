@@ -607,6 +607,126 @@ router.post("/orders/:id/payment-received", isAuthenticated, asyncHandler(async 
   }
 }));
 
+// Manual invoice generation endpoint for card payment orders
+router.post('/orders/:id/generate-invoice', isAuthenticated, isAdmin, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const orderId = parseInt(req.params.id, 10);
+    if (isNaN(orderId)) {
+      return sendError(res, "Invalid order ID", 400);
+    }
+
+    // Get full order details with items
+    const baseOrder = await storage.getOrderById(orderId);
+    if (!baseOrder) {
+      return sendError(res, "Order not found", 404);
+    }
+
+    // Check if this is a card payment order
+    if (baseOrder.paymentMethod !== 'card') {
+      return sendError(res, "Invoice generation only available for card payment orders", 400);
+    }
+
+    // Check if invoice already exists
+    if (baseOrder.invoicePath) {
+      return sendError(res, "Invoice already exists for this order", 400);
+    }
+
+    const orderItemsData = await storage.getOrderItems(orderId);
+    const fullOrder = {
+      ...baseOrder,
+      orderItems: orderItemsData || []
+    };
+
+    if (!fullOrder.orderItems || fullOrder.orderItems.length === 0) {
+      return sendError(res, "Cannot generate invoice: No order items found", 400);
+    }
+
+    // Fetch VAT settings
+    let vatSettings = {
+      vatRate: 0,
+      vatAmount: 0,
+      vatRegistered: false,
+      vatRegistrationNumber: ''
+    };
+
+    try {
+      const vatRateResult = await storage.getSystemSetting('vatRate');
+      const vatRegNumberResult = await storage.getSystemSetting('vatRegistrationNumber');
+      const vatRegisteredResult = await storage.getSystemSetting('vatRegistered');
+
+      const vatRate = parseFloat(vatRateResult?.settingValue || '0');
+      const vatRegistered = vatRegisteredResult?.settingValue === 'true';
+      const vatRegistrationNumber = vatRegNumberResult?.settingValue || '';
+
+      if (vatRegistered && vatRate > 0) {
+        const vatableAmount = fullOrder.subtotalAmount + fullOrder.shippingCost;
+        vatSettings.vatAmount = parseFloat((vatableAmount * (vatRate / 100)).toFixed(2));
+      }
+
+      vatSettings.vatRate = vatRate;
+      vatSettings.vatRegistered = vatRegistered;
+      vatSettings.vatRegistrationNumber = vatRegistrationNumber;
+    } catch (vatError) {
+      logger.error("Failed to fetch VAT settings for manual invoice generation", { error: vatError, orderId });
+    }
+
+    const invoiceData = {
+      orderNumber: fullOrder.orderNumber,
+      customerName: fullOrder.customerName,
+      customerEmail: fullOrder.customerEmail,
+      customerPhone: fullOrder.customerPhone,
+      shippingAddress: fullOrder.shippingAddress,
+      shippingCity: fullOrder.shippingCity,
+      shippingPostalCode: fullOrder.shippingPostalCode,
+      orderItems: fullOrder.orderItems.map(item => ({
+        productName: item.productName,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        totalPrice: item.totalPrice,
+        attributeDisplayText: item.attributeDisplayText || undefined
+      })),
+      subtotalAmount: fullOrder.subtotalAmount,
+      shippingCost: fullOrder.shippingCost,
+      vatAmount: vatSettings.vatAmount,
+      vatRate: vatSettings.vatRate,
+      vatRegistered: vatSettings.vatRegistered,
+      vatRegistrationNumber: vatSettings.vatRegistrationNumber,
+      totalAmount: fullOrder.totalAmount,
+      paymentMethod: fullOrder.paymentMethod,
+      paymentReceivedDate: fullOrder.paymentReceivedDate || new Date().toISOString(),
+      userId: fullOrder.userId
+    };
+
+    // Generate invoice
+    const invoiceGenerator = InvoiceGenerator.getInstance();
+    const invoicePath = await invoiceGenerator.generateInvoicePDF(invoiceData);
+
+    // Update order with invoice path
+    await storage.updateOrderInvoicePath(orderId, invoicePath);
+
+    logger.info("Manual invoice generation completed", {
+      orderId,
+      orderNumber: fullOrder.orderNumber,
+      invoicePath,
+      adminUserId: req.user?.id
+    });
+
+    return sendSuccess(res, {
+      message: "Invoice generated successfully",
+      invoicePath,
+      order: { ...fullOrder, invoicePath }
+    });
+
+  } catch (error) {
+    logger.error("Error generating manual invoice", { 
+      error: error instanceof Error ? error.message : String(error),
+      orderId: req.params.id,
+      adminUserId: req.user?.id 
+    });
+    return sendError(res, "Failed to generate invoice", 500);
+  }
+}));
+
 // ===============================================================
 // USER ADMIN MANAGEMENT ROUTES
 // ===============================================================

@@ -521,6 +521,44 @@ export default function AdminOrderDetail() {
     }
   };
 
+  // Generate invoice mutation for card payments
+  const generateInvoiceMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(`/api/admin/orders/${order?.id}/generate-invoice`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMessage = `Failed to generate invoice: ${response.status}`;
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.message || errorMessage;
+        } catch {
+          // Use the response status message if JSON parsing fails
+        }
+        throw new Error(errorMessage);
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Invoice Generated",
+        description: "Invoice has been successfully generated for this order.",
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/orders/${orderId}`] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Invoice Generation Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   // Proof of Payment download function
   const downloadProofOfPayment = async () => {
     if (!order || !order.eftPop) {
@@ -813,8 +851,8 @@ export default function AdminOrderDetail() {
                       </Button>
                     )}
                     
-                    {/* Invoice Download Button */}
-                    {(order.paymentStatus === 'payment_received' || order.status === 'payment received') && (
+                    {/* Invoice Download Button - only show if invoice exists */}
+                    {(order.paymentStatus === 'payment_received' || order.status === 'payment received') && order.invoicePath && (
                       <Button 
                         onClick={downloadInvoice}
                         variant="outline"
@@ -823,6 +861,26 @@ export default function AdminOrderDetail() {
                       >
                         <Download className="h-4 w-4" />
                         Download Invoice
+                      </Button>
+                    )}
+                    
+                    {/* Generate Invoice Button - only for card payments without invoice */}
+                    {order.paymentMethod === 'card' && 
+                     (order.paymentStatus === 'payment_received' || order.status === 'payment received') && 
+                     !order.invoicePath && (
+                      <Button 
+                        onClick={() => generateInvoiceMutation.mutate()}
+                        disabled={generateInvoiceMutation.isPending}
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center gap-2 text-[#FF69B4] border-[#FF69B4] hover:bg-[#FF69B4] hover:text-white"
+                      >
+                        {generateInvoiceMutation.isPending ? (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+                        ) : (
+                          <FileText className="h-4 w-4" />
+                        )}
+                        Generate Invoice
                       </Button>
                     )}
                   </div>
@@ -907,18 +965,38 @@ export default function AdminOrderDetail() {
                     </Badge>
                   </div>
                   
-                  {/* Download Buttons */}
+                  {/* Download/Generate Buttons */}
                   <div className="flex items-center gap-2">
-                    {/* Invoice Download Button */}
-                    <Button 
-                      onClick={downloadInvoice}
-                      variant="outline"
-                      size="sm"
-                      className="flex items-center gap-2"
-                    >
-                      <Download className="h-4 w-4" />
-                      Download Invoice
-                    </Button>
+                    {/* Invoice Download Button - only show if invoice exists */}
+                    {order.invoicePath && (
+                      <Button 
+                        onClick={downloadInvoice}
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center gap-2"
+                      >
+                        <Download className="h-4 w-4" />
+                        Download Invoice
+                      </Button>
+                    )}
+                    
+                    {/* Generate Invoice Button - only for card payments without invoice */}
+                    {order.paymentMethod === 'card' && !order.invoicePath && (
+                      <Button 
+                        onClick={() => generateInvoiceMutation.mutate()}
+                        disabled={generateInvoiceMutation.isPending}
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center gap-2 text-[#FF69B4] border-[#FF69B4] hover:bg-[#FF69B4] hover:text-white"
+                      >
+                        {generateInvoiceMutation.isPending ? (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+                        ) : (
+                          <FileText className="h-4 w-4" />
+                        )}
+                        Generate Invoice
+                      </Button>
+                    )}
                   </div>
                 </div>
 

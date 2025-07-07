@@ -418,12 +418,30 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
     try {
       // Get full order details with items for invoice generation
       const baseOrder = await storage.getOrderById(newOrder.id);
+      console.log('INVOICE DEBUG: Retrieved base order for invoice generation:', {
+        orderId: newOrder.id,
+        orderExists: !!baseOrder,
+        baseOrderStatus: baseOrder?.status,
+        baseOrderPaymentStatus: baseOrder?.paymentStatus
+      });
+      
       if (baseOrder) {
         const orderItemsData = await storage.getOrderItems(newOrder.id);
         const fullOrder = {
           ...baseOrder,
           orderItems: orderItemsData || []
         };
+
+        console.log('INVOICE DEBUG: Order items retrieved for invoice generation:', {
+          orderId: newOrder.id,
+          orderItemsCount: fullOrder.orderItems?.length || 0,
+          orderItems: fullOrder.orderItems?.map(item => ({
+            id: item.id,
+            productName: item.productName,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice
+          }))
+        });
 
         if (fullOrder.orderItems && fullOrder.orderItems.length > 0) {
           // Fetch VAT settings from systemSettings for invoice generation
@@ -501,10 +519,28 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
             orderNumber: newOrder.orderNumber,
             invoicePath
           });
+        } else {
+          console.error('INVOICE ERROR: No order items found for invoice generation:', {
+            orderId: newOrder.id,
+            orderNumber: newOrder.orderNumber,
+            orderItemsCount: fullOrder.orderItems?.length || 0,
+            orderItemsData: fullOrder.orderItems
+          });
         }
+      } else {
+        console.error('INVOICE ERROR: No base order found for invoice generation:', {
+          orderId: newOrder.id,
+          orderNumber: newOrder.orderNumber
+        });
       }
     } catch (invoiceError) {
-      console.error('Failed to generate invoice for YoCo payment:', invoiceError);
+      console.error('Failed to generate invoice for YoCo payment:', {
+        error: invoiceError,
+        orderId: newOrder.id,
+        orderNumber: newOrder.orderNumber,
+        errorMessage: invoiceError instanceof Error ? invoiceError.message : String(invoiceError),
+        errorStack: invoiceError instanceof Error ? invoiceError.stack : undefined
+      });
       // Don't fail the webhook for invoice errors
     }
 
