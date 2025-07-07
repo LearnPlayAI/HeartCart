@@ -46,6 +46,8 @@ interface YocoCheckoutRequest {
     tempCheckoutId?: string; // Backward compatibility
     customerId: string;
     customerEmail: string;
+    customerFullName: string; // Customer's full name for order creation
+    customerPhone: string; // Customer's phone number for order creation
     cartData: string; // JSON string of cart data for order creation
   };
   totalTaxAmount?: number; // VAT amount in cents
@@ -97,6 +99,8 @@ interface YocoPaymentEvent {
       tempCheckoutId?: string;
       customerId?: string;
       customerEmail?: string;
+      customerFullName?: string;
+      customerPhone?: string;
       cartData?: string;
     };
   };

@@ -37,20 +37,25 @@ router.post('/card/checkout', isAuthenticated, asyncHandler(async (req: Request,
     // CRITICAL FIX: Import storage once for entire function
     const { storage } = await import('./storage.js');
     
-    // CRITICAL FIX: Fetch customer's fullName from users table for proper order creation
+    // CRITICAL FIX: Fetch customer's fullName and phone from users table for proper order creation
     let customerFullName = '';
+    let customerPhone = '';
     try {
       const customer = await storage.getUserById(customerId);
       customerFullName = customer?.fullName || `${customer?.firstName || ''} ${customer?.lastName || ''}`.trim() || 'Unknown Customer';
-      console.log('✅ Customer fullName fetched from database:', {
+      customerPhone = customer?.phone || '+27712063084'; // Use default TeeMeYou contact number as fallback
+      console.log('✅ Customer data fetched from database:', {
         customerId,
         customerFullName,
         customerEmail: customer?.email,
-        hasFullName: !!customer?.fullName
+        customerPhone,
+        hasFullName: !!customer?.fullName,
+        hasPhone: !!customer?.phone
       });
     } catch (error) {
-      console.error('❌ Failed to fetch customer fullName from database:', error);
+      console.error('❌ Failed to fetch customer data from database:', error);
       customerFullName = 'Unknown Customer';
+      customerPhone = '+27712063084'; // Use default TeeMeYou contact number as fallback
     }
 
     // Convert total amount to cents (YoCo requires cents)
@@ -101,10 +106,12 @@ router.post('/card/checkout', isAuthenticated, asyncHandler(async (req: Request,
         customerId: customerId.toString(),
         customerEmail: customerEmail,
         customerFullName: customerFullName, // Include customer's full name for webhook processing
+        customerPhone: customerPhone, // CRITICAL FIX: Include customer phone for webhook processing
         // Store complete cart data for order creation after successful payment  
         cartData: JSON.stringify({
           ...cartData,
-          customerName: customerFullName // Ensure customerName is in cart data for webhook
+          customerName: customerFullName, // Ensure customerName is in cart data for webhook
+          customerPhone: customerPhone // CRITICAL FIX: Ensure customerPhone is in cart data for webhook
         })
       },
       totalTaxAmount: vatAmountInCents,
@@ -116,7 +123,6 @@ router.post('/card/checkout', isAuthenticated, asyncHandler(async (req: Request,
     };
 
     // COMPREHENSIVE DEBUGGING: Check admin YoCo environment setting
-    const { storage } = await import('./storage.js');
     let adminYocoEnvironment = 'test';
     try {
       const environmentSetting = await storage.getSystemSetting('yoco_environment');

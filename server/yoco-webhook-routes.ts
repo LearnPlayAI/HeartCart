@@ -33,6 +33,8 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
       tempCheckoutId: req.body.payload?.metadata?.tempCheckoutId,
       customerId: req.body.payload?.metadata?.customerId,
       customerEmail: req.body.payload?.metadata?.customerEmail,
+      customerFullName: req.body.payload?.metadata?.customerFullName,
+      customerPhone: req.body.payload?.metadata?.customerPhone,
       webhookSecretConfigured: !!process.env.YOCO_WEBHOOK_SECRET,
       webhookSecretUsed: process.env.YOCO_WEBHOOK_SECRET?.substring(0, 20) + '...',
     });
@@ -102,6 +104,7 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
     const customerId = parseInt(payment.metadata.customerId);
     const customerEmail = payment.metadata.customerEmail;
     const customerFullName = payment.metadata.customerFullName; // Extract customer's full name from metadata
+    const customerPhone = payment.metadata.customerPhone; // CRITICAL FIX: Extract customer phone from metadata
     const cartDataStr = payment.metadata.cartData;
 
     console.log('Processing successful payment:', {
@@ -111,6 +114,7 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
       customerId,
       customerEmail,
       customerFullName, // Log customer's full name for debugging
+      customerPhone, // CRITICAL FIX: Log customer phone for debugging
       amount: payment.amount,
       currency: payment.currency,
     });
@@ -139,6 +143,11 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
       console.error('CustomerFullName is null or missing from payment metadata');
       return res.status(400).json({ error: 'Customer name missing from payment data' });
     }
+    
+    if (!customerPhone) {
+      console.error('CustomerPhone is null or missing from payment metadata');
+      return res.status(400).json({ error: 'Customer phone missing from payment data' });
+    }
 
     // CRITICAL FIX: Import storage once for entire webhook processing
     const { storage } = await import('./storage.js');
@@ -163,10 +172,12 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
       customerId,
       customerEmail,
       customerFullName, // Debug customer name from metadata
+      customerPhone, // CRITICAL FIX: Debug customer phone from metadata
       cartDataKeys: Object.keys(cartData),
       hasOrderItems: !!cartData.orderItems,
       orderItemsCount: cartData.orderItems?.length || 0,
-      cartDataCustomerName: cartData.customerName // Debug customer name in cart data
+      cartDataCustomerName: cartData.customerName, // Debug customer name in cart data
+      cartDataCustomerPhone: cartData.customerPhone // CRITICAL FIX: Debug customer phone in cart data
     });
 
     // YoCo compliance: Calculate transaction fees for profit tracking (absorbed by company, not charged to customer)
@@ -189,6 +200,7 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
       userId: customerId,
       customerEmail: customerEmail, // CRITICAL FIX: Explicitly set customerEmail from metadata
       customerName: customerFullName, // CRITICAL FIX: Explicitly set customerName from metadata
+      customerPhone: customerPhone, // CRITICAL FIX: Explicitly set customerPhone from metadata
       paymentMethod: 'card',
       paymentStatus: 'payment_received', // Already paid via card
       status: 'confirmed', // Auto-confirm card payments
