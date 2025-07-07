@@ -9,10 +9,10 @@ import { v4 as uuidv4 } from 'uuid';
 const YOCO_CONFIG = {
   publicKey: process.env.NODE_ENV === 'production' 
     ? process.env.YOCO_PROD_PUBLIC_KEY 
-    : process.env.YOCO_OFFICIAL_TEST_PUBLIC, // Using official YoCo test keys for guaranteed 3D Secure compatibility
+    : process.env.YOCO_OFFICIAL_TEST_PUBLIC, // Temporarily using official YoCo test keys for 3D Secure debugging
   secretKey: process.env.NODE_ENV === 'production'
     ? process.env.YOCO_PROD_SECRET_KEY
-    : process.env.YOCO_OFFICIAL_TEST_SECRET, // Using official YoCo test keys for guaranteed 3D Secure compatibility
+    : process.env.YOCO_OFFICIAL_TEST_SECRET, // Temporarily using official YoCo test keys for 3D Secure debugging
   apiUrl: 'https://payments.yoco.com/api',
   webhookSecret: process.env.YOCO_WEBHOOK_SECRET || '',
 };
