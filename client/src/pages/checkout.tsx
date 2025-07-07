@@ -109,6 +109,16 @@ export default function CheckoutPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedLocker, setSelectedLocker] = useState(null);
   const [savePreferredTrigger, setSavePreferredTrigger] = useState(false);
+  
+  // Debug logging for selectedLocker changes
+  useEffect(() => {
+    console.log("Checkout selectedLocker state changed:", {
+      selectedLocker: selectedLocker,
+      hasLocker: !!selectedLocker,
+      lockerId: selectedLocker?.id,
+      lockerName: selectedLocker?.name
+    });
+  }, [selectedLocker]);
 
   const { creditBalance, formattedBalance, balanceLoading, transactions } = useCredits();
 
@@ -944,7 +954,7 @@ export default function CheckoutPage() {
               type="submit"
               size="lg"
               className="w-full bg-gradient-to-r from-pink-600 to-pink-700 hover:from-pink-700 hover:to-pink-800"
-              disabled={isProcessing || !selectedLocker || !form.formState.isValid || Object.keys(form.formState.errors).length > 0}
+              disabled={isProcessing || (selectedShippingMethod === "pudo" && !selectedLocker) || !form.formState.isValid || Object.keys(form.formState.errors).length > 0}
             >
               {isProcessing ? (
                 <>
