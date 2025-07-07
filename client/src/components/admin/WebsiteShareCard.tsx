@@ -58,21 +58,33 @@ Thank you for supporting our growing business! 🙏
   // Fetch message from systemSettings
   const { data: settingResponse, isLoading: isLoadingSetting } = useQuery({
     queryKey: ['/api/admin/settings/website_share_message'],
-    queryFn: async () => {
-      const response = await fetch('/api/admin/settings/website_share_message', {
-        credentials: 'include'
-      });
-      if (!response.ok) throw new Error('Failed to fetch setting');
-      return response.json();
-    }
+    queryFn: () => apiRequest('GET', '/api/admin/settings/website_share_message'),
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
   // Update message mutation
   const updateMessageMutation = useMutation({
     mutationFn: async (message: string) => {
-      return apiRequest('PATCH', '/api/admin/settings/website_share_message', {
-        value: message
-      });
+      try {
+        const result = await apiRequest('PATCH', '/api/admin/settings/website_share_message', {
+          value: message
+        });
+        
+        if (!result?.success) {
+          throw new Error('Failed to save website share message setting');
+        }
+        
+        return result;
+      } catch (error: any) {
+        // Enhanced error handling for different types of errors
+        if (error.message && error.message.includes('<!DOCTYPE html>')) {
+          throw new Error('Server error occurred. Please check your connection and try again.');
+        }
+        if (error.message && error.message.includes('JSON')) {
+          throw new Error('Invalid server response. Please try again or contact support.');
+        }
+        throw error;
+      }
     },
     onSuccess: () => {
       setHasUnsavedChanges(false);
@@ -82,10 +94,11 @@ Thank you for supporting our growing business! 🙏
       });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/settings/website_share_message'] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      console.error('Website share message save error:', error);
       toast({
         title: "Save failed",
-        description: "Failed to save your message. Please try again.",
+        description: error.message || "Failed to save your message. Please try again.",
         variant: "destructive",
       });
     }

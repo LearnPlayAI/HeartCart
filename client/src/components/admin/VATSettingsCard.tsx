@@ -59,12 +59,33 @@ export function VATSettingsCard() {
   // Save VAT settings mutation
   const saveVATSettingsMutation = useMutation({
     mutationFn: async (settings: VATSettings) => {
-      // Save all three settings
-      await Promise.all([
-        apiRequest('PUT', '/api/admin/settings/vatRate', { settingValue: settings.vatRate }),
-        apiRequest('PUT', '/api/admin/settings/vatRegistrationNumber', { settingValue: settings.vatRegistrationNumber }),
-        apiRequest('PUT', '/api/admin/settings/vatRegistered', { settingValue: settings.vatRegistered }),
-      ]);
+      try {
+        // Save all three settings with proper error handling
+        const results = await Promise.all([
+          apiRequest('PUT', '/api/admin/settings/vatRate', { settingValue: settings.vatRate }),
+          apiRequest('PUT', '/api/admin/settings/vatRegistrationNumber', { settingValue: settings.vatRegistrationNumber }),
+          apiRequest('PUT', '/api/admin/settings/vatRegistered', { settingValue: settings.vatRegistered }),
+        ]);
+        
+        // Verify all requests succeeded
+        results.forEach((result, index) => {
+          const settingNames = ['vatRate', 'vatRegistrationNumber', 'vatRegistered'];
+          if (!result?.success) {
+            throw new Error(`Failed to save ${settingNames[index]} setting`);
+          }
+        });
+        
+        return results;
+      } catch (error: any) {
+        // Enhanced error handling for different types of errors
+        if (error.message && error.message.includes('<!DOCTYPE html>')) {
+          throw new Error('Server error occurred. Please check your connection and try again.');
+        }
+        if (error.message && error.message.includes('JSON')) {
+          throw new Error('Invalid server response. Please try again or contact support.');
+        }
+        throw error;
+      }
     },
     onSuccess: () => {
       // Invalidate all VAT settings queries
@@ -80,6 +101,7 @@ export function VATSettingsCard() {
       });
     },
     onError: (error: any) => {
+      console.error('VAT Settings save error:', error);
       toast({
         title: "Error Saving VAT Settings",
         description: error.message || "Failed to save VAT settings. Please try again.",

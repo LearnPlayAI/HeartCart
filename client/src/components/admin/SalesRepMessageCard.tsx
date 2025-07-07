@@ -28,8 +28,26 @@ export function SalesRepMessageCard({ className = '' }: SalesRepMessageCardProps
 
   // Save message mutation
   const saveMutation = useMutation({
-    mutationFn: (value: string) => 
-      apiRequest('PATCH', '/api/admin/settings/sales_rep_message', { value }),
+    mutationFn: async (value: string) => {
+      try {
+        const result = await apiRequest('PATCH', '/api/admin/settings/sales_rep_message', { value });
+        
+        if (!result?.success) {
+          throw new Error('Failed to save sales rep message setting');
+        }
+        
+        return result;
+      } catch (error: any) {
+        // Enhanced error handling for different types of errors
+        if (error.message && error.message.includes('<!DOCTYPE html>')) {
+          throw new Error('Server error occurred. Please check your connection and try again.');
+        }
+        if (error.message && error.message.includes('JSON')) {
+          throw new Error('Invalid server response. Please try again or contact support.');
+        }
+        throw error;
+      }
+    },
     onSuccess: () => {
       setHasUnsavedChanges(false);
       toast({
@@ -38,10 +56,11 @@ export function SalesRepMessageCard({ className = '' }: SalesRepMessageCardProps
       });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/settings/sales_rep_message'] });
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error('Sales rep message save error:', error);
       toast({
         title: "Error",
-        description: "Failed to save sales rep message",
+        description: error.message || "Failed to save sales rep message",
         variant: "destructive",
       });
     }
