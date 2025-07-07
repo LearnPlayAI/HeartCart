@@ -93,8 +93,10 @@ export default function CartPage() {
   const vatRate = parseFloat(vatRateSettings?.data?.settingValue || '0');
   const vatRegistered = vatRegisteredSettings?.data?.settingValue === 'true';
 
-  // Debug VAT settings - TODO: Remove after testing
+  // Force debug log to always appear
+  console.log('========== VAT DEBUG CART ==========');
   console.log('VAT Debug Cart:', {
+    cartItemsLength: cartItems?.length,
     vatRateSettings: vatRateSettings?.data,
     vatRegisteredSettings: vatRegisteredSettings?.data,
     vatRateLoading,
@@ -116,6 +118,7 @@ export default function CartPage() {
 
   // Debug VAT calculation - TODO: Remove after testing
   console.log('VAT Calculation Result:', vatCalculation);
+  console.log('========== END VAT DEBUG ==========');
 
   const isEmpty = !cartItems || cartItems.length === 0;
 
