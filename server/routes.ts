@@ -3978,44 +3978,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const vatRegistered = vatRegisteredSettings?.settingValue === 'true';
         const vatRegistrationNumber = vatRegistrationNumberSettings?.settingValue || '';
         
-        // Get active promotions for pricing calculations
-        const activePromotions = await storage.getActivePromotionsWithProducts();
-        
-        // Create promotion map
-        const promotionMap = new Map();
-        activePromotions.forEach((promotion: any) => {
-          if (promotion.products) {
-            promotion.products.forEach((pp: any) => {
-              promotionMap.set(pp.productId, {
-                promotionName: promotion.promotionName,
-                promotionDiscount: promotion.discountValue ? promotion.discountValue.toString() : '0',
-                promotionEndDate: promotion.endDate,
-                promotionalPrice: pp.promotionalPrice ? parseFloat(pp.promotionalPrice) : null
-              });
-            });
-          }
-        });
-        
-        // Calculate subtotal with current pricing and promotions
+        // Calculate subtotal using stored cart item prices (simplified for VAT focus)
         const subtotal = cartItems.reduce((sum: number, item: any) => {
-          let currentPrice = 0;
-          if (item.product) {
-            const promotionInfo = promotionMap.get(item.product.id) || null;
-            // Use same pricing logic as frontend
-            const basePrice = item.product.price || 0;
-            const salePrice = item.product.salePrice;
-            
-            if (promotionInfo && promotionInfo.promotionalPrice) {
-              currentPrice = promotionInfo.promotionalPrice;
-            } else if (salePrice && salePrice < basePrice) {
-              currentPrice = salePrice;
-            } else {
-              currentPrice = basePrice;
-            }
-          } else {
-            currentPrice = parseFloat(item.itemPrice || 0);
-          }
-          
+          // Use the stored itemPrice which represents the price when item was added to cart
+          const currentPrice = parseFloat(item.itemPrice || '0');
           const quantity = item.quantity || 0;
           return sum + (currentPrice * quantity);
         }, 0);
