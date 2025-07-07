@@ -17,6 +17,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { calculateProductPricing, getPromotionalBadgeText, calculateShippingCost } from "@/utils/pricing";
 import { useCredits } from "@/hooks/use-credits";
 import PudoLockerPicker from "@/components/PudoLockerPicker";
+import { calculateVAT, formatVATAmount, formatVATRate } from "@shared/vat-utils";
 import { 
   CreditCard, 
   Truck, 
@@ -26,7 +27,8 @@ import {
   Mail, 
   Building2,
   Banknote,
-  Package
+  Package,
+  Calculator
 } from "lucide-react";
 import ContextualInstallPrompts from "@/components/pwa/ContextualInstallPrompts";
 
@@ -129,6 +131,22 @@ export default function CheckoutPage() {
   const { data: ordersResponse } = useQuery({
     queryKey: ['/api/orders'],
     enabled: !!creditBalance // Only fetch if user has credit balance
+  });
+
+  // Fetch VAT settings for order calculation and display
+  const { data: vatRateSettings } = useQuery({
+    queryKey: ['/api/admin/settings/vatRate'],
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+
+  const { data: vatRegisteredSettings } = useQuery({
+    queryKey: ['/api/admin/settings/vatRegistered'],
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: vatRegNumberSettings } = useQuery({
+    queryKey: ['/api/admin/settings/vatRegistrationNumber'],
+    staleTime: 5 * 60 * 1000,
   });
 
   // Invalidate preferred locker cache when checkout page loads to ensure fresh data
@@ -249,9 +267,22 @@ export default function CheckoutPage() {
     userOrders
   );
   const safeShippingCost = shippingCost || 0;
-  const orderTotal = subtotal + safeShippingCost;
-  const autoCreditAmount = Math.min(availableCredit, orderTotal);
-  const finalTotal = Math.max(0, orderTotal - autoCreditAmount);
+  
+  // Get VAT settings from API response
+  const vatRate = parseFloat(vatRateSettings?.data?.settingValue || '0');
+  const vatRegistered = vatRegisteredSettings?.data?.settingValue === 'true';
+  const vatRegistrationNumber = vatRegNumberSettings?.data?.settingValue || '';
+  
+  // Calculate VAT using shared utilities
+  const vatCalculation = calculateVAT({
+    subtotal: subtotal,
+    shippingCost: safeShippingCost,
+    vatRate: vatRate
+  });
+  
+  const orderTotalWithVAT = vatCalculation.totalAmount;
+  const autoCreditAmount = Math.min(availableCredit, orderTotalWithVAT);
+  const finalTotal = Math.max(0, orderTotalWithVAT - autoCreditAmount);
 
   // Update user profile mutation
   const updateProfileMutation = useMutation({
@@ -425,6 +456,10 @@ export default function CheckoutPage() {
         orderItems,
         subtotal,
         total: finalTotal,
+        // VAT information for server-side processing
+        vatAmount: vatCalculation.vatAmount,
+        vatRate: vatRate,
+        vatRegistrationNumber: vatRegistrationNumber,
         creditUsed: autoCreditAmount,
         selectedLockerId: selectedLocker?.id,
         lockerDetails: selectedLocker ? {
@@ -1017,6 +1052,23 @@ export default function CheckoutPage() {
                     )}
                   </div>
                 </div>
+                
+                {/* VAT Line Item - Always show for transparency */}
+                <div className="flex justify-between text-sm items-center">
+                  <div className="flex items-center gap-1">
+                    <Calculator className="h-3 w-3 text-orange-500" />
+                    <span>VAT ({formatVATRate(vatRate)}):</span>
+                  </div>
+                  <span>{formatVATAmount(vatCalculation.vatAmount)}</span>
+                </div>
+                
+                {/* VAT Registration Info (only show if registered) */}
+                {vatRegistered && vatRegistrationNumber && (
+                  <div className="text-xs text-gray-500">
+                    VAT Reg: {vatRegistrationNumber}
+                  </div>
+                )}
+                
                 {autoCreditAmount > 0 && (
                   <div className="flex justify-between text-sm text-green-600">
                     <span>Credit Applied:</span>
@@ -1032,7 +1084,7 @@ export default function CheckoutPage() {
                 </div>
                 {autoCreditAmount > 0 && (
                   <div className="text-xs text-gray-600">
-                    Original total: R{(subtotal + shippingCost).toFixed(2)}
+                    Original total: R{orderTotalWithVAT.toFixed(2)}
                   </div>
                 )}
               </div>

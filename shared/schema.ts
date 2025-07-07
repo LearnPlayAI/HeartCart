@@ -182,6 +182,11 @@ export const orders = pgTable("orders", {
   subtotalAmount: doublePrecision("subtotalAmount").notNull(),
   totalAmount: doublePrecision("totalAmount").notNull(),
   
+  // VAT system fields - South African Value Added Tax
+  vatAmount: doublePrecision("vatAmount").notNull().default(0), // Calculated VAT amount
+  vatRate: doublePrecision("vatRate").notNull(), // VAT rate used for this order (from admin settings)
+  vatRegistrationNumber: text("vatRegistrationNumber"), // Historical VAT registration number when order was placed
+  
   // Credit system fields
   creditUsed: decimal("creditUsed", { precision: 10, scale: 2 }).notNull().default('0'),
   remainingBalance: decimal("remainingBalance", { precision: 10, scale: 2 }),
@@ -657,6 +662,9 @@ export const insertOrderSchema = createInsertSchema(orders).omit({
   paymentMethod: z.enum(["eft"]).default("eft"),
   paymentStatus: z.enum(["pending", "paid", "failed"]).default("pending"),
   status: z.enum(["pending", "confirmed", "processing", "shipped", "delivered", "cancelled"]).default("pending"),
+  vatAmount: z.number().min(0).default(0),
+  vatRate: z.number().min(0).max(100),
+  vatRegistrationNumber: z.string().nullable().optional(),
 });
 
 export const insertOrderItemSchema = createInsertSchema(orderItems).omit({

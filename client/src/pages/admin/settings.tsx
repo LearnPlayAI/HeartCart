@@ -2,6 +2,7 @@ import { AdminLayout } from '@/components/admin/layout';
 import { WebsiteShareCard } from '@/components/admin/WebsiteShareCard';
 import { SalesRepMessageCard } from '@/components/admin/SalesRepMessageCard';
 import { ProductSharingCard } from '@/components/admin/ProductSharingCard';
+import { VATSettingsCard } from '@/components/admin/VATSettingsCard';
 
 export default function AdminSettingsPage() {
   return (
@@ -16,6 +17,12 @@ export default function AdminSettingsPage() {
 
         {/* Settings Cards Grid */}
         <div className="grid grid-cols-1 gap-6">
+          {/* VAT Configuration Section */}
+          <div>
+            <h2 className="text-lg font-semibold mb-4 text-orange-700">VAT Configuration</h2>
+            <VATSettingsCard />
+          </div>
+
           {/* Website Sharing Section - Moving from Dashboard */}
           <div>
             <h2 className="text-lg font-semibold mb-4 text-pink-700">Website Sharing</h2>

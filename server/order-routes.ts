@@ -12,6 +12,7 @@ import fs from "fs";
 import { objectStore } from "./object-store";
 import { databaseEmailService } from "./database-email-service";
 import { PromotionValidationService } from "./promotion-validation-service";
+import { calculateVAT } from "@shared/vat-utils";
 
 // Define the order creation schema that matches the checkout form structure
 const checkoutOrderSchema = z.object({
@@ -39,6 +40,9 @@ const checkoutOrderSchema = z.object({
   paymentMethod: z.string(),
   subtotal: z.number(),
   total: z.number(),
+  vatAmount: z.number().min(0).default(0),
+  vatRate: z.number().min(0).max(100),
+  vatRegistrationNumber: z.string().optional(),
   specialInstructions: z.string().optional(),
   paymentReferenceNumber: z.string().optional(),
   paymentStatus: z.string().optional(),
@@ -242,7 +246,55 @@ router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Respons
     }
     // All other orders remain "pending" until admin manually verifies payment
 
-    // Create order object with new structure including locker details
+    // Fetch VAT settings from admin configuration
+    let vatSettings = {
+      vatRate: 0,
+      vatRegistrationNumber: '',
+      vatRegistered: false
+    };
+    
+    try {
+      // Fetch VAT settings from system settings
+      const vatRateResult = await storage.getSystemSetting('vatRate');
+      const vatRegNumberResult = await storage.getSystemSetting('vatRegistrationNumber');
+      const vatRegisteredResult = await storage.getSystemSetting('vatRegistered');
+      
+      vatSettings.vatRate = parseFloat(vatRateResult?.settingValue || '0');
+      vatSettings.vatRegistrationNumber = vatRegNumberResult?.settingValue || '';
+      vatSettings.vatRegistered = vatRegisteredResult?.settingValue === 'true';
+      
+      logger.info("VAT settings fetched for order", {
+        vatRate: vatSettings.vatRate,
+        vatRegistered: vatSettings.vatRegistered,
+        vatRegistrationNumber: vatSettings.vatRegistrationNumber
+      });
+    } catch (error) {
+      logger.error("Failed to fetch VAT settings, using defaults", { error });
+    }
+    
+    // Calculate VAT amounts using server-side calculation
+    const vatCalculation = calculateVAT({
+      subtotal: orderData.subtotal,
+      shippingCost: orderData.shippingCost,
+      vatRate: vatSettings.vatRate
+    });
+    
+    // Verify total matches (subtotal + shipping + VAT)
+    const expectedTotal = vatCalculation.totalAmount;
+    logger.info("VAT calculation for order", {
+      subtotal: orderData.subtotal,
+      shippingCost: orderData.shippingCost,
+      vatRate: vatSettings.vatRate,
+      vatAmount: vatCalculation.vatAmount,
+      expectedTotal: expectedTotal,
+      clientTotal: orderData.total
+    });
+    
+    // Use server-calculated VAT amounts (override any client-provided values)
+    const finalVatAmount = vatCalculation.vatAmount;
+    const finalTotal = expectedTotal;
+
+    // Create order object with new structure including locker details and VAT
     const order = {
       userId: userId,
       status: orderStatus,
@@ -257,7 +309,11 @@ router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Respons
       paymentMethod: orderData.paymentMethod,
       paymentStatus: finalPaymentStatus,
       subtotalAmount: orderData.subtotal,
-      totalAmount: orderData.total,
+      totalAmount: finalTotal, // Use server-calculated total with VAT
+      // VAT fields - calculated server-side based on admin settings
+      vatAmount: finalVatAmount,
+      vatRate: vatSettings.vatRate,
+      vatRegistrationNumber: vatSettings.vatRegistrationNumber,
       customerNotes: orderData.specialInstructions || null,
       creditUsed: orderData.creditUsed || 0,
       remainingBalance: remainingBalance,

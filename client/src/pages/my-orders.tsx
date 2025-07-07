@@ -3,6 +3,7 @@ import { useLocation } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet';
 import { formatCurrency } from "@/lib/utils";
+import { calculateVAT, formatVATAmount, formatVATRate } from "@shared/vat-utils";
 import { 
   Card, 
   CardContent, 
@@ -34,7 +35,8 @@ import {
   Eye,
   Package2,
   AlertTriangle,
-  ExternalLink
+  ExternalLink,
+  Calculator
 } from 'lucide-react';
 
 // Interfaces matching our database schema
@@ -50,6 +52,35 @@ interface OrderType {
   id: number;
   userId: number;
   orderNumber: string;
+  status: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  shippingAddress: string;
+  shippingCity: string;
+  shippingPostalCode: string;
+  shippingMethod: string;
+  shippingCost: number;
+  paymentMethod: string;
+  paymentStatus: string;
+  subtotalAmount: number;
+  totalAmount: number;
+  // VAT fields - South African Value Added Tax
+  vatAmount: number;
+  vatRate: number;
+  vatRegistrationNumber?: string;
+  customerNotes?: string;
+  adminNotes?: string;
+  trackingNumber?: string;
+  createdAt: string;
+  updatedAt?: string;
+  shippedAt?: string;
+  deliveredAt?: string;
+  eftPop?: string;
+  invoicePath?: string;
+  paymentReferenceNumber?: string;
+  orderItems: OrderItemType[];
+  user?: UserType;
   status: string;
   customerName: string;
   customerEmail: string;

@@ -13,6 +13,7 @@ import ProductDetail from "@/pages/product-detail-new";
 import Category from "@/pages/category";
 import ProductListing from "@/pages/product-listing";
 import ProductsExample from "@/pages/products-example";
+import Cart from "@/pages/cart";
 import Checkout from "@/pages/checkout";
 import OrderDetail from "@/pages/order-detail";
 import OrderConfirmation from "@/pages/order-confirmation";

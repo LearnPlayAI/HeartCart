@@ -98,6 +98,10 @@ interface Order {
   paymentStatus: string;
   subtotalAmount: number;
   totalAmount: number;
+  // VAT fields - South African Value Added Tax
+  vatAmount: number;
+  vatRate: number;
+  vatRegistrationNumber?: string;
   customerNotes?: string;
   adminNotes?: string;
   trackingNumber?: string;
