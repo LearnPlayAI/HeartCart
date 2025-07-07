@@ -2,7 +2,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { sendError, sendSuccess } from "./api-response";
 import { storage } from "./storage";
-import { objectStore } from "./object-store";
+import { objectStoreAdapter } from "./object-store-adapter";
 import asyncHandler from 'express-async-handler';
 import { ZodError } from "zod";
 import { logger } from "./logger";
@@ -29,7 +29,6 @@ import {
   insertPromotionSchema,
   insertProductPromotionSchema
 } from "@shared/schema";
-import { objectStore, STORAGE_FOLDERS } from "./object-store";
 import { setupAuth } from "./auth";
 import { isAuthenticated, isAdmin } from "./auth-middleware";
 import multer from "multer";
@@ -7537,7 +7536,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         try {
           // Get the PDF file from object storage using the correct method
-          const { data: fileData, contentType } = await objectStore.getFileAsBuffer(order.invoicePath);
+          const { data: fileData, contentType } = await objectStoreAdapter.getFileAsBuffer(order.invoicePath);
           
           if (!fileData) {
             return sendError(res, "Invoice file not found", 404);
