@@ -87,18 +87,18 @@ router.post('/card/checkout', isAuthenticated, asyncHandler(async (req: Request,
       },
       totalTaxAmount: vatAmountInCents,
       subtotalAmount: subtotalInCents,
-      lineItems: enrichedLineItems,
-      // YoCo processing mode based on environment
-      // NODE_ENV="production" → "live" mode, anything else → "test" mode
-      processingMode: process.env.NODE_ENV === 'production' ? 'live' : 'test'
+      lineItems: enrichedLineItems
+      // NOTE: processingMode is determined by YoCo based on API keys used:
+      // - Test keys (sk_test_...) → YoCo sets processingMode: "test"
+      // - Live keys (sk_live_...) → YoCo sets processingMode: "live"
     };
 
     // COMPREHENSIVE DEBUGGING: Check exact environment values at checkout creation
     console.log('🔍 ENVIRONMENT DEBUG at checkout creation:', {
       NODE_ENV: process.env.NODE_ENV,
       isProduction: process.env.NODE_ENV === 'production',
-      processingModeCalculated: process.env.NODE_ENV === 'production' ? 'live' : 'test',
-      expectedProcessingMode: 'test', // Should be test based on NODE_ENV
+      keyTypeUsed: process.env.NODE_ENV === 'production' ? 'LIVE keys' : 'TEST keys',
+      expectedYoCoMode: process.env.NODE_ENV === 'production' ? 'live (set by YoCo)' : 'test (set by YoCo)',
       YOCO_TEST_PUBLIC_KEY: process.env.YOCO_TEST_PUBLIC_KEY?.substring(0, 25) + '...',
       YOCO_PROD_PUBLIC_KEY: process.env.YOCO_PROD_PUBLIC_KEY?.substring(0, 25) + '...',
     });
@@ -110,6 +110,7 @@ router.post('/card/checkout', isAuthenticated, asyncHandler(async (req: Request,
       currency: 'ZAR',
       environment: process.env.NODE_ENV || 'development',
       usingTestKeys: process.env.NODE_ENV !== 'production',
+      note: 'processingMode will be set by YoCo based on API keys used',
       lineItemsCount: enrichedLineItems.length,
       vatAmount: vatAmountInCents,
       subtotal: subtotalInCents

@@ -101,15 +101,13 @@ class YocoService {
     console.log('🔑 YoCo API Configuration:', {
       nodeEnv: process.env.NODE_ENV,
       isProduction: process.env.NODE_ENV === 'production',
+      keyType: this.secretKey?.startsWith('sk_test_') ? 'TEST' : (this.secretKey?.startsWith('sk_live_') ? 'LIVE' : 'UNKNOWN'),
       publicKey: YOCO_CONFIG.publicKey?.substring(0, 25) + '...',
       secretKey: this.secretKey?.substring(0, 25) + '...',
       apiUrl: this.baseUrl,
       checkoutAmount: checkoutData.amount,
       currency: checkoutData.currency,
-      testPublicAvailable: !!process.env.YOCO_TEST_PUBLIC_KEY,
-      prodPublicAvailable: !!process.env.YOCO_PROD_PUBLIC_KEY,
-      actualTestKey: process.env.YOCO_TEST_PUBLIC_KEY?.substring(0, 25) + '...',
-      actualProdKey: process.env.YOCO_PROD_PUBLIC_KEY?.substring(0, 25) + '...'
+      note: 'YoCo will set processingMode automatically based on key type'
     });
 
     const idempotencyKey = uuidv4();
@@ -159,9 +157,9 @@ class YocoService {
       redirectUrl: result.redirectUrl,
       amount: result.amount,
       currency: result.currency,
-      processingMode: result.processingMode,
+      yocoProcessingMode: result.processingMode, // YoCo's automatically set processing mode
       environment: process.env.NODE_ENV || 'development',
-      usingTestKeys: process.env.NODE_ENV !== 'production'
+      keyType: this.secretKey?.startsWith('sk_test_') ? 'TEST' : 'LIVE'
     });
     
     return result;
