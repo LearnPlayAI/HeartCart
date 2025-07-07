@@ -3549,8 +3549,38 @@ export class DatabaseStorage implements IStorage {
       let successfulItemInserts = 0;
       let failedItemInserts = 0;
 
+      console.log('CRITICAL DEBUG: Starting order items insertion:', {
+        orderId: orderToUse.id,
+        orderNumber: orderToUse.orderNumber,
+        itemsToInsert: items.length,
+        itemsData: items.map((item, index) => ({
+          index,
+          productId: item.productId,
+          productName: item.productName,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          totalPrice: item.totalPrice,
+          selectedAttributes: item.selectedAttributes,
+          hasAllFields: !!(item.productId && item.productName && item.quantity && item.unitPrice && item.totalPrice)
+        }))
+      });
+
       for (const item of items) {
         try {
+          console.log('CRITICAL DEBUG: Attempting to insert order item:', {
+            orderId: orderToUse.id,
+            itemData: {
+              productId: item.productId,
+              productName: item.productName,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              totalPrice: item.totalPrice,
+              selectedAttributes: item.selectedAttributes,
+              orderId: orderToUse.id,
+              createdAt: new Date().toISOString()
+            }
+          });
+
           const [orderItem] = await db
             .insert(orderItems)
             .values({
@@ -3561,6 +3591,14 @@ export class DatabaseStorage implements IStorage {
             .returning();
 
           successfulItemInserts++;
+
+          console.log('CRITICAL DEBUG: Successfully inserted order item:', {
+            orderId: orderToUse.id,
+            orderItemId: orderItem.id,
+            productId: item.productId,
+            productName: item.productName,
+            insertionSuccess: true
+          });
 
           logger.debug(`Added item to order`, {
             orderId: orderToUse.id,
@@ -3600,6 +3638,21 @@ export class DatabaseStorage implements IStorage {
           }
         } catch (itemError) {
           failedItemInserts++;
+          
+          console.error('CRITICAL ERROR: Failed to insert order item:', {
+            error: itemError,
+            errorMessage: itemError instanceof Error ? itemError.message : String(itemError),
+            errorStack: itemError instanceof Error ? itemError.stack : undefined,
+            orderId: orderToUse.id,
+            productId: item.productId,
+            productName: item.productName,
+            itemData: {
+              ...item,
+              orderId: orderToUse.id,
+              createdAt: new Date().toISOString()
+            }
+          });
+          
           logger.error(`Error inserting order item`, {
             error: itemError,
             orderId: orderToUse.id,

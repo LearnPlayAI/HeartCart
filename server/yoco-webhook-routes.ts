@@ -136,21 +136,31 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Invalid cart data format' });
     }
 
-    // CRITICAL FIX: Validate customer data before order creation
+    // CRITICAL FIX: Validate customer data before order creation with robust fallbacks
     if (!customerEmail) {
       console.error('CustomerEmail is null or missing from payment metadata');
       return res.status(400).json({ error: 'Customer email missing from payment data' });
     }
     
-    if (!customerFullName) {
-      console.error('CustomerFullName is null or missing from payment metadata');
+    // ENHANCED: Use fallback values for non-critical fields instead of failing entire order
+    const finalCustomerFullName = customerFullName || cartData.customerName || `Customer ${customerId}`;
+    const finalCustomerPhone = customerPhone || cartData.customerPhone || '+27712063084'; // Use TeeMeYou contact as fallback
+    
+    if (!finalCustomerFullName || finalCustomerFullName.trim() === '') {
+      console.error('CustomerFullName could not be determined from metadata or cart data');
       return res.status(400).json({ error: 'Customer name missing from payment data' });
     }
     
-    if (!customerPhone) {
-      console.error('CustomerPhone is null or missing from payment metadata');
-      return res.status(400).json({ error: 'Customer phone missing from payment data' });
-    }
+    console.log('CRITICAL DEBUG: Customer data validation results:', {
+      originalCustomerFullName: customerFullName,
+      originalCustomerPhone: customerPhone,
+      cartCustomerName: cartData.customerName,
+      cartCustomerPhone: cartData.customerPhone,
+      finalCustomerFullName,
+      finalCustomerPhone,
+      fallbackUsedForName: finalCustomerFullName !== customerFullName,
+      fallbackUsedForPhone: finalCustomerPhone !== customerPhone
+    });
 
     // CRITICAL FIX: Import storage once for entire webhook processing
     const { storage } = await import('./storage.js');
@@ -175,16 +185,18 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
       fullCartData: JSON.stringify(cartData, null, 2)
     });
 
-    console.log('CRITICAL DEBUG: Address field extraction:', { 
+    console.log('CRITICAL DEBUG: Address field extraction with validated customer data:', { 
       checkoutId, 
       customerId,
       customerEmail,
-      customerFullName, // Debug customer name from metadata
-      customerPhone, // CRITICAL FIX: Debug customer phone from metadata
+      originalCustomerFullName: customerFullName, // Debug original customer name from metadata
+      originalCustomerPhone: customerPhone, // Debug original customer phone from metadata
+      finalCustomerFullName, // Debug validated customer name with fallbacks
+      finalCustomerPhone, // Debug validated customer phone with fallbacks
       hasOrderItems: !!cartData.orderItems,
       orderItemsCount: cartData.orderItems?.length || 0,
       cartDataCustomerName: cartData.customerName, // Debug customer name in cart data
-      cartDataCustomerPhone: cartData.customerPhone, // CRITICAL FIX: Debug customer phone in cart data
+      cartDataCustomerPhone: cartData.customerPhone, // Debug customer phone in cart data
       // CRITICAL FIX: Debug nested address structure (matching EFT flow)
       hasShippingAddress: !!cartData.shippingAddress,
       shippingAddressStructure: cartData.shippingAddress,
@@ -259,9 +271,15 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
 
           const productName = product[0]?.name || `Product ID ${item.productId}`;
           
+          // CRITICAL FIX: Ensure all required database fields are present
           const enrichedItem = {
             ...item,
-            productName: productName  // CRITICAL FIX: Add productName from database
+            productName: productName,  // CRITICAL FIX: Add productName from database
+            totalPrice: item.quantity * item.unitPrice,  // CRITICAL FIX: Calculate totalPrice (required field)
+            selectedAttributes: item.selectedAttributes || item.attributeSelections || {},  // Ensure selectedAttributes exists
+            productSku: item.productSku || null,  // Optional field
+            productImageUrl: item.productImageUrl || null,  // Optional field
+            attributeDisplayText: item.attributeDisplayText || null  // Optional field
           };
           
           orderItems.push(enrichedItem);
@@ -289,7 +307,18 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
       }
     }
 
-    console.log('CRITICAL DEBUG: Final enriched order items:', {
+    // CRITICAL DEBUG: Ensure we have order items before proceeding
+    if (!orderItems || !Array.isArray(orderItems) || orderItems.length === 0) {
+      console.error('CRITICAL ERROR: No order items found after enrichment process!', {
+        originalRawOrderItems: rawOrderItems,
+        enrichedOrderItems: orderItems,
+        cartDataKeys: Object.keys(cartData),
+        checkoutId
+      });
+      return res.status(400).json({ error: 'No order items found in cart data' });
+    }
+
+    console.log('CRITICAL DEBUG: Final enriched order items before database insertion:', {
       enrichedItemCount: orderItems.length,
       allItemsHaveProductName: orderItems.every(item => item.productName),
       sampleEnrichedItem: orderItems[0],
@@ -387,8 +416,8 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
       ...orderData,
       userId: customerId,
       customerEmail: customerEmail, // CRITICAL FIX: Explicitly set customerEmail from metadata
-      customerName: customerFullName, // CRITICAL FIX: Explicitly set customerName from metadata
-      customerPhone: customerPhone, // CRITICAL FIX: Explicitly set customerPhone from metadata
+      customerName: finalCustomerFullName, // CRITICAL FIX: Use validated customer name with fallbacks
+      customerPhone: finalCustomerPhone, // CRITICAL FIX: Use validated customer phone with fallbacks
       // CRITICAL FIX: Map address fields correctly (matching EFT flow structure) 
       shippingAddress: shippingAddress,
       shippingCity: city,
@@ -430,6 +459,34 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
       status: order.status
     });
     
+    // CRITICAL DEBUG: Log exactly what we're passing to storage.createOrder
+    console.log('CRITICAL DEBUG: About to call storage.createOrder with:', {
+      orderDataKeys: Object.keys(order),
+      orderDataSample: {
+        customerName: order.customerName,
+        customerEmail: order.customerEmail,
+        customerPhone: order.customerPhone,
+        userId: order.userId,
+        totalAmount: order.totalAmount,
+        subtotalAmount: order.subtotalAmount,
+        paymentMethod: order.paymentMethod,
+        paymentStatus: order.paymentStatus,
+        status: order.status
+      },
+      orderItemsCount: orderItems.length,
+      orderItemsArray: orderItems.map((item, index) => ({
+        index,
+        productId: item.productId,
+        productName: item.productName,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        totalPrice: item.totalPrice,
+        attributeSelections: item.attributeSelections,
+        hasAllRequiredFields: !!(item.productId && item.productName && item.quantity && item.unitPrice)
+      })),
+      orderItemsStringified: JSON.stringify(orderItems, null, 2)
+    });
+
     try {
       const newOrder = await storage.createOrder(order, orderItems);
       
