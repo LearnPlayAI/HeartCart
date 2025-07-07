@@ -40,12 +40,12 @@ export default function CartPage() {
   });
 
   // Fetch VAT settings for order calculation and display
-  const { data: vatRateSettings } = useQuery({
+  const { data: vatRateSettings, isLoading: vatRateLoading, error: vatRateError } = useQuery({
     queryKey: ['/api/admin/settings/vatRate'],
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: vatRegisteredSettings } = useQuery({
+  const { data: vatRegisteredSettings, isLoading: vatRegisteredLoading, error: vatRegisteredError } = useQuery({
     queryKey: ['/api/admin/settings/vatRegistered'],
     staleTime: 5 * 60 * 1000,
   });
@@ -97,6 +97,10 @@ export default function CartPage() {
   console.log('VAT Debug Cart:', {
     vatRateSettings: vatRateSettings?.data,
     vatRegisteredSettings: vatRegisteredSettings?.data,
+    vatRateLoading,
+    vatRegisteredLoading,
+    vatRateError,
+    vatRegisteredError,
     vatRate,
     vatRegistered,
     subtotal,
