@@ -1,0 +1,32 @@
+2025-07-07 22:47:58.30
+6c21e130
+User
+{"timestamp":"2025-07-07T22:47:58.000Z","level":"ERROR","message":"Failed to initialize PostgreSQL session store, using memory store instead","context":{"error":{}}}
+2025-07-07 22:48:47.46
+6c21e130
+User
+{"timestamp":"2025-07-07T22:48:47.000Z","level":"WARN","message":"No order found for YoCo checkout ID","context":{"checkoutId":"ch_9Ee7kRDjdRJIY2MS3edsr2Ax"}}
+2025-07-07 22:48:47.62
+6c21e130
+User
+{"timestamp":"2025-07-07T22:48:47.000Z","level":"ERROR","message":"Error inserting order item","context":{"error":{"length":290,"name":"error","severity":"ERROR","code":"23502","detail":"Failing row contains (35, 44, 639, null, null, null, 1, 49.5, null, {}, null, 2025-07-07T20:48:47.588Z).","schema":"public","table":"orderItems","column":"productName","file":"execMain.c","line":"2006","routine":"ExecConstraints"},"orderId":44,"productId":639,"itemIndex":0}}
+2025-07-07 22:48:47.66
+6c21e130
+User
+{"timestamp":"2025-07-07T22:48:47.000Z","level":"ERROR","message":"Error inserting order item","context":{"error":{"length":290,"name":"error","severity":"ERROR","code":"23502","detail":"Failing row contains (36, 44, 641, null, null, null, 1, 49.5, null, {}, null, 2025-07-07T20:48:47.628Z).","schema":"public","table":"orderItems","column":"productName","file":"execMain.c","line":"2006","routine":"ExecConstraints"},"orderId":44,"productId":641,"itemIndex":1}}
+2025-07-07 22:48:47.70
+6c21e130
+User
+{"timestamp":"2025-07-07T22:48:47.000Z","level":"ERROR","message":"Error inserting order item","context":{"error":{"length":290,"name":"error","severity":"ERROR","code":"23502","detail":"Failing row contains (37, 44, 640, null, null, null, 1, 49.5, null, {}, null, 2025-07-07T20:48:47.668Z).","schema":"public","table":"orderItems","column":"productName","file":"execMain.c","line":"2006","routine":"ExecConstraints"},"orderId":44,"productId":640,"itemIndex":2}}
+2025-07-07 22:48:47.90
+6c21e130
+User
+{"timestamp":"2025-07-07T22:48:47.000Z","level":"ERROR","message":"API Error: POST /api/webhooks/yoco 500 in 517ms","context":{"method":"POST","path":"/api/webhooks/yoco","statusCode":500,"duration":"517ms","requestId":"0b1c88fd-a00e-4b18-9456-1bf779b5f570"}}
+2025-07-07 22:48:52.67
+6c21e130
+User
+{"timestamp":"2025-07-07T22:48:52.000Z","level":"ERROR","message":"API Error: Invalid order ID","context":{"statusCode":400}}
+2025-07-07 22:48:52.71
+6c21e130
+User
+{"timestamp":"2025-07-07T22:48:52.000Z","level":"WARN","message":"API Warning: GET /api/orders/by-checkout 400 in 119ms","context":{"method":"GET","path":"/api/orders/by-checkout","statusCode":400,"duration":"119ms","requestId":"7656afb5-100d-4b29-b4a0-b70f640d8f5b"}}
