@@ -98,12 +98,17 @@ class YocoService {
 
     // Debug: Log YoCo configuration for verification
     console.log('🔑 YoCo API Configuration:', {
-      publicKey: YOCO_CONFIG.publicKey?.substring(0, 20) + '...',
-      secretKey: this.secretKey?.substring(0, 20) + '...',
+      nodeEnv: process.env.NODE_ENV,
+      isProduction: process.env.NODE_ENV === 'production',
+      publicKey: YOCO_CONFIG.publicKey?.substring(0, 25) + '...',
+      secretKey: this.secretKey?.substring(0, 25) + '...',
       apiUrl: this.baseUrl,
-      environment: process.env.NODE_ENV || 'development',
       checkoutAmount: checkoutData.amount,
-      currency: checkoutData.currency
+      currency: checkoutData.currency,
+      testPublicAvailable: !!process.env.YOCO_TEST_PUBLIC_KEY,
+      prodPublicAvailable: !!process.env.YOCO_PROD_PUBLIC_KEY,
+      actualTestKey: process.env.YOCO_TEST_PUBLIC_KEY?.substring(0, 25) + '...',
+      actualProdKey: process.env.YOCO_PROD_PUBLIC_KEY?.substring(0, 25) + '...'
     });
 
     const idempotencyKey = uuidv4();

@@ -89,8 +89,18 @@ router.post('/card/checkout', isAuthenticated, asyncHandler(async (req: Request,
       subtotalAmount: subtotalInCents,
       lineItems: enrichedLineItems,
       // Enhanced 3D Secure configuration for test environment
-      processingMode: process.env.NODE_ENV === 'production' ? 'live' : 'test'
+      processingMode: process.env.NODE_ENV === 'production' ? 'live' : 'test' // Should be 'test' for NODE_ENV=test
     };
+
+    // COMPREHENSIVE DEBUGGING: Check exact environment values at checkout creation
+    console.log('🔍 ENVIRONMENT DEBUG at checkout creation:', {
+      NODE_ENV: process.env.NODE_ENV,
+      isProduction: process.env.NODE_ENV === 'production',
+      processingModeCalculated: process.env.NODE_ENV === 'production' ? 'live' : 'test',
+      expectedProcessingMode: 'test', // Should be test based on NODE_ENV
+      YOCO_TEST_PUBLIC_KEY: process.env.YOCO_TEST_PUBLIC_KEY?.substring(0, 25) + '...',
+      YOCO_PROD_PUBLIC_KEY: process.env.YOCO_PROD_PUBLIC_KEY?.substring(0, 25) + '...',
+    });
 
     console.log('Creating YoCo checkout session with cart data:', {
       tempCheckoutId,
