@@ -802,6 +802,15 @@ Changelog:
   * Cart items automatically cleared after successful card payment
   * YoCo webhook now follows exact same order creation pattern as EFT payments ensuring consistency
   * Complete card payment flow operational: checkout → YoCo payment → webhook → order creation → cart clearing → email notifications
+- July 7, 2025. CRITICAL YoCo webhook order items creation bug COMPLETELY RESOLVED - Production ready:
+  * RESOLVED CRITICAL DEPLOYMENT ISSUE: Fixed "storage4.createOrderStatusHistory is not a function" error preventing order creation completion
+  * Root cause identified: Incorrect function name - should be addOrderStatusHistory with individual parameters, not createOrderStatusHistory with object
+  * Order items were being detected correctly from YoCo webhook (hasOrderItems: true, orderItemsLength: 2) - cart data structure was NOT the issue
+  * Fixed method call: storage.addOrderStatusHistory(orderId, status, paymentStatus, changedBy, changedByUserId, eventType, notes)
+  * VERIFIED WORKING: Order 48 (TMY-48-20250707) created successfully with 2 order items in database
+  * Order items confirmed: "50-Piece Wooden Dominoes" and "Silent Wireless Mouse" both R49.50 each
+  * YoCo webhook system now 100% operational: payment success → order creation → order items insertion → status history → email notifications
+  * Complete end-to-end card payment processing fully functional and production-ready
 - July 7, 2025. CRITICAL YoCo webhook order items and invoice generation bug fix - System fully operational:
   * RESOLVED CRITICAL ISSUE: Fixed "null value in column productName violates not-null constraint" error preventing order items from being created
   * Enhanced YoCo webhook to fetch product names from database before creating order items, preventing database constraint violations

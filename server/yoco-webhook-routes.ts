@@ -269,14 +269,18 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
     if (rawOrderItems && Array.isArray(rawOrderItems)) {
       for (const item of rawOrderItems) {
         try {
-          // Fetch product name from database using productId
+          // Fetch product name AND image URL from database using productId
           const product = await db
-            .select({ name: products.name })
+            .select({ 
+              name: products.name,
+              image_url: products.image_url  // CRITICAL FIX: Also fetch product image URL
+            })
             .from(products)
             .where(eq(products.id, item.productId))
             .limit(1);
 
           const productName = product[0]?.name || `Product ID ${item.productId}`;
+          const productImageUrl = product[0]?.image_url || null; // CRITICAL FIX: Use database image URL
           
           // CRITICAL FIX: Ensure all required database fields are present
           const enrichedItem = {
@@ -285,7 +289,7 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
             totalPrice: item.quantity * item.unitPrice,  // CRITICAL FIX: Calculate totalPrice (required field)
             selectedAttributes: item.selectedAttributes || item.attributeSelections || {},  // Ensure selectedAttributes exists
             productSku: item.productSku || null,  // Optional field
-            productImageUrl: item.productImageUrl || null,  // Optional field
+            productImageUrl: productImageUrl,  // CRITICAL FIX: Use actual product image URL from database
             attributeDisplayText: item.attributeDisplayText || null  // Optional field
           };
           
@@ -307,7 +311,12 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
           // Use fallback product name to prevent null constraint violation
           const enrichedItem = {
             ...item,
-            productName: `Product ID ${item.productId}`
+            productName: `Product ID ${item.productId}`,
+            totalPrice: item.quantity * item.unitPrice,  // CRITICAL FIX: Calculate totalPrice (required field)
+            selectedAttributes: item.selectedAttributes || item.attributeSelections || {},  // Ensure selectedAttributes exists
+            productSku: item.productSku || null,  // Optional field
+            productImageUrl: null,  // CRITICAL FIX: No image available if product fetch fails
+            attributeDisplayText: item.attributeDisplayText || null  // Optional field
           };
           orderItems.push(enrichedItem);
         }
@@ -529,16 +538,15 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
       });
 
     // Create order status history entry for the newly created order
-    await storage.createOrderStatusHistory({
-      orderId: newOrder.id,
-      status: 'confirmed',
-      paymentStatus: 'payment_received',
-      previousStatus: 'pending',
-      previousPaymentStatus: 'pending',
-      changedBy: 'system',
-      eventType: 'order_created_after_payment',
-      notes: `Order created after successful card payment. Payment ID: ${payment.id}. Transaction fee: R${fees.feeAmount.toFixed(2)} (${fees.feePercentage}%)`,
-    });
+    await storage.addOrderStatusHistory(
+      newOrder.id,
+      'confirmed',
+      'payment_received',
+      'system',
+      null, // changedByUserId
+      'order_created_after_payment',
+      `Order created after successful card payment. Payment ID: ${payment.id}. Transaction fee: R${fees.feeAmount.toFixed(2)} (${fees.feePercentage}%)`
+    );
 
     console.log('Order created successfully after payment:', {
       orderId: newOrder.id,
