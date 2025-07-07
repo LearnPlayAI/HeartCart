@@ -802,6 +802,14 @@ Changelog:
   * Cart items automatically cleared after successful card payment
   * YoCo webhook now follows exact same order creation pattern as EFT payments ensuring consistency
   * Complete card payment flow operational: checkout → YoCo payment → webhook → order creation → cart clearing → email notifications
+- July 7, 2025. CRITICAL YoCo webhook order items and invoice generation bug fix - System fully operational:
+  * RESOLVED CRITICAL ISSUE: Fixed "null value in column productName violates not-null constraint" error preventing order items from being created
+  * Enhanced YoCo webhook to fetch product names from database before creating order items, preventing database constraint violations
+  * Added automatic PDF invoice generation for card payments matching admin payment_received workflow
+  * Invoice generation includes VAT settings lookup, professional PDF creation, object storage integration, and order path updates
+  * Complete YoCo card payment flow now operational: checkout → payment → webhook → order creation with items → invoice generation → cart clearing → email notifications
+  * Orders now display correct item count with proper product names instead of "0 items"
+  * PDF invoices automatically generated and accessible via admin download buttons for all card payments
 - July 7, 2025. CRITICAL YoCo webhook signature verification deployment fix - Production ready:
   * RESOLVED CRITICAL ISSUE: Fixed crypto module import error preventing webhook signature verification in deployed environment
   * Root cause: Dynamic require('crypto') not supported in production, replaced with proper ES6 import statement

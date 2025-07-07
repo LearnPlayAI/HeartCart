@@ -413,6 +413,101 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
       transactionFee: fees.feeAmount,
     });
 
+    // CRITICAL ADDITION: Generate PDF invoice for card payment (same as admin payment_received workflow)
+    let invoicePath = null;
+    try {
+      // Get full order details with items for invoice generation
+      const baseOrder = await storage.getOrderById(newOrder.id);
+      if (baseOrder) {
+        const orderItemsData = await storage.getOrderItems(newOrder.id);
+        const fullOrder = {
+          ...baseOrder,
+          orderItems: orderItemsData || []
+        };
+
+        if (fullOrder.orderItems && fullOrder.orderItems.length > 0) {
+          // Fetch VAT settings from systemSettings for invoice generation
+          let vatSettings = {
+            vatRate: 0,
+            vatAmount: 0,
+            vatRegistered: false,
+            vatRegistrationNumber: ''
+          };
+
+          try {
+            const vatRateResult = await storage.getSystemSetting('vatRate');
+            const vatRegNumberResult = await storage.getSystemSetting('vatRegistrationNumber');
+            const vatRegisteredResult = await storage.getSystemSetting('vatRegistered');
+
+            const vatRate = parseFloat(vatRateResult?.settingValue || '0');
+            const vatRegistered = vatRegisteredResult?.settingValue === 'true';
+            const vatRegistrationNumber = vatRegNumberResult?.settingValue || '';
+
+            if (vatRegistered && vatRate > 0) {
+              const vatableAmount = fullOrder.subtotalAmount + fullOrder.shippingCost;
+              vatSettings.vatAmount = parseFloat((vatableAmount * (vatRate / 100)).toFixed(2));
+            }
+
+            vatSettings.vatRate = vatRate;
+            vatSettings.vatRegistered = vatRegistered;
+            vatSettings.vatRegistrationNumber = vatRegistrationNumber;
+
+            console.log('VAT settings fetched for YoCo invoice generation:', {
+              orderId: newOrder.id,
+              vatRate: vatSettings.vatRate,
+              vatAmount: vatSettings.vatAmount,
+              vatRegistered: vatSettings.vatRegistered
+            });
+          } catch (vatError) {
+            console.error('Failed to fetch VAT settings for YoCo invoice, using defaults:', vatError);
+          }
+
+          const invoiceData = {
+            orderNumber: fullOrder.orderNumber,
+            customerName: fullOrder.customerName,
+            customerEmail: fullOrder.customerEmail,
+            customerPhone: fullOrder.customerPhone,
+            shippingAddress: fullOrder.shippingAddress,
+            shippingCity: fullOrder.shippingCity,
+            shippingPostalCode: fullOrder.shippingPostalCode,
+            orderItems: fullOrder.orderItems.map(item => ({
+              productName: item.productName,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              totalPrice: item.totalPrice,
+              attributeDisplayText: item.attributeDisplayText || undefined
+            })),
+            subtotalAmount: fullOrder.subtotalAmount,
+            shippingCost: fullOrder.shippingCost,
+            vatAmount: vatSettings.vatAmount,
+            vatRate: vatSettings.vatRate,
+            vatRegistered: vatSettings.vatRegistered,
+            vatRegistrationNumber: vatSettings.vatRegistrationNumber,
+            totalAmount: fullOrder.totalAmount,
+            paymentMethod: fullOrder.paymentMethod,
+            paymentReceivedDate: new Date().toISOString(),
+            userId: fullOrder.userId
+          };
+
+          const { InvoiceGenerator } = await import('./services/invoice-generator.js');
+          const invoiceGenerator = InvoiceGenerator.getInstance();
+          invoicePath = await invoiceGenerator.generateInvoicePDF(invoiceData);
+
+          // Update order with invoice path
+          await storage.updateOrderInvoicePath(newOrder.id, invoicePath);
+
+          console.log('PDF invoice generated for YoCo payment:', {
+            orderId: newOrder.id,
+            orderNumber: newOrder.orderNumber,
+            invoicePath
+          });
+        }
+      }
+    } catch (invoiceError) {
+      console.error('Failed to generate invoice for YoCo payment:', invoiceError);
+      // Don't fail the webhook for invoice errors
+    }
+
     // Send order confirmation and payment confirmation emails
     try {
       const orderWithDetails = await storage.getOrderById(newOrder.id);
