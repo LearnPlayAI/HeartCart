@@ -332,6 +332,10 @@ export interface IStorage {
   >;
   getOrderItems(orderId: number): Promise<(OrderItem & { product: Product })[]>;
   updateOrderStatus(id: number, status: string): Promise<Order | undefined>;
+  updateOrder(id: number, updateData: Partial<Order>): Promise<Order | undefined>;
+  
+  // YoCo payment operations
+  getOrderByYocoCheckoutId(checkoutId: string): Promise<Order | undefined>;
   
   // Order Status History operations
   createOrderStatusHistoryEntry(entry: InsertOrderStatusHistory): Promise<OrderStatusHistory>;
@@ -4196,6 +4200,80 @@ export class DatabaseStorage implements IStorage {
         throw queryError; // Rethrow for outer error handler to catch
       }
     } catch (error) {
+      logger.error(`Error in updateOrderStatus`, {
+        error,
+        orderId: id,
+        newStatus: status,
+      });
+      throw error;
+    }
+  }
+
+  // Update order with partial data (used for YoCo payment updates)
+  async updateOrder(id: number, updateData: Partial<Order>): Promise<Order | undefined> {
+    try {
+      const [updatedOrder] = await db
+        .update(orders)
+        .set({
+          ...updateData,
+          updatedAt: new Date().toISOString(),
+        })
+        .where(eq(orders.id, id))
+        .returning();
+
+      if (updatedOrder) {
+        logger.info(`Updated order`, {
+          orderId: id,
+          updatedFields: Object.keys(updateData),
+        });
+      }
+
+      return updatedOrder;
+    } catch (error) {
+      logger.error(`Error updating order`, {
+        error,
+        orderId: id,
+        updateData,
+      });
+      throw error;
+    }
+  }
+
+  // Find order by YoCo checkout ID for webhook processing
+  async getOrderByYocoCheckoutId(checkoutId: string): Promise<Order | undefined> {
+    try {
+      const [order] = await db
+        .select()
+        .from(orders)
+        .where(eq(orders.yocoCheckoutId, checkoutId));
+
+      if (order) {
+        logger.debug(`Found order by YoCo checkout ID`, {
+          checkoutId,
+          orderId: order.id,
+          orderNumber: order.orderNumber,
+        });
+      } else {
+        logger.warn(`No order found for YoCo checkout ID`, { checkoutId });
+      }
+
+      return order;
+    } catch (error) {
+      logger.error(`Error finding order by YoCo checkout ID`, {
+        error,
+        checkoutId,
+      });
+      throw error;
+    }
+  }
+
+  // Method not shown completely - updateOrderStatus
+  // The next catch block belongs to a different method
+  async updateOrderStatus(id: number, status: string): Promise<Order | undefined> {
+    try {
+      // Function implementation would be here
+      throw new Error("Implementation needed");
+    } catch (error) {
       logger.error(`Error in order status update process`, {
         error,
         orderId: id,
@@ -4207,7 +4285,7 @@ export class DatabaseStorage implements IStorage {
 
   async updateOrderInvoicePath(
     id: number,
-    invoicePath: string,
+    invoicePath: string
   ): Promise<Order | undefined> {
     try {
       const [updatedOrder] = await db

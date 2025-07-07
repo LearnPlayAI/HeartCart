@@ -53,7 +53,7 @@ const checkoutSchema = z.object({
   }),
   
   // Payment Method
-  paymentMethod: z.enum(["eft"], {
+  paymentMethod: z.enum(["card", "eft"], {
     required_error: "Please select a payment method"
   }),
   
@@ -84,8 +84,15 @@ const shippingOptions = [
   }
 ];
 
-// Payment options
+// Payment options - Card payment as default (first option)
 const paymentOptions = [
+  {
+    id: "card",
+    name: "Credit/Debit Card",
+    description: "Pay securely with Visa, Mastercard or American Express",
+    icon: CreditCard,
+    badge: "Recommended"
+  },
   {
     id: "eft",
     name: "EFT Bank Transfer",
@@ -211,7 +218,7 @@ export default function CheckoutPage() {
       province: "",
       postalCode: "",
       shippingMethod: "pudo",
-      paymentMethod: "eft",
+      paymentMethod: "card", // Card payment as default
       specialInstructions: "",
       saveDetails: true
     }
@@ -243,7 +250,7 @@ export default function CheckoutPage() {
         province: userData.province || "",
         postalCode: userData.postalCode || "",
         shippingMethod: "pudo",
-        paymentMethod: "eft",
+        paymentMethod: "card", // Card payment as default
         specialInstructions: "",
         saveDetails: true
       });
@@ -498,27 +505,49 @@ export default function CheckoutPage() {
 
       console.log("Creating order directly for bank transfer:", orderData);
       
-      // For bank transfer payments, create order directly and redirect to payment page
+      // Handle different payment methods
       if (data.paymentMethod === "eft") {
-        // Store order data in sessionStorage for payment page
+        // For bank transfer payments, create order directly and redirect to payment page
         sessionStorage.setItem('pendingOrder', JSON.stringify(orderData));
-        
-        // Navigate to payment instructions page
         navigate('/payment-confirmation');
         return;
+      } else if (data.paymentMethod === "card") {
+        // For card payments, create YoCo checkout session
+        try {
+          console.log("Creating YoCo checkout session...");
+          
+          // First create the order to get an order ID
+          const orderResult = await apiRequest("POST", "/api/orders", orderData);
+          
+          if (!orderResult.success || !orderResult.data) {
+            throw new Error("Failed to create order for card payment");
+          }
+          
+          const orderId = orderResult.data.id;
+          console.log("Order created for card payment:", orderId);
+          
+          // Create YoCo checkout session with order ID
+          const checkoutResult = await apiRequest("POST", "/api/payments/card/checkout", {
+            orderId: orderId
+          });
+          
+          if (!checkoutResult.success || !checkoutResult.redirectUrl) {
+            throw new Error("Failed to create YoCo checkout session");
+          }
+          
+          console.log("YoCo checkout session created, redirecting to:", checkoutResult.redirectUrl);
+          
+          // Redirect to YoCo checkout page
+          window.location.href = checkoutResult.redirectUrl;
+          return;
+        } catch (error) {
+          console.error("Card payment error:", error);
+          throw new Error(`Card payment failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
       }
       
-      // For other payment methods (future), use payment session approach
-      const sessionResult = await createPaymentSessionMutation.mutateAsync(orderData);
-      
-      if (sessionResult.success && sessionResult.data?.sessionId) {
-        await confirmPaymentMutation.mutateAsync({
-          sessionId: sessionResult.data.sessionId,
-          paymentMethod: data.paymentMethod
-        });
-      } else {
-        throw new Error("Failed to create payment session");
-      }
+      // Fallback for unsupported payment methods
+      throw new Error("Unsupported payment method");
     } catch (error) {
       console.error("Checkout error:", error);
       toast({
@@ -844,8 +873,18 @@ export default function CheckoutPage() {
                       <Label htmlFor={option.id} className="flex-1 cursor-pointer">
                         <div className="flex items-center gap-3">
                           <option.icon className="h-5 w-5 text-gray-500" />
-                          <div>
-                            <div className="font-medium">{option.name}</div>
+                          <div className="flex-1">
+                            <div className="font-medium flex items-center gap-2">
+                              {option.name}
+                              {option.id === "card" && (
+                                <Badge 
+                                  variant="secondary" 
+                                  className="bg-green-100 text-green-700 text-xs px-2 py-0 h-5"
+                                >
+                                  Recommended
+                                </Badge>
+                              )}
+                            </div>
                             <div className="text-sm text-gray-600">{option.description}</div>
                           </div>
                         </div>

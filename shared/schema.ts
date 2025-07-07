@@ -173,10 +173,16 @@ export const orders = pgTable("orders", {
   shippingCost: doublePrecision("shippingCost").notNull().default(85), // R85 for PUDO
   
   // Payment information
-  paymentMethod: text("paymentMethod").notNull().default("eft"), // eft only for now
+  paymentMethod: text("paymentMethod").notNull().default("eft"), // eft, card
   paymentStatus: text("paymentStatus").notNull().default("pending"), // pending, paid, payment_received, failed
   paymentReferenceNumber: text("paymentReferenceNumber"), // TMY-X-DDMMYYYY format for bank transfer reference
   paymentReceivedDate: text("paymentReceivedDate"), // Date when admin confirmed payment was received
+  
+  // YoCo card payment fields
+  yocoCheckoutId: text("yocoCheckoutId"), // YoCo checkout session ID
+  yocoPaymentId: text("yocoPaymentId"), // YoCo payment ID after successful payment
+  transactionFeeAmount: doublePrecision("transactionFeeAmount").default(0), // YoCo transaction fee amount
+  transactionFeePercentage: doublePrecision("transactionFeePercentage").default(0), // YoCo fee percentage used
   
   // Order totals
   subtotalAmount: doublePrecision("subtotalAmount").notNull(),
@@ -659,12 +665,16 @@ export const insertOrderSchema = createInsertSchema(orders).omit({
   orderNumber: true, // Generated automatically
 }).extend({
   shippingMethod: z.enum(["standard", "express"]).default("standard"),
-  paymentMethod: z.enum(["eft"]).default("eft"),
-  paymentStatus: z.enum(["pending", "paid", "failed"]).default("pending"),
+  paymentMethod: z.enum(["eft", "card"]).default("eft"),
+  paymentStatus: z.enum(["pending", "paid", "payment_received", "failed"]).default("pending"),
   status: z.enum(["pending", "confirmed", "processing", "shipped", "delivered", "cancelled"]).default("pending"),
   vatAmount: z.number().min(0).default(0),
   vatRate: z.number().min(0).max(100),
   vatRegistrationNumber: z.string().nullable().optional(),
+  yocoCheckoutId: z.string().nullable().optional(),
+  yocoPaymentId: z.string().nullable().optional(),
+  transactionFeeAmount: z.number().min(0).default(0),
+  transactionFeePercentage: z.number().min(0).default(0),
 });
 
 export const insertOrderItemSchema = createInsertSchema(orderItems).omit({

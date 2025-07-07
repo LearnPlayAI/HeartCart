@@ -18,6 +18,8 @@ import Checkout from "@/pages/checkout";
 import OrderDetail from "@/pages/order-detail";
 import OrderConfirmation from "@/pages/order-confirmation";
 import PaymentConfirmation from "@/pages/payment-confirmation";
+import PaymentFailedPage from "@/pages/payment-failed";
+import PaymentSuccessPage from "@/pages/payment-success";
 import SearchResults from "@/pages/search-results";
 import Profile from "@/pages/profile-fix";
 import ProfileSettings from "@/pages/profile-settings";
@@ -283,6 +285,8 @@ function App() {
                           <ProtectedRoute path="/cart" component={CartPage} />
                           <ProtectedRoute path="/checkout" component={Checkout} />
                           <ProtectedRoute path="/payment-confirmation" component={PaymentConfirmation} />
+                          <ProtectedRoute path="/payment-failed" component={PaymentFailedPage} />
+                          <ProtectedRoute path="/payment-success" component={PaymentSuccessPage} />
                           <ProtectedRoute path="/order-confirmation/:id" component={OrderConfirmation} />
                           <Route path="/search"><SearchResults /></Route>
                           <ProtectedRoute path="/profile" component={Profile} />

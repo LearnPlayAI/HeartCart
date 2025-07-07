@@ -1,437 +1,151 @@
-import express, { Request, Response } from "express";
-import { z } from "zod";
-import asyncHandler from "express-async-handler";
-import { storage } from "./storage";
-import { isAuthenticated } from "./auth-middleware";
-import { sendSuccess, sendError } from "./api-response";
-import { logger } from "./logger";
-import { unifiedEmailService } from "./unified-email-service";
-import { PromotionValidationService } from "./promotion-validation-service";
+/**
+ * Payment Routes
+ * Handles both EFT and YoCo card payment processing
+ */
 
-const router = express.Router();
+import { Router, Request, Response } from 'express';
+import asyncHandler from 'express-async-handler';
+import { yocoService } from './yoco-service.js';
+import { storage } from './storage.js';
+import { isAuthenticated } from './auth-middleware.js';
 
-// Payment session schema for checkout preparation
-const createPaymentSessionSchema = z.object({
-  customerInfo: z.object({
-    firstName: z.string().min(1, "First name is required"),
-    lastName: z.string().min(1, "Last name is required"),
-    email: z.string().email("Valid email is required"),
-    phone: z.string().min(1, "Phone number is required")
-  }),
-  shippingAddress: z.object({
-    addressLine1: z.string().min(1, "Address line 1 is required"),
-    addressLine2: z.string().optional(),
-    city: z.string().min(1, "City is required"),
-    province: z.string().min(1, "Province is required"),
-    postalCode: z.string().min(1, "Postal code is required")
-  }),
-  shippingMethod: z.string().default("pudo"),
-  shippingCost: z.number(),
-  paymentMethod: z.string().default("eft"),
-  specialInstructions: z.string().optional(),
-  orderItems: z.array(z.object({
-    productId: z.number(),
-    quantity: z.number(),
-    unitPrice: z.number(),
-    productAttributes: z.record(z.union([z.string(), z.record(z.number())])).optional()
-  })),
-  subtotal: z.number(),
-  total: z.number(),
-  creditUsed: z.number().default(0),
-  selectedLockerId: z.number().optional(),
-  lockerDetails: z.object({
-    code: z.string(),
-    name: z.string(),
-    address: z.string(),
-    provider: z.string()
-  }).optional()
-});
+const router = Router();
 
-// Payment confirmation schema
-const confirmPaymentSchema = z.object({
-  sessionId: z.string(),
-  paymentProof: z.object({
-    method: z.enum(["eft", "credit"]),
-    transactionReference: z.string().optional(),
-    amount: z.number()
-  })
-});
-
-// Create payment session - prepare order without creating it
-router.post("/session", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
+/**
+ * Create YoCo card payment checkout session
+ * POST /api/payments/card/checkout
+ */
+router.post('/card/checkout', isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
   try {
-    const sessionData = createPaymentSessionSchema.parse(req.body);
-    const userId = req.user!.id;
+    const { orderId } = req.body;
 
-    logger.info("Creating payment session", { 
-      userId: userId,
-      paymentMethod: sessionData.paymentMethod,
-      total: sessionData.total
-    });
-
-    // Validate cart items exist and prices match
-    const cart = await storage.getCartWithProducts(userId);
-    if (!cart || cart.length === 0) {
-      return sendError(res, "Cart is empty", 400);
+    if (!orderId) {
+      return res.status(400).json({ error: 'Order ID is required' });
     }
 
-    // Validate credit balance if using credits
-    if (sessionData.creditUsed && sessionData.creditUsed > 0) {
-      const creditBalance = await storage.getUserCreditBalance(userId);
-      if (creditBalance.availableCreditAmount < sessionData.creditUsed) {
-        return sendError(res, "Insufficient credit balance", 400);
-      }
+    // Get the order details
+    const order = await storage.getOrderById(orderId);
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
     }
 
-    // Create temporary payment session
-    const sessionId = `pay_session_${Date.now()}_${userId}`;
-    const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+    // Verify order belongs to the current user (unless admin)
+    if (req.user?.role !== 'admin' && order.userId !== req.user?.id) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
 
-    // Store session data temporarily (in production, use Redis or similar)
-    const sessionInfo = {
-      sessionId,
-      userId,
-      sessionData,
-      expiresAt: expiresAt.toISOString(),
-      status: 'pending',
-      createdAt: new Date().toISOString()
+    // Check if order is already paid
+    if (order.paymentStatus === 'payment_received') {
+      return res.status(400).json({ error: 'Order is already paid' });
+    }
+
+    // Convert total amount to cents (YoCo requires cents)
+    const amountInCents = Math.round(order.totalAmount * 100);
+    const vatAmountInCents = Math.round(order.vatAmount * 100);
+    const subtotalInCents = Math.round(order.subtotalAmount * 100);
+
+    // Prepare checkout data
+    const checkoutData = {
+      amount: amountInCents,
+      currency: 'ZAR',
+      cancelUrl: `${process.env.FRONTEND_URL || 'https://teemeyou.shop'}/payment-failed?orderId=${orderId}`,
+      successUrl: `${process.env.FRONTEND_URL || 'https://teemeyou.shop'}/payment-success?orderId=${orderId}`,
+      failureUrl: `${process.env.FRONTEND_URL || 'https://teemeyou.shop'}/payment-failed?orderId=${orderId}`,
+      metadata: {
+        orderId: orderId.toString(),
+        orderNumber: order.orderNumber,
+        customerId: order.userId.toString(),
+        customerEmail: order.customerEmail,
+      },
+      totalTaxAmount: vatAmountInCents,
+      subtotalAmount: subtotalInCents,
+      lineItems: order.items?.map(item => ({
+        displayName: item.productName,
+        quantity: item.quantity,
+        priceCents: Math.round(item.unitPrice * 100),
+      })) || [],
     };
 
-    // For now, store in memory - in production, use proper session storage
-    global.paymentSessions = global.paymentSessions || new Map();
-    global.paymentSessions.set(sessionId, sessionInfo);
-
-    logger.info("Payment session created", {
-      sessionId,
-      userId,
-      expiresAt: expiresAt.toISOString()
+    console.log('Creating YoCo checkout session:', {
+      orderId,
+      orderNumber: order.orderNumber,
+      amount: amountInCents,
+      currency: 'ZAR',
     });
 
-    return sendSuccess(res, {
-      sessionId,
-      expiresAt: expiresAt.toISOString(),
-      paymentMethod: sessionData.paymentMethod,
-      total: sessionData.total,
-      remainingBalance: sessionData.total - (sessionData.creditUsed || 0)
+    // Create YoCo checkout session
+    const checkoutResponse = await yocoService.createCheckout(checkoutData);
+
+    // Update order with YoCo checkout ID
+    await storage.updateOrder(orderId, {
+      yocoCheckoutId: checkoutResponse.id,
+      paymentMethod: 'card',
+    });
+
+    console.log('YoCo checkout session created successfully:', {
+      checkoutId: checkoutResponse.id,
+      redirectUrl: checkoutResponse.redirectUrl,
+    });
+
+    res.json({
+      success: true,
+      checkoutId: checkoutResponse.id,
+      redirectUrl: checkoutResponse.redirectUrl,
+      amount: order.totalAmount,
+      currency: 'ZAR',
     });
 
   } catch (error) {
-    logger.error("Error creating payment session", {
-      error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined,
-      userId: req.user?.id,
-      requestBody: req.body
+    console.error('Error creating YoCo checkout session:', error);
+    res.status(500).json({ 
+      error: 'Failed to create payment session',
+      message: error instanceof Error ? error.message : 'Unknown error'
     });
-    
-    if (error instanceof z.ZodError) {
-      return sendError(res, `Validation error: ${error.errors.map(e => e.message).join(', ')}`, 400);
-    }
-    
-    return sendError(res, "Failed to create payment session", 500);
   }
 }));
 
-// Confirm payment and create order
-router.post("/confirm", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
+/**
+ * Get payment status for an order
+ * GET /api/payments/status/:orderId
+ */
+router.get('/status/:orderId', isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
   try {
-    const paymentData = confirmPaymentSchema.parse(req.body);
-    const userId = req.user!.id;
+    const orderId = parseInt(req.params.orderId);
 
-    logger.info("Payment confirmation attempt", {
-      sessionId: paymentData.sessionId,
-      userId: userId,
-      paymentMethod: paymentData.paymentProof.method
+    if (isNaN(orderId)) {
+      return res.status(400).json({ error: 'Invalid order ID' });
+    }
+
+    const order = await storage.getOrderById(orderId);
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    // Verify order belongs to the current user (unless admin)
+    if (req.user?.role !== 'admin' && order.userId !== req.user?.id) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    res.json({
+      success: true,
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      paymentMethod: order.paymentMethod,
+      paymentStatus: order.paymentStatus,
+      status: order.status,
+      yocoCheckoutId: order.yocoCheckoutId,
+      yocoPaymentId: order.yocoPaymentId,
+      transactionFeeAmount: order.transactionFeeAmount,
+      transactionFeePercentage: order.transactionFeePercentage,
     });
-
-    // Retrieve payment session
-    global.paymentSessions = global.paymentSessions || new Map();
-    const session = global.paymentSessions.get(paymentData.sessionId);
-    
-    if (!session) {
-      return sendError(res, "Payment session not found or expired", 404);
-    }
-
-    if (session.userId !== userId) {
-      return sendError(res, "Unauthorized access to payment session", 403);
-    }
-
-    if (new Date() > new Date(session.expiresAt)) {
-      global.paymentSessions.delete(paymentData.sessionId);
-      return sendError(res, "Payment session has expired", 400);
-    }
-
-    if (session.status !== 'pending') {
-      return sendError(res, "Payment session already processed", 400);
-    }
-
-    const sessionData = session.sessionData;
-
-    // Process payment based on method
-    let paymentVerified = false;
-    let finalPaymentStatus = "verifying_payment";
-    let remainingBalance = sessionData.total;
-
-    if (paymentData.paymentProof.method === "credit") {
-      // For credit payments, verify and deduct immediately
-      if (sessionData.creditUsed && sessionData.creditUsed > 0) {
-        const creditBalance = await storage.getUserCreditBalance(userId);
-        if (creditBalance.availableCreditAmount >= sessionData.creditUsed) {
-          remainingBalance = sessionData.total - sessionData.creditUsed;
-          if (remainingBalance <= 0) {
-            paymentVerified = true;
-            finalPaymentStatus = "paid";
-            remainingBalance = 0;
-          }
-        } else {
-          return sendError(res, "Insufficient credit balance", 400);
-        }
-      }
-    } else if (paymentData.paymentProof.method === "eft") {
-      // For EFT, mark as pending payment (to be verified by admin)
-      finalPaymentStatus = "pending";
-      paymentVerified = false; // Will be verified later by admin
-    }
-
-    // Mark session as processing
-    session.status = 'processing';
-    global.paymentSessions.set(paymentData.sessionId, session);
-
-    // Only create order if payment is verified OR if it's EFT (pending verification)
-    if (paymentVerified || paymentData.paymentProof.method === "eft") {
-      
-      // Prepare order items with product details
-      const orderItems = [];
-      for (const item of sessionData.orderItems) {
-        const product = await storage.getProductById(item.productId);
-        if (!product) {
-          return sendError(res, `Product ${item.productId} not found`, 404);
-        }
-
-        // Generate attribute display text
-        const attributeDisplayText = generateAttributeDisplayText(item.productAttributes || {});
-
-        orderItems.push({
-          productId: item.productId,
-          productName: product.name,
-          productSku: product.sku,
-          productImageUrl: product.imageUrl,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          totalPrice: item.unitPrice * item.quantity,
-          selectedAttributes: item.productAttributes || {},
-          attributeDisplayText: attributeDisplayText,
-        });
-      }
-
-      // Determine order status - always start with pending
-      let orderStatus = "pending";
-
-      // Create order object
-      const order = {
-        userId: userId,
-        status: orderStatus,
-        customerName: `${sessionData.customerInfo.firstName} ${sessionData.customerInfo.lastName}`,
-        customerEmail: sessionData.customerInfo.email,
-        customerPhone: sessionData.customerInfo.phone,
-        shippingAddress: `${sessionData.shippingAddress.addressLine1}${sessionData.shippingAddress.addressLine2 ? ', ' + sessionData.shippingAddress.addressLine2 : ''}`,
-        shippingCity: sessionData.shippingAddress.city,
-        shippingPostalCode: sessionData.shippingAddress.postalCode,
-        shippingMethod: sessionData.shippingMethod,
-        shippingCost: sessionData.shippingCost,
-        paymentMethod: sessionData.paymentMethod,
-        paymentStatus: finalPaymentStatus,
-        subtotalAmount: sessionData.subtotal,
-        totalAmount: sessionData.total,
-        customerNotes: sessionData.specialInstructions || null,
-        creditUsed: sessionData.creditUsed || 0,
-        remainingBalance: remainingBalance,
-        selectedLockerId: sessionData.selectedLockerId || null,
-        lockerDetails: sessionData.lockerDetails || null,
-      };
-
-      // Validate cart items against promotion requirements before creating order
-      try {
-        // Convert orderItems to cart format for validation
-        const cartItems = orderItems.map(item => ({
-          productId: item.productId,
-          quantity: item.quantity,
-          product: {
-            id: item.productId,
-            name: item.productName,
-            price: item.unitPrice,
-            salePrice: item.unitPrice
-          }
-        }));
-
-        const validationResult = await PromotionValidationService.validateCartForCheckout(cartItems);
-        
-        if (!validationResult.canProceedToCheckout) {
-          logger.warn("Order creation blocked due to promotion validation failure", {
-            userId,
-            sessionId: paymentData.sessionId,
-            errors: validationResult.errors,
-            blockedPromotions: validationResult.blockedPromotions
-          });
-          
-          // Clean up payment session
-          global.paymentSessions.delete(paymentData.sessionId);
-          
-          return sendError(res, 
-            `Promotion requirements not met: ${validationResult.errors.join(', ')}`, 
-            400, 
-            {
-              validationErrors: validationResult.errors,
-              blockedPromotions: validationResult.blockedPromotions
-            }
-          );
-        }
-
-        logger.info("Promotion validation passed for order creation", {
-          userId,
-          sessionId: paymentData.sessionId,
-          validationResult: validationResult.isValid
-        });
-      } catch (validationError) {
-        logger.error("Error during promotion validation", {
-          error: validationError instanceof Error ? validationError.message : String(validationError),
-          userId,
-          sessionId: paymentData.sessionId
-        });
-        // On validation error, allow order to proceed (fail safe)
-      }
-
-      // Create the order
-      const newOrder = await storage.createOrder(order, orderItems);
-
-      // If using credits and payment verified, deduct credits now
-      if (paymentVerified && sessionData.creditUsed && sessionData.creditUsed > 0) {
-        try {
-          await storage.useUserCredits(
-            userId,
-            sessionData.creditUsed,
-            `Credit applied to order #${newOrder.orderNumber}`,
-            newOrder.id
-          );
-          
-          logger.info("Credit successfully deducted after order creation", {
-            userId: userId,
-            orderId: newOrder.id,
-            orderNumber: newOrder.orderNumber,
-            creditUsed: sessionData.creditUsed
-          });
-        } catch (creditError) {
-          logger.error("Credit deduction failed after order creation", {
-            error: creditError,
-            userId: userId,
-            orderId: newOrder.id,
-            requestedCredit: sessionData.creditUsed
-          });
-        }
-      }
-
-      // Clean up session
-      global.paymentSessions.delete(paymentData.sessionId);
-
-      logger.info("Order created successfully after payment confirmation", {
-        orderId: newOrder.id,
-        orderNumber: newOrder.orderNumber,
-        userId: userId,
-        totalAmount: sessionData.total,
-        paymentMethod: sessionData.paymentMethod,
-        paymentStatus: finalPaymentStatus
-      });
-
-      // Send payment confirmation email if payment was verified
-      if (paymentVerified) {
-        try {
-          const orderEmailData = {
-            id: newOrder.id,
-            orderNumber: newOrder.orderNumber,
-            status: newOrder.status,
-            customerName: newOrder.customerName,
-            customerEmail: newOrder.customerEmail,
-            customerPhone: newOrder.customerPhone,
-            shippingAddress: newOrder.shippingAddress,
-            shippingCity: newOrder.shippingCity,
-            shippingPostalCode: newOrder.shippingPostalCode,
-            shippingMethod: newOrder.shippingMethod,
-            shippingCost: newOrder.shippingCost,
-            paymentMethod: newOrder.paymentMethod,
-            paymentStatus: finalPaymentStatus,
-            subtotalAmount: newOrder.subtotalAmount,
-            totalAmount: newOrder.totalAmount,
-            createdAt: newOrder.createdAt.toISOString(),
-            trackingNumber: newOrder.trackingNumber,
-            orderItems: orderItems.map(item => ({
-              productName: item.productName,
-              quantity: item.quantity,
-              unitPrice: item.unitPrice,
-              totalPrice: item.totalPrice
-            }))
-          };
-
-          const paymentEmailData = {
-            orderNumber: newOrder.orderNumber,
-            amount: sessionData.total,
-            paymentMethod: sessionData.paymentMethod,
-            transactionReference: paymentData.paymentProof.transactionReference,
-            paymentDate: new Date().toISOString()
-          };
-
-          await unifiedEmailService.sendPaymentReceivedEmail(orderEmailData, paymentEmailData);
-          logger.info("Payment confirmation email sent", { orderId: newOrder.id });
-        } catch (emailError) {
-          logger.warn("Failed to send payment confirmation email", { 
-            orderId: newOrder.id, 
-            error: emailError 
-          });
-        }
-      }
-
-      return sendSuccess(res, {
-        id: newOrder.id,
-        orderNumber: newOrder.orderNumber,
-        status: newOrder.status,
-        totalAmount: newOrder.totalAmount,
-        paymentStatus: finalPaymentStatus,
-        message: "Order created successfully"
-      });
-
-    } else {
-      // Clean up session if payment not verified
-      global.paymentSessions.delete(paymentData.sessionId);
-      return sendError(res, "Payment verification failed", 400);
-    }
 
   } catch (error) {
-    logger.error("Error confirming payment", {
-      error: error instanceof Error ? error.message : String(error),
-      userId: req.user?.id
+    console.error('Error getting payment status:', error);
+    res.status(500).json({ 
+      error: 'Failed to get payment status',
+      message: error instanceof Error ? error.message : 'Unknown error'
     });
-    return sendError(res, "Failed to confirm payment", 500);
   }
 }));
-
-// Helper function to generate attribute display text
-function generateAttributeDisplayText(attributes: Record<string, string | Record<string, number>>): string {
-  if (!attributes || Object.keys(attributes).length === 0) {
-    return "";
-  }
-  
-  return Object.entries(attributes)
-    .map(([key, value]) => {
-      if (typeof value === 'string') {
-        return `${key}: ${value}`;
-      } else if (typeof value === 'object' && value !== null) {
-        const selections = Object.entries(value)
-          .filter(([, qty]) => qty > 0)
-          .map(([option, qty]) => qty > 1 ? `${option} x${qty}` : option)
-          .join(', ');
-        return `${key}: ${selections}`;
-      }
-      return `${key}: ${value}`;
-    })
-    .join(", ");
-}
 
 export default router;

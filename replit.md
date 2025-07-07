@@ -885,6 +885,23 @@ Changelog:
   * Non-VAT registered businesses display "VAT (0%): Not VAT registered" message in both invoices and emails
   * VAT information seamlessly integrated into existing TeeMeYou hot pink email branding without disrupting design consistency
   * Complete end-to-end VAT transparency: cart → checkout → order → invoice → email notifications all display consistent VAT information
+- July 7, 2025. COMPLETE YOCO CARD PAYMENT INTEGRATION IMPLEMENTATION COMPLETED AND FULLY OPERATIONAL:
+  * Successfully integrated YoCo South African credit/debit card payment system into existing EFT-based payment architecture
+  * Card payment now set as default option on checkout page with "Recommended" green badge above EFT option
+  * Comprehensive checkout component updates to handle both card and EFT payment methods seamlessly
+  * Card payments create orders first, then redirect to YoCo checkout sessions for secure payment processing
+  * EFT payments maintain existing functionality with navigation to payment confirmation page
+  * Complete YoCo service implementation with createCheckout method for payment session creation
+  * Enhanced payment routes with /api/payments/card/checkout endpoint supporting orderId-based session creation
+  * Database schema already updated with YoCo-specific fields (yocoCheckoutId, yocoPaymentId, transactionFeeAmount, transactionFeePercentage)
+  * Payment success and failure pages properly implemented with routing in App.tsx
+  * Webhook handler already implemented for automatic order confirmation on successful card payments
+  * System design: Card payments auto-confirm orders (status: "confirmed", paymentStatus: "payment_received")
+  * EFT payments maintain manual verification workflow for admin payment confirmation
+  * Transaction fees stored for profit calculations but absorbed (not shown to customers)
+  * All existing EFT functionality preserved while adding modern card payment capabilities
+  * Test environment ready with YoCo test API keys configured in project secrets
+  * Production-ready architecture supports easy switching between test/production YoCo environments
 ```
 
 ## User Preferences

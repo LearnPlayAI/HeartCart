@@ -47,6 +47,7 @@ import aiApiRoutes from "./routes/ai-api";
 import { orderRoutes } from "./order-routes";
 import { adminRoutes } from "./admin-routes";
 import paymentRoutes from "./payment-routes";
+import webhookRoutes from "./yoco-webhook-routes";
 import { registerAuthTestRoutes } from "./auth-test-routes";
 import { registerDatabaseTestRoutes } from "./database-test-routes";
 import { unifiedEmailService } from "./unified-email-service";
@@ -181,6 +182,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register payment routes for payment-first order creation
   app.use("/api/payment", paymentRoutes);
+  app.use("/api/payments", paymentRoutes);
+  
+  // Register YoCo webhook routes
+  app.use("/api/webhooks", webhookRoutes);
   
   // Register order routes (after middleware for proper error handling)
   app.use("/api/orders", orderRoutes);
