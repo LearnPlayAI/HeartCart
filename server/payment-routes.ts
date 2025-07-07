@@ -97,9 +97,31 @@ router.post('/card/checkout', isAuthenticated, asyncHandler(async (req: Request,
 
   } catch (error) {
     console.error('Error creating YoCo checkout session:', error);
-    res.status(500).json({ 
-      error: 'Failed to create payment session',
-      message: error instanceof Error ? error.message : 'Unknown error'
+    
+    // Provide specific error messages based on error type
+    let errorMessage = 'Failed to create payment session';
+    let statusCode = 500;
+    
+    if (error instanceof Error) {
+      if (error.message.includes('API Error: 400')) {
+        errorMessage = 'Invalid payment details. Please check your order and try again.';
+        statusCode = 400;
+      } else if (error.message.includes('API Error: 401') || error.message.includes('unauthorized')) {
+        errorMessage = 'Payment service authentication failed. Please try again later.';
+        statusCode = 503;
+      } else if (error.message.includes('API Error: 403')) {
+        errorMessage = 'Payment not authorized. Please verify your payment details.';
+        statusCode = 403;
+      } else if (error.message.includes('network') || error.message.includes('timeout') || error.message.includes('ECONNREFUSED')) {
+        errorMessage = 'Payment service temporarily unavailable. Please try again in a few moments.';
+        statusCode = 503;
+      }
+    }
+    
+    res.status(statusCode).json({ 
+      error: errorMessage,
+      message: error instanceof Error ? error.message : 'Unknown error',
+      details: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : undefined) : undefined
     });
   }
 }));

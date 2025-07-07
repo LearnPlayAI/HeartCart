@@ -109,7 +109,7 @@ export default function PaymentFailedPage() {
             <h3 className="font-semibold text-gray-900">What would you like to do?</h3>
             
             <div className="grid gap-3">
-              {order && (
+              {order && order.paymentStatus !== 'payment_received' && (
                 <Button asChild className="w-full" size="lg">
                   <Link href={`/order/${order.orderNumber}`}>
                     <CreditCard className="w-4 h-4 mr-2" />

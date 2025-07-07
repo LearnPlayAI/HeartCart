@@ -28,7 +28,8 @@ import {
   Building2,
   Banknote,
   Package,
-  Calculator
+  Calculator,
+  AlertCircle
 } from "lucide-react";
 import ContextualInstallPrompts from "@/components/pwa/ContextualInstallPrompts";
 
@@ -542,7 +543,20 @@ export default function CheckoutPage() {
           return;
         } catch (error) {
           console.error("Card payment error:", error);
-          throw new Error(`Card payment failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          
+          // Extract specific error message from API response
+          let errorMessage = "Unknown error occurred";
+          if (error && typeof error === 'object') {
+            if ('message' in error) {
+              errorMessage = error.message as string;
+            } else if ('error' in error) {
+              errorMessage = (error as any).error;
+            } else if ('description' in error) {
+              errorMessage = (error as any).description;
+            }
+          }
+          
+          throw new Error(`Card payment failed: ${errorMessage}`);
         }
       }
       
@@ -931,17 +945,54 @@ export default function CheckoutPage() {
               </Card>
             )}
 
-            {/* Submit Button */}
+            {/* Submit Button with Enhanced Loading States */}
             <Button
               type="submit"
               size="lg"
-              className="w-full"
-              disabled={isProcessing || createPaymentSessionMutation.isPending || confirmPaymentMutation.isPending}
+              className="w-full bg-gradient-to-r from-pink-600 to-pink-700 hover:from-pink-700 hover:to-pink-800"
+              disabled={isProcessing || !selectedLocker || !form.formState.isValid || Object.keys(form.formState.errors).length > 0}
             >
-              {isProcessing 
-                ? "Processing Order..." 
-                : `Place Order - R${finalTotal.toFixed(2)}`}
+              {isProcessing ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  {selectedPaymentMethod === "card" ? "Creating Payment Session..." : "Processing Order..."}
+                </>
+              ) : (
+                `Place Order - R${finalTotal.toFixed(2)}`
+              )}
             </Button>
+
+            {/* Comprehensive Form Validation Errors Display */}
+            {Object.keys(form.formState.errors).length > 0 && (
+              <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertCircle className="h-4 w-4 text-red-600" />
+                  <span className="text-sm font-medium text-red-700">
+                    Please fix the following errors:
+                  </span>
+                </div>
+                <ul className="text-sm text-red-600 space-y-1">
+                  {Object.entries(form.formState.errors).map(([field, error]) => (
+                    <li key={field} className="flex items-start gap-1">
+                      <span className="text-red-500">•</span>
+                      <span>{error?.message || `${field} is invalid`}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* PUDO Locker Selection Validation */}
+            {!selectedLocker && (
+              <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 text-amber-600" />
+                  <span className="text-sm font-medium text-amber-700">
+                    Please select a PUDO locker for delivery
+                  </span>
+                </div>
+              </div>
+            )}
           </form>
         </div>
 
