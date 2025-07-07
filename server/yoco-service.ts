@@ -97,17 +97,27 @@ class YocoService {
       throw new Error('YoCo secret key not configured');
     }
 
-    // Debug: Log YoCo configuration for verification
+    // COMPREHENSIVE YoCo DEBUG LOGGING
     console.log('🔑 YoCo API Configuration:', {
       nodeEnv: process.env.NODE_ENV,
       isProduction: process.env.NODE_ENV === 'production',
       keyType: this.secretKey?.startsWith('sk_test_') ? 'TEST' : (this.secretKey?.startsWith('sk_live_') ? 'LIVE' : 'UNKNOWN'),
       publicKey: YOCO_CONFIG.publicKey?.substring(0, 25) + '...',
       secretKey: this.secretKey?.substring(0, 25) + '...',
+      fullPublicKey: YOCO_CONFIG.publicKey, // FULL KEY FOR DEBUGGING
+      fullSecretKey: this.secretKey?.substring(0, 15) + '...', // MORE CHARS FOR DEBUGGING
       apiUrl: this.baseUrl,
       checkoutAmount: checkoutData.amount,
       currency: checkoutData.currency,
-      note: 'YoCo will set processingMode automatically based on key type'
+      webhookSecret: YOCO_CONFIG.webhookSecret?.substring(0, 20) + '...',
+      note: 'YoCo will set processingMode automatically based on key type',
+      availableEnvKeys: {
+        YOCO_TEST_PUBLIC: !!process.env.YOCO_TEST_PUBLIC_KEY,
+        YOCO_TEST_SECRET: !!process.env.YOCO_TEST_SECRET_KEY,
+        YOCO_PROD_PUBLIC: !!process.env.YOCO_PROD_PUBLIC_KEY,
+        YOCO_PROD_SECRET: !!process.env.YOCO_PROD_SECRET_KEY,
+        YOCO_WEBHOOK_SECRET: !!process.env.YOCO_WEBHOOK_SECRET,
+      }
     });
 
     const idempotencyKey = uuidv4();
@@ -152,14 +162,23 @@ class YocoService {
     }
 
     const result = await response.json();
-    console.log('YoCo checkout created successfully:', {
+    console.log('✅ YoCo checkout created successfully:', {
       checkoutId: result.id,
       redirectUrl: result.redirectUrl,
       amount: result.amount,
       currency: result.currency,
       yocoProcessingMode: result.processingMode, // YoCo's automatically set processing mode
       environment: process.env.NODE_ENV || 'development',
-      keyType: this.secretKey?.startsWith('sk_test_') ? 'TEST' : 'LIVE'
+      keyType: this.secretKey?.startsWith('sk_test_') ? 'TEST' : 'LIVE',
+      usedSecretKey: this.secretKey?.substring(0, 15) + '...',
+      usedPublicKey: YOCO_CONFIG.publicKey?.substring(0, 25) + '...',
+      idempotencyKey: idempotencyKey,
+      requestPayload: {
+        amount: checkoutData.amount,
+        currency: checkoutData.currency,
+        metadata: checkoutData.metadata,
+        lineItemsCount: checkoutData.lineItems?.length || 0
+      }
     });
     
     return result;

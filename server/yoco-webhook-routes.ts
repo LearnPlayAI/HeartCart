@@ -22,11 +22,20 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
     const webhookId = req.headers['webhook-id'] as string;
     const timestamp = req.headers['webhook-timestamp'] as string;
 
-    console.log('YoCo webhook received:', {
+    console.log('📨 YoCo webhook received:', {
       webhookId,
       timestamp,
       eventType: req.body.type,
       hasSignature: !!signature,
+      paymentId: req.body.payload?.id,
+      paymentAmount: req.body.payload?.amount,
+      paymentCurrency: req.body.payload?.currency,
+      checkoutId: req.body.payload?.metadata?.checkoutId,
+      tempCheckoutId: req.body.payload?.metadata?.tempCheckoutId,
+      customerId: req.body.payload?.metadata?.customerId,
+      customerEmail: req.body.payload?.metadata?.customerEmail,
+      webhookSecretConfigured: !!process.env.YOCO_WEBHOOK_SECRET,
+      webhookSecretUsed: process.env.YOCO_WEBHOOK_SECRET?.substring(0, 20) + '...',
     });
 
     // Validate webhook timestamp (prevent replay attacks)
