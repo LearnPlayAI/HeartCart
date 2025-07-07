@@ -102,6 +102,7 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
     const tempCheckoutId = payment.metadata.tempCheckoutId;
     const customerId = parseInt(payment.metadata.customerId);
     const customerEmail = payment.metadata.customerEmail;
+    const customerFullName = payment.metadata.customerFullName; // Extract customer's full name from metadata
     const cartDataStr = payment.metadata.cartData;
 
     console.log('Processing successful payment:', {
@@ -109,6 +110,8 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
       checkoutId,
       tempCheckoutId,
       customerId,
+      customerEmail,
+      customerFullName, // Log customer's full name for debugging
       amount: payment.amount,
       currency: payment.currency,
     });
@@ -144,10 +147,13 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
 
     console.log('Creating order after successful payment:', { 
       checkoutId, 
-      customerId, 
+      customerId,
+      customerEmail,
+      customerFullName, // Debug customer name from metadata
       cartDataKeys: Object.keys(cartData),
       hasOrderItems: !!cartData.orderItems,
-      orderItemsCount: cartData.orderItems?.length || 0
+      orderItemsCount: cartData.orderItems?.length || 0,
+      cartDataCustomerName: cartData.customerName // Debug customer name in cart data
     });
 
     // YoCo compliance: Calculate transaction fees for profit tracking (absorbed by company, not charged to customer)

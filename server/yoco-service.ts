@@ -268,7 +268,7 @@ class YocoService {
    * YoCo compliance: Implement proper timestamp validation as per security requirements
    * SAST timezone support: Extended tolerance for South African users (UTC+2)
    */
-  isValidTimestamp(timestamp: string, toleranceInMinutes: number = 15): boolean {
+  isValidTimestamp(timestamp: string): boolean {
     if (!timestamp) {
       console.warn('YoCo webhook timestamp validation: No timestamp provided');
       return false;
@@ -283,29 +283,30 @@ class YocoService {
       
       const currentTime = Date.now();
       
-      // Much more generous tolerance for SAST timezone and deployment environment differences
-      // Allow up to 15 minutes base + 4 hours for timezone/deployment issues
-      const sastToleranceInMinutes = toleranceInMinutes + 240; // Add 4 hours for safety
-      const tolerance = sastToleranceInMinutes * 60 * 1000; // Convert to milliseconds
+      // YoCo COMPLIANCE: Use exactly 3 minutes as recommended by official documentation
+      const toleranceInMinutes = 3; // YoCo recommended maximum
+      const tolerance = toleranceInMinutes * 60 * 1000; // Convert to milliseconds
       const timeDifference = Math.abs(currentTime - webhookTime);
       
-      console.log('YoCo webhook timestamp validation:', {
+      console.log('YoCo webhook timestamp validation (3-minute compliance):', {
         webhookTime: new Date(webhookTime).toISOString(),
         currentTime: new Date(currentTime).toISOString(),
         differenceMs: timeDifference,
         toleranceMs: tolerance,
-        sastToleranceMinutes: sastToleranceInMinutes,
+        toleranceMinutes: toleranceInMinutes,
         differenceInMinutes: (timeDifference / (1000 * 60)).toFixed(2),
-        isValid: timeDifference <= tolerance
+        isValid: timeDifference <= tolerance,
+        yocoCompliant: true
       });
       
       if (timeDifference > tolerance) {
-        console.warn('YoCo webhook timestamp validation: Timestamp outside extended tolerance window', {
+        console.warn('YoCo webhook timestamp validation FAILED: Timestamp outside 3-minute compliance window', {
           webhookTime: new Date(webhookTime).toISOString(),
           currentTime: new Date(currentTime).toISOString(),
           differenceMs: timeDifference,
           toleranceMs: tolerance,
-          sastToleranceMinutes: sastToleranceMinutes
+          toleranceMinutes: toleranceInMinutes,
+          complianceNote: 'YoCo recommends max 3 minutes for security'
         });
         return false;
       }

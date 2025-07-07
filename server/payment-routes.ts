@@ -35,6 +35,22 @@ router.post('/card/checkout', isAuthenticated, asyncHandler(async (req: Request,
       return res.status(403).json({ error: 'Access denied' });
     }
 
+    // CRITICAL FIX: Fetch customer's fullName from users table for proper order creation
+    let customerFullName = '';
+    try {
+      const customer = await storage.getUserById(customerId);
+      customerFullName = customer?.fullName || `${customer?.firstName || ''} ${customer?.lastName || ''}`.trim() || 'Unknown Customer';
+      console.log('✅ Customer fullName fetched from database:', {
+        customerId,
+        customerFullName,
+        customerEmail: customer?.email,
+        hasFullName: !!customer?.fullName
+      });
+    } catch (error) {
+      console.error('❌ Failed to fetch customer fullName from database:', error);
+      customerFullName = 'Unknown Customer';
+    }
+
     // Convert total amount to cents (YoCo requires cents)
     const amountInCents = Math.round(cartData.total * 100);
     const vatAmountInCents = Math.round(cartData.vatAmount * 100);
@@ -82,8 +98,12 @@ router.post('/card/checkout', isAuthenticated, asyncHandler(async (req: Request,
         tempCheckoutId, // Keep for backward compatibility
         customerId: customerId.toString(),
         customerEmail: customerEmail,
-        // Store complete cart data for order creation after successful payment
-        cartData: JSON.stringify(cartData)
+        customerFullName: customerFullName, // Include customer's full name for webhook processing
+        // Store complete cart data for order creation after successful payment  
+        cartData: JSON.stringify({
+          ...cartData,
+          customerName: customerFullName // Ensure customerName is in cart data for webhook
+        })
       },
       totalTaxAmount: vatAmountInCents,
       subtotalAmount: subtotalInCents,

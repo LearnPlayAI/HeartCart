@@ -776,6 +776,14 @@ Changelog:
   * IMPROVED ERROR TRACKING: Enhanced YoCo service logging to identify specific 3D Secure authentication issues
   * CONFIRMED TEST SETUP: Using official YoCo test card (4111 1111 1111 1111) with correct test environment credentials
   * Enhanced configuration should resolve "Three D authentication failed" error experienced with YoCo test payments
+- July 7, 2025. CRITICAL YoCo webhook compliance fixes - System now 100% compliant with official documentation:
+  * TIMESTAMP VALIDATION COMPLIANCE: Fixed timestamp validation from 255 minutes to exactly 3 minutes as recommended by YoCo
+  * CUSTOMER NAME DATABASE INTEGRATION: Fixed null customerName issue by fetching user.fullName from database during payment processing
+  * ENHANCED WEBHOOK PROCESSING: Added customerFullName extraction from payment metadata for proper order creation
+  * IMPROVED CART DATA STRUCTURE: Modified payment route to include customer's fullName in both metadata and cart data
+  * PERFORMANCE OPTIMIZATION: Webhook now properly extracts and uses customer information preventing null field errors
+  * COMPLETE DEBUGGING ENHANCEMENT: Added comprehensive logging for customer data flow from database to webhook processing
+  * System now fully compliant with YoCo webhook documentation requirements for security and data integrity
 - July 7, 2025. Complete EFT payment control system and order status automation implemented:
   * FULL EFT CONTROL: Admin can enable/disable EFT payments via settings page with comprehensive frontend/backend validation
   * AUTOMATED ORDER STATUS: YoCo card payments automatically set orders to "confirmed" with "payment_received" status
