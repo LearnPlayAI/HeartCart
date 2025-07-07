@@ -273,6 +273,45 @@ router.patch("/orders/:id/payment-status", isAuthenticated, asyncHandler(async (
           
           // Generate PDF invoice first
           try {
+            // Fetch VAT settings from systemSettings for invoice generation
+            let vatSettings = {
+              vatRate: 0,
+              vatAmount: 0,
+              vatRegistered: false,
+              vatRegistrationNumber: ''
+            };
+            
+            try {
+              // Fetch VAT settings from system settings
+              const vatRateResult = await storage.getSystemSetting('vatRate');
+              const vatRegNumberResult = await storage.getSystemSetting('vatRegistrationNumber');
+              const vatRegisteredResult = await storage.getSystemSetting('vatRegistered');
+              
+              const vatRate = parseFloat(vatRateResult?.settingValue || '0');
+              const vatRegistered = vatRegisteredResult?.settingValue === 'true';
+              const vatRegistrationNumber = vatRegNumberResult?.settingValue || '';
+              
+              // Calculate VAT amount if registered
+              if (vatRegistered && vatRate > 0) {
+                const vatableAmount = fullOrder.subtotalAmount + fullOrder.shippingCost;
+                vatSettings.vatAmount = parseFloat((vatableAmount * (vatRate / 100)).toFixed(2));
+              }
+              
+              vatSettings.vatRate = vatRate;
+              vatSettings.vatRegistered = vatRegistered;
+              vatSettings.vatRegistrationNumber = vatRegistrationNumber;
+              
+              logger.info("VAT settings fetched for invoice generation", {
+                orderId,
+                vatRate: vatSettings.vatRate,
+                vatAmount: vatSettings.vatAmount,
+                vatRegistered: vatSettings.vatRegistered,
+                vatRegistrationNumber: vatSettings.vatRegistrationNumber
+              });
+            } catch (vatError) {
+              logger.error("Failed to fetch VAT settings for invoice, using defaults", { error: vatError, orderId });
+            }
+
             const invoiceData = {
               orderNumber: fullOrder.orderNumber,
               customerName: fullOrder.customerName,
@@ -290,6 +329,10 @@ router.patch("/orders/:id/payment-status", isAuthenticated, asyncHandler(async (
               })),
               subtotalAmount: fullOrder.subtotalAmount,
               shippingCost: fullOrder.shippingCost,
+              vatAmount: vatSettings.vatAmount,
+              vatRate: vatSettings.vatRate,
+              vatRegistered: vatSettings.vatRegistered,
+              vatRegistrationNumber: vatSettings.vatRegistrationNumber,
               totalAmount: fullOrder.totalAmount,
               paymentMethod: fullOrder.paymentMethod,
               paymentReceivedDate: new Date().toISOString(),

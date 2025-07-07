@@ -1,6 +1,7 @@
 import { jsPDF } from 'jspdf';
 import { logger } from '../logger';
 import { objectStore } from '../object-store';
+import { storage } from '../storage';
 import path from 'path';
 
 export interface InvoiceData {
@@ -20,6 +21,10 @@ export interface InvoiceData {
   }>;
   subtotalAmount: number;
   shippingCost: number;
+  vatAmount: number;
+  vatRate: number;
+  vatRegistered: boolean;
+  vatRegistrationNumber: string;
   totalAmount: number;
   paymentMethod: string;
   paymentReceivedDate: string;
@@ -58,7 +63,12 @@ export class InvoiceGenerator {
 
   async generateInvoicePDF(data: InvoiceData): Promise<string> {
     try {
-      logger.info('Starting PDF invoice generation', { orderNumber: data.orderNumber });
+      logger.info('Starting PDF invoice generation with VAT', { 
+        orderNumber: data.orderNumber,
+        vatAmount: data.vatAmount,
+        vatRate: data.vatRate,
+        vatRegistered: data.vatRegistered
+      });
 
       // Create new jsPDF instance
       const doc = new jsPDF();
@@ -84,14 +94,18 @@ export class InvoiceGenerator {
           type: 'invoice',
           orderNumber: data.orderNumber,
           userId: data.userId.toString(),
-          generatedAt: new Date().toISOString()
+          generatedAt: new Date().toISOString(),
+          vatAmount: data.vatAmount.toString(),
+          vatRate: data.vatRate.toString()
         }
       });
 
-      logger.info('Invoice PDF generated and stored successfully', { 
+      logger.info('Invoice PDF generated and stored successfully with VAT', { 
         orderNumber: data.orderNumber,
         storagePath,
-        size: pdfBuffer.length 
+        size: pdfBuffer.length,
+        vatAmount: data.vatAmount,
+        vatRate: data.vatRate
       });
 
       return storagePath;
@@ -205,7 +219,7 @@ export class InvoiceGenerator {
 
     yPosition += 10;
 
-    // Totals
+    // Totals with VAT breakdown
     const totalsX = margin + 110;
     doc.setFont('helvetica', 'normal');
     doc.text('Subtotal:', totalsX, yPosition);
@@ -215,7 +229,24 @@ export class InvoiceGenerator {
     doc.text('Shipping:', totalsX, yPosition);
     doc.text(`R${data.shippingCost.toFixed(2)}`, totalsX + 30, yPosition);
     
-    yPosition += 10;
+    // VAT breakdown
+    yPosition += 7;
+    if (data.vatRegistered && data.vatAmount > 0) {
+      doc.text(`VAT (${data.vatRate}%):`, totalsX, yPosition);
+      doc.text(`R${data.vatAmount.toFixed(2)}`, totalsX + 30, yPosition);
+      yPosition += 7;
+      
+      // VAT registration number
+      doc.setFontSize(8);
+      doc.text(`VAT No: ${data.vatRegistrationNumber}`, totalsX, yPosition);
+      doc.setFontSize(10);
+      yPosition += 3;
+    } else {
+      doc.text('VAT (0%): Not VAT registered', totalsX, yPosition);
+      yPosition += 3;
+    }
+    
+    yPosition += 7;
     doc.setFont('helvetica', 'bold');
     doc.text('Total:', totalsX, yPosition);
     doc.text(`R${data.totalAmount.toFixed(2)}`, totalsX + 30, yPosition);
@@ -587,7 +618,7 @@ export class InvoiceGenerator {
             </tbody>
         </table>
 
-        <!-- Totals -->
+        <!-- Totals with VAT breakdown -->
         <div class="totals-section">
             <table class="totals-table">
                 <tr>
@@ -598,6 +629,19 @@ export class InvoiceGenerator {
                     <td class="label">Shipping:</td>
                     <td class="amount">${formatCurrency(data.shippingCost)}</td>
                 </tr>
+                ${data.vatRegistered && data.vatAmount > 0 ? `
+                <tr>
+                    <td class="label">VAT (${data.vatRate}%):</td>
+                    <td class="amount">${formatCurrency(data.vatAmount)}</td>
+                </tr>
+                <tr style="font-size: 12px; opacity: 0.8;">
+                    <td class="label">VAT No: ${data.vatRegistrationNumber}</td>
+                    <td class="amount"></td>
+                </tr>` : `
+                <tr>
+                    <td class="label">VAT (0%):</td>
+                    <td class="amount">Not VAT registered</td>
+                </tr>`}
                 <tr>
                     <td class="label">TOTAL:</td>
                     <td class="amount">${formatCurrency(data.totalAmount)}</td>
@@ -613,7 +657,10 @@ export class InvoiceGenerator {
             
             <div class="legal-notice">
                 <h5>Important Notice</h5>
-                <p>• This company is not registered for VAT</p>
+                ${data.vatRegistered && data.vatAmount > 0 ? `
+                <p>• VAT Registered Company - VAT No: ${data.vatRegistrationNumber}</p>
+                <p>• VAT at ${data.vatRate}% included in total amount</p>` : `
+                <p>• This company is not currently registered for VAT</p>`}
                 <p>• Business Registration Number: 2025/499123/07</p>
                 <p>• This document serves as proof of purchase and payment</p>
             </div>
