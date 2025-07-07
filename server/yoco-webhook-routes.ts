@@ -7,6 +7,9 @@ import { Router, Request, Response } from 'express';
 import asyncHandler from 'express-async-handler';
 import { yocoService, YocoPaymentEvent } from './yoco-service.js';
 import { unifiedEmailService } from './unified-email-service.js';
+import { db } from './db';
+import { products } from '../shared/schema.js';
+import { eq } from 'drizzle-orm';
 
 const router = Router();
 
@@ -205,7 +208,63 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
     
     // Extract order and orderItems from cart data (like EFT flow)
     // CRITICAL FIX: Extract address fields from nested shippingAddress object
-    const { orderItems, shippingAddress: addressData, ...orderData } = cartData;
+    const { orderItems: rawOrderItems, shippingAddress: addressData, ...orderData } = cartData;
+
+    // CRITICAL FIX: Enrich order items with product names from database (preventing null productName constraint violations)
+    console.log('CRITICAL DEBUG: Raw order items before enrichment:', {
+      rawOrderItems: rawOrderItems,
+      itemCount: rawOrderItems?.length || 0,
+      sampleItem: rawOrderItems?.[0]
+    });
+
+    const orderItems = [];
+    if (rawOrderItems && Array.isArray(rawOrderItems)) {
+      for (const item of rawOrderItems) {
+        try {
+          // Fetch product name from database using productId
+          const product = await db
+            .select({ name: products.name })
+            .from(products)
+            .where(eq(products.id, item.productId))
+            .limit(1);
+
+          const productName = product[0]?.name || `Product ID ${item.productId}`;
+          
+          const enrichedItem = {
+            ...item,
+            productName: productName  // CRITICAL FIX: Add productName from database
+          };
+          
+          orderItems.push(enrichedItem);
+          
+          console.log('CRITICAL DEBUG: Enriched order item with productName:', {
+            productId: item.productId,
+            productName: productName,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice
+          });
+        } catch (productFetchError) {
+          console.error('Error fetching product name for order item:', {
+            error: productFetchError,
+            productId: item.productId,
+            itemIndex: orderItems.length
+          });
+          
+          // Use fallback product name to prevent null constraint violation
+          const enrichedItem = {
+            ...item,
+            productName: `Product ID ${item.productId}`
+          };
+          orderItems.push(enrichedItem);
+        }
+      }
+    }
+
+    console.log('CRITICAL DEBUG: Final enriched order items:', {
+      enrichedItemCount: orderItems.length,
+      allItemsHaveProductName: orderItems.every(item => item.productName),
+      sampleEnrichedItem: orderItems[0]
+    });
     
     // CRITICAL FIX: Ensure all required address fields have fallbacks to prevent null constraints
     const addressLine1 = addressData?.addressLine1 || 'Address not provided';
