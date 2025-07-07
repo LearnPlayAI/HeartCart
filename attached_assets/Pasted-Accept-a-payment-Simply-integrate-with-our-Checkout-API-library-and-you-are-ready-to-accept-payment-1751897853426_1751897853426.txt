@@ -1,0 +1,140 @@
+Accept a payment
+Simply integrate with our Checkout API library and you are ready to accept payments!
+
+caution
+The Checkout API should only be called from your server. This flow ensures the security of your payments and provides a trusted result to your server.
+
+Steps
+Create the Checkout
+Redirect the customer to the Checkout page
+Verify that the payment is successful
+1. Create the Checkout
+The Checkout API requires authenticated access, see here for more details.
+
+A Checkout represents what your customer sees on the payment page such as the amount to collect, currency and any other additional details. Add an endpoint on your server that creates a Checkout.
+
+https://payments.yoco.com/api/checkouts
+Headers
+Parameter	Type	Description
+Authorization
+string
+The secret key for your account.
+Idempotency-Key
+string
+An optional idempotency key enables you to safely retry a request without risking the user being charged multiple times.
+Body
+Parameter	Type	Description
+amount
+integer
+The final amount you would like to charge the customer, in cents. Including all the discounts and applicable taxes.
+currency
+string
+The 3-letter currency code in ISO 4217 format. Currently we only support ZAR.
+cancelUrl
+string
+The URL to redirect customers to when the checkout is cancelled.
+successUrl
+string
+The URL to optionally redirect customers to when the checkout completes successfully.
+failureUrl
+string
+The URL to optionally redirect customers to when the checkout does not complete successfully.
+metadata
+map
+Used to record additional details about the checkout, often used to reconcile data with an external system.
+totalDiscount
+integer
+The total discount, in cents, is used for display only. It must already be included in the amount to collect.
+totalTaxAmount
+integer
+The total tax, in cents, is used for display only. It must already be included in the amount to collect.
+subtotalAmount
+integer
+The subtotal, in cents, is used for display only and represents the total value collected including taxes and excluding discounts.
+lineItems
+list
+The line items are used for display only and provide additional details for the items purchased during checkout.
+important
+We do not recommend using the successUrl as a way to verify if the payment was successful. Rather follow the instructions in Step 3: Verify that the payment is successful.
+
+caution
+The following fields are solely utilised for display purposes and never subject to validation: totalDiscount, totalTaxAmount, subtotalAmount and lineItems.
+
+Before creating the Checkout, it is important to do your own validation on these fields.
+
+Sample request
+cURL
+curl --location --request POST 'https://payments.yoco.com/api/checkouts' \
+--header 'Content-Type: application/json' \
+--header 'Authorization: Bearer <secret-key>' \
+--data-raw '{
+  "amount": 900,
+  "currency": "ZAR"
+}'
+
+important
+Replace <secret-key\> with your secret API integration key. For more information, see here.
+
+important
+We do not accept payments that are less than R2.
+
+Sample response
+The Checkout response contains a redirectUrl which is used to redirect the customer to the checkout page.
+
+Successful
+HTTP: 200 OK
+{
+    "id": "ch_9LVKD8GnAj7f39DFbn4F16bE",
+    "redirectUrl": "https://c.yoco.com/checkout/ch_9LVKD8GnAj7f39DFbn4F16bE",
+    "status": "created",
+    "amount": 900,
+    "currency": "ZAR",
+    "paymentId": null,
+    "cancelUrl": null,
+    "successUrl": null,
+    "failureUrl": null,
+    "metadata": {
+        "checkoutId": "ch_9LVKD8GnAj7f39DFbn4F16bE",
+        "paymentFacilitator": "yoco-online-checkout"
+    },
+    "merchantId": "1687579359397-9ecd46a3-83f9-4563-8def-20ac11p67087",
+    "totalDiscount": null,
+    "totalTaxAmount": null,
+    "subtotalAmount": null,
+    "lineItems": null,
+    "externalId": null,
+    "processingMode": "live"
+}
+
+important
+You should retain the id and redirectUrl returned. This will be used in the following steps.
+
+More examples:
+Checkout with discounts and tax.
+Checkout with line items, discounts and tax.
+2. Redirect the customer to the Checkout page
+After creating the Checkout, redirect your customer to the redirectUrl. This will redirect the customer to the checkout page where they can complete the payment.
+
+3. Verify that the payment is successful
+When a payment is successful, we will send a webhook event to your server. It is highly recommended to use webhooks to check the payment status before fulfilling the order.
+
+For more information on receiving webhook events, see here.
+
+The status of the payment can be verified by referring to the type field of the webhook event. A payment is considered successful if its type is marked as payment.succeeded.
+
+important
+For more information about the successful payment event, see here.
+
+Errors
+The Checkout API uses conventional HTTP response codes to indicate the success or failure of requests. In general, codes in the 2xx range indicate success. Codes in the 4xx range indicate an error that failed given the information provided (e.g., a required parameter was omitted, etc.). Codes in the 5xx range indicate an error with our servers. (These do not happen often.)
+
+General errors
+Description	Reason	Solution
+CORS	The request is not being sent over HTTPS from your server. Browser security prevents a web page from making requests to a different domain than the one that served the web page. This restriction is called the same-origin policy.	Ensure you are making calls to the the Checkout API from your server and use HTTPs for those calls. This also ensures your secret key is not exposed.
+HTTP response errors
+Below are potential errors that may occur, along with additional information to assist you in resolving them. Please note that this list is not exhaustive.
+
+Status code	Description	Reason	Solution
+403	A key is required, but has not been specified.	Secret API key is not included in header, or is incorrect.	Confirm that the Authorization header is included in your request and that the API key is correct. For more information, see here.
+409	Conflict	A request with the same idempotency key is already being processed.	Try again later, or use a different idempotency key.
+422	The request payload (method, path, parameters) does not match the original request.	An initial request was sent with an idempotency key, followed by a subsequent request with the same idempotency key.	Confirm that the Idempotency-Key header is unique for each request.
