@@ -1071,6 +1071,43 @@ router.patch("/settings/:key", isAuthenticated, asyncHandler(async (req: Request
   }
 }));
 
+// Add PUT route for system settings (frontend expects PUT method with settingValue property)
+router.put("/settings/:key", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    // TODO: Add admin role check here
+    const { key } = req.params;
+    const { settingValue } = req.body;
+    
+    // Allow empty string as a valid value, but not undefined/null
+    if (settingValue === undefined || settingValue === null) {
+      return sendError(res, "Setting value is required", 400);
+    }
+    
+    let updatedSetting = await storage.updateSystemSetting(key, String(settingValue));
+    
+    // If setting doesn't exist, create it
+    if (!updatedSetting) {
+      updatedSetting = await storage.createSystemSetting({
+        settingKey: key,
+        settingValue: String(settingValue),
+        description: `Auto-generated setting for ${key}`,
+        isActive: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+      
+      logger.info("Created new system setting via PUT", { key, settingValue });
+    } else {
+      logger.info("System setting updated successfully via PUT", { key, settingValue, adminUserId: req.user?.id });
+    }
+    
+    return sendSuccess(res, updatedSetting);
+  } catch (error) {
+    logger.error("Error updating system setting via PUT", { error, key: req.params.key });
+    return sendError(res, "Failed to update system setting", 500);
+  }
+}));
+
 // Sales Rep Commission System Admin Routes
 router.get("/sales-reps", isAdmin, asyncHandler(async (req: Request, res: Response) => {
   try {
