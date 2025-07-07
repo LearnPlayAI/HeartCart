@@ -56,8 +56,8 @@ async function updateMainOrderStatusBasedOnSupplierOrders(orderItemId: number) {
       // All items either received or unavailable - ready to ship available items
       newMainOrderStatus = 'processing';
     } else if (orderedCount > 0 && receivedCount + orderedCount + unavailableCount === totalItems) {
-      // All items are either ordered, received, or unavailable - confirmed
-      newMainOrderStatus = 'confirmed';
+      // All items are either ordered, received, or unavailable - set to processing
+      newMainOrderStatus = 'processing';
     }
 
     // Update main order status if needed

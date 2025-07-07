@@ -776,6 +776,16 @@ Changelog:
   * IMPROVED ERROR TRACKING: Enhanced YoCo service logging to identify specific 3D Secure authentication issues
   * CONFIRMED TEST SETUP: Using official YoCo test card (4111 1111 1111 1111) with correct test environment credentials
   * Enhanced configuration should resolve "Three D authentication failed" error experienced with YoCo test payments
+- July 7, 2025. Complete EFT payment control system and order status automation implemented:
+  * FULL EFT CONTROL: Admin can enable/disable EFT payments via settings page with comprehensive frontend/backend validation
+  * AUTOMATED ORDER STATUS: YoCo card payments automatically set orders to "confirmed" with "payment_received" status
+  * SUPPLIER ORDER AUTOMATION: When admin marks items as "ordered" on supplier orders page, main order status becomes "processing"
+  * PAYMENT METHOD FILTERING: Checkout page conditionally shows payment options based on admin EFT settings
+  * AUTO-SWITCH LOGIC: System automatically switches from EFT to card payment when EFT gets disabled by admin
+  * PAYMENT FAILURE UX: Payment failure page only shows EFT option when enabled by admin settings
+  * CONTACT NUMBER UPDATE: All contact numbers updated to +27712063084 throughout entire application
+  * BACKEND VALIDATION: Server-side validation prevents EFT orders when disabled, ensuring data integrity
+  * Complete admin-controlled payment management system with proper order status automation based on payment method and supplier management
 - July 4, 2025. Automatic shipping address data persistence in checkout system:
   * Modified checkout form to always save shipping address data when logged-in users place orders
   * Removed dependency on "Save details" checkbox for address information persistence
