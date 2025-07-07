@@ -847,6 +847,11 @@ Changelog:
   * Fixed 10+ references throughout server/routes.ts: changed objectStore.getFileAsBuffer(), objectStore.exists(), objectStore.uploadFromBuffer(), objectStore.getPublicUrl() to objectStoreAdapter equivalents
   * All product images now display correctly, file serving system fully operational
   * Complete system integrity restored: VAT calculations working + object storage serving files properly
+- July 7, 2025. Admin test order data cleanup completed:
+  * Cleared all order-related data for admin@teemeyou.shop user (user ID 8) for clean testing environment
+  * Deleted 2 test orders (TMY-15-20250707, TMY-16-20250707) with 4 order items and 4 status history records
+  * Removed cart items for admin user ensuring clean slate for future testing
+  * System ready for fresh order testing with all core functionality operational: VAT calculations, object storage, email notifications
   * Updated all variable references from vatRate/vatRegistered to vatRateValue/vatRegisteredValue for clarity
   * Checkout page VAT display now matches server-side cart totals endpoint logic exactly
   * Complete end-to-end VAT system operational: shows VAT (0%): R0.00 when inactive, VAT (15%): amount when active and registered
