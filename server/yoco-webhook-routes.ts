@@ -208,7 +208,22 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
     
     // Extract order and orderItems from cart data (like EFT flow)
     // CRITICAL FIX: Extract address fields from nested shippingAddress object
-    const { orderItems: rawOrderItems, shippingAddress: addressData, ...orderData } = cartData;
+    // CRITICAL DEBUG: Check multiple possible field names for order items
+    let rawOrderItems = cartData.orderItems || cartData.items || cartData.lineItems || [];
+    const { shippingAddress: addressData, ...orderData } = cartData;
+    
+    console.log('CRITICAL DEBUG: Order items field detection:', {
+      hasOrderItems: !!cartData.orderItems,
+      hasItems: !!cartData.items, 
+      hasLineItems: !!cartData.lineItems,
+      orderItemsLength: cartData.orderItems?.length || 0,
+      itemsLength: cartData.items?.length || 0,
+      lineItemsLength: cartData.lineItems?.length || 0,
+      selectedField: rawOrderItems === cartData.orderItems ? 'orderItems' : 
+                     rawOrderItems === cartData.items ? 'items' :
+                     rawOrderItems === cartData.lineItems ? 'lineItems' : 'none',
+      rawOrderItemsLength: rawOrderItems?.length || 0
+    });
 
     // CRITICAL FIX: Enrich order items with product names from database (preventing null productName constraint violations)
     console.log('CRITICAL DEBUG: Raw order items before enrichment:', {
