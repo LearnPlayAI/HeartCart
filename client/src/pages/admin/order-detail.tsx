@@ -1167,10 +1167,12 @@ export default function AdminOrderDetail() {
                   <span>Shipping:</span>
                   <span>{formatCurrency(order.shippingCost)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>Tax:</span>
-                  <span>{formatCurrency(0)}</span>
-                </div>
+                {order.vatAmount > 0 && (
+                  <div className="flex justify-between">
+                    <span>VAT ({order.vatRate}%):</span>
+                    <span>{formatCurrency(order.vatAmount)}</span>
+                  </div>
+                )}
                 <Separator />
                 <div className="flex justify-between font-bold text-lg">
                   <span>Total:</span>

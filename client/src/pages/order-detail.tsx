@@ -886,6 +886,12 @@ ${order.customerName}`;
                   <span>Shipping</span>
                   <span>{formatCurrency(order.shippingCost)}</span>
                 </div>
+                {order.vatAmount > 0 && (
+                  <div className="flex justify-between">
+                    <span>VAT ({order.vatRate}%)</span>
+                    <span>{formatCurrency(order.vatAmount)}</span>
+                  </div>
+                )}
                 <Separator />
                 <div className="flex justify-between font-semibold text-lg">
                   <span>Total</span>

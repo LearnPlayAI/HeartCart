@@ -689,6 +689,9 @@ const MyOrdersPage: React.FC = () => {
                         <div className="text-sm text-gray-600 mb-3">
                           <div>Subtotal: {formatCurrency(order.subtotalAmount)}</div>
                           <div>Shipping: {formatCurrency(order.shippingCost)}</div>
+                          {order.vatAmount > 0 && (
+                            <div>VAT ({order.vatRate}%): {formatCurrency(order.vatAmount)}</div>
+                          )}
                         </div>
                         <div className="flex gap-2">
                           <Button 
