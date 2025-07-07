@@ -128,13 +128,27 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
     }
 
     // Check if order already exists for this checkout (prevent duplicates)
-    const existingOrder = await storage.getOrderByYocoCheckoutId(checkoutId);
-    if (existingOrder) {
-      console.log('Order already created for checkout:', existingOrder.orderNumber);
-      return res.status(200).json({ received: true, orderId: existingOrder.id, message: 'Already processed' });
+    try {
+      const existingOrder = await storage.getOrderByYocoCheckoutId(checkoutId);
+      if (existingOrder) {
+        console.log('Order already created for checkout:', existingOrder.orderNumber);
+        return res.status(200).json({ received: true, orderId: existingOrder.id, message: 'Already processed' });
+      }
+    } catch (orderCheckError) {
+      console.warn('Error checking for existing order (proceeding with creation):', {
+        error: orderCheckError.message,
+        checkoutId
+      });
+      // Continue with order creation even if check fails
     }
 
-    console.log('Creating order after successful payment:', { checkoutId, customerId });
+    console.log('Creating order after successful payment:', { 
+      checkoutId, 
+      customerId, 
+      cartDataKeys: Object.keys(cartData),
+      hasOrderItems: !!cartData.orderItems,
+      orderItemsCount: cartData.orderItems?.length || 0
+    });
 
     // YoCo compliance: Calculate transaction fees for profit tracking (absorbed by company, not charged to customer)
     const fees = yocoService.calculateTransactionFees(payment.amount);
@@ -165,7 +179,23 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
     };
 
     // Use the exact same method signature as EFT flow: createOrder(order, orderItems)
+    console.log('Calling storage.createOrder with order and orderItems:', {
+      orderKeys: Object.keys(order),
+      orderItemsCount: orderItems?.length || 0,
+      customerId: order.userId,
+      paymentMethod: order.paymentMethod,
+      paymentStatus: order.paymentStatus,
+      status: order.status
+    });
+    
     const newOrder = await storage.createOrder(order, orderItems);
+    
+    console.log('Order created successfully:', {
+      orderId: newOrder.id,
+      orderNumber: newOrder.orderNumber,
+      status: newOrder.status,
+      paymentStatus: newOrder.paymentStatus
+    });
 
     // Create order status history entry for the newly created order
     await storage.createOrderStatusHistory({

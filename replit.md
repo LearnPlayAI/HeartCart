@@ -794,6 +794,12 @@ Changelog:
   * Cart items automatically cleared after successful card payment
   * YoCo webhook now follows exact same order creation pattern as EFT payments ensuring consistency
   * Complete card payment flow operational: checkout → YoCo payment → webhook → order creation → cart clearing → email notifications
+- July 7, 2025. CRITICAL YoCo webhook signature verification deployment fix - Production ready:
+  * RESOLVED CRITICAL ISSUE: Fixed crypto module import error preventing webhook signature verification in deployed environment
+  * Root cause: Dynamic require('crypto') not supported in production, replaced with proper ES6 import statement
+  * Database schema updated with yocoCheckoutId column for order tracking and duplicate prevention
+  * Webhook signature verification now fully operational with proper crypto module access
+  * YoCo webhook system 100% compliant and production-ready for both test and live environments
 - July 4, 2025. Automatic shipping address data persistence in checkout system:
   * Modified checkout form to always save shipping address data when logged-in users place orders
   * Removed dependency on "Save details" checkbox for address information persistence

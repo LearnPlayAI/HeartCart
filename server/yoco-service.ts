@@ -4,6 +4,7 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
+import crypto from 'crypto';
 
 // YoCo configuration function that reads from admin settings
 async function getYocoConfig() {
@@ -236,8 +237,6 @@ class YocoService {
     }
 
     try {
-      const crypto = require('crypto');
-      
       // Construct signed content: webhookId.timestamp.payload
       const signedContent = `${webhookId}.${timestamp}.${payload}`;
       
