@@ -268,28 +268,39 @@ export default function CheckoutPage() {
   );
   const safeShippingCost = shippingCost || 0;
   
-  // Get VAT settings from API response
-  const vatRate = parseFloat(vatRateSettings?.data?.settingValue || '0');
-  const vatRegistered = vatRegisteredSettings?.data?.settingValue === 'true';
+  // Get VAT settings from API response and check if they're ACTIVE
+  const vatRateValue = parseFloat(vatRateSettings?.data?.settingValue || '0');
+  const vatRateActive = vatRateSettings?.data?.isActive === true;
+  
+  const vatRegisteredValue = vatRegisteredSettings?.data?.settingValue === 'true';
+  const vatRegisteredActive = vatRegisteredSettings?.data?.isActive === true;
+  
   const vatRegistrationNumber = vatRegNumberSettings?.data?.settingValue || '';
+  
+  // Only apply VAT if settings are ACTIVE and company is registered
+  const shouldApplyVAT = vatRateActive && vatRegisteredActive && vatRegisteredValue;
+  const effectiveVATRate = shouldApplyVAT ? vatRateValue : 0;
   
   // Debug VAT settings - TODO: Remove after testing
   console.log('VAT Debug Checkout:', {
     vatRateSettings: vatRateSettings?.data,
     vatRegisteredSettings: vatRegisteredSettings?.data,
     vatRegNumberSettings: vatRegNumberSettings?.data,
-    vatRate,
-    vatRegistered,
-    vatRegistrationNumber,
+    vatRateValue,
+    vatRateActive,
+    vatRegisteredValue, 
+    vatRegisteredActive,
+    shouldApplyVAT,
+    effectiveVATRate,
     subtotal,
     shippingCost: safeShippingCost
   });
   
-  // Calculate VAT using shared utilities
+  // Calculate VAT using effective rate (0 if inactive)
   const vatCalculation = calculateVAT({
     subtotal: subtotal,
     shippingCost: safeShippingCost,
-    vatRate: vatRate
+    vatRate: effectiveVATRate
   });
 
   // Debug VAT calculation - TODO: Remove after testing
@@ -1078,7 +1089,7 @@ export default function CheckoutPage() {
                 </div>
                 
                 {/* VAT Registration Info (only show if registered) */}
-                {vatRegistered && vatRegistrationNumber && (
+                {vatRegisteredValue && vatRegistrationNumber && (
                   <div className="text-xs text-gray-500">
                     VAT Reg: {vatRegistrationNumber}
                   </div>
