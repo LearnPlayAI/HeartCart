@@ -786,6 +786,14 @@ Changelog:
   * CONTACT NUMBER UPDATE: All contact numbers updated to +27712063084 throughout entire application
   * BACKEND VALIDATION: Server-side validation prevents EFT orders when disabled, ensuring data integrity
   * Complete admin-controlled payment management system with proper order status automation based on payment method and supplier management
+- July 7, 2025. CRITICAL YoCo webhook order creation and cart clearing bug fix - System fully operational:
+  * RESOLVED CRITICAL ISSUE: Fixed YoCo webhook to use correct storage.createOrder(order, orderItems) method signature matching EFT flow
+  * Root cause: YoCo webhook was calling createOrder() with single parameter instead of required two parameters (order, orderItems)
+  * Cart clearing now works automatically through storage.createOrder() method (same as EFT flow)
+  * Orders are now properly created for successful test and production card payments
+  * Cart items automatically cleared after successful card payment
+  * YoCo webhook now follows exact same order creation pattern as EFT payments ensuring consistency
+  * Complete card payment flow operational: checkout → YoCo payment → webhook → order creation → cart clearing → email notifications
 - July 4, 2025. Automatic shipping address data persistence in checkout system:
   * Modified checkout form to always save shipping address data when logged-in users place orders
   * Removed dependency on "Save details" checkbox for address information persistence

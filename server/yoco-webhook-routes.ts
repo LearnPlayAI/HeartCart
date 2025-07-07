@@ -147,9 +147,12 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
       checkoutId
     });
     
+    // Extract order and orderItems from cart data (like EFT flow)
+    const { orderItems, ...orderData } = cartData;
+    
     // Create order with payment information included (camelCase naming convention)
-    const orderData = {
-      ...cartData,
+    const order = {
+      ...orderData,
       userId: customerId,
       paymentMethod: 'card',
       paymentStatus: 'payment_received', // Already paid via card
@@ -161,11 +164,12 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
       paymentReceivedDate: new Date().toISOString(),
     };
 
-    const order = await storage.createOrder(orderData);
+    // Use the exact same method signature as EFT flow: createOrder(order, orderItems)
+    const newOrder = await storage.createOrder(order, orderItems);
 
     // Create order status history entry for the newly created order
     await storage.createOrderStatusHistory({
-      orderId: order.id,
+      orderId: newOrder.id,
       status: 'confirmed',
       paymentStatus: 'payment_received',
       previousStatus: 'pending',
@@ -176,8 +180,8 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
     });
 
     console.log('Order created successfully after payment:', {
-      orderId: order.id,
-      orderNumber: order.orderNumber,
+      orderId: newOrder.id,
+      orderNumber: newOrder.orderNumber,
       status: 'confirmed',
       paymentStatus: 'payment_received',
       transactionFee: fees.feeAmount,
@@ -185,12 +189,12 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
 
     // Send order confirmation and payment confirmation emails
     try {
-      const newOrder = await storage.getOrderById(order.id);
-      if (newOrder) {
+      const orderWithDetails = await storage.getOrderById(newOrder.id);
+      if (orderWithDetails) {
         // Send both order confirmation and payment confirmation emails
-        await unifiedEmailService.sendOrderConfirmationEmail(newOrder);
-        await unifiedEmailService.sendPaymentConfirmationEmail(newOrder);
-        console.log('Order confirmation and payment confirmation emails sent for order:', order.orderNumber);
+        await unifiedEmailService.sendOrderConfirmationEmail(orderWithDetails);
+        await unifiedEmailService.sendPaymentConfirmationEmail(orderWithDetails);
+        console.log('Order confirmation and payment confirmation emails sent for order:', newOrder.orderNumber);
       }
     } catch (emailError) {
       console.error('Failed to send confirmation emails:', emailError);
@@ -200,8 +204,8 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
     // YoCo compliance: Respond quickly (within 15 seconds as required by documentation)
     const webhookResponse = { 
       received: true, 
-      orderId: order.id,
-      orderNumber: order.orderNumber,
+      orderId: newOrder.id,
+      orderNumber: newOrder.orderNumber,
       checkoutId,
       tempCheckoutId,
       status: 'order_created_and_paid',
