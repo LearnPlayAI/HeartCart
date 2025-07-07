@@ -42,7 +42,7 @@ export function YocoSettingsCard() {
     },
   });
 
-  const currentEnvironment = yocoEnvironment?.data || 'test';
+  const currentEnvironment = yocoEnvironment?.data?.settingValue || 'test';
   const isProductionMode = currentEnvironment === 'production';
 
   const handleToggleChange = (checked: boolean) => {
