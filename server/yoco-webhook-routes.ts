@@ -282,6 +282,13 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
           const productName = product[0]?.name || `Product ID ${item.productId}`;
           const productImageUrl = product[0]?.imageUrl || null;
           
+          console.log(`🔍 WEBHOOK DEBUG - Product ${item.productId}:`, {
+            dbName: product[0]?.name,
+            dbImageUrl: product[0]?.imageUrl,
+            productImageUrlSet: productImageUrl,
+            hasImageUrl: !!productImageUrl
+          });
+          
           // CRITICAL FIX: Ensure all required database fields are present
           const enrichedItem = {
             ...item,
@@ -292,6 +299,15 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
             productImageUrl: productImageUrl,  // CRITICAL FIX: Use actual product image URL from database
             attributeDisplayText: item.attributeDisplayText || null  // Optional field
           };
+          
+          console.log(`📦 WEBHOOK DEBUG - Enriched Item ${item.productId}:`, {
+            productId: enrichedItem.productId,
+            productName: enrichedItem.productName,
+            productImageUrl: enrichedItem.productImageUrl,
+            hasProductImageUrl: !!enrichedItem.productImageUrl,
+            totalPrice: enrichedItem.totalPrice,
+            quantity: enrichedItem.quantity
+          });
           
           orderItems.push(enrichedItem);
           
@@ -491,6 +507,8 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
         console.log(`  [${index}]:`, {
           productId: item.productId,
           productName: item.productName,
+          productImageUrl: item.productImageUrl,
+          hasProductImageUrl: !!item.productImageUrl,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
           totalPrice: item.totalPrice,

@@ -3571,21 +3571,22 @@ export class DatabaseStorage implements IStorage {
 
       for (const item of items) {
         try {
-          // Debug: Check productImageUrl before insertion
-          console.log(`📸 Item ${item.productId}: productImageUrl = "${item.productImageUrl}"`);
-          
           const [orderItem] = await db
             .insert(orderItems)
             .values({
-              ...item,
+              productId: item.productId,
+              productName: item.productName,
+              productSku: item.productSku || null,
+              productImageUrl: item.productImageUrl || null,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              totalPrice: item.totalPrice,
+              selectedAttributes: item.selectedAttributes || {},
+              attributeDisplayText: item.attributeDisplayText || null,
               orderId: orderToUse.id,
               createdAt: new Date().toISOString(),
             })
             .returning();
-            
-          // Debug: Check what was actually saved
-          console.log(`💾 Saved ${orderItem.id}: productImageUrl = "${orderItem.productImageUrl}"`);
-          
 
           successfulItemInserts++;
 

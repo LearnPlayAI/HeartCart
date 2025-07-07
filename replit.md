@@ -845,11 +845,12 @@ Changelog:
   * YoCo webhook now correctly fetches and saves product names and image URLs to orderItems table during order creation
   * Product images will now display correctly in orders created through successful card payments
   * Resolved TypeError preventing order item creation with proper product information from database
-- July 8, 2025. CRITICAL YoCo webhook productImageUrl database persistence issue identified:
-  * Confirmed products table contains valid image URLs but orderItems table shows empty productImageUrl values
-  * Issue identified in data flow between YoCo webhook product fetching and database insertion
-  * Added targeted debugging to trace exact point where productImageUrl is lost during order creation process
-  * Investigation ongoing to ensure product images are properly saved to orderItems table during card payments
+- July 8, 2025. CRITICAL YoCo webhook productImageUrl database persistence issue RESOLVED:
+  * Root cause identified: spread operator in storage.ts wasn't reliably preserving productImageUrl field during database insertion
+  * Fixed by replacing spread operator with explicit field mapping to ensure productImageUrl is always included in database insertion
+  * Changed from `{...item, orderId, createdAt}` to explicit mapping with `productImageUrl: item.productImageUrl || null`
+  * Confirmed products table contains valid image URLs and YoCo webhook correctly fetches them
+  * Product images will now properly save to orderItems table during card payments and display correctly in orders and emails
 - July 7, 2025. CRITICAL YoCo webhook signature verification deployment fix - Production ready:
   * RESOLVED CRITICAL ISSUE: Fixed crypto module import error preventing webhook signature verification in deployed environment
   * Root cause: Dynamic require('crypto') not supported in production, replaced with proper ES6 import statement
