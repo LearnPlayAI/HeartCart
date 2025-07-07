@@ -3492,11 +3492,9 @@ export class DatabaseStorage implements IStorage {
         .innerJoin(products, eq(orderItems.productId, products.id))
         .where(eq(orderItems.orderId, orderId));
 
-      // Map the result to get the structure we want, with image URL fallback
+      // Map the result to get the structure we want
       return items.map((row) => ({
         ...row.orderItem,
-        // CRITICAL FIX: Use product image as fallback when order item productImageUrl is null
-        productImageUrl: row.orderItem.productImageUrl || row.product.image_url,
         product: row.product,
       }));
     } catch (error) {

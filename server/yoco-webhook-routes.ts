@@ -295,11 +295,14 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
           
           orderItems.push(enrichedItem);
           
-          console.log('CRITICAL DEBUG: Enriched order item with productName:', {
+          console.log('CRITICAL DEBUG: Enriched order item with productName AND image URL:', {
             productId: item.productId,
             productName: productName,
+            productImageUrl: productImageUrl,
+            databaseImageUrl: product[0]?.image_url,
             quantity: item.quantity,
-            unitPrice: item.unitPrice
+            unitPrice: item.unitPrice,
+            hasImageUrl: !!productImageUrl
           });
         } catch (productFetchError) {
           console.error('Error fetching product name for order item:', {

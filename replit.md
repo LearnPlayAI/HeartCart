@@ -819,6 +819,15 @@ Changelog:
   * Complete YoCo card payment flow now operational: checkout → payment → webhook → order creation with items → invoice generation → cart clearing → email notifications
   * Orders now display correct item count with proper product names instead of "0 items"
   * PDF invoices automatically generated and accessible via admin download buttons for all card payments
+- July 7, 2025. CRITICAL YoCo webhook product image URL fix - Complete image display system operational:
+  * RESOLVED CRITICAL ISSUE: Fixed YoCo webhook to properly save product image URLs to orderItems table during order creation
+  * Enhanced YoCo webhook to fetch both product names AND image URLs from products table and save to productImageUrl field
+  * Removed fallback mechanism dependencies - webhook now saves authentic product images directly to database
+  * Updated existing Order 48 data to populate missing productImageUrl fields with actual product images
+  * Enhanced debugging logs to track image URL assignment during webhook processing
+  * Order items now display actual product images (wooden dominoes, wireless mouse) instead of generic box icons
+  * Complete product image display system operational without relying on fallback mechanisms
+  * All future YoCo card payments will automatically save correct product images during order creation
 - July 7, 2025. CRITICAL YoCo webhook signature verification deployment fix - Production ready:
   * RESOLVED CRITICAL ISSUE: Fixed crypto module import error preventing webhook signature verification in deployed environment
   * Root cause: Dynamic require('crypto') not supported in production, replaced with proper ES6 import statement
