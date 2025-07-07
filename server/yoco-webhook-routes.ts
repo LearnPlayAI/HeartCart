@@ -609,34 +609,46 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
       // Don't fail the webhook for invoice errors
     }
 
-    // Send order confirmation and payment confirmation emails
-    try {
-      const orderWithDetails = await storage.getOrderById(newOrder.id);
-      if (orderWithDetails) {
-        // Send both order confirmation and payment confirmation emails
-        await unifiedEmailService.sendOrderConfirmationEmail(orderWithDetails);
-        await unifiedEmailService.sendPaymentConfirmationEmail(orderWithDetails);
-        console.log('Order confirmation and payment confirmation emails sent for order:', newOrder.orderNumber);
+      // Send order confirmation and payment confirmation emails
+      try {
+        const orderWithDetails = await storage.getOrderById(newOrder.id);
+        if (orderWithDetails) {
+          // Send both order confirmation and payment confirmation emails
+          await unifiedEmailService.sendOrderConfirmationEmail(orderWithDetails);
+          await unifiedEmailService.sendPaymentConfirmationEmail(orderWithDetails);
+          console.log('Order confirmation and payment confirmation emails sent for order:', newOrder.orderNumber);
+        }
+      } catch (emailError) {
+        console.error('Failed to send confirmation emails:', emailError);
+        // Don't fail the webhook for email errors
       }
-    } catch (emailError) {
-      console.error('Failed to send confirmation emails:', emailError);
-      // Don't fail the webhook for email errors
-    }
 
-    // YoCo compliance: Respond quickly (within 15 seconds as required by documentation)
-    const webhookResponse = { 
-      received: true, 
-      orderId: newOrder.id,
-      orderNumber: newOrder.orderNumber,
-      checkoutId,
-      tempCheckoutId,
-      status: 'order_created_and_paid',
-      timestamp: new Date().toISOString(),
-      processingTime: Date.now() - (event.payload.createdDate ? new Date(event.payload.createdDate).getTime() : Date.now())
-    };
-    
-    console.log('YoCo webhook processed successfully:', webhookResponse);
-    res.status(200).json(webhookResponse);
+      // YoCo compliance: Respond quickly (within 15 seconds as required by documentation)
+      const webhookResponse = { 
+        received: true, 
+        orderId: newOrder.id,
+        orderNumber: newOrder.orderNumber,
+        checkoutId,
+        tempCheckoutId,
+        status: 'order_created_and_paid',
+        timestamp: new Date().toISOString(),
+        processingTime: Date.now() - (event.payload.createdDate ? new Date(event.payload.createdDate).getTime() : Date.now())
+      };
+      
+      console.log('YoCo webhook processed successfully:', webhookResponse);
+      res.status(200).json(webhookResponse);
+
+    } catch (orderCreationError) {
+      console.error('Failed to create order from YoCo webhook:', {
+        error: orderCreationError,
+        checkoutId,
+        customerEmail,
+        orderItemsCount: orderItems.length,
+        errorMessage: orderCreationError instanceof Error ? orderCreationError.message : String(orderCreationError),
+        errorStack: orderCreationError instanceof Error ? orderCreationError.stack : undefined
+      });
+      return res.status(500).json({ error: 'Failed to create order from payment' });
+    }
 
   } catch (error) {
     console.error('YoCo webhook processing error:', error);
