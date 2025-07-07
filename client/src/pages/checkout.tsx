@@ -90,7 +90,7 @@ const paymentOptions = [
   {
     id: "card",
     name: "Credit/Debit Card",
-    description: "Pay securely with Visa, Mastercard or American Express",
+    description: "Pay securely with Visa or Mastercard",
     icon: CreditCard,
     badge: "Recommended"
   },
