@@ -17,10 +17,17 @@ const router = Router();
  */
 router.post('/card/checkout', isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
   try {
-    const { cartData, customerId, customerEmail } = req.body;
+    const { cartData, customerId: requestCustomerId, customerEmail } = req.body;
 
     if (!cartData) {
       return res.status(400).json({ error: 'Cart data is required' });
+    }
+
+    // Use authenticated user's ID if customerId not provided
+    const customerId = requestCustomerId || req.user?.id;
+    
+    if (!customerId) {
+      return res.status(400).json({ error: 'Customer ID is required' });
     }
 
     // Validate user access
@@ -46,14 +53,18 @@ router.post('/card/checkout', isAuthenticated, asyncHandler(async (req: Request,
           enrichedLineItems.push({
             displayName: product ? product.name : `Product ${item.productId}`,
             quantity: item.quantity,
-            priceCents: Math.round(item.unitPrice * 100),
+            pricingDetails: {
+              price: Math.round(item.unitPrice * 100), // YoCo expects pricingDetails.price structure
+            }
           });
         } catch (error) {
           console.error(`Failed to get product ${item.productId} for line items:`, error);
           enrichedLineItems.push({
             displayName: `Product ${item.productId}`,
             quantity: item.quantity,
-            priceCents: Math.round(item.unitPrice * 100),
+            pricingDetails: {
+              price: Math.round(item.unitPrice * 100),
+            }
           });
         }
       }
@@ -65,6 +76,7 @@ router.post('/card/checkout', isAuthenticated, asyncHandler(async (req: Request,
       cancelUrl: `${process.env.FRONTEND_URL || 'https://teemeyou.shop'}/payment-failed?checkoutId=${tempCheckoutId}`,
       successUrl: `${process.env.FRONTEND_URL || 'https://teemeyou.shop'}/payment-success?checkoutId=${tempCheckoutId}`,
       failureUrl: `${process.env.FRONTEND_URL || 'https://teemeyou.shop'}/payment-failed?checkoutId=${tempCheckoutId}`,
+      externalId: tempCheckoutId, // YoCo compliance: external reference for reconciliation
       metadata: {
         checkoutId: tempCheckoutId, // YoCo compliance: proper checkout reference
         tempCheckoutId, // Keep for backward compatibility

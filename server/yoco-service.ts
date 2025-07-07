@@ -35,7 +35,9 @@ interface YocoCheckoutRequest {
   lineItems?: Array<{
     displayName: string;
     quantity: number;
-    priceCents: number;
+    pricingDetails: {
+      price: number; // YoCo API expects price within pricingDetails object
+    };
   }>;
 }
 
@@ -52,29 +54,32 @@ interface YocoCheckoutResponse {
 
 interface YocoPaymentEvent {
   id: string;
-  type: string;
-  createdDate: string;
+  type: string; // "payment.succeeded", "payment.failed", "payment.refunded"
+  createdDate: string; // ISO 8601 timestamp
   payload: {
-    id: string;
-    type: string;
-    createdDate: string;
-    amount: number;
-    currency: string;
+    id: string; // Payment ID
+    type: string; // Always "payment"
+    createdDate: string; // ISO 8601 timestamp
+    amount: number; // Amount in cents
+    currency: string; // "ZAR"
     paymentMethodDetails: {
-      type: string;
+      type: string; // "card"
       card: {
         expiryMonth: number;
         expiryYear: number;
-        maskedCard: string;
-        scheme: string;
+        maskedCard: string; // "************1111"
+        scheme: string; // "visa", "mastercard", etc.
       };
     };
-    status: string;
-    mode: string;
+    status: string; // "succeeded", "failed", "refunded"
+    mode: string; // "live" or "test"
     metadata: {
-      checkoutId: string;
-      orderId?: string;
-      orderNumber?: string;
+      checkoutId: string; // Our checkout ID from the original request
+      // Additional metadata we set during checkout
+      tempCheckoutId?: string;
+      customerId?: string;
+      customerEmail?: string;
+      cartData?: string;
     };
   };
 }
@@ -146,7 +151,8 @@ class YocoService {
 
   /**
    * Calculate YoCo transaction fees
-   * YoCo charges approximately 2.95% + R2.00 per transaction
+   * YoCo charges 2.95% (ex. VAT) + R2.00 per transaction
+   * Note: These fees are absorbed by the company, not charged to customers
    */
   calculateTransactionFees(amountInCents: number): { feeAmount: number; feePercentage: number } {
     const feePercentage = 2.95; // 2.95%
@@ -207,8 +213,9 @@ class YocoService {
   /**
    * Validate webhook timestamp to prevent replay attacks
    * YoCo compliance: Implement proper timestamp validation as per security requirements
+   * SAST timezone support: Extended tolerance for South African users (UTC+2)
    */
-  isValidTimestamp(timestamp: string, toleranceInMinutes: number = 3): boolean {
+  isValidTimestamp(timestamp: string, toleranceInMinutes: number = 5): boolean {
     if (!timestamp) {
       console.warn('YoCo webhook timestamp validation: No timestamp provided');
       return false;
@@ -222,16 +229,29 @@ class YocoService {
       }
       
       const currentTime = Date.now();
-      const tolerance = toleranceInMinutes * 60 * 1000; // Convert to milliseconds
+      
+      // Extended tolerance for SAST timezone differences (UTC+2)
+      // South African users may experience up to 2 hours timezone difference
+      const sastToleranceInMinutes = toleranceInMinutes + 120; // Add 2 hours for SAST
+      const tolerance = sastToleranceInMinutes * 60 * 1000; // Convert to milliseconds
       const timeDifference = Math.abs(currentTime - webhookTime);
       
+      console.log('YoCo webhook timestamp validation:', {
+        webhookTime: new Date(webhookTime).toISOString(),
+        currentTime: new Date(currentTime).toISOString(),
+        differenceMs: timeDifference,
+        toleranceMs: tolerance,
+        sastToleranceMinutes: sastToleranceInMinutes,
+        isValid: timeDifference <= tolerance
+      });
+      
       if (timeDifference > tolerance) {
-        console.warn('YoCo webhook timestamp validation: Timestamp outside tolerance window', {
+        console.warn('YoCo webhook timestamp validation: Timestamp outside SAST tolerance window', {
           webhookTime: new Date(webhookTime).toISOString(),
           currentTime: new Date(currentTime).toISOString(),
           differenceMs: timeDifference,
           toleranceMs: tolerance,
-          toleranceMinutes: toleranceInMinutes
+          sastToleranceMinutes: sastToleranceMinutes
         });
         return false;
       }
