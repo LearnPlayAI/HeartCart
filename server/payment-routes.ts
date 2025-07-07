@@ -88,8 +88,9 @@ router.post('/card/checkout', isAuthenticated, asyncHandler(async (req: Request,
       totalTaxAmount: vatAmountInCents,
       subtotalAmount: subtotalInCents,
       lineItems: enrichedLineItems,
-      // Enhanced 3D Secure configuration for test environment
-      processingMode: process.env.NODE_ENV === 'production' ? 'live' : 'test' // Should be 'test' for NODE_ENV=test
+      // YoCo processing mode based on environment
+      // NODE_ENV="production" → "live" mode, anything else → "test" mode
+      processingMode: process.env.NODE_ENV === 'production' ? 'live' : 'test'
     };
 
     // COMPREHENSIVE DEBUGGING: Check exact environment values at checkout creation

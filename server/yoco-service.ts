@@ -6,13 +6,14 @@
 import { v4 as uuidv4 } from 'uuid';
 
 // Environment-based YoCo configuration
+// NODE_ENV values: "test" = use TEST keys, "production" = use PROD keys
 const YOCO_CONFIG = {
   publicKey: process.env.NODE_ENV === 'production' 
     ? process.env.YOCO_PROD_PUBLIC_KEY 
-    : process.env.YOCO_TEST_PUBLIC_KEY, // Using proper test environment keys
+    : process.env.YOCO_TEST_PUBLIC_KEY, // TEST keys for "test" or "development"
   secretKey: process.env.NODE_ENV === 'production'
     ? process.env.YOCO_PROD_SECRET_KEY
-    : process.env.YOCO_TEST_SECRET_KEY, // Using proper test environment keys
+    : process.env.YOCO_TEST_SECRET_KEY, // TEST keys for "test" or "development"
   apiUrl: 'https://payments.yoco.com/api',
   webhookSecret: process.env.YOCO_WEBHOOK_SECRET || '',
 };
