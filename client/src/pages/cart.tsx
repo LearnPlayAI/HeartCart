@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 
 export default function CartPage() {
+  console.log('🛒 CART PAGE COMPONENT STARTED');
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
@@ -101,36 +102,57 @@ export default function CartPage() {
     );
   }
 
+  // FORCED DEBUG - This MUST appear in console
+  console.log('CART PAGE LOADED - CHECKING VAT');
+  
   // Get VAT settings from API response
-  const vatRate = parseFloat(vatRateSettings?.data?.settingValue || '0');
-  const vatRegistered = vatRegisteredSettings?.data?.settingValue === 'true';
+  let vatRate = 0;
+  let vatRegistered = false;
+  let vatCalculation = null;
+  
+  try {
+    console.log('========== VAT DEBUG CART ==========');
+    
+    vatRate = parseFloat(vatRateSettings?.data?.settingValue || '0');
+    vatRegistered = vatRegisteredSettings?.data?.settingValue === 'true';
+    
+    console.log('VAT Debug Cart:', {
+      cartItemsLength: cartItems?.length,
+      vatRateSettings: vatRateSettings?.data,
+      vatRegisteredSettings: vatRegisteredSettings?.data,
+      vatRateLoading,
+      vatRegisteredLoading,
+      vatRateError,
+      vatRegisteredError,
+      vatRate,
+      vatRegistered,
+      subtotal,
+      shippingCost
+    });
 
-  // Force debug log to always appear
-  console.log('========== VAT DEBUG CART ==========');
-  console.log('VAT Debug Cart:', {
-    cartItemsLength: cartItems?.length,
-    vatRateSettings: vatRateSettings?.data,
-    vatRegisteredSettings: vatRegisteredSettings?.data,
-    vatRateLoading,
-    vatRegisteredLoading,
-    vatRateError,
-    vatRegisteredError,
-    vatRate,
-    vatRegistered,
-    subtotal,
-    shippingCost
-  });
+    // Calculate VAT using shared utilities
+    vatCalculation = calculateVAT({
+      subtotal: subtotal,
+      shippingCost: shippingCost,
+      vatRate: vatRate
+    });
 
-  // Calculate VAT using shared utilities
-  const vatCalculation = calculateVAT({
-    subtotal: subtotal,
-    shippingCost: shippingCost,
-    vatRate: vatRate
-  });
-
-  // Debug VAT calculation - TODO: Remove after testing
-  console.log('VAT Calculation Result:', vatCalculation);
-  console.log('========== END VAT DEBUG ==========');
+    console.log('VAT Calculation Result:', vatCalculation);
+    console.log('========== END VAT DEBUG ==========');
+    
+  } catch (error) {
+    console.error('VAT CALCULATION ERROR:', error);
+    // Fallback calculation if VAT function fails
+    vatCalculation = {
+      subtotal: subtotal,
+      shippingCost: shippingCost,
+      vatableAmount: subtotal + shippingCost,
+      vatRate: vatRate,
+      vatAmount: (subtotal + shippingCost) * (vatRate / 100),
+      totalAmount: subtotal + shippingCost + ((subtotal + shippingCost) * (vatRate / 100))
+    };
+    console.log('FALLBACK VAT Calculation:', vatCalculation);
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
