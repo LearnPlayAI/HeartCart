@@ -939,6 +939,20 @@ export default function CheckoutPage() {
               </Card>
             )}
 
+            {/* Debug: Button State */}
+            {(() => {
+              const buttonState = {
+                isProcessing,
+                selectedShippingMethod,
+                selectedLockerId: selectedLocker?.id,
+                formValid: form.formState.isValid,
+                formErrors: Object.keys(form.formState.errors),
+                pudoCheck: selectedShippingMethod === "pudo" && !selectedLocker?.id
+              };
+              console.log('🔘 Button State Debug:', buttonState);
+              return null;
+            })()}
+
             {/* Submit Button with Enhanced Loading States */}
             <Button
               type="submit"
