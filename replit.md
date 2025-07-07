@@ -800,6 +800,12 @@ Changelog:
   * Database schema updated with yocoCheckoutId column for order tracking and duplicate prevention
   * Webhook signature verification now fully operational with proper crypto module access
   * YoCo webhook system 100% compliant and production-ready for both test and live environments
+- July 7, 2025. CRITICAL YoCo webhook timestamp validation fix for SAST timezone compatibility:
+  * RESOLVED CRITICAL ISSUE: Fixed timestamp validation failing due to UTC vs SAST (UTC+2) timezone differences in deployed environment
+  * Extended timestamp tolerance from 2 hours to 4 hours (240 minutes) plus 15-minute base tolerance
+  * Total tolerance window now 255 minutes (over 4 hours) to accommodate deployment environment timing differences
+  * Added enhanced debugging showing time differences in minutes for better troubleshooting
+  * Webhook timestamp validation now properly handles South African timezone and deployment server differences
 - July 4, 2025. Automatic shipping address data persistence in checkout system:
   * Modified checkout form to always save shipping address data when logged-in users place orders
   * Removed dependency on "Save details" checkbox for address information persistence

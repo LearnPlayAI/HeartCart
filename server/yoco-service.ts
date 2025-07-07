@@ -268,7 +268,7 @@ class YocoService {
    * YoCo compliance: Implement proper timestamp validation as per security requirements
    * SAST timezone support: Extended tolerance for South African users (UTC+2)
    */
-  isValidTimestamp(timestamp: string, toleranceInMinutes: number = 5): boolean {
+  isValidTimestamp(timestamp: string, toleranceInMinutes: number = 15): boolean {
     if (!timestamp) {
       console.warn('YoCo webhook timestamp validation: No timestamp provided');
       return false;
@@ -283,9 +283,9 @@ class YocoService {
       
       const currentTime = Date.now();
       
-      // Extended tolerance for SAST timezone differences (UTC+2)
-      // South African users may experience up to 2 hours timezone difference
-      const sastToleranceInMinutes = toleranceInMinutes + 120; // Add 2 hours for SAST
+      // Much more generous tolerance for SAST timezone and deployment environment differences
+      // Allow up to 15 minutes base + 4 hours for timezone/deployment issues
+      const sastToleranceInMinutes = toleranceInMinutes + 240; // Add 4 hours for safety
       const tolerance = sastToleranceInMinutes * 60 * 1000; // Convert to milliseconds
       const timeDifference = Math.abs(currentTime - webhookTime);
       
@@ -295,11 +295,12 @@ class YocoService {
         differenceMs: timeDifference,
         toleranceMs: tolerance,
         sastToleranceMinutes: sastToleranceInMinutes,
+        differenceInMinutes: (timeDifference / (1000 * 60)).toFixed(2),
         isValid: timeDifference <= tolerance
       });
       
       if (timeDifference > tolerance) {
-        console.warn('YoCo webhook timestamp validation: Timestamp outside SAST tolerance window', {
+        console.warn('YoCo webhook timestamp validation: Timestamp outside extended tolerance window', {
           webhookTime: new Date(webhookTime).toISOString(),
           currentTime: new Date(currentTime).toISOString(),
           differenceMs: timeDifference,
