@@ -44,10 +44,14 @@ const CartDrawer = () => {
   const [location, setLocation] = useLocation();
 
   // Fetch cart totals with VAT calculations from server-side
+  // FIXED: Added authentication check and retry logic to ensure cart totals load from database
   const { data: cartTotalsResponse, isLoading: totalsLoading } = useQuery({
     queryKey: ["/api/cart/totals"],
-    staleTime: 0,
-    gcTime: 0,
+    enabled: cartItems.length > 0, // Only fetch totals when there are cart items
+    retry: 3, // Allow retries to handle temporary issues
+    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
+    staleTime: 0, // Always fetch fresh data
+    gcTime: 0, // Don't cache query results
   });
 
   const cartTotals = cartTotalsResponse?.data;

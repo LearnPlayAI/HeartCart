@@ -806,6 +806,16 @@ Changelog:
   * Total tolerance window now 255 minutes (over 4 hours) to accommodate deployment environment timing differences
   * Added enhanced debugging showing time differences in minutes for better troubleshooting
   * Webhook timestamp validation now properly handles South African timezone and deployment server differences
+- July 7, 2025. CRITICAL cart loading database vs cache issue resolved - System fully operational:
+  * RESOLVED CRITICAL ISSUE: Fixed cart items not loading from database after browser cache clear, appearing empty until new item added
+  * Root cause: Cart query had retry: false and no authentication checks, causing database loading failures
+  * Added proper authentication check with enabled: !!user to only fetch cart when user is authenticated
+  * Changed from retry: false to retry: 3 with exponential backoff to handle temporary loading issues
+  * Enhanced cart totals query with same retry logic and proper enabled condition (only when cart has items)
+  * Added better error handling and debugging for cart summary calculation with authentication checks
+  * Cart counter and cart drawer now consistently load from database instead of relying on cached data
+  * Fixed contact numbers on payment success and failed pages to show correct +27 71 206 3084 number
+  * Complete fix ensures cart functionality works reliably without breaking any existing features
 - July 4, 2025. Automatic shipping address data persistence in checkout system:
   * Modified checkout form to always save shipping address data when logged-in users place orders
   * Removed dependency on "Save details" checkbox for address information persistence

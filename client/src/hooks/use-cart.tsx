@@ -3,6 +3,7 @@ import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
+import { useAuth } from '@/hooks/use-auth';
 import type { Product } from '@shared/schema';
 import { CartItemWithDiscounts, CartSummary } from '@/types/cart.types';
 import { StandardApiResponse } from '@/types/api';
@@ -51,32 +52,50 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
+  const { user } = useAuth();
   
   // Get cart items from server with improved typing for discount fields
   // API now returns StandardApiResponse format
+  // FIXED: Added proper authentication check and retry logic to ensure cart loads from database
   const { data: responseData, isLoading } = useQuery<StandardApiResponse<CartItemWithDiscounts[]>>({
     queryKey: ['/api/cart'],
-    retry: false,
-    gcTime: 0,
-    staleTime: 0,
+    enabled: !!user, // Only fetch when user is authenticated
+    retry: 3, // Allow retries instead of retry: false to handle temporary issues
+    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
+    gcTime: 0, // Don't cache query results
+    staleTime: 0, // Always fetch fresh data
   });
   
   // Safe extraction of cart items from the standardized response format
   // If response is not available or doesn't have success/data properties, fall back to empty array
-  const cartItems = (responseData?.success ? responseData.data : []);
+  // FIXED: Added authentication check to prevent showing cached data when user logs out
+  const cartItems = (user && responseData?.success ? responseData.data : []);
   
   // Calculate cart summary with simplified approach
   // Since we're using database persistence, the pricing calculations are done server-side
   // Here we simply aggregate the information that was calculated and stored in the database
+  // FIXED: Added better error handling and logging for cart summary calculation
   const cartSummary = useMemo<CartSummary>(() => {
-    return cartItems.reduce((summary, item) => {
+    if (!Array.isArray(cartItems)) {
+      console.warn('Cart items is not an array:', cartItems);
+      return {
+        itemCount: 0,
+        subtotal: 0,
+        totalDiscount: 0,
+        finalTotal: 0
+      };
+    }
+    
+    const summary = cartItems.reduce((summary, item) => {
       // For each item, accumulate total items and price
       const itemPrice = Number(item.itemPrice) || 0;
+      const quantity = Number(item.quantity) || 0;
+      
       return {
-        itemCount: summary.itemCount + item.quantity,
-        subtotal: summary.subtotal + (itemPrice * item.quantity),
+        itemCount: summary.itemCount + quantity,
+        subtotal: summary.subtotal + (itemPrice * quantity),
         totalDiscount: 0, // No discounts in simplified cart
-        finalTotal: summary.finalTotal + (itemPrice * item.quantity)
+        finalTotal: summary.finalTotal + (itemPrice * quantity)
       };
     }, {
       itemCount: 0,
@@ -84,7 +103,17 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       totalDiscount: 0,
       finalTotal: 0
     });
-  }, [cartItems]);
+    
+    // Debug logging for cart summary calculation
+    console.log('Cart summary calculated:', { 
+      cartItemsCount: cartItems.length, 
+      summary,
+      user: !!user,
+      isLoading
+    });
+    
+    return summary;
+  }, [cartItems, user, isLoading]);
   
   // Clean cart mutation implementation for attribute selections
   const addToCartMutation = useMutation({
