@@ -1083,7 +1083,7 @@ export default function CheckoutPage() {
                 <div className="flex justify-between text-sm items-center">
                   <div className="flex items-center gap-1">
                     <Calculator className="h-3 w-3 text-orange-500" />
-                    <span>VAT ({formatVATRate(vatRate)}):</span>
+                    <span>VAT ({formatVATRate(effectiveVATRate)}):</span>
                   </div>
                   <span>{formatVATAmount(vatCalculation.vatAmount)}</span>
                 </div>
