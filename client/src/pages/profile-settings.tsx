@@ -300,7 +300,7 @@ const ProfileSettingsPage: React.FC = () => {
                         <FormItem>
                           <FormLabel>Phone Number</FormLabel>
                           <FormControl>
-                            <Input placeholder="+27 12 345 6789" {...field} />
+                            <Input placeholder="+27712063084" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>

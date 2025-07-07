@@ -163,6 +163,31 @@ router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Respons
       return sendError(res, "No order items provided", 400);
     }
 
+    // Validate EFT payment method is enabled if selected
+    if (orderData.paymentMethod === 'eft') {
+      try {
+        const eftSetting = await storage.getSystemSetting('eft_payments_enabled');
+        const isEftEnabled = eftSetting?.settingValue === 'true';
+        
+        if (!isEftEnabled) {
+          logger.warn("EFT payment attempted but disabled by admin", {
+            userId,
+            paymentMethod: orderData.paymentMethod,
+            eftEnabled: isEftEnabled
+          });
+          return sendError(res, "EFT payments are currently disabled. Please select card payment.", 400);
+        }
+        
+        logger.info("EFT payment validation passed", {
+          userId,
+          eftEnabled: isEftEnabled
+        });
+      } catch (error) {
+        logger.error("Failed to check EFT setting, defaulting to disabled", { error });
+        return sendError(res, "Payment method validation failed. Please try again.", 500);
+      }
+    }
+
     // Validate products exist and prepare order items
     const orderItems = [];
     for (const item of orderData.orderItems) {

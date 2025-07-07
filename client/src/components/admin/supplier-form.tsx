@@ -130,7 +130,7 @@ export function SupplierForm({
               <FormItem>
                 <FormLabel>Phone Number *</FormLabel>
                 <FormControl>
-                  <Input placeholder="+27 XX XXX XXXX" {...field} />
+                  <Input placeholder="+27712063084" {...field} />
                 </FormControl>
                 <FormDescription>
                   Primary contact phone for the supplier

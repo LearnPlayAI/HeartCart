@@ -25,6 +25,11 @@ export default function PaymentFailedPage() {
     enabled: !!orderId, // Only fetch if orderId exists (EFT case)
   });
 
+  // Fetch EFT payment setting to conditionally show EFT option
+  const { data: eftSetting } = useQuery({
+    queryKey: ['/api/admin/settings/eft_payments_enabled'],
+  });
+
   if (!orderId && !checkoutId) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -121,12 +126,15 @@ export default function PaymentFailedPage() {
                     </Link>
                   </Button>
                   
-                  <Button asChild variant="outline" className="w-full" size="lg">
-                    <Link href="/checkout">
-                      <DollarSign className="w-4 h-4 mr-2" />
-                      Use Bank Transfer Instead
-                    </Link>
-                  </Button>
+                  {/* Only show EFT option if enabled by admin */}
+                  {eftSetting?.data?.settingValue === 'true' && (
+                    <Button asChild variant="outline" className="w-full" size="lg">
+                      <Link href="/checkout">
+                        <DollarSign className="w-4 h-4 mr-2" />
+                        Use Bank Transfer Instead
+                      </Link>
+                    </Button>
+                  )}
                 </>
               )}
               

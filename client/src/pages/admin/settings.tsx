@@ -4,6 +4,7 @@ import { SalesRepMessageCard } from '@/components/admin/SalesRepMessageCard';
 import { ProductSharingCard } from '@/components/admin/ProductSharingCard';
 import { VATSettingsCard } from '@/components/admin/VATSettingsCard';
 import { YocoSettingsCard } from '@/components/admin/YocoSettingsCard';
+import { EftSettingsCard } from '@/components/admin/EftSettingsCard';
 
 export default function AdminSettingsPage() {
   return (
@@ -21,7 +22,10 @@ export default function AdminSettingsPage() {
           {/* Payment Configuration Section */}
           <div>
             <h2 className="text-lg font-semibold mb-4 text-blue-700">Payment Configuration</h2>
-            <YocoSettingsCard />
+            <div className="space-y-4">
+              <YocoSettingsCard />
+              <EftSettingsCard />
+            </div>
           </div>
 
           {/* VAT Configuration Section */}

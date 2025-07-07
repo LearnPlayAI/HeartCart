@@ -53,10 +53,8 @@ const checkoutSchema = z.object({
     required_error: "Please select a shipping method"
   }),
   
-  // Payment Method
-  paymentMethod: z.enum(["card", "eft"], {
-    required_error: "Please select a payment method"
-  }),
+  // Payment Method - dynamic validation based on available options
+  paymentMethod: z.string().min(1, "Please select a payment method"),
   
   // Special Instructions
   specialInstructions: z.string().optional(),
@@ -85,8 +83,8 @@ const shippingOptions = [
   }
 ];
 
-// Payment options - Card payment as default (first option)
-const paymentOptions = [
+// Payment options - will be filtered based on admin settings
+const basePaymentOptions = [
   {
     id: "card",
     name: "Credit/Debit Card",
@@ -124,6 +122,11 @@ export default function CheckoutPage() {
     gcTime: 0, // Don't cache the results (updated for TanStack Query v5)
     refetchOnMount: true, // Refetch when component mounts
     refetchOnWindowFocus: true // Refetch when window gets focus
+  });
+
+  // Fetch EFT payment setting
+  const { data: eftSetting } = useQuery({
+    queryKey: ['/api/admin/settings/eft_payments_enabled'],
   });
 
   // Fetch active promotions to apply promotional pricing - no cache for real-time pricing
@@ -260,6 +263,22 @@ export default function CheckoutPage() {
 
   const selectedShippingMethod = form.watch("shippingMethod");
   const selectedPaymentMethod = form.watch("paymentMethod");
+  
+  // Filter payment options based on admin settings
+  const isEftEnabled = eftSetting?.data?.settingValue === 'true';
+  const paymentOptions = basePaymentOptions.filter(option => {
+    if (option.id === 'eft' && !isEftEnabled) {
+      return false; // Hide EFT if disabled by admin
+    }
+    return true;
+  });
+
+  // Auto-switch to card payment if EFT is disabled and currently selected
+  useEffect(() => {
+    if (!isEftEnabled && selectedPaymentMethod === 'eft') {
+      form.setValue('paymentMethod', 'card');
+    }
+  }, [isEftEnabled, selectedPaymentMethod, form]);
   
   // Calculate automatic credit application
   const availableCredit = creditBalance?.availableCredits ? parseFloat(creditBalance.availableCredits) : 0;

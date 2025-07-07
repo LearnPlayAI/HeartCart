@@ -411,7 +411,7 @@ const PrivacyPolicy = () => {
                   <h4 className="font-semibold text-gray-900 mb-3">Contact Our Privacy Team</h4>
                   <div className="space-y-2 text-gray-700">
                     <p><strong>Email:</strong> sales@teemeyou.shop</p>
-                    <p><strong>Phone:</strong> +27 71 2063084</p>
+                    <p><strong>Phone:</strong> +27712063084</p>
                     <p><strong>Address:</strong><br />
                     TeeMeYou Privacy Department<br />
                     Johannesburg, South Africa</p>
@@ -424,7 +424,7 @@ const PrivacyPolicy = () => {
                     <p><strong>Information Regulator South Africa</strong><br />
                     <strong>Website:</strong> inforegulator.org.za<br />
                     <strong>Email:</strong> complaints.IR@justice.gov.za<br />
-                    <strong>Phone:</strong> +27 (0) 12 406 4818</p>
+                    <strong>Phone:</strong> +27712063084</p>
                   </div>
                 </div>
               </div>
