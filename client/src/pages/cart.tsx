@@ -89,6 +89,18 @@ export default function CartPage() {
 
   const shippingCost = 85; // Standard PUDO shipping
 
+  const isEmpty = !cartItems || cartItems.length === 0;
+
+  if (cartLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center">Loading cart...</div>
+        </div>
+      </div>
+    );
+  }
+
   // Get VAT settings from API response
   const vatRate = parseFloat(vatRateSettings?.data?.settingValue || '0');
   const vatRegistered = vatRegisteredSettings?.data?.settingValue === 'true';
@@ -119,18 +131,6 @@ export default function CartPage() {
   // Debug VAT calculation - TODO: Remove after testing
   console.log('VAT Calculation Result:', vatCalculation);
   console.log('========== END VAT DEBUG ==========');
-
-  const isEmpty = !cartItems || cartItems.length === 0;
-
-  if (cartLoading) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center">Loading cart...</div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="container mx-auto px-4 py-8">
