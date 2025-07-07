@@ -182,17 +182,14 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
       orderItemsCount: cartData.orderItems?.length || 0,
       cartDataCustomerName: cartData.customerName, // Debug customer name in cart data
       cartDataCustomerPhone: cartData.customerPhone, // CRITICAL FIX: Debug customer phone in cart data
-      // CRITICAL FIX: Debug address mapping
-      addressLine1: cartData.addressLine1,
-      addressLine2: cartData.addressLine2,
-      city: cartData.city,
-      province: cartData.province,
-      postalCode: cartData.postalCode,
-      // Check all possible address field variations
-      cartDataAddressLine1: cartData.addressLine1,
-      cartDataCity: cartData.city,
-      cartDataProvince: cartData.province,
-      cartDataPostalCode: cartData.postalCode
+      // CRITICAL FIX: Debug nested address structure (matching EFT flow)
+      hasShippingAddress: !!cartData.shippingAddress,
+      shippingAddressStructure: cartData.shippingAddress,
+      addressLine1: cartData.shippingAddress?.addressLine1,
+      addressLine2: cartData.shippingAddress?.addressLine2,
+      city: cartData.shippingAddress?.city,
+      province: cartData.shippingAddress?.province,
+      postalCode: cartData.shippingAddress?.postalCode
     });
 
     // YoCo compliance: Calculate transaction fees for profit tracking (absorbed by company, not charged to customer)
@@ -207,9 +204,18 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
     });
     
     // Extract order and orderItems from cart data (like EFT flow)
-    const { orderItems, addressLine1, addressLine2, city, province, postalCode, ...orderData } = cartData;
+    // CRITICAL FIX: Extract address fields from nested shippingAddress object
+    const { orderItems, shippingAddress: addressData, ...orderData } = cartData;
     
-    console.log('CRITICAL DEBUG: Destructured address fields:', {
+    const addressLine1 = addressData?.addressLine1;
+    const addressLine2 = addressData?.addressLine2;
+    const city = addressData?.city;
+    const province = addressData?.province;
+    const postalCode = addressData?.postalCode;
+    
+    console.log('CRITICAL DEBUG: Destructured address fields from nested structure:', {
+      hasShippingAddress: !!addressData,
+      shippingAddressObject: addressData,
       addressLine1,
       addressLine2, 
       city,
@@ -235,8 +241,8 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
       customerEmail: customerEmail, // CRITICAL FIX: Explicitly set customerEmail from metadata
       customerName: customerFullName, // CRITICAL FIX: Explicitly set customerName from metadata
       customerPhone: customerPhone, // CRITICAL FIX: Explicitly set customerPhone from metadata
-      // CRITICAL FIX: Map address fields correctly
-      shippingAddress: shippingAddress,
+      // CRITICAL FIX: Map address fields correctly (matching EFT flow structure)
+      shippingAddress: `${addressLine1 || ''}${addressLine2 ? ', ' + addressLine2 : ''}`,
       shippingCity: city,
       shippingProvince: province, 
       shippingPostalCode: postalCode,

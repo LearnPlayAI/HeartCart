@@ -1,0 +1,140 @@
+2025-07-07 22:10:54.59
+d1f03aff
+User
+shippingPostalCode: undefined,
+2025-07-07 22:10:54.59
+d1f03aff
+User
+paymentMethod: 'card',
+2025-07-07 22:10:54.59
+d1f03aff
+User
+paymentStatus: 'payment_received',
+2025-07-07 22:10:54.59
+d1f03aff
+User
+status: 'confirmed'
+2025-07-07 22:10:54.59
+d1f03aff
+User
+}
+2025-07-07 22:10:54.63
+d1f03aff
+User
+{"timestamp":"2025-07-07T22:10:54.000Z","level":"ERROR","message":"Error in order creation process","context":{"error":"null value in column \"shippingAddress\" of relation \"orders\" violates not-null constraint","stack":"error: null value in column \"shippingAddress\" of relation \"orders\" violates not-null constraint\n at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74\n at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n at async NeonPreparedQuery.execute (file:///home/runner/workspace/node_modules/drizzle-orm/neon-serverless/session.js:76:20)\n at async DatabaseStorage.createOrder (file:///home/runner/workspace/dist/index.js:6190:30)\n at async file:///home/runner/workspace/dist/index.js:26322:22","userId":8}}
+2025-07-07 22:10:54.63
+d1f03aff
+User
+YoCo webhook processing error: error: null value in column "shippingAddress" of relation "orders" violates not-null constraint
+2025-07-07 22:10:54.63
+d1f03aff
+User
+at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+2025-07-07 22:10:54.63
+d1f03aff
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-07-07 22:10:54.63
+d1f03aff
+User
+at async NeonPreparedQuery.execute (file:///home/runner/workspace/node_modules/drizzle-orm/neon-serverless/session.js:76:20)
+2025-07-07 22:10:54.63
+d1f03aff
+User
+at async DatabaseStorage.createOrder (file:///home/runner/workspace/dist/index.js:6190:30)
+2025-07-07 22:10:54.63
+d1f03aff
+User
+at async file:///home/runner/workspace/dist/index.js:26322:22 {
+2025-07-07 22:10:54.63
+d1f03aff
+User
+length: 680,
+2025-07-07 22:10:54.63
+d1f03aff
+User
+severity: 'ERROR',
+2025-07-07 22:10:54.63
+d1f03aff
+User
+code: '23502',
+2025-07-07 22:10:54.63
+d1f03aff
+User
+detail: 'Failing row contains (36, 8, TMY-TEMP-1751919054596, confirmed, Jan Coetzee, admin@teemeyou.shop, +27712063084, null, null, null, pudo, 85, card, payment_received, null, null, null, null, null, 2025-07-07T20:10:54.596Z, 2025-07-07T20:10:54.596Z, null, null, null, 2025-07-07T20:10:54.596Z, 0.00, null, 146, null, null, null, {"code": "CG76", "name": "Banbury Cross Village", "address": "Hu..., null, null, 0, 0, 4567890123, ch_wxMZMmwPwQjFknRSqaGTojAL, p_3LRQ8kKrKeOSJ7qu1l0f31Ax, 10.63, 2.95).',
+2025-07-07 22:10:54.63
+d1f03aff
+User
+internalQuery: undefined,
+2025-07-07 22:10:54.63
+d1f03aff
+User
+where: undefined,
+2025-07-07 22:10:54.63
+d1f03aff
+User
+schema: 'public',
+2025-07-07 22:10:54.63
+d1f03aff
+User
+column: 'shippingAddress',
+2025-07-07 22:10:54.63
+d1f03aff
+User
+constraint: undefined,
+2025-07-07 22:10:54.63
+d1f03aff
+User
+file: 'execMain.c',
+2025-07-07 22:10:54.63
+d1f03aff
+User
+line: '2006',
+2025-07-07 22:10:54.63
+d1f03aff
+User
+routine: 'ExecConstraints'
+2025-07-07 22:10:54.63
+d1f03aff
+User
+}
+2025-07-07 22:10:54.63
+d1f03aff
+User
+{"timestamp":"2025-07-07T22:10:54.000Z","level":"ERROR","message":"API Error: POST /api/webhooks/yoco 500 in 118ms","context":{"method":"POST","path":"/api/webhooks/yoco","statusCode":500,"duration":"118ms","requestId":"e597964a-3b74-4270-91c3-c3e9de77ec28"}}
+2025-07-07 22:10:54.63
+d1f03aff
+User
+8:10:54 PM [express] POST /api/webhooks/yoco 500 in 118ms :: {"success":false,"data":{"error":"Inter…
+2025-07-07 22:10:54.83
+d1f03aff
+User
+8:10:54 PM [express] GET /api/categories 304 in 192ms :: {"success":true,"data":[{"id":223,"name":"3…
+2025-07-07 22:10:55.37
+d1f03aff
+User
+8:10:55 PM [express] GET /api/credits/transactions 304 in 165ms :: {"success":true,"data":[],"meta":…
+2025-07-07 22:10:55.44
+d1f03aff
+User
+{"timestamp":"2025-07-07T22:10:55.000Z","level":"ERROR","message":"API Error: Invalid order ID","context":{"statusCode":400}}
+2025-07-07 22:10:55.48
+d1f03aff
+User
+{"timestamp":"2025-07-07T22:10:55.000Z","level":"WARN","message":"API Warning: GET /api/orders/by-checkout 400 in 233ms","context":{"method":"GET","path":"/api/orders/by-checkout","statusCode":400,"duration":"233ms","requestId":"6097fa6c-455c-4296-a0f2-189814363223"}}
+2025-07-07 22:10:55.48
+d1f03aff
+User
+8:10:55 PM [express] GET /api/orders/by-checkout 400 in 233ms :: {"success":false,"error":{"message"…
+2025-07-07 22:10:55.60
+d1f03aff
+User
+8:10:55 PM [express] GET /api/credits/balance 304 in 351ms :: {"success":true,"data":{"userId":8,"to…
+2025-07-07 22:10:55.82
+d1f03aff
+User
+8:10:55 PM [express] GET /api/cart 304 in 606ms :: {"success":true,"data":[{"id":94,"userId":8,"prod…
+2025-07-07 22:10:55.97
+d1f03aff
+User
+{"timestamp":"2025-07-07T22:10:55.000Z","level":"INFO","message":"Retrieved orders for user","context":{"userId":8,"count":0}}
