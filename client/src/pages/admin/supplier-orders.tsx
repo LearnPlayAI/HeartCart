@@ -871,6 +871,30 @@ const SupplierOrders = () => {
                     </div>
                   </div>
 
+                  {/* YoCo Payment Details - Only for card payments */}
+                  {order.customerOrder.paymentMethod?.toLowerCase() === 'card' && (order.customerOrder.yocoCheckoutId || order.customerOrder.yocoPaymentId) && (
+                    <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <h4 className="font-medium mb-2 text-blue-800 flex items-center gap-2">
+                        <CreditCard className="h-4 w-4" />
+                        YoCo Payment Details
+                      </h4>
+                      <div className="space-y-1 text-sm">
+                        {order.customerOrder.yocoCheckoutId && (
+                          <div className="flex justify-between">
+                            <span className="text-blue-600">Checkout ID:</span>
+                            <span className="font-mono text-blue-800">{order.customerOrder.yocoCheckoutId}</span>
+                          </div>
+                        )}
+                        {order.customerOrder.yocoPaymentId && (
+                          <div className="flex justify-between">
+                            <span className="text-blue-600">Payment ID:</span>
+                            <span className="font-mono text-blue-800">{order.customerOrder.yocoPaymentId}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Supplier Details */}
                   <div className="space-y-4">
                     <div>

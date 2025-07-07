@@ -778,7 +778,7 @@ export default function AdminOrderDetail() {
           )}
 
           {/* EFT Payment Proof Management - Only show if order requires actual EFT payment */}
-          {order.paymentMethod?.toLowerCase() === 'eft' && order.remainingBalance > 0 && (
+          {order.paymentMethod?.toLowerCase() === 'eft' && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
@@ -882,6 +882,118 @@ export default function AdminOrderDetail() {
                         month: 'long',
                         day: 'numeric'
                       })}
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* YoCo Payments - Only show for card payments */}
+          {order.paymentMethod?.toLowerCase() === 'card' && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <CreditCard className="h-5 w-5" />
+                  <span>YoCo Payments</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">Payment Status:</p>
+                    <Badge variant="default" className="bg-green-600">
+                      Payment Received
+                    </Badge>
+                  </div>
+                  
+                  {/* Download Buttons */}
+                  <div className="flex items-center gap-2">
+                    {/* Invoice Download Button */}
+                    <Button 
+                      onClick={downloadInvoice}
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-2"
+                    >
+                      <Download className="h-4 w-4" />
+                      Download Invoice
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Customer & Payment Information */}
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    Customer Payment Information
+                  </h4>
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium text-gray-600">Customer Name</label>
+                        <p className="text-sm font-semibold text-gray-800">
+                          {order.customerName || 'Not provided'}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-600">Email Address</label>
+                        <p className="text-sm font-semibold text-gray-800">
+                          {order.customerEmail || 'Not provided'}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-600">Phone Number</label>
+                        <p className="text-sm font-semibold text-gray-800">
+                          {order.customerPhone || 'Not provided'}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-600">Payment Amount</label>
+                        <p className="text-sm font-semibold text-gray-800">
+                          R {order.totalAmount ? Number(order.totalAmount).toFixed(2) : '0.00'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* YoCo Transaction Details */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h4 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">
+                    <Receipt className="h-4 w-4" />
+                    YoCo Transaction Details
+                  </h4>
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium text-blue-600">YoCo Checkout ID</label>
+                        <p className="text-sm font-semibold text-blue-800 font-mono">
+                          {order.yocoCheckoutId || 'Not available'}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-blue-600">YoCo Payment ID</label>
+                        <p className="text-sm font-semibold text-blue-800 font-mono">
+                          {order.yocoPaymentId || 'Not available'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {order.paymentReceivedDate && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                    <p className="text-sm font-medium text-green-800">Card Payment Received On:</p>
+                    <p className="text-sm text-green-600">
+                      {new Date(order.paymentReceivedDate).toLocaleDateString('en-ZA', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        timeZone: 'Africa/Johannesburg'
+                      })} SAST
                     </p>
                   </div>
                 )}

@@ -398,6 +398,30 @@ function OrderCard({
           </div>
         )}
 
+        {/* YoCo Payment Details - Only for card payments */}
+        {order.paymentMethod?.toLowerCase() === 'card' && (order.yocoCheckoutId || order.yocoPaymentId) && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <div className="flex items-center mb-2">
+              <CreditCard className="h-4 w-4 text-blue-600 mr-2" />
+              <span className="text-sm font-medium text-blue-800">YoCo Payment Details</span>
+            </div>
+            <div className="space-y-1 text-xs">
+              {order.yocoCheckoutId && (
+                <div className="flex justify-between">
+                  <span className="text-blue-600">Checkout ID:</span>
+                  <span className="font-mono text-blue-800">{order.yocoCheckoutId}</span>
+                </div>
+              )}
+              {order.yocoPaymentId && (
+                <div className="flex justify-between">
+                  <span className="text-blue-600">Payment ID:</span>
+                  <span className="font-mono text-blue-800">{order.yocoPaymentId}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Order Summary */}
         <div className="border-t pt-4">
           <div className="flex justify-between items-center">
@@ -513,6 +537,11 @@ function OrderTable({
                     {order.paymentReferenceNumber && (
                       <div className="text-xs font-medium text-[#FF69B4]">
                         Ref: {order.paymentReferenceNumber}
+                      </div>
+                    )}
+                    {order.paymentMethod?.toLowerCase() === 'card' && order.yocoCheckoutId && (
+                      <div className="text-xs font-medium text-blue-600">
+                        YoCo: {order.yocoCheckoutId}
                       </div>
                     )}
                     {order.trackingNumber && (
@@ -693,6 +722,8 @@ export default function AdminOrdersPage() {
         (order.customerNotes && order.customerNotes.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (order.adminNotes && order.adminNotes.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (order.paymentReferenceNumber && order.paymentReferenceNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (order.yocoCheckoutId && order.yocoCheckoutId.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (order.yocoPaymentId && order.yocoPaymentId.toLowerCase().includes(searchTerm.toLowerCase())) ||
         // Search in order items
         order.orderItems.some((item: any) => 
           item.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
