@@ -34,10 +34,12 @@ router.post('/card/checkout', isAuthenticated, asyncHandler(async (req: Request,
       return res.status(403).json({ error: 'Access denied' });
     }
 
+    // CRITICAL FIX: Import storage once for entire function
+    const { storage } = await import('./storage.js');
+    
     // CRITICAL FIX: Fetch customer's fullName from users table for proper order creation
     let customerFullName = '';
     try {
-      const { storage } = await import('./storage.js');
       const customer = await storage.getUserById(customerId);
       customerFullName = customer?.fullName || `${customer?.firstName || ''} ${customer?.lastName || ''}`.trim() || 'Unknown Customer';
       console.log('✅ Customer fullName fetched from database:', {

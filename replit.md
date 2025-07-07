@@ -828,11 +828,13 @@ Changelog:
   * RESOLVED CRITICAL ISSUE: Fixed "null value in column 'customerEmail'" error preventing card payment orders from being created
   * Root cause: Storage initialization timing and missing customer data validation in YoCo webhook processing
   * Fixed "Cannot access 'storage' before initialization" by converting static imports to dynamic imports in payment and webhook routes
+  * FINAL FIX: Resolved storage initialization error in payment-routes.ts line items processing by repositioning dynamic storage import for entire function scope
   * Added explicit validation for customerEmail and customerFullName before order creation to prevent null constraint violations
   * Explicitly set customerEmail and customerName fields in order object during webhook processing using metadata values
   * Implemented proper SAST (UTC+2) timezone handling throughout email verification system with dedicated utility functions
   * Enhanced customer fullName database fetching during payment processing with proper error handling
   * YoCo webhook now properly creates orders with complete customer information after successful card payments
+  * Fixed product name fetching for YoCo line items to display real product names instead of "Product ID" placeholders
   * All card payment flows now operational: checkout → YoCo payment → webhook → order creation → cart clearing → email notifications
   * System confirmed ready for production use with complete card payment functionality and proper data validation
 - July 4, 2025. Automatic shipping address data persistence in checkout system:
