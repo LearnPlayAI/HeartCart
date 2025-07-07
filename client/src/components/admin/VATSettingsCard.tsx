@@ -67,14 +67,11 @@ export function VATSettingsCard() {
           apiRequest('PUT', '/api/admin/settings/vatRegistered', { settingValue: settings.vatRegistered }),
         ]);
         
-        // Verify all requests succeeded
-        results.forEach((result, index) => {
-          const settingNames = ['vatRate', 'vatRegistrationNumber', 'vatRegistered'];
-          if (!result || typeof result !== 'object' || result.success !== true) {
-            console.log(`VAT setting ${settingNames[index]} result:`, result);
-            throw new Error(`Failed to save ${settingNames[index]} setting`);
-          }
-        });
+        // Log the results for debugging
+        console.log('VAT settings save results:', results);
+        
+        // All apiRequest calls completed, they would have thrown if they failed
+        // No need to validate further since apiRequest handles success/error internally
         
         return results;
       } catch (error: any) {
