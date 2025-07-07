@@ -24,23 +24,25 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
     const webhookId = req.headers['webhook-id'] as string;
     const timestamp = req.headers['webhook-timestamp'] as string;
 
-    console.log('📨 YoCo webhook received:', {
-      webhookId,
-      timestamp,
-      eventType: req.body.type,
-      hasSignature: !!signature,
-      paymentId: req.body.payload?.id,
-      paymentAmount: req.body.payload?.amount,
-      paymentCurrency: req.body.payload?.currency,
-      checkoutId: req.body.payload?.metadata?.checkoutId,
-      tempCheckoutId: req.body.payload?.metadata?.tempCheckoutId,
-      customerId: req.body.payload?.metadata?.customerId,
-      customerEmail: req.body.payload?.metadata?.customerEmail,
-      customerFullName: req.body.payload?.metadata?.customerFullName,
-      customerPhone: req.body.payload?.metadata?.customerPhone,
-      webhookSecretConfigured: !!process.env.YOCO_WEBHOOK_SECRET,
-      webhookSecretUsed: process.env.YOCO_WEBHOOK_SECRET?.substring(0, 20) + '...',
-    });
+    console.log('\n💥💥💥 YOCO WEBHOOK RECEIVED! 💥💥💥');
+    console.log('═'.repeat(80));
+    console.log('WEBHOOK DETAILS:');
+    console.log('  webhookId:', webhookId);
+    console.log('  timestamp:', timestamp);
+    console.log('  eventType:', req.body.type);
+    console.log('  hasSignature:', !!signature);
+    console.log('  paymentId:', req.body.payload?.id);
+    console.log('  paymentAmount:', req.body.payload?.amount);
+    console.log('  paymentCurrency:', req.body.payload?.currency);
+    console.log('  checkoutId:', req.body.payload?.metadata?.checkoutId);
+    console.log('  tempCheckoutId:', req.body.payload?.metadata?.tempCheckoutId);
+    console.log('  customerId:', req.body.payload?.metadata?.customerId);
+    console.log('  customerEmail:', req.body.payload?.metadata?.customerEmail);
+    console.log('  customerFullName:', req.body.payload?.metadata?.customerFullName);
+    console.log('  customerPhone:', req.body.payload?.metadata?.customerPhone);
+    console.log('  webhookSecretConfigured:', !!process.env.YOCO_WEBHOOK_SECRET);
+    console.log('  webhookSecretUsed:', process.env.YOCO_WEBHOOK_SECRET?.substring(0, 20) + '...');
+    console.log('═'.repeat(80));
 
     // Validate webhook timestamp (prevent replay attacks)
     if (!yocoService.isValidTimestamp(timestamp)) {
@@ -224,18 +226,20 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
     let rawOrderItems = cartData.orderItems || cartData.items || cartData.lineItems || [];
     const { shippingAddress: addressData, ...orderData } = cartData;
     
-    console.log('CRITICAL DEBUG: Order items field detection:', {
-      hasOrderItems: !!cartData.orderItems,
-      hasItems: !!cartData.items, 
-      hasLineItems: !!cartData.lineItems,
-      orderItemsLength: cartData.orderItems?.length || 0,
-      itemsLength: cartData.items?.length || 0,
-      lineItemsLength: cartData.lineItems?.length || 0,
-      selectedField: rawOrderItems === cartData.orderItems ? 'orderItems' : 
+    console.log('\n🚨🚨🚨 YOCO WEBHOOK ORDER ITEMS DEBUG 🚨🚨🚨');
+    console.log('=' .repeat(80));
+    console.log('ORDER ITEMS FIELD DETECTION:');
+    console.log('  hasOrderItems:', !!cartData.orderItems);
+    console.log('  hasItems:', !!cartData.items);
+    console.log('  hasLineItems:', !!cartData.lineItems);
+    console.log('  orderItemsLength:', cartData.orderItems?.length || 0);
+    console.log('  itemsLength:', cartData.items?.length || 0);
+    console.log('  lineItemsLength:', cartData.lineItems?.length || 0);
+    console.log('  selectedField:', rawOrderItems === cartData.orderItems ? 'orderItems' : 
                      rawOrderItems === cartData.items ? 'items' :
-                     rawOrderItems === cartData.lineItems ? 'lineItems' : 'none',
-      rawOrderItemsLength: rawOrderItems?.length || 0
-    });
+                     rawOrderItems === cartData.lineItems ? 'lineItems' : 'none');
+    console.log('  rawOrderItemsLength:', rawOrderItems?.length || 0);
+    console.log('=' .repeat(80));
 
     // CRITICAL FIX: Enrich order items with product names from database (preventing null productName constraint violations)
     console.log('CRITICAL DEBUG: Raw order items before enrichment:', {
@@ -248,14 +252,17 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
 
     // EMERGENCY DEBUG: If no order items found in any expected field, log all cart data fields
     if (!rawOrderItems || !Array.isArray(rawOrderItems) || rawOrderItems.length === 0) {
-      console.error('CRITICAL ERROR: No order items found in cart data!', {
-        cartDataKeys: Object.keys(cartData),
-        cartDataValues: Object.entries(cartData).reduce((acc, [key, value]) => {
-          acc[key] = Array.isArray(value) ? `Array(${value.length})` : typeof value;
-          return acc;
-        }, {}),
-        fullCartDataSample: JSON.stringify(cartData, null, 2).substring(0, 2000) // Truncate for logs
+      console.log('\n❌❌❌ CRITICAL ISSUE: NO ORDER ITEMS FOUND! ❌❌❌');
+      console.log('*'.repeat(80));
+      console.log('CART DATA ANALYSIS:');
+      console.log('  cartDataKeys:', Object.keys(cartData));
+      console.log('  cartDataValues:');
+      Object.entries(cartData).forEach(([key, value]) => {
+        console.log(`    ${key}:`, Array.isArray(value) ? `Array(${value.length})` : typeof value);
       });
+      console.log('\nFULL CART DATA SAMPLE:');
+      console.log(JSON.stringify(cartData, null, 2).substring(0, 2000));
+      console.log('*'.repeat(80));
     }
 
     const orderItems = [];
@@ -460,32 +467,38 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
     });
     
     // CRITICAL DEBUG: Log exactly what we're passing to storage.createOrder
-    console.log('CRITICAL DEBUG: About to call storage.createOrder with:', {
-      orderDataKeys: Object.keys(order),
-      orderDataSample: {
-        customerName: order.customerName,
-        customerEmail: order.customerEmail,
-        customerPhone: order.customerPhone,
-        userId: order.userId,
-        totalAmount: order.totalAmount,
-        subtotalAmount: order.subtotalAmount,
-        paymentMethod: order.paymentMethod,
-        paymentStatus: order.paymentStatus,
-        status: order.status
-      },
-      orderItemsCount: orderItems.length,
-      orderItemsArray: orderItems.map((item, index) => ({
-        index,
-        productId: item.productId,
-        productName: item.productName,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        totalPrice: item.totalPrice,
-        attributeSelections: item.attributeSelections,
-        hasAllRequiredFields: !!(item.productId && item.productName && item.quantity && item.unitPrice)
-      })),
-      orderItemsStringified: JSON.stringify(orderItems, null, 2)
-    });
+    console.log('\n✅✅✅ CALLING storage.createOrder() ✅✅✅');
+    console.log('#'.repeat(80));
+    console.log('ORDER DATA KEYS:', Object.keys(order));
+    console.log('ORDER SAMPLE:');
+    console.log('  customerName:', order.customerName);
+    console.log('  customerEmail:', order.customerEmail);
+    console.log('  customerPhone:', order.customerPhone);
+    console.log('  userId:', order.userId);
+    console.log('  totalAmount:', order.totalAmount);
+    console.log('  subtotalAmount:', order.subtotalAmount);
+    console.log('  paymentMethod:', order.paymentMethod);
+    console.log('  paymentStatus:', order.paymentStatus);
+    console.log('  status:', order.status);
+    console.log('\nORDER ITEMS COUNT:', orderItems.length);
+    if (orderItems.length > 0) {
+      console.log('ORDER ITEMS ARRAY:');
+      orderItems.forEach((item, index) => {
+        console.log(`  [${index}]:`, {
+          productId: item.productId,
+          productName: item.productName,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          totalPrice: item.totalPrice,
+          hasAllRequiredFields: !!(item.productId && item.productName && item.quantity && item.unitPrice)
+        });
+      });
+      console.log('\nFULL ORDER ITEMS JSON:');
+      console.log(JSON.stringify(orderItems, null, 2));
+    } else {
+      console.log('⚠️ WARNING: ZERO ORDER ITEMS TO CREATE!');
+    }
+    console.log('#'.repeat(80));
 
     try {
       const newOrder = await storage.createOrder(order, orderItems);

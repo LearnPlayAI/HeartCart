@@ -3549,12 +3549,15 @@ export class DatabaseStorage implements IStorage {
       let successfulItemInserts = 0;
       let failedItemInserts = 0;
 
-      console.log('CRITICAL DEBUG: Starting order items insertion:', {
-        orderId: orderToUse.id,
-        orderNumber: orderToUse.orderNumber,
-        itemsToInsert: items.length,
-        itemsData: items.map((item, index) => ({
-          index,
+      console.log('\n🔥🔥🔥 STORAGE.TS ORDER ITEMS INSERTION 🔥🔥🔥');
+      console.log('▶'.repeat(80));
+      console.log('STARTING ORDER ITEMS INSERTION:');
+      console.log('  orderId:', orderToUse.id);
+      console.log('  orderNumber:', orderToUse.orderNumber);
+      console.log('  itemsToInsert:', items.length);
+      console.log('ITEMS DATA:');
+      items.forEach((item, index) => {
+        console.log(`  [${index}]:`, {
           productId: item.productId,
           productName: item.productName,
           quantity: item.quantity,
@@ -3562,8 +3565,9 @@ export class DatabaseStorage implements IStorage {
           totalPrice: item.totalPrice,
           selectedAttributes: item.selectedAttributes,
           hasAllFields: !!(item.productId && item.productName && item.quantity && item.unitPrice && item.totalPrice)
-        }))
+        });
       });
+      console.log('▶'.repeat(80));
 
       for (const item of items) {
         try {
@@ -3592,7 +3596,7 @@ export class DatabaseStorage implements IStorage {
 
           successfulItemInserts++;
 
-          console.log('CRITICAL DEBUG: Successfully inserted order item:', {
+          console.log('✅ ORDER ITEM INSERTED SUCCESSFULLY:', {
             orderId: orderToUse.id,
             orderItemId: orderItem.id,
             productId: item.productId,
@@ -3639,19 +3643,18 @@ export class DatabaseStorage implements IStorage {
         } catch (itemError) {
           failedItemInserts++;
           
-          console.error('CRITICAL ERROR: Failed to insert order item:', {
-            error: itemError,
-            errorMessage: itemError instanceof Error ? itemError.message : String(itemError),
-            errorStack: itemError instanceof Error ? itemError.stack : undefined,
+          console.log('\n❌❌❌ ORDER ITEM INSERTION FAILED! ❌❌❌');
+          console.log('ERROR:', itemError instanceof Error ? itemError.message : String(itemError));
+          console.log('STACK:', itemError instanceof Error ? itemError.stack : undefined);
+          console.log('ORDER ID:', orderToUse.id);
+          console.log('PRODUCT ID:', item.productId);
+          console.log('PRODUCT NAME:', item.productName);
+          console.log('ITEM DATA:', {
+            ...item,
             orderId: orderToUse.id,
-            productId: item.productId,
-            productName: item.productName,
-            itemData: {
-              ...item,
-              orderId: orderToUse.id,
-              createdAt: new Date().toISOString()
-            }
+            createdAt: new Date().toISOString()
           });
+          console.log('❌'.repeat(80));
           
           logger.error(`Error inserting order item`, {
             error: itemError,
