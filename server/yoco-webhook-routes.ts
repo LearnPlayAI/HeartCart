@@ -177,7 +177,13 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
       hasOrderItems: !!cartData.orderItems,
       orderItemsCount: cartData.orderItems?.length || 0,
       cartDataCustomerName: cartData.customerName, // Debug customer name in cart data
-      cartDataCustomerPhone: cartData.customerPhone // CRITICAL FIX: Debug customer phone in cart data
+      cartDataCustomerPhone: cartData.customerPhone, // CRITICAL FIX: Debug customer phone in cart data
+      // CRITICAL FIX: Debug address mapping
+      addressLine1: cartData.addressLine1,
+      addressLine2: cartData.addressLine2,
+      city: cartData.city,
+      province: cartData.province,
+      postalCode: cartData.postalCode
     });
 
     // YoCo compliance: Calculate transaction fees for profit tracking (absorbed by company, not charged to customer)
@@ -192,7 +198,10 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
     });
     
     // Extract order and orderItems from cart data (like EFT flow)
-    const { orderItems, ...orderData } = cartData;
+    const { orderItems, addressLine1, addressLine2, city, province, postalCode, ...orderData } = cartData;
+    
+    // CRITICAL FIX: Properly map address fields from cart data to order fields
+    const shippingAddress = addressLine2 ? `${addressLine1}, ${addressLine2}` : addressLine1;
     
     // Create order with payment information included (camelCase naming convention)
     const order = {
@@ -201,6 +210,11 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
       customerEmail: customerEmail, // CRITICAL FIX: Explicitly set customerEmail from metadata
       customerName: customerFullName, // CRITICAL FIX: Explicitly set customerName from metadata
       customerPhone: customerPhone, // CRITICAL FIX: Explicitly set customerPhone from metadata
+      // CRITICAL FIX: Map address fields correctly
+      shippingAddress: shippingAddress,
+      shippingCity: city,
+      shippingProvince: province, 
+      shippingPostalCode: postalCode,
       paymentMethod: 'card',
       paymentStatus: 'payment_received', // Already paid via card
       status: 'confirmed', // Auto-confirm card payments
@@ -218,6 +232,11 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
       customerId: order.userId,
       customerEmail: order.customerEmail,
       customerName: order.customerName,
+      customerPhone: order.customerPhone,
+      shippingAddress: order.shippingAddress,
+      shippingCity: order.shippingCity,
+      shippingProvince: order.shippingProvince,
+      shippingPostalCode: order.shippingPostalCode,
       paymentMethod: order.paymentMethod,
       paymentStatus: order.paymentStatus,
       status: order.status

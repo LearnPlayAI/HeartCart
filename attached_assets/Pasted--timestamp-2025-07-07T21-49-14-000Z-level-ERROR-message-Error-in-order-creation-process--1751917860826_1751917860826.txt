@@ -1,0 +1,101 @@
+{"timestamp":"2025-07-07T21:49:14.000Z","level":"ERROR","message":"Error in order creation process","context":{"error":"null value in column \"shippingCity\" of relation \"orders\" violates not-null constraint","stack":"error: null value in column \"shippingCity\" of relation \"orders\" violates not-null constraint\n at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74\n at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n at async NeonPreparedQuery.execute (file:///home/runner/workspace/node_modules/drizzle-orm/neon-serverless/session.js:76:20)\n at async DatabaseStorage.createOrder (file:///home/runner/workspace/dist/index.js:6190:30)\n at async file:///home/runner/workspace/dist/index.js:26281:22","userId":8}}
+2025-07-07 21:49:14.94
+8446dffe
+User
+YoCo webhook processing error: error: null value in column "shippingCity" of relation "orders" violates not-null constraint
+2025-07-07 21:49:14.94
+8446dffe
+User
+at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+2025-07-07 21:49:14.94
+8446dffe
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-07-07 21:49:14.94
+8446dffe
+User
+at async NeonPreparedQuery.execute (file:///home/runner/workspace/node_modules/drizzle-orm/neon-serverless/session.js:76:20)
+2025-07-07 21:49:14.94
+8446dffe
+User
+at async DatabaseStorage.createOrder (file:///home/runner/workspace/dist/index.js:6190:30)
+2025-07-07 21:49:14.94
+8446dffe
+User
+at async file:///home/runner/workspace/dist/index.js:26281:22 {
+2025-07-07 21:49:14.94
+8446dffe
+User
+length: 737,
+2025-07-07 21:49:14.94
+8446dffe
+User
+severity: 'ERROR',
+2025-07-07 21:49:14.94
+8446dffe
+User
+code: '23502',
+2025-07-07 21:49:14.94
+8446dffe
+User
+detail: 'Failing row contains (29, 8, TMY-TEMP-1751917754898, confirmed, Jan Coetzee, admin@teemeyou.shop, +27712063084, {"addressLine1":"12 Ebbehout Street","addressLine2":"","city":"R..., null, null, pudo, 85, card, payment_received, null, null, null, null, null, 2025-07-07T19:49:14.898Z, 2025-07-07T19:49:14.898Z, null, null, null, 2025-07-07T19:49:14.897Z, 0.00, null, 146, null, null, null, {"code": "CG76", "name": "Banbury Cross Village", "address": "Hu..., null, null, 0, 0, 4567890123, ch_kgKDMmloQZ8sbk0tZaOSKmxV, p_dg1e38MapOmuMkoTP3WiawRg, 10.63, 2.95).',
+2025-07-07 21:49:14.94
+8446dffe
+User
+hint: undefined,
+2025-07-07 21:49:14.94
+8446dffe
+User
+position: undefined,
+2025-07-07 21:49:14.94
+8446dffe
+User
+internalPosition: undefined,
+2025-07-07 21:49:14.94
+8446dffe
+User
+internalQuery: undefined,
+2025-07-07 21:49:14.94
+8446dffe
+User
+where: undefined,
+2025-07-07 21:49:14.94
+8446dffe
+User
+schema: 'public',
+2025-07-07 21:49:14.94
+8446dffe
+User
+table: 'orders',
+2025-07-07 21:49:14.94
+8446dffe
+User
+column: 'shippingCity',
+2025-07-07 21:49:14.94
+8446dffe
+User
+dataType: undefined,
+2025-07-07 21:49:14.94
+8446dffe
+User
+constraint: undefined,
+2025-07-07 21:49:14.94
+8446dffe
+User
+file: 'execMain.c',
+2025-07-07 21:49:14.94
+8446dffe
+User
+line: '2006',
+2025-07-07 21:49:14.94
+8446dffe
+User
+routine: 'ExecConstraints'
+2025-07-07 21:49:14.94
+8446dffe
+User
+}
+2025-07-07 21:49:14.94
+8446dffe
+User
+{"timestamp":"2025-07-07T21:49:14.000Z","level":"ERROR","message":"API Error: POST /api/webhooks/yoco 500 in 245ms","context":{"method":"POST","path":"/api/webhooks/yoco","statusCode":500,"duration":"245ms","requestId":"b07faf3c-0de0-435c-88f5-1c59786909b1"}}
