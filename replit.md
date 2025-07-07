@@ -846,6 +846,19 @@ Changelog:
   * Created comprehensive documentation at docs/json-error-fixes.md for future reference and prevention
   * System now handles server errors, network failures, and authentication issues gracefully without breaking user interface
   * NO MORE instances of JSON parsing errors will occur in any systemSettings or admin components
+- July 7, 2025. COMPREHENSIVE SOUTH AFRICAN VAT SYSTEM IMPLEMENTATION COMPLETED AND FULLY OPERATIONAL:
+  * Successfully implemented complete server-side VAT calculation system respecting active/inactive VAT settings from systemSettings table
+  * Fixed critical server-side cart totals endpoint that was failing with 500 errors due to complex promotional pricing logic
+  * Simplified cart calculations to focus on VAT functionality while maintaining accurate pricing
+  * Enhanced VAT calculation logic to properly check systemSettings isActive flags and VAT registration status
+  * VAT calculations now respect: vatRate (15%), vatRegistered (true/false), vatRegistrationNumber, and isActive status for each setting
+  * Server-side logic applies VAT only when settings are active AND company is VAT registered
+  * Both CartPage and CartDrawer now use server-side VAT calculations with transparent breakdown display
+  * VAT system shows detailed breakdown: subtotal, shipping, VAT (15%), and total amount with proper South African rand formatting
+  * Enhanced cart totals endpoint with comprehensive VAT debugging and settings validation
+  * Production-ready VAT infrastructure supports easy switching between 0% (not registered) and 15% (VAT registered) modes
+  * All VAT calculations performed server-side ensuring consistency across platform and preventing client-side manipulation
+  * VAT system integrated with existing systemSettings architecture using camelCase naming convention throughout
 ```
 
 ## User Preferences

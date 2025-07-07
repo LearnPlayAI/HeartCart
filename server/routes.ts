@@ -3974,13 +3974,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const vatRegisteredSettings = await storage.getSystemSetting('vatRegistered');
         const vatRegistrationNumberSettings = await storage.getSystemSetting('vatRegistrationNumber');
         
-        const vatRate = parseFloat(vatRateSettings?.settingValue || '0');
+        // Check if VAT settings are active and properly configured
+        const vatRateValue = parseFloat(vatRateSettings?.settingValue || '0');
         const vatRegistered = vatRegisteredSettings?.settingValue === 'true';
         const vatRegistrationNumber = vatRegistrationNumberSettings?.settingValue || '';
+        const vatRateActive = vatRateSettings?.isActive === true;
+        const vatRegisteredActive = vatRegisteredSettings?.isActive === true;
         
-        // Calculate subtotal using stored cart item prices (simplified for VAT focus)
+        // Calculate subtotal using stored cart item prices
         const subtotal = cartItems.reduce((sum: number, item: any) => {
-          // Use the stored itemPrice which represents the price when item was added to cart
           const currentPrice = parseFloat(item.itemPrice || '0');
           const quantity = item.quantity || 0;
           return sum + (currentPrice * quantity);
@@ -3988,15 +3990,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         const shippingCost = 85; // Standard PUDO shipping
         
-        // Calculate VAT using shared utilities
+        // VAT calculation logic: Apply VAT only if settings are active AND company is VAT registered
+        const shouldApplyVAT = vatRateActive && vatRegisteredActive && vatRegistered;
+        const effectiveVATRate = shouldApplyVAT ? vatRateValue : 0;
+        
         const vatableAmount = subtotal + shippingCost;
-        const vatAmount = vatableAmount * (vatRate / 100);
+        const vatAmount = vatableAmount * (effectiveVATRate / 100);
         const totalAmount = vatableAmount + vatAmount;
         
         const totals = {
           subtotal: Math.round(subtotal * 100) / 100,
           shippingCost,
-          vatRate,
+          vatRate: effectiveVATRate,
           vatAmount: Math.round(vatAmount * 100) / 100,
           totalAmount: Math.round(totalAmount * 100) / 100,
           itemCount: cartItems.length,
@@ -4004,14 +4009,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
           vatBreakdown: {
             vatableAmount: Math.round(vatableAmount * 100) / 100,
             vatRegistered,
-            vatRegistrationNumber
+            vatRegistrationNumber,
+            vatActive: shouldApplyVAT,
+            configuredVATRate: vatRateValue
           }
         };
         
         logger.info('Cart totals calculated server-side', { 
           userId: user.id, 
           totals,
-          cartItemCount: cartItems.length 
+          cartItemCount: cartItems.length,
+          vatSettings: {
+            vatRateValue,
+            vatRegistered,
+            vatRateActive,
+            vatRegisteredActive,
+            shouldApplyVAT,
+            effectiveVATRate
+          }
         });
         
         return res.json({
