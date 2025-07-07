@@ -51,78 +51,93 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
 
     const payment = event.payload;
     const checkoutId = payment.metadata.checkoutId;
+    const tempCheckoutId = payment.metadata.tempCheckoutId;
+    const customerId = parseInt(payment.metadata.customerId);
+    const customerEmail = payment.metadata.customerEmail;
+    const cartDataStr = payment.metadata.cartData;
 
     console.log('Processing successful payment:', {
       paymentId: payment.id,
       checkoutId,
+      tempCheckoutId,
+      customerId,
       amount: payment.amount,
       currency: payment.currency,
     });
 
-    // Find order by YoCo checkout ID
-    const order = await storage.getOrderByYocoCheckoutId(checkoutId);
-    if (!order) {
-      console.error('Order not found for YoCo checkout ID:', checkoutId);
-      return res.status(404).json({ error: 'Order not found' });
+    // CRITICAL: Create order only AFTER successful payment
+    if (!cartDataStr) {
+      console.error('No cart data found in payment metadata');
+      return res.status(400).json({ error: 'Cart data missing from payment' });
     }
 
-    console.log('Found order for payment:', {
-      orderId: order.id,
-      orderNumber: order.orderNumber,
-      currentStatus: order.status,
-      currentPaymentStatus: order.paymentStatus,
-    });
-
-    // Prevent duplicate processing
-    if (order.paymentStatus === 'payment_received') {
-      console.log('Payment already processed for order:', order.orderNumber);
-      return res.status(200).json({ received: true, message: 'Already processed' });
+    let cartData;
+    try {
+      cartData = JSON.parse(cartDataStr);
+    } catch (error) {
+      console.error('Failed to parse cart data:', error);
+      return res.status(400).json({ error: 'Invalid cart data format' });
     }
+
+    // Check if order already exists for this checkout (prevent duplicates)
+    const existingOrder = await storage.getOrderByYocoCheckoutId(checkoutId);
+    if (existingOrder) {
+      console.log('Order already created for checkout:', existingOrder.orderNumber);
+      return res.status(200).json({ received: true, orderId: existingOrder.id, message: 'Already processed' });
+    }
+
+    console.log('Creating order after successful payment:', { checkoutId, customerId });
 
     // Calculate transaction fees
     const fees = yocoService.calculateTransactionFees(payment.amount);
     
-    // Update order with successful payment information
-    const updateData = {
-      paymentStatus: 'payment_received' as const,
-      status: 'confirmed' as const, // Auto-confirm card payments
+    // Create order with payment information included
+    const orderData = {
+      ...cartData,
+      userId: customerId,
+      paymentMethod: 'card',
+      paymentStatus: 'payment_received', // Already paid via card
+      status: 'confirmed', // Auto-confirm card payments
+      yocoCheckoutId: checkoutId,
       yocoPaymentId: payment.id,
       transactionFeeAmount: fees.feeAmount,
       transactionFeePercentage: fees.feePercentage,
       paymentReceivedDate: new Date().toISOString(),
     };
 
-    await storage.updateOrder(order.id, updateData);
+    const order = await storage.createOrder(orderData);
 
-    // Create order status history entry
+    // Create order status history entry for the newly created order
     await storage.createOrderStatusHistory({
       orderId: order.id,
       status: 'confirmed',
       paymentStatus: 'payment_received',
-      previousStatus: order.status,
-      previousPaymentStatus: order.paymentStatus,
+      previousStatus: 'pending',
+      previousPaymentStatus: 'pending',
       changedBy: 'system',
-      eventType: 'payment_received',
-      notes: `Card payment confirmed via YoCo. Payment ID: ${payment.id}. Transaction fee: R${fees.feeAmount.toFixed(2)} (${fees.feePercentage}%)`,
+      eventType: 'order_created_after_payment',
+      notes: `Order created after successful card payment. Payment ID: ${payment.id}. Transaction fee: R${fees.feeAmount.toFixed(2)} (${fees.feePercentage}%)`,
     });
 
-    console.log('Order updated successfully:', {
+    console.log('Order created successfully after payment:', {
       orderId: order.id,
       orderNumber: order.orderNumber,
-      newStatus: 'confirmed',
-      newPaymentStatus: 'payment_received',
+      status: 'confirmed',
+      paymentStatus: 'payment_received',
       transactionFee: fees.feeAmount,
     });
 
-    // Send payment confirmation email
+    // Send order confirmation and payment confirmation emails
     try {
-      const updatedOrder = await storage.getOrderById(order.id);
-      if (updatedOrder) {
-        await unifiedEmailService.sendPaymentConfirmationEmail(updatedOrder);
-        console.log('Payment confirmation email sent for order:', order.orderNumber);
+      const newOrder = await storage.getOrderById(order.id);
+      if (newOrder) {
+        // Send both order confirmation and payment confirmation emails
+        await unifiedEmailService.sendOrderConfirmationEmail(newOrder);
+        await unifiedEmailService.sendPaymentConfirmationEmail(newOrder);
+        console.log('Order confirmation and payment confirmation emails sent for order:', order.orderNumber);
       }
     } catch (emailError) {
-      console.error('Failed to send payment confirmation email:', emailError);
+      console.error('Failed to send confirmation emails:', emailError);
       // Don't fail the webhook for email errors
     }
 
@@ -131,7 +146,9 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
       received: true, 
       orderId: order.id,
       orderNumber: order.orderNumber,
-      status: 'processed' 
+      checkoutId,
+      tempCheckoutId,
+      status: 'order_created_and_paid' 
     });
 
   } catch (error) {

@@ -15,15 +15,17 @@ export default function PaymentFailedPage() {
   const [location] = useLocation();
   const searchParams = new URLSearchParams(window.location.search);
   const orderId = searchParams.get('orderId');
+  const checkoutId = searchParams.get('checkoutId');
   const error = searchParams.get('error') || 'Payment failed to process';
 
-  // Get order details if orderId is available
+  // CRITICAL: For card payment failures, no order exists (which is correct!)
+  // Only try to fetch order data if orderId exists (EFT payments)
   const { data: order, isLoading } = useQuery({
     queryKey: ['/api/orders', orderId],
-    enabled: !!orderId,
+    enabled: !!orderId, // Only fetch if orderId exists (EFT case)
   });
 
-  if (!orderId) {
+  if (!orderId && !checkoutId) {
     return (
       <div className="container mx-auto px-4 py-8">
         <Card className="max-w-2xl mx-auto">
@@ -109,22 +111,42 @@ export default function PaymentFailedPage() {
             <h3 className="font-semibold text-gray-900">What would you like to do?</h3>
             
             <div className="grid gap-3">
-              {order && order.paymentStatus !== 'payment_received' && (
-                <Button asChild className="w-full" size="lg">
-                  <Link href={`/order/${order.orderNumber}`}>
-                    <CreditCard className="w-4 h-4 mr-2" />
-                    Try Card Payment Again
-                  </Link>
-                </Button>
+              {/* For card payment failures, show option to retry or go back to cart */}
+              {checkoutId && (
+                <>
+                  <Button asChild className="w-full" size="lg">
+                    <Link href="/cart">
+                      <CreditCard className="w-4 h-4 mr-2" />
+                      Try Card Payment Again
+                    </Link>
+                  </Button>
+                  
+                  <Button asChild variant="outline" className="w-full" size="lg">
+                    <Link href="/checkout">
+                      <DollarSign className="w-4 h-4 mr-2" />
+                      Use Bank Transfer Instead
+                    </Link>
+                  </Button>
+                </>
               )}
               
-              {order && (
-                <Button asChild variant="outline" className="w-full" size="lg">
-                  <Link href={`/payment-confirmation?orderNumber=${order.orderNumber}`}>
-                    <DollarSign className="w-4 h-4 mr-2" />
-                    Use Bank Transfer Instead
-                  </Link>
-                </Button>
+              {/* For EFT payment failures where order exists */}
+              {order && order.paymentStatus !== 'payment_received' && (
+                <>
+                  <Button asChild className="w-full" size="lg">
+                    <Link href={`/order/${order.orderNumber}`}>
+                      <CreditCard className="w-4 h-4 mr-2" />
+                      Try Card Payment Again
+                    </Link>
+                  </Button>
+                  
+                  <Button asChild variant="outline" className="w-full" size="lg">
+                    <Link href={`/payment-confirmation?orderNumber=${order.orderNumber}`}>
+                      <DollarSign className="w-4 h-4 mr-2" />
+                      Use Bank Transfer Instead
+                    </Link>
+                  </Button>
+                </>
               )}
               
               <Button asChild variant="outline" className="w-full">

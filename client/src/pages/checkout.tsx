@@ -513,23 +513,17 @@ export default function CheckoutPage() {
         navigate('/payment-confirmation');
         return;
       } else if (data.paymentMethod === "card") {
-        // For card payments, create YoCo checkout session
+        // CRITICAL: For card payments, DO NOT create order first
+        // Only create YoCo checkout session with cart data
+        // Order will be created only if payment succeeds via webhook
         try {
-          console.log("Creating YoCo checkout session...");
+          console.log("Creating YoCo checkout session with cart data...");
           
-          // First create the order to get an order ID
-          const orderResult = await apiRequest("POST", "/api/orders", orderData);
-          
-          if (!orderResult.success || !orderResult.data) {
-            throw new Error("Failed to create order for card payment");
-          }
-          
-          const orderId = orderResult.data.id;
-          console.log("Order created for card payment:", orderId);
-          
-          // Create YoCo checkout session with order ID
+          // Create YoCo checkout session directly with cart data (no order creation)
           const checkoutResult = await apiRequest("POST", "/api/payments/card/checkout", {
-            orderId: orderId
+            cartData: orderData, // Pass cart data, not order ID
+            customerId: user?.id,
+            customerEmail: user?.email || data.email
           });
           
           if (!checkoutResult.success || !checkoutResult.redirectUrl) {

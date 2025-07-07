@@ -187,6 +187,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register YoCo webhook routes
   app.use("/api/webhooks", webhookRoutes);
   
+  // Add route for getting order by checkout ID (for card payments)
+  app.get("/api/orders/by-checkout/:checkoutId", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const checkoutId = req.params.checkoutId;
+      
+      if (!checkoutId) {
+        return res.status(400).json({ success: false, error: "Checkout ID is required" });
+      }
+
+      const order = await storage.getOrderByYocoCheckoutId(checkoutId);
+      if (!order) {
+        return res.status(404).json({ success: false, error: "Order not found" });
+      }
+
+      // Verify order belongs to the current user (unless admin)
+      if (req.user?.role !== 'admin' && order.userId !== req.user?.id) {
+        return res.status(403).json({ success: false, error: 'Access denied' });
+      }
+
+      res.json({ success: true, data: order });
+    } catch (error) {
+      logger.error('Error fetching order by checkout ID:', error);
+      res.status(500).json({ success: false, error: "Failed to retrieve order" });
+    }
+  }));
+
   // Register order routes (after middleware for proper error handling)
   app.use("/api/orders", orderRoutes);
   

@@ -17,81 +17,73 @@ const router = Router();
  */
 router.post('/card/checkout', isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
   try {
-    const { orderId } = req.body;
+    const { cartData, customerId, customerEmail } = req.body;
 
-    if (!orderId) {
-      return res.status(400).json({ error: 'Order ID is required' });
+    if (!cartData) {
+      return res.status(400).json({ error: 'Cart data is required' });
     }
 
-    // Get the order details
-    const order = await storage.getOrderById(orderId);
-    if (!order) {
-      return res.status(404).json({ error: 'Order not found' });
-    }
-
-    // Verify order belongs to the current user (unless admin)
-    if (req.user?.role !== 'admin' && order.userId !== req.user?.id) {
+    // Validate user access
+    if (req.user?.role !== 'admin' && customerId !== req.user?.id) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    // Check if order is already paid
-    if (order.paymentStatus === 'payment_received') {
-      return res.status(400).json({ error: 'Order is already paid' });
-    }
-
     // Convert total amount to cents (YoCo requires cents)
-    const amountInCents = Math.round(order.totalAmount * 100);
-    const vatAmountInCents = Math.round(order.vatAmount * 100);
-    const subtotalInCents = Math.round(order.subtotalAmount * 100);
+    const amountInCents = Math.round(cartData.total * 100);
+    const vatAmountInCents = Math.round(cartData.vatAmount * 100);
+    const subtotalInCents = Math.round(cartData.subtotal * 100);
 
-    // Prepare checkout data
+    // Generate temporary checkout ID for tracking (no order exists yet)
+    const tempCheckoutId = `temp_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+    
+    // Prepare checkout data with cart information (NO ORDER CREATED YET)
     const checkoutData = {
       amount: amountInCents,
       currency: 'ZAR',
-      cancelUrl: `${process.env.FRONTEND_URL || 'https://teemeyou.shop'}/payment-failed?orderId=${orderId}`,
-      successUrl: `${process.env.FRONTEND_URL || 'https://teemeyou.shop'}/payment-success?orderId=${orderId}`,
-      failureUrl: `${process.env.FRONTEND_URL || 'https://teemeyou.shop'}/payment-failed?orderId=${orderId}`,
+      cancelUrl: `${process.env.FRONTEND_URL || 'https://teemeyou.shop'}/payment-failed?checkoutId=${tempCheckoutId}`,
+      successUrl: `${process.env.FRONTEND_URL || 'https://teemeyou.shop'}/payment-success?checkoutId=${tempCheckoutId}`,
+      failureUrl: `${process.env.FRONTEND_URL || 'https://teemeyou.shop'}/payment-failed?checkoutId=${tempCheckoutId}`,
       metadata: {
-        orderId: orderId.toString(),
-        orderNumber: order.orderNumber,
-        customerId: order.userId.toString(),
-        customerEmail: order.customerEmail,
+        tempCheckoutId,
+        customerId: customerId.toString(),
+        customerEmail: customerEmail,
+        // Store complete cart data for order creation after successful payment
+        cartData: JSON.stringify(cartData)
       },
       totalTaxAmount: vatAmountInCents,
       subtotalAmount: subtotalInCents,
-      lineItems: order.items?.map(item => ({
-        displayName: item.productName,
+      lineItems: cartData.orderItems?.map((item: any) => ({
+        displayName: `Product ${item.productId}`, // Will be enriched in webhook
         quantity: item.quantity,
         priceCents: Math.round(item.unitPrice * 100),
       })) || [],
     };
 
-    console.log('Creating YoCo checkout session:', {
-      orderId,
-      orderNumber: order.orderNumber,
+    console.log('Creating YoCo checkout session with cart data:', {
+      tempCheckoutId,
+      customerId,
       amount: amountInCents,
       currency: 'ZAR',
     });
 
-    // Create YoCo checkout session
+    // Create YoCo checkout session (NO ORDER CREATED)
     const checkoutResponse = await yocoService.createCheckout(checkoutData);
 
-    // Update order with YoCo checkout ID
-    await storage.updateOrder(orderId, {
-      yocoCheckoutId: checkoutResponse.id,
-      paymentMethod: 'card',
-    });
-
-    console.log('YoCo checkout session created successfully:', {
+    // Store temporary checkout data for webhook processing
+    // TODO: Store tempCheckoutId mapping if needed for webhook processing
+    
+    console.log('YoCo checkout session created successfully (no order created yet):', {
       checkoutId: checkoutResponse.id,
+      tempCheckoutId,
       redirectUrl: checkoutResponse.redirectUrl,
     });
 
     res.json({
       success: true,
       checkoutId: checkoutResponse.id,
+      tempCheckoutId,
       redirectUrl: checkoutResponse.redirectUrl,
-      amount: order.totalAmount,
+      amount: cartData.total,
       currency: 'ZAR',
     });
 

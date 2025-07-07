@@ -14,21 +14,23 @@ export default function PaymentSuccessPage() {
   const [location] = useLocation();
   const searchParams = new URLSearchParams(window.location.search);
   const orderId = searchParams.get('orderId');
+  const checkoutId = searchParams.get('checkoutId');
 
-  // Get order details if orderId is available
+  // CRITICAL: For card payments, we now have checkoutId, not orderId initially
+  // Need to fetch order by checkout ID since order is created after payment
   const { data: order, isLoading } = useQuery({
-    queryKey: ['/api/orders', orderId],
-    enabled: !!orderId,
+    queryKey: orderId ? ['/api/orders', orderId] : ['/api/orders/by-checkout', checkoutId],
+    enabled: !!(orderId || checkoutId),
   });
 
   useEffect(() => {
-    // If no order ID is provided, redirect to orders page
-    if (!orderId) {
+    // If no order ID or checkout ID is provided, redirect to orders page
+    if (!orderId && !checkoutId) {
       window.location.href = '/orders';
     }
-  }, [orderId]);
+  }, [orderId, checkoutId]);
 
-  if (!orderId) {
+  if (!orderId && !checkoutId) {
     return null; // Will redirect above
   }
 
