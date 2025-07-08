@@ -880,6 +880,13 @@ Changelog:
   * Allows admins to test real card payments with cheaper amounts while preserving all existing functionality
   * Setting can be toggled on/off instantly for testing without affecting regular customer payments
   * Complete admin-controlled testing system ready for deployment verification
+- July 8, 2025. Complete admin transactional data cleanup for fresh testing environment:
+  * Deleted ALL transactional data for admin@teemeyou.shop (user ID 8): 9 orders, 35 order items, 18 order status history records
+  * Cleared user interaction data: 73 product interactions, 1 user favourite, cart items, email logs, mail tokens
+  * Database verification confirms 0 remaining transactional records for admin user
+  * Preserved ALL core system data: users, products, categories, suppliers, settings, sales reps
+  * Admin user now has completely clean slate for testing new shipping fee skip feature and deployment verification
+  * System ready for comprehensive testing with fresh data while maintaining full product catalog and functionality
 - July 7, 2025. CRITICAL YoCo webhook signature verification deployment fix - Production ready:
   * RESOLVED CRITICAL ISSUE: Fixed crypto module import error preventing webhook signature verification in deployed environment
   * Root cause: Dynamic require('crypto') not supported in production, replaced with proper ES6 import statement
