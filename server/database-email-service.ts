@@ -1653,7 +1653,8 @@ export class DatabaseEmailService {
                   </h4>
                   <ul style="margin: 0; padding-left: 20px; color: #374151;">
                     <li style="margin-bottom: 8px;">We'll process your order and prepare it for shipping</li>
-                    <li style="margin-bottom: 8px;">You'll receive a shipping notification with tracking details</li>
+                    <li style="margin-bottom: 8px;">You'll receive PUDO tracking information in a separate email once your shipment order is created</li>
+                    <li style="margin-bottom: 8px;">You'll get an SMS notification when your order arrives at the selected PUDO locker</li>
                     <li style="margin-bottom: 8px;">Your order will be delivered within 3-5 business days</li>
                   </ul>
                 </div>
