@@ -228,10 +228,10 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
     // Calculate total amount
     const calculatedTotalAmount = calculatedSubtotal + calculatedShippingCost + calculatedVatAmount;
 
-    // CRITICAL FIX: Extract PUDO locker information from cart data
-    const selectedLockerName = orderData.selectedLockerName || null;
-    const selectedLockerAddress = orderData.selectedLockerAddress || null;
-    const selectedLockerCode = orderData.selectedLockerCode || null;
+    // CRITICAL FIX: Extract PUDO locker information from cart data using same pattern as EFT flow
+    const selectedLockerName = cartData.lockerDetails?.name || cartData.selectedLockerName || null;
+    const selectedLockerAddress = cartData.lockerDetails?.address || cartData.selectedLockerAddress || null;
+    const selectedLockerCode = cartData.lockerDetails?.code || cartData.selectedLockerCode || null;
     
 
 
@@ -425,8 +425,19 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
           
 
           
-          // Send combined order confirmation and payment confirmation email with invoice attachment
-          await databaseEmailService.sendOrderConfirmationWithPaymentEmail(combinedEmailData);
+          // Send payment confirmation email with invoice attachment - same pattern as EFT admin flow
+          const paymentEmailData = {
+            email: orderWithDetails.customerEmail,
+            customerName: orderWithDetails.customerName,
+            orderNumber: orderWithDetails.orderNumber,
+            orderId: orderWithDetails.id,
+            amount: orderWithDetails.totalAmount,
+            currency: 'R',
+            paymentMethod: orderWithDetails.paymentMethod,
+            invoicePath: invoicePath || undefined // Include invoice path for attachment - same as EFT
+          };
+
+          await databaseEmailService.sendPaymentConfirmationEmail(paymentEmailData);
         }
       } catch (emailError) {
         // Email sending failed but don't fail the webhook
