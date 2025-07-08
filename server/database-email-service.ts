@@ -86,6 +86,36 @@ export interface OrderConfirmationEmailData {
   vatRegistrationNumber?: string;
 }
 
+export interface OrderConfirmationWithPaymentEmailData {
+  email: string;
+  customerName: string;
+  orderNumber: string;
+  orderId: number;
+  orderItems: Array<{
+    productName: string;
+    quantity: number;
+    unitPrice: number;
+    totalPrice: number;
+    attributeDisplayText?: string;
+  }>;
+  subtotalAmount: number;
+  shippingCost: number;
+  totalAmount: number;
+  paymentMethod: string;
+  paymentStatus: string;
+  shippingMethod: string;
+  selectedLockerName?: string;
+  selectedLockerAddress?: string;
+  shippingAddress?: string;
+  shippingCity?: string;
+  shippingPostalCode?: string;
+  vatAmount?: number;
+  vatRate?: number;
+  vatRegistered?: boolean;
+  vatRegistrationNumber?: string;
+  invoicePath?: string; // For PDF invoice attachment
+}
+
 /**
  * Database-driven email service using MailerSend
  * All tokens and email logs are stored in PostgreSQL database
@@ -1359,6 +1389,267 @@ export class DatabaseEmailService {
       });
     } catch (error) {
       logger.error('Error sending invoice email', { error, data });
+      throw error;
+    }
+  }
+
+  /**
+   * Send combined order confirmation and payment confirmation email for card payments
+   */
+  async sendOrderConfirmationWithPaymentEmail(data: OrderConfirmationWithPaymentEmailData): Promise<void> {
+    try {
+      // Generate order items HTML
+      const orderItemsHtml = data.orderItems.map(item => `
+        <tr>
+          <td style="padding: 12px; border-bottom: 1px solid #e9ecef; vertical-align: top;">
+            <strong>${item.productName}</strong>
+            ${item.attributeDisplayText ? `<br><small style="color: #6c757d;">${item.attributeDisplayText}</small>` : ''}
+          </td>
+          <td style="padding: 12px; border-bottom: 1px solid #e9ecef; text-align: center;">${item.quantity}</td>
+          <td style="padding: 12px; border-bottom: 1px solid #e9ecef; text-align: right;">R ${item.unitPrice.toFixed(2)}</td>
+          <td style="padding: 12px; border-bottom: 1px solid #e9ecef; text-align: right;"><strong>R ${item.totalPrice.toFixed(2)}</strong></td>
+        </tr>
+      `).join('');
+
+      // Generate shipping information with hot pink styling
+      const shippingInfoHtml = data.shippingMethod === 'pudo' && data.selectedLockerName ? `
+        <div style="background: linear-gradient(135deg, #FFF0F6 0%, #FFE4E1 100%); padding: 20px; border-left: 4px solid #FF69B4; margin: 25px 0; border-radius: 8px;">
+          <h4 style="margin: 0 0 10px 0; color: #E91E63; display: flex; align-items: center;">
+            <span style="font-size: 18px; margin-right: 8px;">📦</span>
+            PUDO Locker Delivery
+          </h4>
+          <p style="margin: 0; font-size: 14px; color: #4A5568;"><strong>Selected Locker:</strong> ${data.selectedLockerName}</p>
+          <p style="margin: 5px 0 0 0; font-size: 14px; color: #718096;">${data.selectedLockerAddress}</p>
+        </div>
+      ` : `
+        <div style="background: linear-gradient(135deg, #FFF0F6 0%, #FFE4E1 100%); padding: 20px; border-left: 4px solid #FF69B4; margin: 25px 0; border-radius: 8px;">
+          <h4 style="margin: 0 0 10px 0; color: #E91E63; display: flex; align-items: center;">
+            <span style="font-size: 18px; margin-right: 8px;">🏠</span>
+            Delivery Address
+          </h4>
+          <p style="margin: 0; font-size: 14px; color: #4A5568;">${data.shippingAddress}</p>
+          <p style="margin: 5px 0 0 0; font-size: 14px; color: #718096;">${data.shippingCity}, ${data.shippingPostalCode}</p>
+        </div>
+      `;
+
+      // VAT breakdown if applicable
+      const vatBreakdownHtml = data.vatRegistered && data.vatAmount && data.vatAmount > 0 ? `
+        <tr>
+          <td style="padding: 8px 0; color: #6B7280;">VAT (${data.vatRate}%):</td>
+          <td style="padding: 8px 0; color: #6B7280; text-align: right;">R ${data.vatAmount.toFixed(2)}</td>
+        </tr>
+      ` : '';
+
+      const emailParams = new EmailParams()
+        .setFrom(this.sender)
+        .setTo([new Recipient(data.email, data.customerName)])
+        .setSubject(`Order Confirmed & Payment Received - ${data.orderNumber}`)
+        .setSettings({
+          track_clicks: false,
+          track_opens: true
+        })
+        .setHtml(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Order Confirmed & Payment Received - TeeMeYou</title>
+          </head>
+          <body style="margin: 0; padding: 0; background: linear-gradient(135deg, #F3F4F6 0%, #FFFFFF 100%); font-family: 'Segoe UI', Arial, sans-serif;">
+            <div class="container" style="max-width: 600px; margin: 20px auto; background: #FFFFFF; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 32px rgba(255, 105, 180, 0.2);">
+              
+              <!-- Header -->
+              <div class="header" style="background: linear-gradient(135deg, #FF69B4 0%, #E91E63 100%); padding: 40px; text-align: center; position: relative;">
+                <div style="position: absolute; top: 0; left: 0; width: 100%; height: 6px; background: linear-gradient(90deg, #FF69B4 0%, #FF1493 50%, #E91E63 100%);"></div>
+                <div style="display: inline-block; background: #FFFFFF; padding: 12px; border-radius: 50%; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);">
+                  <span style="font-size: 28px; color: #FF69B4;">✅</span>
+                </div>
+                <h1 style="color: #FFFFFF; margin: 0; font-size: 36px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3); letter-spacing: 1px;">TeeMeYou</h1>
+                <p style="color: #FFFFFF; margin: 8px 0 0 0; font-size: 18px; opacity: 0.9;">Order Confirmed & Payment Received!</p>
+              </div>
+            
+              <div style="background: #FFFFFF; padding: 40px; border-radius: 0 0 12px 12px;">
+                <div style="text-align: center; margin-bottom: 30px;">
+                  <div style="display: inline-block; background: linear-gradient(135deg, #10B981 0%, #059669 100%); padding: 12px; border-radius: 50%; margin-bottom: 15px;">
+                    <span style="font-size: 32px; color: #FFFFFF;">🎉</span>
+                  </div>
+                  <h2 style="color: #E91E63; margin: 0; font-size: 28px; font-weight: 600;">Thank you, ${data.customerName}!</h2>
+                </div>
+                
+                <div style="display: flex; gap: 15px; margin-bottom: 30px; justify-content: center; flex-wrap: wrap;">
+                  <span style="background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: white; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: bold; display: inline-flex; align-items: center;">
+                    <span style="margin-right: 5px;">✓</span> ORDER CONFIRMED
+                  </span>
+                  <span style="background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%); color: white; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: bold; display: inline-flex; align-items: center;">
+                    <span style="margin-right: 5px;">💳</span> PAYMENT RECEIVED
+                  </span>
+                </div>
+                
+                <p style="font-size: 16px; line-height: 1.6; color: #4A5568; margin-bottom: 30px; text-align: center;">
+                  Your order has been confirmed and your payment has been successfully processed${data.invoicePath ? '. Your invoice is attached to this email.' : '.'} We're now processing your order for shipping.
+                </p>
+                
+                <!-- Order Details -->
+                <div style="background: linear-gradient(135deg, #FFF0F6 0%, #FFFFFF 100%); padding: 25px; border-radius: 12px; border: 2px solid #FF69B4; margin: 25px 0; box-shadow: 0 4px 12px rgba(255, 105, 180, 0.1);">
+                  <h3 style="margin: 0 0 20px 0; color: #E91E63; display: flex; align-items: center;">
+                    <span style="font-size: 20px; margin-right: 8px;">📋</span>
+                    Order Details
+                  </h3>
+                  <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                      <td style="padding: 12px 0; font-weight: bold; color: #E91E63;">Order Number:</td>
+                      <td style="padding: 12px 0; color: #4A5568;">${data.orderNumber}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 12px 0; font-weight: bold; color: #E91E63;">Payment Method:</td>
+                      <td style="padding: 12px 0; color: #4A5568;">Card Payment</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 12px 0; font-weight: bold; color: #E91E63;">Order Status:</td>
+                      <td style="padding: 12px 0; color: #10B981; font-weight: bold;">Processing</td>
+                    </tr>
+                  </table>
+                </div>
+                
+                <!-- Order Items -->
+                <div style="background: #F9FAFB; padding: 25px; border-radius: 12px; margin: 25px 0;">
+                  <h3 style="margin: 0 0 20px 0; color: #E91E63; display: flex; align-items: center;">
+                    <span style="font-size: 20px; margin-right: 8px;">🛍️</span>
+                    Your Items
+                  </h3>
+                  <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden;">
+                    <thead>
+                      <tr style="background: linear-gradient(135deg, #FF69B4 0%, #E91E63 100%);">
+                        <th style="padding: 15px 12px; color: white; text-align: left; font-weight: 600;">Item</th>
+                        <th style="padding: 15px 12px; color: white; text-align: center; font-weight: 600;">Qty</th>
+                        <th style="padding: 15px 12px; color: white; text-align: right; font-weight: 600;">Price</th>
+                        <th style="padding: 15px 12px; color: white; text-align: right; font-weight: 600;">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${orderItemsHtml}
+                    </tbody>
+                  </table>
+                  
+                  <div style="background: white; padding: 20px; margin-top: 15px; border-radius: 8px; border: 2px solid #FF69B4;">
+                    <table style="width: 100%; border-collapse: collapse;">
+                      <tr>
+                        <td style="padding: 8px 0; color: #6B7280;">Subtotal:</td>
+                        <td style="padding: 8px 0; color: #6B7280; text-align: right;">R ${data.subtotalAmount.toFixed(2)}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 8px 0; color: #6B7280;">Shipping:</td>
+                        <td style="padding: 8px 0; color: #6B7280; text-align: right;">R ${data.shippingCost.toFixed(2)}</td>
+                      </tr>
+                      ${vatBreakdownHtml}
+                      <tr style="border-top: 2px solid #FF69B4;">
+                        <td style="padding: 12px 0; font-weight: bold; color: #E91E63; font-size: 18px;">Total Paid:</td>
+                        <td style="padding: 12px 0; color: #10B981; font-weight: bold; font-size: 18px; text-align: right;">R ${data.totalAmount.toFixed(2)}</td>
+                      </tr>
+                    </table>
+                  </div>
+                </div>
+                
+                ${shippingInfoHtml}
+                
+                <!-- What's Next -->
+                <div style="background: linear-gradient(135deg, #EBF8FF 0%, #DBEAFE 100%); border: 2px solid #3B82F6; padding: 20px; border-radius: 12px; margin: 25px 0;">
+                  <h4 style="margin: 0 0 15px 0; color: #1E40AF; display: flex; align-items: center;">
+                    <span style="font-size: 18px; margin-right: 8px;">⏭️</span>
+                    What happens next?
+                  </h4>
+                  <ul style="margin: 0; padding-left: 20px; color: #374151;">
+                    <li style="margin-bottom: 8px;">We'll process your order and prepare it for shipping</li>
+                    <li style="margin-bottom: 8px;">You'll receive a shipping notification with tracking details</li>
+                    <li style="margin-bottom: 8px;">Your order will be delivered within 3-5 business days</li>
+                  </ul>
+                </div>
+                
+                <div style="text-align: center; margin: 30px 0;">
+                  <a href="https://teemeyou.shop/order/${data.orderId}" 
+                     style="background: linear-gradient(135deg, #FF69B4 0%, #E91E63 100%); 
+                            color: white; 
+                            padding: 16px 32px; 
+                            text-decoration: none; 
+                            border-radius: 8px; 
+                            font-weight: 600; 
+                            font-size: 16px; 
+                            display: inline-block;
+                            box-shadow: 0 4px 15px rgba(255, 105, 180, 0.4);
+                            text-transform: uppercase;
+                            letter-spacing: 0.5px;">
+                    📱 Track Your Order
+                  </a>
+                </div>
+                
+                <hr style="border: none; border-top: 2px solid #FF69B4; margin: 30px 0; opacity: 0.3;">
+                
+                <!-- Footer -->
+                <div style="background: #4A5568; padding: 25px; text-align: center; border-radius: 12px; margin: 25px 0;">
+                  <div style="margin-bottom: 15px;">
+                    <span style="display: inline-block; background: #FFFFFF; padding: 8px 12px; border-radius: 20px; margin: 0 5px; box-shadow: 0 2px 8px rgba(255, 105, 180, 0.2);">
+                      <span style="font-size: 16px; color: #FF69B4;">🛍️</span>
+                    </span>
+                  </div>
+                  <p style="color: #FFFFFF; margin: 0; font-size: 14px; font-weight: 500;">
+                    © 2024 TeeMeYou • South Africa's Premium Shopping Platform
+                  </p>
+                  <p style="color: #CBD5E0; margin: 8px 0 0 0; font-size: 12px;">
+                    <a href="https://teemeyou.shop" style="color: #FF69B4; text-decoration: none;">teemeyou.shop</a> | 
+                    <a href="mailto:sales@teemeyou.shop" style="color: #FF69B4; text-decoration: none;">sales@teemeyou.shop</a> | 
+                    <a href="tel:+27712063084" style="color: #FF69B4; text-decoration: none;">+27 71 206 3084</a>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </body>
+          </html>
+        `);
+
+      // Add PDF invoice attachment if provided
+      if (data.invoicePath) {
+        try {
+          const fileBuffer = await objectStoreAdapter.getFile(data.invoicePath);
+          const fileName = `Invoice-${data.orderNumber}.pdf`;
+          
+          const attachment = new Attachment(fileBuffer, fileName, 'attachment');
+          emailParams.setAttachments([attachment]);
+          
+          logger.info('Invoice attachment added to combined order confirmation email', { 
+            orderNumber: data.orderNumber,
+            invoicePath: data.invoicePath,
+            fileName 
+          });
+        } catch (attachmentError) {
+          logger.error('Failed to attach invoice to combined order confirmation email', { 
+            error: attachmentError,
+            orderNumber: data.orderNumber,
+            invoicePath: data.invoicePath 
+          });
+          // Continue sending email without attachment
+        }
+      }
+
+      await this.mailerSend.email.send(emailParams);
+      
+      // Log email in database
+      await this.logEmail({
+        email: data.email,
+        emailType: 'order_confirmation_with_payment',
+        subject: `Order Confirmed & Payment Received - ${data.orderNumber}`,
+        status: 'sent',
+        orderNumber: data.orderNumber,
+        orderId: data.orderId
+      });
+      
+      logger.info('Combined order confirmation and payment email sent successfully', { 
+        email: data.email,
+        orderNumber: data.orderNumber,
+        hasInvoiceAttachment: !!data.invoicePath
+      });
+    } catch (error) {
+      logger.error('Error sending combined order confirmation and payment email', { error, data });
       throw error;
     }
   }

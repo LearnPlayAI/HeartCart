@@ -481,7 +481,7 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
       vatRegistrationNumber: orderData.vatRegistrationNumber || '4567890123', // Default VAT number
       paymentMethod: 'card',
       paymentStatus: 'payment_received', // Already paid via card
-      status: 'confirmed', // Auto-confirm card payments
+      status: 'processing', // Set to processing as requested by user
       yocoCheckoutId: checkoutId,
       yocoPaymentId: payment.id,
       transactionFeeAmount: fees.feeAmount,
@@ -722,13 +722,13 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
       // Don't fail the webhook for invoice errors
     }
 
-      // Send order confirmation and payment confirmation emails
+      // Send combined order confirmation and payment confirmation email
       try {
-        console.log('🔥 STARTING EMAIL SENDING PROCESS FOR YOCO PAYMENT 🔥');
+        console.log('🔥 STARTING COMBINED EMAIL SENDING PROCESS FOR YOCO PAYMENT 🔥');
         console.log('=' .repeat(80));
         
         const orderWithDetails = await storage.getOrderById(newOrder.id);
-        console.log('Retrieved order details for email sending:', {
+        console.log('Retrieved order details for combined email sending:', {
           orderId: newOrder.id,
           orderExists: !!orderWithDetails,
           customerEmail: orderWithDetails?.customerEmail,
@@ -739,22 +739,37 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
         });
         
         if (orderWithDetails) {
-          console.log('📧 Attempting to send order confirmation email...');
-          // Send order confirmation email
-          await databaseEmailService.sendOrderConfirmationEmail(orderWithDetails);
-          console.log('✅ Order confirmation email sent successfully');
+          // Get order items for the combined email
+          const orderItemsData = await storage.getOrderItems(newOrder.id);
+          console.log('Retrieved order items for combined email:', {
+            orderId: newOrder.id,
+            orderItemsCount: orderItemsData?.length || 0
+          });
           
-          // Create properly structured payment confirmation email data with invoice attachment
-          const paymentConfirmationData = {
+          // Create combined order confirmation and payment confirmation email data
+          const combinedEmailData = {
             email: orderWithDetails.customerEmail,
             customerName: orderWithDetails.customerName,
             orderNumber: orderWithDetails.orderNumber,
             orderId: orderWithDetails.id,
-            amount: orderWithDetails.totalAmount,
-            currency: 'R',
-            paymentMethod: 'Card Payment',
+            orderItems: orderItemsData.map(item => ({
+              productName: item.productName,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              totalPrice: item.totalPrice,
+              attributeDisplayText: item.attributeDisplayText || undefined
+            })),
             subtotalAmount: orderWithDetails.subtotalAmount,
             shippingCost: orderWithDetails.shippingCost,
+            totalAmount: orderWithDetails.totalAmount,
+            paymentMethod: 'card',
+            paymentStatus: 'payment_received',
+            shippingMethod: orderWithDetails.shippingMethod || 'pudo',
+            selectedLockerName: orderWithDetails.selectedLockerName,
+            selectedLockerAddress: orderWithDetails.selectedLockerAddress,
+            shippingAddress: orderWithDetails.shippingAddress,
+            shippingCity: orderWithDetails.shippingCity,
+            shippingPostalCode: orderWithDetails.shippingPostalCode,
             vatAmount: orderWithDetails.vatAmount || 0,
             vatRate: orderWithDetails.vatRate || 0,
             vatRegistered: orderWithDetails.vatRegistered || false,
@@ -762,37 +777,40 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
             invoicePath: invoicePath // Include the generated invoice path for attachment
           };
           
-          console.log('📧 Attempting to send payment confirmation email with data:', {
-            email: paymentConfirmationData.email,
-            customerName: paymentConfirmationData.customerName,
-            orderNumber: paymentConfirmationData.orderNumber,
-            amount: paymentConfirmationData.amount,
-            hasInvoiceAttachment: !!paymentConfirmationData.invoicePath,
-            invoicePath: paymentConfirmationData.invoicePath
+          console.log('📧 Attempting to send combined order confirmation and payment email with data:', {
+            email: combinedEmailData.email,
+            customerName: combinedEmailData.customerName,
+            orderNumber: combinedEmailData.orderNumber,
+            orderItemsCount: combinedEmailData.orderItems.length,
+            totalAmount: combinedEmailData.totalAmount,
+            paymentStatus: combinedEmailData.paymentStatus,
+            hasInvoiceAttachment: !!combinedEmailData.invoicePath,
+            invoicePath: combinedEmailData.invoicePath
           });
           
-          // Send payment confirmation email with invoice attachment
-          await databaseEmailService.sendPaymentConfirmationEmail(paymentConfirmationData);
-          console.log('✅ Payment confirmation email sent successfully');
+          // Send combined order confirmation and payment confirmation email with invoice attachment
+          await databaseEmailService.sendOrderConfirmationWithPaymentEmail(combinedEmailData);
+          console.log('✅ Combined order confirmation and payment email sent successfully');
           
-          console.log('✅✅✅ ALL EMAILS SENT SUCCESSFULLY FOR YOCO PAYMENT ✅✅✅');
-          console.log('Order confirmation and payment confirmation emails sent for order:', {
+          console.log('✅✅✅ COMBINED EMAIL SENT SUCCESSFULLY FOR YOCO PAYMENT ✅✅✅');
+          console.log('Combined order confirmation and payment email sent for order:', {
             orderNumber: newOrder.orderNumber,
             hasInvoiceAttachment: !!invoicePath,
             invoicePath: invoicePath,
-            customerEmail: orderWithDetails.customerEmail
+            customerEmail: orderWithDetails.customerEmail,
+            orderItemsIncluded: combinedEmailData.orderItems.length
           });
         } else {
-          console.error('❌ No order details found for email sending:', {
+          console.error('❌ No order details found for combined email sending:', {
             orderId: newOrder.id,
             orderNumber: newOrder.orderNumber
           });
         }
         console.log('=' .repeat(80));
       } catch (emailError) {
-        console.error('❌❌❌ CRITICAL EMAIL SENDING ERROR FOR YOCO PAYMENT ❌❌❌');
+        console.error('❌❌❌ CRITICAL COMBINED EMAIL SENDING ERROR FOR YOCO PAYMENT ❌❌❌');
         console.error('=' .repeat(80));
-        console.error('Email sending failed for order:', {
+        console.error('Combined email sending failed for order:', {
           orderId: newOrder.id,
           orderNumber: newOrder.orderNumber,
           customerEmail: orderWithDetails?.customerEmail,
