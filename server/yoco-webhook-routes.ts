@@ -6,7 +6,7 @@
 import { Router, Request, Response } from 'express';
 import asyncHandler from 'express-async-handler';
 import { yocoService, YocoPaymentEvent } from './yoco-service.js';
-import { unifiedEmailService } from './unified-email-service.js';
+import { databaseEmailService } from './database-email-service.js';
 import { db } from './db';
 import { products } from '../shared/schema.js';
 import { eq } from 'drizzle-orm';
@@ -724,10 +724,25 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
 
       // Send order confirmation and payment confirmation emails
       try {
+        console.log('🔥 STARTING EMAIL SENDING PROCESS FOR YOCO PAYMENT 🔥');
+        console.log('=' .repeat(80));
+        
         const orderWithDetails = await storage.getOrderById(newOrder.id);
+        console.log('Retrieved order details for email sending:', {
+          orderId: newOrder.id,
+          orderExists: !!orderWithDetails,
+          customerEmail: orderWithDetails?.customerEmail,
+          customerName: orderWithDetails?.customerName,
+          orderNumber: orderWithDetails?.orderNumber,
+          totalAmount: orderWithDetails?.totalAmount,
+          hasInvoicePath: !!invoicePath
+        });
+        
         if (orderWithDetails) {
+          console.log('📧 Attempting to send order confirmation email...');
           // Send order confirmation email
-          await unifiedEmailService.sendOrderConfirmationEmail(orderWithDetails);
+          await databaseEmailService.sendOrderConfirmationEmail(orderWithDetails);
+          console.log('✅ Order confirmation email sent successfully');
           
           // Create properly structured payment confirmation email data with invoice attachment
           const paymentConfirmationData = {
@@ -747,17 +762,46 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
             invoicePath: invoicePath // Include the generated invoice path for attachment
           };
           
-          // Send payment confirmation email with invoice attachment
-          await unifiedEmailService.sendPaymentConfirmationEmail(paymentConfirmationData);
+          console.log('📧 Attempting to send payment confirmation email with data:', {
+            email: paymentConfirmationData.email,
+            customerName: paymentConfirmationData.customerName,
+            orderNumber: paymentConfirmationData.orderNumber,
+            amount: paymentConfirmationData.amount,
+            hasInvoiceAttachment: !!paymentConfirmationData.invoicePath,
+            invoicePath: paymentConfirmationData.invoicePath
+          });
           
+          // Send payment confirmation email with invoice attachment
+          await databaseEmailService.sendPaymentConfirmationEmail(paymentConfirmationData);
+          console.log('✅ Payment confirmation email sent successfully');
+          
+          console.log('✅✅✅ ALL EMAILS SENT SUCCESSFULLY FOR YOCO PAYMENT ✅✅✅');
           console.log('Order confirmation and payment confirmation emails sent for order:', {
             orderNumber: newOrder.orderNumber,
             hasInvoiceAttachment: !!invoicePath,
-            invoicePath: invoicePath
+            invoicePath: invoicePath,
+            customerEmail: orderWithDetails.customerEmail
+          });
+        } else {
+          console.error('❌ No order details found for email sending:', {
+            orderId: newOrder.id,
+            orderNumber: newOrder.orderNumber
           });
         }
+        console.log('=' .repeat(80));
       } catch (emailError) {
-        console.error('Failed to send confirmation emails:', emailError);
+        console.error('❌❌❌ CRITICAL EMAIL SENDING ERROR FOR YOCO PAYMENT ❌❌❌');
+        console.error('=' .repeat(80));
+        console.error('Email sending failed for order:', {
+          orderId: newOrder.id,
+          orderNumber: newOrder.orderNumber,
+          customerEmail: orderWithDetails?.customerEmail,
+          errorType: typeof emailError,
+          errorMessage: emailError instanceof Error ? emailError.message : String(emailError),
+          errorStack: emailError instanceof Error ? emailError.stack : undefined,
+          errorDetails: emailError
+        });
+        console.error('=' .repeat(80));
         // Don't fail the webhook for email errors
       }
 
