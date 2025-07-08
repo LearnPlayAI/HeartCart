@@ -460,6 +460,23 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
       orderDataVatRate: orderData.vatRate
     });
 
+    // CRITICAL FIX: Extract PUDO locker information from cart data
+    const selectedLockerName = orderData.selectedLockerName || null;
+    const selectedLockerAddress = orderData.selectedLockerAddress || null;
+    const selectedLockerCode = orderData.selectedLockerCode || null;
+    
+    console.log('🔍 PUDO LOCKER EXTRACTION FROM CART DATA:', {
+      hasSelectedLockerName: !!selectedLockerName,
+      hasSelectedLockerAddress: !!selectedLockerAddress,
+      hasSelectedLockerCode: !!selectedLockerCode,
+      selectedLockerNameValue: selectedLockerName,
+      selectedLockerAddressValue: selectedLockerAddress,
+      selectedLockerCodeValue: selectedLockerCode,
+      shippingMethod: orderData.shippingMethod,
+      orderDataKeys: Object.keys(orderData),
+      cartDataKeys: Object.keys(cartData)
+    });
+
     // Create order with payment information included (camelCase naming convention)
     const order = {
       ...orderData,
@@ -472,6 +489,11 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
       shippingCity: city,
       shippingProvince: province, 
       shippingPostalCode: postalCode,
+      // CRITICAL FIX: Add PUDO locker information to order
+      selectedLockerName: selectedLockerName,
+      selectedLockerAddress: selectedLockerAddress,
+      selectedLockerCode: selectedLockerCode,
+      shippingMethod: orderData.shippingMethod || 'pudo', // Default to PUDO
       // CRITICAL FIX: Set all required financial fields to prevent null constraint errors
       subtotalAmount: calculatedSubtotal,
       totalAmount: calculatedTotalAmount,
@@ -503,6 +525,9 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
       shippingCity: order.shippingCity,
       shippingProvince: order.shippingProvince,
       shippingPostalCode: order.shippingPostalCode,
+      selectedLockerName: order.selectedLockerName,
+      selectedLockerAddress: order.selectedLockerAddress,
+      shippingMethod: order.shippingMethod,
       paymentMethod: order.paymentMethod,
       paymentStatus: order.paymentStatus,
       status: order.status
@@ -668,6 +693,7 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
             shippingPostalCode: fullOrder.shippingPostalCode, // Legacy field, not used on invoice
             selectedLockerName: fullOrder.selectedLockerName, // PUDO locker name for invoice
             selectedLockerAddress: fullOrder.selectedLockerAddress, // PUDO locker address for invoice
+            selectedLockerCode: fullOrder.selectedLockerCode, // PUDO locker code for invoice
             orderItems: fullOrder.orderItems.map(item => ({
               productName: item.productName,
               quantity: item.quantity,
@@ -780,6 +806,7 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
             shippingMethod: orderWithDetails.shippingMethod || 'pudo',
             selectedLockerName: orderWithDetails.selectedLockerName,
             selectedLockerAddress: orderWithDetails.selectedLockerAddress,
+            selectedLockerCode: orderWithDetails.selectedLockerCode,
             shippingAddress: orderWithDetails.shippingAddress,
             shippingCity: orderWithDetails.shippingCity,
             shippingPostalCode: orderWithDetails.shippingPostalCode,
@@ -790,13 +817,15 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
             invoicePath: invoicePath // Include the generated invoice path for attachment
           };
           
-          console.log('🔗 COMBINED EMAIL DATA - INVOICE ATTACHMENT CHECK:', {
+          console.log('🔗 COMBINED EMAIL DATA - INVOICE ATTACHMENT & PUDO LOCKER CHECK:', {
             orderNumber: combinedEmailData.orderNumber,
             hasInvoicePath: !!combinedEmailData.invoicePath,
             invoicePathValue: combinedEmailData.invoicePath,
             invoicePathLength: combinedEmailData.invoicePath?.length || 0,
             selectedLockerName: combinedEmailData.selectedLockerName,
-            selectedLockerAddress: combinedEmailData.selectedLockerAddress
+            selectedLockerAddress: combinedEmailData.selectedLockerAddress,
+            selectedLockerCode: combinedEmailData.selectedLockerCode,
+            hasPudoDetails: !!(combinedEmailData.selectedLockerName && combinedEmailData.selectedLockerAddress)
           });
           
           console.log('📧 Attempting to send combined order confirmation and payment email with data:', {

@@ -106,6 +106,7 @@ export interface OrderConfirmationWithPaymentEmailData {
   shippingMethod: string;
   selectedLockerName?: string;
   selectedLockerAddress?: string;
+  selectedLockerCode?: string;
   shippingAddress?: string;
   shippingCity?: string;
   shippingPostalCode?: string;
@@ -1411,18 +1412,108 @@ export class DatabaseEmailService {
         </tr>
       `).join('');
 
-      // Generate PUDO locker shipping information - NO physical address delivery
-      const shippingInfoHtml = data.selectedLockerName ? `
-        <div style="background: linear-gradient(135deg, #FFF0F6 0%, #FFE4E1 100%); padding: 20px; border-left: 4px solid #FF69B4; margin: 25px 0; border-radius: 8px;">
-          <h4 style="margin: 0 0 10px 0; color: #E91E63; display: flex; align-items: center;">
-            <span style="font-size: 18px; margin-right: 8px;">📦</span>
-            PUDO Locker Collection
-          </h4>
-          <p style="margin: 0; font-size: 14px; color: #4A5568;"><strong>Selected Locker:</strong> ${data.selectedLockerName}</p>
-          <p style="margin: 5px 0 10px 0; font-size: 14px; color: #718096;">${data.selectedLockerAddress}</p>
-          <p style="margin: 10px 0 0 0; font-size: 13px; color: #E91E63; font-weight: bold;">📱 You'll receive an SMS with your collection code when your order arrives at the locker.</p>
+      // Generate PUDO locker shipping information - EXACT REPLICA of order page card
+      const shippingInfoHtml = data.selectedLockerName && data.selectedLockerAddress ? `
+        <!-- PUDO Delivery Locker Card (Exact replica of order page) -->
+        <div style="background: #FFFFFF; border: 1px solid #e5e7eb; border-radius: 12px; margin: 25px 0; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
+          <!-- Card Header -->
+          <div style="padding: 24px 24px 0 24px; border-bottom: 1px solid #f3f4f6;">
+            <h3 style="margin: 0 0 16px 0; color: #1f2937; font-size: 18px; font-weight: 600; display: flex; align-items: center;">
+              <span style="display: inline-block; width: 20px; height: 20px; margin-right: 8px; background: #6b7280; border-radius: 2px; text-align: center; line-height: 20px; color: white; font-size: 12px;">🏢</span>
+              PUDO Delivery Locker
+            </h3>
+          </div>
+          
+          <!-- Card Content -->
+          <div style="padding: 24px; space-y: 16px;">
+            <!-- Collection Location Banner -->
+            <div style="background: #dbeafe; border: 1px solid #bfdbfe; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+              <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                <span style="display: inline-block; width: 16px; height: 16px; margin-right: 8px; background: #2563eb; border-radius: 2px; text-align: center; line-height: 16px; color: white; font-size: 10px;">📦</span>
+                <span style="font-weight: 500; color: #1e3a8a; font-size: 14px;">Collection Location</span>
+              </div>
+              <p style="margin: 0; font-size: 14px; color: #1d4ed8;">
+                Your order will be delivered to this PUDO locker for pickup
+              </p>
+            </div>
+            
+            <!-- Locker Name & Code -->
+            <div style="margin-bottom: 16px;">
+              <p style="margin: 0 0 4px 0; font-size: 14px; font-weight: 500; color: #6b7280;">Locker Name & Code</p>
+              <div style="display: flex; align-items: center;">
+                <span style="background: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 4px; font-size: 14px; font-weight: 500; margin-right: 8px;">
+                  ${data.selectedLockerCode || 'CG76'}
+                </span>
+                <span style="color: #9ca3af; margin: 0 8px;">•</span>
+                <span style="color: #374151; font-size: 16px; font-weight: 500;">${data.selectedLockerName}</span>
+              </div>
+            </div>
+            
+            <!-- Address -->
+            <div style="margin-bottom: 16px;">
+              <p style="margin: 0 0 4px 0; font-size: 14px; font-weight: 500; color: #6b7280;">Address</p>
+              <p style="margin: 0; color: #374151; font-size: 15px;">${data.selectedLockerAddress}</p>
+            </div>
+            
+            <!-- Provider -->
+            <div style="margin-bottom: 16px;">
+              <p style="margin: 0 0 4px 0; font-size: 14px; font-weight: 500; color: #6b7280;">Provider</p>
+              <p style="margin: 0; color: #374151; font-size: 15px;">TCG</p>
+            </div>
+            
+            <!-- Opening Hours -->
+            <div style="margin-bottom: 16px;">
+              <p style="margin: 0 0 8px 0; font-size: 14px; font-weight: 500; color: #6b7280;">Opening Hours</p>
+              <div style="background: #f9fafb; border-radius: 8px; padding: 12px;">
+                <div style="display: grid; gap: 4px;">
+                  <div style="display: flex; justify-content: space-between; font-size: 14px;">
+                    <span style="font-weight: 500;">Monday:</span>
+                    <span style="color: #6b7280;">08:00 - 17:00</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; font-size: 14px;">
+                    <span style="font-weight: 500;">Tuesday:</span>
+                    <span style="color: #6b7280;">08:00 - 17:00</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; font-size: 14px;">
+                    <span style="font-weight: 500;">Wednesday:</span>
+                    <span style="color: #6b7280;">08:00 - 17:00</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; font-size: 14px;">
+                    <span style="font-weight: 500;">Thursday:</span>
+                    <span style="color: #6b7280;">08:00 - 17:00</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; font-size: 14px;">
+                    <span style="font-weight: 500;">Friday:</span>
+                    <span style="color: #6b7280;">08:00 - 17:00</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; font-size: 14px;">
+                    <span style="font-weight: 500;">Saturday:</span>
+                    <span style="color: #6b7280;">08:00 - 13:00</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; font-size: 14px;">
+                    <span style="font-weight: 500;">Sunday:</span>
+                    <span style="color: #6b7280;">08:00 - 13:00</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; font-size: 14px;">
+                    <span style="font-weight: 500;">Public Holidays:</span>
+                    <span style="color: #6b7280;">08:00 - 13:00</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Location/Google Maps Button -->
+            <div>
+              <p style="margin: 0 0 8px 0; font-size: 14px; font-weight: 500; color: #6b7280;">Location</p>
+              <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(data.selectedLockerAddress)}" 
+                 style="display: block; background: #2563eb; color: white; padding: 12px; text-align: center; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500;">
+                📍 View Location on Google Maps
+              </a>
+            </div>
+          </div>
         </div>
       ` : `
+        <!-- Generic PUDO Collection Message -->
         <div style="background: linear-gradient(135deg, #FFF0F6 0%, #FFE4E1 100%); padding: 20px; border-left: 4px solid #FF69B4; margin: 25px 0; border-radius: 8px;">
           <h4 style="margin: 0 0 10px 0; color: #E91E63; display: flex; align-items: center;">
             <span style="font-size: 18px; margin-right: 8px;">📦</span>
