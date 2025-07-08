@@ -59,9 +59,34 @@ router.post('/card/checkout', isAuthenticated, asyncHandler(async (req: Request,
     }
 
     // Convert total amount to cents (YoCo requires cents)
-    const amountInCents = Math.round(cartData.total * 100);
+    let amountInCents = Math.round(cartData.total * 100);
     const vatAmountInCents = Math.round(cartData.vatAmount * 100);
     const subtotalInCents = Math.round(cartData.subtotal * 100);
+
+    // Check if admin user has enabled shipping fee skip for testing
+    if (req.user?.role === 'admin') {
+      try {
+        const shippingFeeSetting = await storage.getSystemSetting('skip_shipping_fee_for_admin');
+        const skipShippingFee = shippingFeeSetting?.settingValue === 'true';
+        
+        if (skipShippingFee) {
+          const originalAmount = amountInCents;
+          amountInCents = Math.max(0, amountInCents - 8500); // Subtract R85 (8500 cents)
+          
+          console.log('🎯 Admin shipping fee skip applied:', {
+            adminUser: req.user?.email,
+            originalAmountCents: originalAmount,
+            originalAmountRands: originalAmount / 100,
+            adjustedAmountCents: amountInCents,
+            adjustedAmountRands: amountInCents / 100,
+            savedAmount: (originalAmount - amountInCents) / 100,
+            note: 'Order will still show full amount in database/emails'
+          });
+        }
+      } catch (error) {
+        console.warn('Failed to check admin shipping fee setting, proceeding with normal amount:', error);
+      }
+    }
 
     // Generate temporary checkout ID for tracking (no order exists yet)
     const tempCheckoutId = `temp_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;

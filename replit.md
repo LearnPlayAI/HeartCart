@@ -872,6 +872,14 @@ Changelog:
   * COMPLETE FIX: Deleted old webhook registration, updated YOCO_WEBHOOK_SECRET with correct secret (whsec_RkIzMUEzNDRFOTI5QkQ3OUZGNTQzRjUzREUzQURFNDU=)
   * Enhanced security logging now tracks IP addresses, user agents, and signature verification failures for future monitoring
   * System now has single webhook registration with proper signature verification - phantom order creation permanently resolved
+- July 8, 2025. Admin shipping fee skip feature implemented for testing real card payments:
+  * Added AdminShippingFeeCard component to /admin/settings page following established EftSettingsCard pattern
+  * Implemented skip_shipping_fee_for_admin system setting with toggle switch for admin-only testing
+  * Modified YoCo card payment calculation to subtract R85 shipping fee when admin user has setting enabled
+  * Orders still save full amount (including R85) in database, emails, and invoices - only YoCo payment amount is reduced
+  * Allows admins to test real card payments with cheaper amounts while preserving all existing functionality
+  * Setting can be toggled on/off instantly for testing without affecting regular customer payments
+  * Complete admin-controlled testing system ready for deployment verification
 - July 7, 2025. CRITICAL YoCo webhook signature verification deployment fix - Production ready:
   * RESOLVED CRITICAL ISSUE: Fixed crypto module import error preventing webhook signature verification in deployed environment
   * Root cause: Dynamic require('crypto') not supported in production, replaced with proper ES6 import statement

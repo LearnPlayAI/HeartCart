@@ -5,6 +5,7 @@ import { ProductSharingCard } from '@/components/admin/ProductSharingCard';
 import { VATSettingsCard } from '@/components/admin/VATSettingsCard';
 import { YocoSettingsCard } from '@/components/admin/YocoSettingsCard';
 import { EftSettingsCard } from '@/components/admin/EftSettingsCard';
+import { AdminShippingFeeCard } from '@/components/admin/AdminShippingFeeCard';
 
 export default function AdminSettingsPage() {
   return (
@@ -25,6 +26,7 @@ export default function AdminSettingsPage() {
             <div className="space-y-4">
               <YocoSettingsCard />
               <EftSettingsCard />
+              <AdminShippingFeeCard />
             </div>
           </div>
 
