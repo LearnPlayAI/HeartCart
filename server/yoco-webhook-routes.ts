@@ -26,11 +26,14 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
 
     console.log('\n💥💥💥 YOCO WEBHOOK RECEIVED! 💥💥💥');
     console.log('═'.repeat(80));
-    console.log('WEBHOOK DETAILS:');
+    console.log('WEBHOOK SECURITY ANALYSIS:');
     console.log('  webhookId:', webhookId);
     console.log('  timestamp:', timestamp);
     console.log('  eventType:', req.body.type);
     console.log('  hasSignature:', !!signature);
+    console.log('  signature:', signature);
+    console.log('  sourceIP:', req.ip || req.connection.remoteAddress);
+    console.log('  userAgent:', req.get('User-Agent'));
     console.log('  paymentId:', req.body.payload?.id);
     console.log('  paymentAmount:', req.body.payload?.amount);
     console.log('  paymentCurrency:', req.body.payload?.currency);
@@ -42,19 +45,38 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
     console.log('  customerPhone:', req.body.payload?.metadata?.customerPhone);
     console.log('  webhookSecretConfigured:', !!process.env.YOCO_WEBHOOK_SECRET);
     console.log('  webhookSecretUsed:', process.env.YOCO_WEBHOOK_SECRET?.substring(0, 20) + '...');
+    console.log('  SECURITY STATUS: PHANTOM ORDER PROTECTION ACTIVE');
     console.log('═'.repeat(80));
 
-    // Validate webhook timestamp (prevent replay attacks)
+    // CRITICAL SECURITY: Validate webhook timestamp (prevent replay attacks)
     if (!yocoService.isValidTimestamp(timestamp)) {
-      console.error('YoCo webhook timestamp validation failed:', timestamp);
+      console.error('🚨 SECURITY ALERT: YoCo webhook timestamp validation failed - potential replay attack!', {
+        timestamp,
+        webhookId,
+        sourceIP: req.ip,
+        userAgent: req.get('User-Agent')
+      });
       return res.status(400).json({ error: 'Invalid timestamp' });
     }
 
-    // Verify webhook signature
-    if (!(await yocoService.verifyWebhookSignature(rawBody, signature, webhookId, timestamp))) {
-      console.error('YoCo webhook signature verification failed');
+    // CRITICAL SECURITY: Verify webhook signature (prevents phantom orders)
+    const signatureValid = await yocoService.verifyWebhookSignature(rawBody, signature, webhookId, timestamp);
+    if (!signatureValid) {
+      console.error('🚨 CRITICAL SECURITY ALERT: YoCo webhook signature verification FAILED - potential attack!', {
+        webhookId,
+        timestamp,
+        hasSignature: !!signature,
+        sourceIP: req.ip,
+        userAgent: req.get('User-Agent'),
+        eventType: req.body.type,
+        paymentId: req.body.payload?.id,
+        checkoutId: req.body.payload?.metadata?.checkoutId,
+        SECURITY_STATUS: 'REJECTED - PHANTOM ORDER PROTECTION ACTIVE'
+      });
       return res.status(403).json({ error: 'Invalid signature' });
     }
+
+    console.log('✅ SECURITY CHECK PASSED: Webhook signature and timestamp validated successfully');
 
     const event: YocoPaymentEvent = req.body;
 

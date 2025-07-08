@@ -851,6 +851,13 @@ Changelog:
   * Changed from `{...item, orderId, createdAt}` to explicit mapping with `productImageUrl: item.productImageUrl || null`
   * Confirmed products table contains valid image URLs and YoCo webhook correctly fetches them
   * Product images will now properly save to orderItems table during card payments and display correctly in orders and emails
+- July 8, 2025. CRITICAL SECURITY: YoCo webhook phantom order protection system implemented:
+  * SECURITY VULNERABILITY FIXED: Webhook signature verification was allowing all webhooks when no secret configured
+  * Changed verifyWebhookSignature to reject ALL webhooks without proper YOCO_WEBHOOK_SECRET instead of allowing them
+  * Enhanced webhook logging with IP tracking, user agent analysis, and security status monitoring
+  * Added comprehensive security alerts for failed signature verification and timestamp validation attempts
+  * Existing duplicate protection via getOrderByYocoCheckoutId method confirmed operational
+  * Phantom order creation prevention system now fully active - webhooks without valid signatures will be rejected
 - July 7, 2025. CRITICAL YoCo webhook signature verification deployment fix - Production ready:
   * RESOLVED CRITICAL ISSUE: Fixed crypto module import error preventing webhook signature verification in deployed environment
   * Root cause: Dynamic require('crypto') not supported in production, replaced with proper ES6 import statement

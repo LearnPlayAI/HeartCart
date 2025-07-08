@@ -236,8 +236,8 @@ class YocoService {
     const config = await getYocoConfig();
     
     if (!config.webhookSecret) {
-      console.warn('YoCo webhook secret not configured, skipping verification');
-      return true; // Allow for development
+      console.error('CRITICAL SECURITY: YoCo webhook secret not configured - REJECTING ALL WEBHOOKS');
+      return false; // SECURITY FIX: Reject all webhooks without proper secret
     }
 
     try {
