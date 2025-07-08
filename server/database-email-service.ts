@@ -1411,24 +1411,25 @@ export class DatabaseEmailService {
         </tr>
       `).join('');
 
-      // Generate shipping information with hot pink styling
-      const shippingInfoHtml = data.shippingMethod === 'pudo' && data.selectedLockerName ? `
+      // Generate PUDO locker shipping information - NO physical address delivery
+      const shippingInfoHtml = data.selectedLockerName ? `
         <div style="background: linear-gradient(135deg, #FFF0F6 0%, #FFE4E1 100%); padding: 20px; border-left: 4px solid #FF69B4; margin: 25px 0; border-radius: 8px;">
           <h4 style="margin: 0 0 10px 0; color: #E91E63; display: flex; align-items: center;">
             <span style="font-size: 18px; margin-right: 8px;">📦</span>
-            PUDO Locker Delivery
+            PUDO Locker Collection
           </h4>
           <p style="margin: 0; font-size: 14px; color: #4A5568;"><strong>Selected Locker:</strong> ${data.selectedLockerName}</p>
-          <p style="margin: 5px 0 0 0; font-size: 14px; color: #718096;">${data.selectedLockerAddress}</p>
+          <p style="margin: 5px 0 10px 0; font-size: 14px; color: #718096;">${data.selectedLockerAddress}</p>
+          <p style="margin: 10px 0 0 0; font-size: 13px; color: #E91E63; font-weight: bold;">📱 You'll receive an SMS with your collection code when your order arrives at the locker.</p>
         </div>
       ` : `
         <div style="background: linear-gradient(135deg, #FFF0F6 0%, #FFE4E1 100%); padding: 20px; border-left: 4px solid #FF69B4; margin: 25px 0; border-radius: 8px;">
           <h4 style="margin: 0 0 10px 0; color: #E91E63; display: flex; align-items: center;">
-            <span style="font-size: 18px; margin-right: 8px;">🏠</span>
-            Delivery Address
+            <span style="font-size: 18px; margin-right: 8px;">📦</span>
+            PUDO Locker Collection
           </h4>
-          <p style="margin: 0; font-size: 14px; color: #4A5568;">${data.shippingAddress}</p>
-          <p style="margin: 5px 0 0 0; font-size: 14px; color: #718096;">${data.shippingCity}, ${data.shippingPostalCode}</p>
+          <p style="margin: 0; font-size: 14px; color: #4A5568;">Your order will be delivered to a PUDO locker near you.</p>
+          <p style="margin: 10px 0 0 0; font-size: 13px; color: #E91E63; font-weight: bold;">📱 You'll receive an SMS with locker location and collection code when your order is ready for pickup.</p>
         </div>
       `;
 
@@ -1607,28 +1608,51 @@ export class DatabaseEmailService {
           </html>
         `);
 
-      // Add PDF invoice attachment if provided
+      // Add PDF invoice attachment if provided - ENHANCED DEBUGGING
       if (data.invoicePath) {
         try {
+          logger.info('🔗 ATTEMPTING INVOICE ATTACHMENT', { 
+            orderNumber: data.orderNumber,
+            invoicePath: data.invoicePath,
+            invoicePathExists: !!data.invoicePath,
+            invoicePathType: typeof data.invoicePath
+          });
+          
           const fileBuffer = await objectStoreAdapter.getFile(data.invoicePath);
           const fileName = `Invoice-${data.orderNumber}.pdf`;
+          
+          logger.info('📎 FILE RETRIEVED FOR ATTACHMENT', { 
+            orderNumber: data.orderNumber,
+            fileName,
+            bufferSize: fileBuffer.length,
+            bufferType: typeof fileBuffer
+          });
           
           const attachment = new Attachment(fileBuffer, fileName, 'attachment');
           emailParams.setAttachments([attachment]);
           
-          logger.info('Invoice attachment added to combined order confirmation email', { 
+          logger.info('✅ INVOICE ATTACHMENT SUCCESSFULLY ADDED TO EMAIL', { 
             orderNumber: data.orderNumber,
             invoicePath: data.invoicePath,
-            fileName 
+            fileName,
+            attachmentCreated: true
           });
         } catch (attachmentError) {
-          logger.error('Failed to attach invoice to combined order confirmation email', { 
+          logger.error('❌ INVOICE ATTACHMENT FAILED', { 
             error: attachmentError,
+            errorMessage: attachmentError instanceof Error ? attachmentError.message : String(attachmentError),
+            errorStack: attachmentError instanceof Error ? attachmentError.stack : undefined,
             orderNumber: data.orderNumber,
             invoicePath: data.invoicePath 
           });
           // Continue sending email without attachment
         }
+      } else {
+        logger.warn('⚠️ NO INVOICE PATH PROVIDED FOR ATTACHMENT', { 
+          orderNumber: data.orderNumber,
+          invoicePathValue: data.invoicePath,
+          hasInvoicePath: !!data.invoicePath
+        });
       }
 
       await this.mailerSend.email.send(emailParams);

@@ -9,9 +9,11 @@ export interface InvoiceData {
   customerName: string;
   customerEmail: string;
   customerPhone: string;
-  shippingAddress: string;
-  shippingCity: string;
-  shippingPostalCode: string;
+  shippingAddress: string; // Kept for legacy but not used - PUDO only
+  shippingCity: string; // Kept for legacy but not used - PUDO only  
+  shippingPostalCode: string; // Kept for legacy but not used - PUDO only
+  selectedLockerName?: string; // PUDO locker name
+  selectedLockerAddress?: string; // PUDO locker address
   orderItems: Array<{
     productName: string;
     quantity: number;
@@ -173,13 +175,19 @@ export class InvoiceGenerator {
 
     yPosition += 35;
 
-    // Shipping address
+    // PUDO Locker Collection (No physical address delivery)
     doc.setFont('helvetica', 'bold');
-    doc.text('Shipping Address:', margin, yPosition);
+    doc.text('Collection Point:', margin, yPosition);
     yPosition += 7;
     doc.setFont('helvetica', 'normal');
-    doc.text(data.shippingAddress, margin, yPosition);
-    doc.text(`${data.shippingCity}, ${data.shippingPostalCode}`, margin, yPosition + 5);
+    if (data.selectedLockerName && data.selectedLockerAddress) {
+      doc.text(`PUDO Locker: ${data.selectedLockerName}`, margin, yPosition);
+      doc.text(data.selectedLockerAddress, margin, yPosition + 5);
+      doc.text('SMS notification will be sent with collection code', margin, yPosition + 10);
+    } else {
+      doc.text('PUDO Locker Collection', margin, yPosition);
+      doc.text('SMS notification will be sent with locker details', margin, yPosition + 5);
+    }
     
     yPosition += 20;
 

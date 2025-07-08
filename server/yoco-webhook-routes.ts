@@ -663,9 +663,11 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
             customerName: fullOrder.customerName,
             customerEmail: fullOrder.customerEmail,
             customerPhone: fullOrder.customerPhone,
-            shippingAddress: fullOrder.shippingAddress,
-            shippingCity: fullOrder.shippingCity,
-            shippingPostalCode: fullOrder.shippingPostalCode,
+            shippingAddress: fullOrder.shippingAddress, // Legacy field, not used on invoice
+            shippingCity: fullOrder.shippingCity, // Legacy field, not used on invoice
+            shippingPostalCode: fullOrder.shippingPostalCode, // Legacy field, not used on invoice
+            selectedLockerName: fullOrder.selectedLockerName, // PUDO locker name for invoice
+            selectedLockerAddress: fullOrder.selectedLockerAddress, // PUDO locker address for invoice
             orderItems: fullOrder.orderItems.map(item => ({
               productName: item.productName,
               quantity: item.quantity,
@@ -685,6 +687,13 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
             userId: fullOrder.userId
           };
 
+          console.log('📄 INVOICE DATA CONSTRUCTED WITH PUDO DETAILS:', {
+            orderNumber: invoiceData.orderNumber,
+            selectedLockerName: invoiceData.selectedLockerName,
+            selectedLockerAddress: invoiceData.selectedLockerAddress,
+            hasLockerDetails: !!(invoiceData.selectedLockerName && invoiceData.selectedLockerAddress)
+          });
+
           const { InvoiceGenerator } = await import('./services/invoice-generator.js');
           const invoiceGenerator = InvoiceGenerator.getInstance();
           invoicePath = await invoiceGenerator.generateInvoicePDF(invoiceData);
@@ -692,10 +701,14 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
           // Update order with invoice path
           await storage.updateOrderInvoicePath(newOrder.id, invoicePath);
 
-          console.log('PDF invoice generated for YoCo payment:', {
+          console.log('✅ PDF INVOICE GENERATED FOR YOCO PAYMENT WITH PUDO DETAILS:', {
             orderId: newOrder.id,
             orderNumber: newOrder.orderNumber,
-            invoicePath
+            invoicePath,
+            invoiceGenerated: !!invoicePath,
+            invoicePathLength: invoicePath?.length || 0,
+            lockerNameOnInvoice: invoiceData.selectedLockerName,
+            lockerAddressOnInvoice: invoiceData.selectedLockerAddress
           });
         } else {
           console.error('INVOICE ERROR: No order items found for invoice generation:', {
@@ -776,6 +789,15 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
             vatRegistrationNumber: orderWithDetails.vatRegistrationNumber || '',
             invoicePath: invoicePath // Include the generated invoice path for attachment
           };
+          
+          console.log('🔗 COMBINED EMAIL DATA - INVOICE ATTACHMENT CHECK:', {
+            orderNumber: combinedEmailData.orderNumber,
+            hasInvoicePath: !!combinedEmailData.invoicePath,
+            invoicePathValue: combinedEmailData.invoicePath,
+            invoicePathLength: combinedEmailData.invoicePath?.length || 0,
+            selectedLockerName: combinedEmailData.selectedLockerName,
+            selectedLockerAddress: combinedEmailData.selectedLockerAddress
+          });
           
           console.log('📧 Attempting to send combined order confirmation and payment email with data:', {
             email: combinedEmailData.email,

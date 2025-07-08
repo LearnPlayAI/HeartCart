@@ -880,6 +880,13 @@ Changelog:
   * Allows admins to test real card payments with cheaper amounts while preserving all existing functionality
   * Setting can be toggled on/off instantly for testing without affecting regular customer payments
   * Complete admin-controlled testing system ready for deployment verification
+- July 8, 2025. CRITICAL PUDO locker display fixes and invoice attachment debugging completed:
+  * FIXED COMBINED EMAIL TEMPLATE: Changed all delivery address references to PUDO locker collection details with SMS notification messages
+  * FIXED INVOICE GENERATOR: Updated "Shipping Address" section to "Collection Point" displaying PUDO locker information instead of delivery addresses
+  * ENHANCED YOCO WEBHOOK: Added selectedLockerName and selectedLockerAddress fields to invoice data construction for proper PUDO display on invoices
+  * ENHANCED INVOICE ATTACHMENT DEBUGGING: Added comprehensive logging throughout email attachment process with detailed error tracking
+  * CRITICAL BUSINESS RULE COMPLIANCE: System now displays PUDO locker collection information everywhere instead of delivery addresses (emails and invoices)
+  * All customer communications now correctly show PUDO locker collection process with SMS collection code notifications
 - July 8, 2025. Complete admin transactional data cleanup for fresh testing environment:
   * Deleted ALL transactional data for admin@teemeyou.shop (user ID 8): 9 orders, 35 order items, 18 order status history records
   * Cleared user interaction data: 73 product interactions, 1 user favourite, cart items, email logs, mail tokens
