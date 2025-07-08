@@ -48,8 +48,6 @@ import {
 import {
   Search,
   MoreHorizontal,
-  ChevronLeft,
-  ChevronRight,
   Users,
   Eye,
   Edit,
@@ -94,15 +92,14 @@ export default function UserAdminPageFixed() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  // State for pagination and filtering - using exact approach as product management
-  const [currentPage, setCurrentPage] = useState(1);
+  // State for filtering - pagination removed to show all users
   const [searchQuery, setSearchQuery] = useState(''); // Single state like product management
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
 
-  const itemsPerPage = 20;
-  const offset = (currentPage - 1) * itemsPerPage;
+  const itemsPerPage = 1000; // Set high limit to show all users
+  const offset = 0; // No offset needed since we want all users
   
   // State for dialogs
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -194,8 +191,7 @@ export default function UserAdminPageFixed() {
   const users = usersData?.success ? usersData.data.users : [];
   const pagination = usersData?.success ? usersData.meta : null;
 
-  // Calculate pagination info
-  const totalPages = Math.ceil((pagination?.total || 0) / itemsPerPage);
+  // Total users from response
   const totalUsers = pagination?.total || 0;
 
   // Delete user mutation
@@ -541,37 +537,10 @@ export default function UserAdminPageFixed() {
           </div>
         )}
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between px-2 py-4">
-            <div className="text-sm text-muted-foreground">
-              Showing {offset + 1} to {Math.min(offset + itemsPerPage, totalUsers)} of {totalUsers} users
-            </div>
-            <div className="flex items-center space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                disabled={currentPage <= 1}
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Previous
-              </Button>
-              <div className="text-sm">
-                Page {currentPage} of {totalPages}
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage >= totalPages}
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        )}
+        {/* Show total users count */}
+        <div className="px-2 py-4 text-sm text-muted-foreground">
+          Showing all {totalUsers} users
+        </div>
       </CardContent>
     </Card>
   );
