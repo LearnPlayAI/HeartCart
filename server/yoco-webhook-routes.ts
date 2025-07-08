@@ -24,59 +24,18 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
     const webhookId = req.headers['webhook-id'] as string;
     const timestamp = req.headers['webhook-timestamp'] as string;
 
-    console.log('\n💥💥💥 YOCO WEBHOOK RECEIVED! 💥💥💥');
-    console.log('═'.repeat(80));
-    console.log('WEBHOOK SECURITY ANALYSIS:');
-    console.log('  webhookId:', webhookId);
-    console.log('  timestamp:', timestamp);
-    console.log('  eventType:', req.body.type);
-    console.log('  hasSignature:', !!signature);
-    console.log('  signature:', signature);
-    console.log('  sourceIP:', req.ip || req.connection.remoteAddress);
-    console.log('  userAgent:', req.get('User-Agent'));
-    console.log('  paymentId:', req.body.payload?.id);
-    console.log('  paymentAmount:', req.body.payload?.amount);
-    console.log('  paymentCurrency:', req.body.payload?.currency);
-    console.log('  checkoutId:', req.body.payload?.metadata?.checkoutId);
-    console.log('  tempCheckoutId:', req.body.payload?.metadata?.tempCheckoutId);
-    console.log('  customerId:', req.body.payload?.metadata?.customerId);
-    console.log('  customerEmail:', req.body.payload?.metadata?.customerEmail);
-    console.log('  customerFullName:', req.body.payload?.metadata?.customerFullName);
-    console.log('  customerPhone:', req.body.payload?.metadata?.customerPhone);
-    console.log('  webhookSecretConfigured:', !!process.env.YOCO_WEBHOOK_SECRET);
-    console.log('  webhookSecretUsed:', process.env.YOCO_WEBHOOK_SECRET?.substring(0, 20) + '...');
-    console.log('  SECURITY STATUS: PHANTOM ORDER PROTECTION ACTIVE');
-    console.log('═'.repeat(80));
+
 
     // CRITICAL SECURITY: Validate webhook timestamp (prevent replay attacks)
     if (!yocoService.isValidTimestamp(timestamp)) {
-      console.error('🚨 SECURITY ALERT: YoCo webhook timestamp validation failed - potential replay attack!', {
-        timestamp,
-        webhookId,
-        sourceIP: req.ip,
-        userAgent: req.get('User-Agent')
-      });
       return res.status(400).json({ error: 'Invalid timestamp' });
     }
 
     // CRITICAL SECURITY: Verify webhook signature (prevents phantom orders)
     const signatureValid = await yocoService.verifyWebhookSignature(rawBody, signature, webhookId, timestamp);
     if (!signatureValid) {
-      console.error('🚨 CRITICAL SECURITY ALERT: YoCo webhook signature verification FAILED - potential attack!', {
-        webhookId,
-        timestamp,
-        hasSignature: !!signature,
-        sourceIP: req.ip,
-        userAgent: req.get('User-Agent'),
-        eventType: req.body.type,
-        paymentId: req.body.payload?.id,
-        checkoutId: req.body.payload?.metadata?.checkoutId,
-        SECURITY_STATUS: 'REJECTED - PHANTOM ORDER PROTECTION ACTIVE'
-      });
       return res.status(403).json({ error: 'Invalid signature' });
     }
-
-    console.log('✅ SECURITY CHECK PASSED: Webhook signature and timestamp validated successfully');
 
     const event: YocoPaymentEvent = req.body;
 
@@ -87,12 +46,6 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
         break;
       
       case 'payment.failed':
-        console.log('Processing failed payment event:', {
-          paymentId: event.payload.id,
-          checkoutId: event.payload.metadata?.checkoutId,
-          amount: event.payload.amount,
-          reason: event.payload.status
-        });
         // For failed payments, no order should exist (which is correct behavior)
         return res.status(200).json({ 
           received: true, 
@@ -101,11 +54,6 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
         });
       
       case 'payment.refunded':
-        console.log('Processing refund event:', {
-          paymentId: event.payload.id,
-          checkoutId: event.payload.metadata?.checkoutId,
-          amount: event.payload.amount
-        });
         // TODO: Implement refund handling when needed
         return res.status(200).json({ 
           received: true, 
@@ -114,10 +62,6 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
         });
       
       default:
-        console.log('Processing unhandled webhook event type:', {
-          eventType: event.type,
-          paymentId: event.payload?.id
-        });
         return res.status(200).json({ 
           received: true, 
           eventType: event.type,
@@ -134,21 +78,10 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
     const customerPhone = payment.metadata.customerPhone; // CRITICAL FIX: Extract customer phone from metadata
     const cartDataStr = payment.metadata.cartData;
 
-    console.log('Processing successful payment:', {
-      paymentId: payment.id,
-      checkoutId,
-      tempCheckoutId,
-      customerId,
-      customerEmail,
-      customerFullName, // Log customer's full name for debugging
-      customerPhone, // CRITICAL FIX: Log customer phone for debugging
-      amount: payment.amount,
-      currency: payment.currency,
-    });
+
 
     // CRITICAL: Create order only AFTER successful payment
     if (!cartDataStr) {
-      console.error('No cart data found in payment metadata');
       return res.status(400).json({ error: 'Cart data missing from payment' });
     }
 
@@ -156,13 +89,11 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
     try {
       cartData = JSON.parse(cartDataStr);
     } catch (error) {
-      console.error('Failed to parse cart data:', error);
       return res.status(400).json({ error: 'Invalid cart data format' });
     }
 
     // CRITICAL FIX: Validate customer data before order creation with robust fallbacks
     if (!customerEmail) {
-      console.error('CustomerEmail is null or missing from payment metadata');
       return res.status(400).json({ error: 'Customer email missing from payment data' });
     }
     
@@ -171,20 +102,8 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
     const finalCustomerPhone = customerPhone || cartData.customerPhone || '+27712063084'; // Use TeeMeYou contact as fallback
     
     if (!finalCustomerFullName || finalCustomerFullName.trim() === '') {
-      console.error('CustomerFullName could not be determined from metadata or cart data');
       return res.status(400).json({ error: 'Customer name missing from payment data' });
     }
-    
-    console.log('CRITICAL DEBUG: Customer data validation results:', {
-      originalCustomerFullName: customerFullName,
-      originalCustomerPhone: customerPhone,
-      cartCustomerName: cartData.customerName,
-      cartCustomerPhone: cartData.customerPhone,
-      finalCustomerFullName,
-      finalCustomerPhone,
-      fallbackUsedForName: finalCustomerFullName !== customerFullName,
-      fallbackUsedForPhone: finalCustomerPhone !== customerPhone
-    });
 
     // CRITICAL FIX: Import storage once for entire webhook processing
     const { storage } = await import('./storage.js');
@@ -193,99 +112,21 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
     try {
       const existingOrder = await storage.getOrderByYocoCheckoutId(checkoutId);
       if (existingOrder) {
-        console.log('Order already created for checkout:', existingOrder.orderNumber);
         return res.status(200).json({ received: true, orderId: existingOrder.id, message: 'Already processed' });
       }
     } catch (orderCheckError) {
-      console.warn('Error checking for existing order (proceeding with creation):', {
-        error: orderCheckError.message,
-        checkoutId
-      });
       // Continue with order creation even if check fails
     }
-
-    console.log('CRITICAL DEBUG: Cart data structure analysis:', {
-      cartDataKeys: Object.keys(cartData),
-      fullCartData: JSON.stringify(cartData, null, 2)
-    });
-
-    console.log('CRITICAL DEBUG: Address field extraction with validated customer data:', { 
-      checkoutId, 
-      customerId,
-      customerEmail,
-      originalCustomerFullName: customerFullName, // Debug original customer name from metadata
-      originalCustomerPhone: customerPhone, // Debug original customer phone from metadata
-      finalCustomerFullName, // Debug validated customer name with fallbacks
-      finalCustomerPhone, // Debug validated customer phone with fallbacks
-      hasOrderItems: !!cartData.orderItems,
-      orderItemsCount: cartData.orderItems?.length || 0,
-      cartDataCustomerName: cartData.customerName, // Debug customer name in cart data
-      cartDataCustomerPhone: cartData.customerPhone, // Debug customer phone in cart data
-      // CRITICAL FIX: Debug nested address structure (matching EFT flow)
-      hasShippingAddress: !!cartData.shippingAddress,
-      shippingAddressStructure: cartData.shippingAddress,
-      addressLine1: cartData.shippingAddress?.addressLine1,
-      addressLine2: cartData.shippingAddress?.addressLine2,
-      city: cartData.shippingAddress?.city,
-      province: cartData.shippingAddress?.province,
-      postalCode: cartData.shippingAddress?.postalCode
-    });
 
     // YoCo compliance: Calculate transaction fees for profit tracking (absorbed by company, not charged to customer)
     const fees = yocoService.calculateTransactionFees(payment.amount);
     
-    console.log('YoCo transaction fees calculated for profit tracking:', {
-      orderAmount: payment.amount / 100,
-      feeAmount: fees.feeAmount,
-      feePercentage: fees.feePercentage,
-      netRevenue: (payment.amount / 100) - fees.feeAmount,
-      checkoutId
-    });
-    
     // Extract order and orderItems from cart data (like EFT flow)
     // CRITICAL FIX: Extract address fields from nested shippingAddress object
-    // CRITICAL DEBUG: Check multiple possible field names for order items
     let rawOrderItems = cartData.orderItems || cartData.items || cartData.lineItems || [];
     const { shippingAddress: addressData, ...orderData } = cartData;
-    
-    console.log('\n🚨🚨🚨 YOCO WEBHOOK ORDER ITEMS DEBUG 🚨🚨🚨');
-    console.log('=' .repeat(80));
-    console.log('ORDER ITEMS FIELD DETECTION:');
-    console.log('  hasOrderItems:', !!cartData.orderItems);
-    console.log('  hasItems:', !!cartData.items);
-    console.log('  hasLineItems:', !!cartData.lineItems);
-    console.log('  orderItemsLength:', cartData.orderItems?.length || 0);
-    console.log('  itemsLength:', cartData.items?.length || 0);
-    console.log('  lineItemsLength:', cartData.lineItems?.length || 0);
-    console.log('  selectedField:', rawOrderItems === cartData.orderItems ? 'orderItems' : 
-                     rawOrderItems === cartData.items ? 'items' :
-                     rawOrderItems === cartData.lineItems ? 'lineItems' : 'none');
-    console.log('  rawOrderItemsLength:', rawOrderItems?.length || 0);
-    console.log('=' .repeat(80));
 
     // CRITICAL FIX: Enrich order items with product names from database (preventing null productName constraint violations)
-    console.log('CRITICAL DEBUG: Raw order items before enrichment:', {
-      rawOrderItems: rawOrderItems,
-      itemCount: rawOrderItems?.length || 0,
-      sampleItem: rawOrderItems?.[0],
-      isArray: Array.isArray(rawOrderItems),
-      typeOfRawOrderItems: typeof rawOrderItems
-    });
-
-    // EMERGENCY DEBUG: If no order items found in any expected field, log all cart data fields
-    if (!rawOrderItems || !Array.isArray(rawOrderItems) || rawOrderItems.length === 0) {
-      console.log('\n❌❌❌ CRITICAL ISSUE: NO ORDER ITEMS FOUND! ❌❌❌');
-      console.log('*'.repeat(80));
-      console.log('CART DATA ANALYSIS:');
-      console.log('  cartDataKeys:', Object.keys(cartData));
-      console.log('  cartDataValues:');
-      Object.entries(cartData).forEach(([key, value]) => {
-        console.log(`    ${key}:`, Array.isArray(value) ? `Array(${value.length})` : typeof value);
-      });
-      console.log('\nFULL CART DATA SAMPLE:');
-      console.log(JSON.stringify(cartData, null, 2).substring(0, 2000));
-      console.log('*'.repeat(80));
-    }
 
     const orderItems = [];
     if (rawOrderItems && Array.isArray(rawOrderItems)) {
@@ -304,13 +145,6 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
           const productName = product[0]?.name || `Product ID ${item.productId}`;
           const productImageUrl = product[0]?.imageUrl || null;
           
-          console.log(`🔍 WEBHOOK DEBUG - Product ${item.productId}:`, {
-            dbName: product[0]?.name,
-            dbImageUrl: product[0]?.imageUrl,
-            productImageUrlSet: productImageUrl,
-            hasImageUrl: !!productImageUrl
-          });
-          
           // CRITICAL FIX: Ensure all required database fields are present
           const enrichedItem = {
             ...item,
@@ -322,25 +156,10 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
             attributeDisplayText: item.attributeDisplayText || null  // Optional field
           };
           
-          console.log(`📦 WEBHOOK DEBUG - Enriched Item ${item.productId}:`, {
-            productId: enrichedItem.productId,
-            productName: enrichedItem.productName,
-            productImageUrl: enrichedItem.productImageUrl,
-            hasProductImageUrl: !!enrichedItem.productImageUrl,
-            totalPrice: enrichedItem.totalPrice,
-            quantity: enrichedItem.quantity
-          });
-          
           orderItems.push(enrichedItem);
           
 
         } catch (productFetchError) {
-          console.error('Error fetching product name for order item:', {
-            error: productFetchError,
-            productId: item.productId,
-            itemIndex: orderItems.length
-          });
-          
           // Use fallback product name to prevent null constraint violation
           const enrichedItem = {
             ...item,
@@ -358,31 +177,11 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
 
     // CRITICAL DEBUG: Ensure we have order items before proceeding
     if (!orderItems || !Array.isArray(orderItems) || orderItems.length === 0) {
-      console.error('CRITICAL ERROR: No order items found after enrichment process!', {
-        originalRawOrderItems: rawOrderItems,
-        enrichedOrderItems: orderItems,
-        cartDataKeys: Object.keys(cartData),
-        checkoutId
-      });
       return res.status(400).json({ error: 'No order items found in cart data' });
     }
 
-    console.log('CRITICAL DEBUG: Final enriched order items before database insertion:', {
-      enrichedItemCount: orderItems.length,
-      allItemsHaveProductName: orderItems.every(item => item.productName),
-      sampleEnrichedItem: orderItems[0],
-      allItemDetails: orderItems.map(item => ({
-        productId: item.productId,
-        productName: item.productName,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        totalPrice: item.totalPrice
-      }))
-    });
-
     // EMERGENCY STOP: If no order items after enrichment, fail the webhook
     if (!orderItems || orderItems.length === 0) {
-      console.error('CRITICAL FAILURE: No order items after enrichment process!');
       return res.status(400).json({ 
         error: 'No order items found in payment data',
         checkoutId,
@@ -397,26 +196,8 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
     const province = addressData?.province || 'Province not provided';
     const postalCode = addressData?.postalCode || '0000';
     
-    console.log('CRITICAL DEBUG: Destructured address fields from nested structure:', {
-      hasShippingAddress: !!addressData,
-      shippingAddressObject: addressData,
-      addressLine1,
-      addressLine2, 
-      city,
-      province,
-      postalCode,
-      orderDataKeys: Object.keys(orderData)
-    });
-    
     // CRITICAL FIX: Properly map address fields from cart data to order fields with fallback
     const shippingAddress = addressLine2 ? `${addressLine1}, ${addressLine2}` : addressLine1;
-    
-    console.log('CRITICAL DEBUG: Final address mapping before order creation:', {
-      shippingAddress,
-      shippingCity: city,
-      shippingProvince: province,
-      shippingPostalCode: postalCode
-    });
     
     // CRITICAL FIX: Calculate all required financial fields from order items
     let calculatedSubtotal = 0;
@@ -447,35 +228,12 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
     // Calculate total amount
     const calculatedTotalAmount = calculatedSubtotal + calculatedShippingCost + calculatedVatAmount;
 
-    console.log('CRITICAL FIX: Calculated financial fields for order creation:', {
-      calculatedSubtotal,
-      calculatedShippingCost,
-      calculatedVatAmount,
-      calculatedVatRate,
-      calculatedTotalAmount,
-      paymentAmountFromYoCo: payment.amount / 100, // YoCo amount in cents
-      orderItemsCount: orderItems?.length || 0,
-      orderDataShippingCost: orderData.shippingCost,
-      orderDataVatAmount: orderData.vatAmount,
-      orderDataVatRate: orderData.vatRate
-    });
-
     // CRITICAL FIX: Extract PUDO locker information from cart data
     const selectedLockerName = orderData.selectedLockerName || null;
     const selectedLockerAddress = orderData.selectedLockerAddress || null;
     const selectedLockerCode = orderData.selectedLockerCode || null;
     
-    console.log('🔍 PUDO LOCKER EXTRACTION FROM CART DATA:', {
-      hasSelectedLockerName: !!selectedLockerName,
-      hasSelectedLockerAddress: !!selectedLockerAddress,
-      hasSelectedLockerCode: !!selectedLockerCode,
-      selectedLockerNameValue: selectedLockerName,
-      selectedLockerAddressValue: selectedLockerAddress,
-      selectedLockerCodeValue: selectedLockerCode,
-      shippingMethod: orderData.shippingMethod,
-      orderDataKeys: Object.keys(orderData),
-      cartDataKeys: Object.keys(cartData)
-    });
+
 
     // Create order with payment information included (camelCase naming convention)
     const order = {
@@ -512,90 +270,12 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
     };
 
     // Use the exact same method signature as EFT flow: createOrder(order, orderItems)
-    console.log('FINAL DEBUG: Complete order object before database insertion:', {
-      fullOrder: JSON.stringify(order, null, 2),
-      orderKeys: Object.keys(order),
-      orderItemsCount: orderItems?.length || 0,
-      // Specific fields that are failing
-      customerId: order.userId,
-      customerEmail: order.customerEmail,
-      customerName: order.customerName,
-      customerPhone: order.customerPhone,
-      shippingAddress: order.shippingAddress,
-      shippingCity: order.shippingCity,
-      shippingProvince: order.shippingProvince,
-      shippingPostalCode: order.shippingPostalCode,
-      selectedLockerName: order.selectedLockerName,
-      selectedLockerAddress: order.selectedLockerAddress,
-      shippingMethod: order.shippingMethod,
-      paymentMethod: order.paymentMethod,
-      paymentStatus: order.paymentStatus,
-      status: order.status
-    });
-    
-    // CRITICAL DEBUG: Log exactly what we're passing to storage.createOrder
-    console.log('\n✅✅✅ CALLING storage.createOrder() ✅✅✅');
-    console.log('#'.repeat(80));
-    console.log('ORDER DATA KEYS:', Object.keys(order));
-    console.log('ORDER SAMPLE:');
-    console.log('  customerName:', order.customerName);
-    console.log('  customerEmail:', order.customerEmail);
-    console.log('  customerPhone:', order.customerPhone);
-    console.log('  userId:', order.userId);
-    console.log('  totalAmount:', order.totalAmount);
-    console.log('  subtotalAmount:', order.subtotalAmount);
-    console.log('  paymentMethod:', order.paymentMethod);
-    console.log('  paymentStatus:', order.paymentStatus);
-    console.log('  status:', order.status);
-    console.log('\nORDER ITEMS COUNT:', orderItems.length);
-    if (orderItems.length > 0) {
-      console.log('ORDER ITEMS ARRAY:');
-      orderItems.forEach((item, index) => {
-        console.log(`  [${index}]:`, {
-          productId: item.productId,
-          productName: item.productName,
-          productImageUrl: item.productImageUrl,
-          hasProductImageUrl: !!item.productImageUrl,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          totalPrice: item.totalPrice,
-          hasAllRequiredFields: !!(item.productId && item.productName && item.quantity && item.unitPrice)
-        });
-      });
-      console.log('\nFULL ORDER ITEMS JSON:');
-      console.log(JSON.stringify(orderItems, null, 2));
-    } else {
-      console.log('⚠️ WARNING: ZERO ORDER ITEMS TO CREATE!');
-    }
-    console.log('#'.repeat(80));
 
     try {
       const newOrder = await storage.createOrder(order, orderItems);
-      
-      console.log('Order created successfully:', {
-        orderId: newOrder.id,
-        orderNumber: newOrder.orderNumber,
-        status: newOrder.status,
-        paymentStatus: newOrder.paymentStatus,
-        itemsPassedToCreate: orderItems.length,
-        orderCreationSuccess: true
-      });
 
       // Verify order items were actually created in database
       const verifyOrderItems = await storage.getOrderItems(newOrder.id);
-      console.log('Order items verification after creation:', {
-        orderId: newOrder.id,
-        orderNumber: newOrder.orderNumber,
-        orderItemsInDatabase: verifyOrderItems.length,
-        expectedOrderItems: orderItems.length,
-        orderItemsMatch: verifyOrderItems.length === orderItems.length,
-        orderItemsSample: verifyOrderItems.slice(0, 2).map(item => ({
-          id: item.id,
-          productId: item.productId,
-          productName: item.productName,
-          quantity: item.quantity
-        }))
-      });
 
     // Create order status history entry for the newly created order
     await storage.addOrderStatusHistory(
@@ -608,25 +288,13 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
       `Order created after successful card payment. Payment ID: ${payment.id}. Transaction fee: R${fees.feeAmount.toFixed(2)} (${fees.feePercentage}%)`
     );
 
-    console.log('Order created successfully after payment:', {
-      orderId: newOrder.id,
-      orderNumber: newOrder.orderNumber,
-      status: 'confirmed',
-      paymentStatus: 'payment_received',
-      transactionFee: fees.feeAmount,
-    });
+
 
     // CRITICAL ADDITION: Generate PDF invoice for card payment (same as admin payment_received workflow)
     let invoicePath = null;
     try {
       // Get full order details with items for invoice generation
       const baseOrder = await storage.getOrderById(newOrder.id);
-      console.log('INVOICE DEBUG: Retrieved base order for invoice generation:', {
-        orderId: newOrder.id,
-        orderExists: !!baseOrder,
-        baseOrderStatus: baseOrder?.status,
-        baseOrderPaymentStatus: baseOrder?.paymentStatus
-      });
       
       if (baseOrder) {
         const orderItemsData = await storage.getOrderItems(newOrder.id);
@@ -635,16 +303,7 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
           orderItems: orderItemsData || []
         };
 
-        console.log('INVOICE DEBUG: Order items retrieved for invoice generation:', {
-          orderId: newOrder.id,
-          orderItemsCount: fullOrder.orderItems?.length || 0,
-          orderItems: fullOrder.orderItems?.map(item => ({
-            id: item.id,
-            productName: item.productName,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice
-          }))
-        });
+
 
         if (fullOrder.orderItems && fullOrder.orderItems.length > 0) {
           // Fetch VAT settings from systemSettings for invoice generation
@@ -673,14 +332,9 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
             vatSettings.vatRegistered = vatRegistered;
             vatSettings.vatRegistrationNumber = vatRegistrationNumber;
 
-            console.log('VAT settings fetched for YoCo invoice generation:', {
-              orderId: newOrder.id,
-              vatRate: vatSettings.vatRate,
-              vatAmount: vatSettings.vatAmount,
-              vatRegistered: vatSettings.vatRegistered
-            });
+
           } catch (vatError) {
-            console.error('Failed to fetch VAT settings for YoCo invoice, using defaults:', vatError);
+
           }
 
           const invoiceData = {
@@ -713,12 +367,7 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
             userId: fullOrder.userId
           };
 
-          console.log('📄 INVOICE DATA CONSTRUCTED WITH PUDO DETAILS:', {
-            orderNumber: invoiceData.orderNumber,
-            selectedLockerName: invoiceData.selectedLockerName,
-            selectedLockerAddress: invoiceData.selectedLockerAddress,
-            hasLockerDetails: !!(invoiceData.selectedLockerName && invoiceData.selectedLockerAddress)
-          });
+
 
           const { InvoiceGenerator } = await import('./services/invoice-generator.js');
           const invoiceGenerator = InvoiceGenerator.getInstance();
@@ -727,63 +376,20 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
           // Update order with invoice path
           await storage.updateOrderInvoicePath(newOrder.id, invoicePath);
 
-          console.log('✅ PDF INVOICE GENERATED FOR YOCO PAYMENT WITH PUDO DETAILS:', {
-            orderId: newOrder.id,
-            orderNumber: newOrder.orderNumber,
-            invoicePath,
-            invoiceGenerated: !!invoicePath,
-            invoicePathLength: invoicePath?.length || 0,
-            lockerNameOnInvoice: invoiceData.selectedLockerName,
-            lockerAddressOnInvoice: invoiceData.selectedLockerAddress
-          });
-        } else {
-          console.error('INVOICE ERROR: No order items found for invoice generation:', {
-            orderId: newOrder.id,
-            orderNumber: newOrder.orderNumber,
-            orderItemsCount: fullOrder.orderItems?.length || 0,
-            orderItemsData: fullOrder.orderItems
-          });
+
         }
-      } else {
-        console.error('INVOICE ERROR: No base order found for invoice generation:', {
-          orderId: newOrder.id,
-          orderNumber: newOrder.orderNumber
-        });
       }
     } catch (invoiceError) {
-      console.error('Failed to generate invoice for YoCo payment:', {
-        error: invoiceError,
-        orderId: newOrder.id,
-        orderNumber: newOrder.orderNumber,
-        errorMessage: invoiceError instanceof Error ? invoiceError.message : String(invoiceError),
-        errorStack: invoiceError instanceof Error ? invoiceError.stack : undefined
-      });
       // Don't fail the webhook for invoice errors
     }
 
       // Send combined order confirmation and payment confirmation email
       try {
-        console.log('🔥 STARTING COMBINED EMAIL SENDING PROCESS FOR YOCO PAYMENT 🔥');
-        console.log('=' .repeat(80));
-        
         const orderWithDetails = await storage.getOrderById(newOrder.id);
-        console.log('Retrieved order details for combined email sending:', {
-          orderId: newOrder.id,
-          orderExists: !!orderWithDetails,
-          customerEmail: orderWithDetails?.customerEmail,
-          customerName: orderWithDetails?.customerName,
-          orderNumber: orderWithDetails?.orderNumber,
-          totalAmount: orderWithDetails?.totalAmount,
-          hasInvoicePath: !!invoicePath
-        });
         
         if (orderWithDetails) {
           // Get order items for the combined email
           const orderItemsData = await storage.getOrderItems(newOrder.id);
-          console.log('Retrieved order items for combined email:', {
-            orderId: newOrder.id,
-            orderItemsCount: orderItemsData?.length || 0
-          });
           
           // Create combined order confirmation and payment confirmation email data
           const combinedEmailData = {
@@ -817,60 +423,13 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
             invoicePath: invoicePath // Include the generated invoice path for attachment
           };
           
-          console.log('🔗 COMBINED EMAIL DATA - INVOICE ATTACHMENT & PUDO LOCKER CHECK:', {
-            orderNumber: combinedEmailData.orderNumber,
-            hasInvoicePath: !!combinedEmailData.invoicePath,
-            invoicePathValue: combinedEmailData.invoicePath,
-            invoicePathLength: combinedEmailData.invoicePath?.length || 0,
-            selectedLockerName: combinedEmailData.selectedLockerName,
-            selectedLockerAddress: combinedEmailData.selectedLockerAddress,
-            selectedLockerCode: combinedEmailData.selectedLockerCode,
-            hasPudoDetails: !!(combinedEmailData.selectedLockerName && combinedEmailData.selectedLockerAddress)
-          });
-          
-          console.log('📧 Attempting to send combined order confirmation and payment email with data:', {
-            email: combinedEmailData.email,
-            customerName: combinedEmailData.customerName,
-            orderNumber: combinedEmailData.orderNumber,
-            orderItemsCount: combinedEmailData.orderItems.length,
-            totalAmount: combinedEmailData.totalAmount,
-            paymentStatus: combinedEmailData.paymentStatus,
-            hasInvoiceAttachment: !!combinedEmailData.invoicePath,
-            invoicePath: combinedEmailData.invoicePath
-          });
+
           
           // Send combined order confirmation and payment confirmation email with invoice attachment
           await databaseEmailService.sendOrderConfirmationWithPaymentEmail(combinedEmailData);
-          console.log('✅ Combined order confirmation and payment email sent successfully');
-          
-          console.log('✅✅✅ COMBINED EMAIL SENT SUCCESSFULLY FOR YOCO PAYMENT ✅✅✅');
-          console.log('Combined order confirmation and payment email sent for order:', {
-            orderNumber: newOrder.orderNumber,
-            hasInvoiceAttachment: !!invoicePath,
-            invoicePath: invoicePath,
-            customerEmail: orderWithDetails.customerEmail,
-            orderItemsIncluded: combinedEmailData.orderItems.length
-          });
-        } else {
-          console.error('❌ No order details found for combined email sending:', {
-            orderId: newOrder.id,
-            orderNumber: newOrder.orderNumber
-          });
         }
-        console.log('=' .repeat(80));
       } catch (emailError) {
-        console.error('❌❌❌ CRITICAL COMBINED EMAIL SENDING ERROR FOR YOCO PAYMENT ❌❌❌');
-        console.error('=' .repeat(80));
-        console.error('Combined email sending failed for order:', {
-          orderId: newOrder.id,
-          orderNumber: newOrder.orderNumber,
-          customerEmail: orderWithDetails?.customerEmail,
-          errorType: typeof emailError,
-          errorMessage: emailError instanceof Error ? emailError.message : String(emailError),
-          errorStack: emailError instanceof Error ? emailError.stack : undefined,
-          errorDetails: emailError
-        });
-        console.error('=' .repeat(80));
+        // Email sending failed but don't fail the webhook
         // Don't fail the webhook for email errors
       }
 
@@ -886,23 +445,18 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
         processingTime: Date.now() - (event.payload.createdDate ? new Date(event.payload.createdDate).getTime() : Date.now())
       };
       
-      console.log('YoCo webhook processed successfully:', webhookResponse);
       res.status(200).json(webhookResponse);
 
     } catch (orderCreationError) {
-      console.error('Failed to create order from YoCo webhook:', {
+      logger.error('Order creation failed in YoCo webhook', { 
         error: orderCreationError,
         checkoutId,
-        customerEmail,
-        orderItemsCount: orderItems.length,
-        errorMessage: orderCreationError instanceof Error ? orderCreationError.message : String(orderCreationError),
-        errorStack: orderCreationError instanceof Error ? orderCreationError.stack : undefined
+        customerEmail
       });
       return res.status(500).json({ error: 'Failed to create order from payment' });
     }
 
   } catch (error) {
-    console.error('YoCo webhook processing error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 }));

@@ -1413,7 +1413,7 @@ export class DatabaseEmailService {
       `).join('');
 
       // Generate PUDO locker shipping information - EXACT REPLICA of order page card
-      const shippingInfoHtml = data.selectedLockerName && data.selectedLockerAddress ? `
+      const shippingInfoHtml = data.shippingMethod === 'pudo' ? `
         <!-- PUDO Delivery Locker Card (Exact replica of order page) -->
         <div style="background: #FFFFFF; border: 1px solid #e5e7eb; border-radius: 12px; margin: 25px 0; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
           <!-- Card Header -->
@@ -1513,14 +1513,68 @@ export class DatabaseEmailService {
           </div>
         </div>
       ` : `
-        <!-- Generic PUDO Collection Message -->
-        <div style="background: linear-gradient(135deg, #FFF0F6 0%, #FFE4E1 100%); padding: 20px; border-left: 4px solid #FF69B4; margin: 25px 0; border-radius: 8px;">
-          <h4 style="margin: 0 0 10px 0; color: #E91E63; display: flex; align-items: center;">
-            <span style="font-size: 18px; margin-right: 8px;">📦</span>
-            PUDO Locker Collection
-          </h4>
-          <p style="margin: 0; font-size: 14px; color: #4A5568;">Your order will be delivered to a PUDO locker near you.</p>
-          <p style="margin: 10px 0 0 0; font-size: 13px; color: #E91E63; font-weight: bold;">📱 You'll receive an SMS with locker location and collection code when your order is ready for pickup.</p>
+        <!-- PUDO Delivery Locker Card (Exact replica of order page) -->
+        <div style="background: #FFFFFF; border: 1px solid #e5e7eb; border-radius: 12px; margin: 25px 0; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
+          <!-- Card Header -->
+          <div style="padding: 24px 24px 0 24px; border-bottom: 1px solid #f3f4f6;">
+            <h3 style="margin: 0 0 16px 0; color: #1f2937; font-size: 18px; font-weight: 600; display: flex; align-items: center;">
+              <span style="display: inline-block; width: 20px; height: 20px; margin-right: 8px; background: #6b7280; border-radius: 2px; text-align: center; line-height: 20px; color: white; font-size: 12px;">🏢</span>
+              PUDO Delivery Locker
+            </h3>
+          </div>
+          
+          <!-- Card Content -->
+          <div style="padding: 24px;">
+            <!-- Collection Location Banner -->
+            <div style="background: #dbeafe; border: 1px solid #bfdbfe; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+              <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                <span style="display: inline-block; width: 16px; height: 16px; margin-right: 8px; background: #2563eb; border-radius: 2px; text-align: center; line-height: 16px; color: white; font-size: 10px;">📦</span>
+                <span style="font-weight: 500; color: #1e3a8a; font-size: 14px;">Collection Location</span>
+              </div>
+              <p style="margin: 0; font-size: 14px; color: #1d4ed8;">
+                Your order will be delivered to this PUDO locker for pickup
+              </p>
+            </div>
+            
+            <!-- Locker Name & Code -->
+            <div style="margin-bottom: 16px;">
+              <p style="margin: 0 0 4px 0; font-size: 14px; font-weight: 500; color: #6b7280;">Locker Name & Code</p>
+              <div style="display: flex; align-items: center;">
+                <span style="background: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 4px; font-size: 14px; font-weight: 500; margin-right: 8px;">
+                  ${data.selectedLockerCode || 'CG76'}
+                </span>
+                <span style="color: #9ca3af; margin: 0 8px;">•</span>
+                <span style="color: #374151; font-size: 16px; font-weight: 500;">${data.selectedLockerName || 'PUDO Locker'}</span>
+              </div>
+            </div>
+            
+            <!-- Address -->
+            <div style="margin-bottom: 16px;">
+              <p style="margin: 0 0 4px 0; font-size: 14px; font-weight: 500; color: #6b7280;">Address</p>
+              <p style="margin: 0; color: #374151; font-size: 15px;">${data.selectedLockerAddress || 'Address will be provided via SMS'}</p>
+            </div>
+            
+            <!-- Provider & Hours -->
+            <div style="display: flex; gap: 16px; margin-bottom: 16px;">
+              <div style="flex: 1;">
+                <p style="margin: 0 0 4px 0; font-size: 14px; font-weight: 500; color: #6b7280;">Provider</p>
+                <p style="margin: 0; color: #374151; font-size: 14px;">PUDO</p>
+              </div>
+              <div style="flex: 1;">
+                <p style="margin: 0 0 4px 0; font-size: 14px; font-weight: 500; color: #6b7280;">Opening Hours</p>
+                <p style="margin: 0; color: #374151; font-size: 14px;">24/7</p>
+              </div>
+            </div>
+            
+            <!-- Location/Google Maps Button -->
+            <div>
+              <p style="margin: 0 0 8px 0; font-size: 14px; font-weight: 500; color: #6b7280;">Location</p>
+              <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(data.selectedLockerAddress || 'PUDO locker')}" 
+                 style="display: block; background: #2563eb; color: white; padding: 12px; text-align: center; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500;">
+                📍 View Location on Google Maps
+              </a>
+            </div>
+          </div>
         </div>
       `;
 
@@ -1750,13 +1804,14 @@ export class DatabaseEmailService {
       await this.mailerSend.email.send(emailParams);
       
       // Log email in database
-      await this.logEmail({
-        email: data.email,
+      await storage.logEmail({
+        recipientEmail: data.email,
         emailType: 'order_confirmation_with_payment',
         subject: `Order Confirmed & Payment Received - ${data.orderNumber}`,
-        status: 'sent',
+        deliveryStatus: 'sent',
         orderNumber: data.orderNumber,
-        orderId: data.orderId
+        orderId: data.orderId,
+        sentAt: new Date()
       });
       
       logger.info('Combined order confirmation and payment email sent successfully', { 
