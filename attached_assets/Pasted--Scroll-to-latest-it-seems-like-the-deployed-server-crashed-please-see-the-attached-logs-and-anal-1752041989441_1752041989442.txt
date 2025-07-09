@@ -1,0 +1,378 @@
+
+Scroll to latest
+it seems like the deployed server crashed. please see the attached logs and analyze hem and identify the root cause.
+
+2025-07-09 04:27:40.38
+d0f0925c
+User
+2:27:40 AM [express] POST /api/session/refresh 200 in 762ms :: {"success":true,"data":{"message":"Se…
+2025-07-09 04:36:18.43
+d0f0925c
+User
+_sender: Sender {
+2025-07-09 04:36:18.43
+d0f0925c
+User
+_extensions: {},
+2025-07-09 04:36:18.43
+d0f0925c
+User
+_socket: [TLSSocket],
+2025-07-09 04:36:18.43
+d0f0925c
+User
+_firstFragment: true,
+2025-07-09 04:36:18.43
+d0f0925c
+User
+_compress: false,
+2025-07-09 04:36:18.43
+d0f0925c
+User
+_bufferedBytes: 0,
+2025-07-09 04:36:18.43
+d0f0925c
+User
+_queue: [],
+2025-07-09 04:36:18.43
+d0f0925c
+User
+_state: 0,
+2025-07-09 04:36:18.43
+d0f0925c
+User
+onerror: [Function: senderOnError],
+2025-07-09 04:36:18.43
+d0f0925c
+User
+[Symbol(websocket)]: [Circular *1]
+2025-07-09 04:36:18.43
+d0f0925c
+User
+},
+2025-07-09 04:36:18.43
+d0f0925c
+User
+_socket: TLSSocket {
+2025-07-09 04:36:18.43
+d0f0925c
+User
+_tlsOptions: [Object],
+2025-07-09 04:36:18.43
+d0f0925c
+User
+_secureEstablished: true,
+2025-07-09 04:36:18.43
+d0f0925c
+User
+_securePending: false,
+2025-07-09 04:36:18.43
+d0f0925c
+User
+_newSessionPending: false,
+2025-07-09 04:36:18.43
+d0f0925c
+User
+_controlReleased: true,
+2025-07-09 04:36:18.43
+d0f0925c
+User
+secureConnecting: false,
+2025-07-09 04:36:18.43
+d0f0925c
+User
+_SNICallback: null,
+2025-07-09 04:36:18.43
+d0f0925c
+User
+servername: 'ep-twilight-bread-a48ys49j.us-east-1.aws.neon.tech',
+2025-07-09 04:36:18.43
+d0f0925c
+User
+alpnProtocol: false,
+
+Chats
+Archived
+Updating Replit Configuration for HTTPS Port
+5 days ago
+Troubleshooting CSP Errors in Deployed App
+26 days ago
+Replit Object Store Image Retrieval Troubleshooting
+1 month ago
+Replit Object Store Technical Integration Guide
+1 month ago
+Untitled
+1 month ago
+new pwa project tech stack requirements
+1 month ago
+Replit PDF Display Issue on Admin Orders Page
+1 month ago
+Vite Config Runtime Error Overlay Filtering
+1 month ago
+Cloud Run Deployment Build Process
+1 month ago
+Comparing Discount Labels in Products Table
+1 month ago
+Draft System Analysis Product Editing Workflow
+2 months ago
+Debugging Product Publishing Database Error
+2 months ago
+Debugging Product Draft Publishing Database Error
+2 months ago
+code review product publishing logic
+2 months ago
+database error product draft troubleshooting
+2 months ago
+Deleting Objects and Folders in Replit Object Store
+2 months ago
+Troubleshooting Create Attribute Dialog Type Dropdown
+2 months ago
+UI Component Standardization Project Roadmap
+2 months ago
+Code Review Discussion No Changes Yet
+2 months ago
+api tests implementation using existing backend routes
+2 months ago
+Storage Interface Purpose Explained
+2 months ago
+New chat with Assistant
+Assistant answers questions, refines code, and makes precise edits.
+Assistant mode
+
+advanced
+Claude 4.0 Sonnet
+
+Ask Assistant, use @ to include specific files...
+/
+
+2m
+ • 
+2 minutes ago
+Port :5000 opened on
+Database connected
+36 tables
+44.72MB/10GB
+Schema	Name	Type	Owner	Size	Description
+public	abandonedCarts	table	neondb_owner	48 kB	
+public	abandonedCarts_id_seq	sequence	neondb_owner	8192 bytes	
+public	aiRecommendations	table	neondb_owner	16 kB	
+public	aiRecommendations_id_seq	sequence	neondb_owner	8192 bytes	
+public	aiSettings	table	neondb_owner	24 kB	
+Docs
+Powered by
+/
+Search
+Loaded 1000
+Name	Added	Size
+dmc-wholesale
+-
+-
+Invoices
+-
+-
+POPS
+-
+-
+
+1000
+Search
+Time
+Deployment
+Source
+Log
+2025-07-09 04:17:58.16
+d0f0925c
+User
+_closeTimer: Timeout {
+2025-07-09 04:36:18.43
+d0f0925c
+User
+_sender: Sender {
+2025-07-09 04:36:18.43
+d0f0925c
+User
+_extensions: {},
+2025-07-09 04:36:18.43
+d0f0925c
+User
+_socket: [TLSSocket],
+2025-07-09 04:36:18.43
+d0f0925c
+User
+_firstFragment: true,
+2025-07-09 04:36:18.43
+d0f0925c
+User
+_compress: false,
+2025-07-09 04:36:18.43
+d0f0925c
+User
+_bufferedBytes: 0,
+2025-07-09 04:36:18.43
+d0f0925c
+User
+_queue: [],
+2025-07-09 04:36:18.43
+d0f0925c
+User
+_state: 0,
+2025-07-09 04:36:18.43
+d0f0925c
+User
+onerror: [Function: senderOnError],
+2025-07-09 04:36:18.43
+d0f0925c
+User
+[Symbol(websocket)]: [Circular *1]
+2025-07-09 04:36:18.43
+d0f0925c
+User
+},
+2025-07-09 04:36:18.43
+d0f0925c
+User
+_socket: TLSSocket {
+2025-07-09 04:36:18.43
+d0f0925c
+User
+_tlsOptions: [Object],
+2025-07-09 04:36:18.43
+d0f0925c
+User
+_secureEstablished: true,
+2025-07-09 04:36:18.43
+d0f0925c
+User
+_securePending: false,
+2025-07-09 04:36:18.43
+d0f0925c
+User
+_newSessionPending: false,
+2025-07-09 04:36:18.43
+d0f0925c
+User
+_controlReleased: true,
+2025-07-09 04:36:18.43
+d0f0925c
+User
+secureConnecting: false,
+2025-07-09 04:36:18.43
+d0f0925c
+User
+_SNICallback: null,
+2025-07-09 04:36:18.43
+d0f0925c
+User
+servername: 'ep-twilight-bread-a48ys49j.us-east-1.aws.neon.tech',
+2025-07-09 04:36:18.43
+d0f0925c
+User
+alpnProtocol: false,
+2025-07-09 04:36:18.43
+d0f0925c
+User
+authorized: true,
+2025-07-09 04:36:18.43
+d0f0925c
+User
+authorizationError: null,
+2025-07-09 04:36:18.43
+d0f0925c
+User
+_eventsCount: 6,
+2025-07-09 04:36:18.43
+d0f0925c
+User
+connecting: false,
+2025-07-09 04:36:18.43
+d0f0925c
+User
+_parent: null,
+2025-07-09 04:36:18.43
+d0f0925c
+User
+_readableState: [ReadableState],
+2025-07-09 04:36:18.43
+d0f0925c
+User
+_writableState: [WritableState],
+2025-07-09 04:36:18.43
+d0f0925c
+User
+_maxListeners: undefined,
+2025-07-09 04:36:18.43
+d0f0925c
+User
+_sockname: null,
+2025-07-09 04:36:18.43
+d0f0925c
+User
+_pendingEncoding: '',
+2025-07-09 04:36:18.43
+d0f0925c
+User
+_server: null,
+2025-07-09 04:36:18.43
+d0f0925c
+User
+ssl: [TLSWrap],
+2025-07-09 04:36:18.43
+d0f0925c
+User
+_rejectUnauthorized: true,
+2025-07-09 04:36:18.43
+d0f0925c
+User
+parser: null,
+2025-07-09 04:36:18.43
+d0f0925c
+User
+autoSelectFamilyAttemptedAddresses: [Array],
+2025-07-09 04:36:18.43
+d0f0925c
+User
+timeout: 0,
+2025-07-09 04:36:18.43
+d0f0925c
+User
+[Symbol(alpncallback)]: null,
+2025-07-09 04:36:18.43
+d0f0925c
+User
+[Symbol(res)]: [TLSWrap],
+2025-07-09 04:36:18.43
+d0f0925c
+User
+[Symbol(verified)]: true,
+2025-07-09 04:36:18.43
+d0f0925c
+User
+[Symbol(pendingSession)]: null,
+2025-07-09 04:36:18.43
+d0f0925c
+User
+[Symbol(async_id_symbol)]: 6115,
+2025-07-09 04:36:18.43
+d0f0925c
+User
+[Symbol(lastWriteQueueSize)]: 6,
+2025-07-09 04:36:18.43
+d0f0925c
+User
+[Symbol(kBufferCb)]: null,
+2025-07-09 04:36:18.43
+d0f0925c
+User
+[Symbol(kSetKeepAlive)]: false,
+2025-07-09 04:36:18.43
+d0f0925c
+User
+},
+2025-07-09 04:36:18.43
+d0f0925c
+User
+writeBuffer: undefined,
+2025-07-09 04:36:18.43
+d0f0925c
+User
+tlsState: 0,
