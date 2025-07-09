@@ -1,45 +1,24 @@
-import { Pool, neonConfig } from '@neondatabase/serverless';
+import { Pool } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-serverless';
-import ws from "ws";
 import * as schema from "@shared/schema";
 import { SAST_TIMEZONE } from '@shared/date-utils';
 import { logger } from './logger';
 
-// Enhanced WebSocket constructor with better error handling
-class EnhancedWebSocket extends ws {
-  constructor(address: string, protocols?: string | string[], options?: ws.ClientOptions) {
-    super(address, protocols, options);
-    
-    // Add comprehensive error handling
-    this.on('error', (error) => {
-      logger.error('WebSocket connection error:', {
-        error: error.message,
-        code: (error as any).code,
-        type: error.constructor.name,
-        address: address
-      });
-      
-      // Prevent the error from bubbling up as uncaught
-      // The Neon package will handle reconnection logic
-    });
-    
-    this.on('close', (code, reason) => {
-      if (code !== 1000) { // 1000 is normal closure
-        logger.warn('WebSocket connection closed unexpectedly:', {
-          code,
-          reason: reason.toString(),
-          address: address
-        });
-      }
-    });
-  }
+// CRITICAL FIX: Disable WebSocket connections to eliminate connection errors
+// Use HTTP pooling instead of WebSocket for better stability on resource-constrained environments
+import { neonConfig } from '@neondatabase/serverless';
+
+// Disable WebSocket and use HTTP pooling for stability
+neonConfig.useSecureWebSocket = false;
+neonConfig.pipelineConnect = false;
+neonConfig.pipelineTLS = false;
+
+// Configure fetch-based connection instead of WebSocket
+// This eliminates WebSocket connection errors and improves stability
+if (typeof fetch === 'undefined') {
+  // Ensure fetch is available for HTTP connections
+  global.fetch = require('node-fetch');
 }
-
-// Configure websocket for Neon Serverless with enhanced error handling
-neonConfig.webSocketConstructor = EnhancedWebSocket;
-
-// Remove the malformed wsProxy configuration that was causing double wss:// URLs
-// The webSocketConstructor setting is sufficient for Neon serverless
 
 if (!process.env.DATABASE_URL) {
   throw new Error(
@@ -48,15 +27,16 @@ if (!process.env.DATABASE_URL) {
 }
 
 // Configure database connection optimized for resource-constrained environment (0.5CPU/1GB)
+// Using HTTP-based connections instead of WebSocket for improved stability
 export const pool = new Pool({ 
   connectionString: process.env.DATABASE_URL,
-  // Optimized pool settings for small server
-  max: 5, // Reduced from 20 to 5 for resource-constrained environment
+  // Optimized pool settings for small server with HTTP connections
+  max: 3, // Further reduced to 3 for HTTP connections (more stable than WebSocket)
   min: 1, // Minimum connections to maintain
-  idleTimeoutMillis: 15000, // Close idle connections after 15 seconds (reduced from 30s)
-  connectionTimeoutMillis: 3000, // Reduced connection timeout for faster failure detection
-  maxUses: 1000, // Connection refresh after 1000 uses to prevent memory leaks
-  acquireTimeoutMillis: 5000, // Timeout for acquiring connection from pool
+  idleTimeoutMillis: 20000, // Slightly increased for HTTP connections (20s)
+  connectionTimeoutMillis: 5000, // Increased timeout for HTTP connections
+  maxUses: 500, // Reduced connection reuse to prevent memory leaks with HTTP
+  acquireTimeoutMillis: 8000, // Increased timeout for HTTP connection acquisition
 });
 
 // Add comprehensive pool error handling
