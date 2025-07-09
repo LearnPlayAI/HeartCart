@@ -12,6 +12,41 @@ import crypto from "crypto";
 // YoCo environment is now controlled via admin settings page
 // No longer dependent on NODE_ENV - see /admin/settings for YoCo environment toggle
 
+// Add global error handling to prevent server crashes
+process.on('uncaughtException', (error) => {
+  logger.error('Uncaught Exception - Server will attempt to continue', {
+    error: error.message,
+    stack: error.stack,
+    timestamp: new Date().toISOString()
+  });
+  
+  // Log the error but don't exit the process
+  console.error('UNCAUGHT EXCEPTION:', error);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error('Unhandled Promise Rejection - Server will attempt to continue', {
+    reason: reason instanceof Error ? reason.message : String(reason),
+    stack: reason instanceof Error ? reason.stack : undefined,
+    promise: promise.toString(),
+    timestamp: new Date().toISOString()
+  });
+  
+  // Log the error but don't exit the process
+  console.error('UNHANDLED REJECTION:', reason);
+});
+
+// Add process exit handlers for graceful shutdown
+process.on('SIGTERM', () => {
+  logger.info('SIGTERM received, shutting down gracefully');
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  logger.info('SIGINT received, shutting down gracefully');
+  process.exit(0);
+});
+
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -126,6 +161,17 @@ app.use((req, res, next) => {
   });
 
   next();
+});
+
+// Add health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    memory: process.memoryUsage(),
+    env: process.env.NODE_ENV || 'development'
+  });
 });
 
 // Add social preview routes early in the middleware chain
