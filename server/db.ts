@@ -24,10 +24,10 @@ export const pool = new Pool({
   // Increased pool settings for better connection availability
   max: 50, // Increased from 30 to 50 for improved connection availability
   min: 1, // Minimum connections to maintain
-  idleTimeoutMillis: 15000, // Close idle connections after 15 seconds (reduced from 30s)
-  connectionTimeoutMillis: 3000, // Reduced connection timeout for faster failure detection
+  idleTimeoutMillis: 5000, // Close idle connections after 5 seconds (reduced from 15s for faster release)
+  connectionTimeoutMillis: 2000, // Reduced connection timeout for faster failure detection
   maxUses: 1000, // Connection refresh after 1000 uses to prevent memory leaks
-  acquireTimeoutMillis: 5000, // Timeout for acquiring connection from pool
+  acquireTimeoutMillis: 3000, // Timeout for acquiring connection from pool (reduced from 5s)
 });
 
 // Add comprehensive pool error handling with connection recovery
