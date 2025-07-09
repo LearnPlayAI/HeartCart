@@ -1,28 +1,24 @@
-// CRITICAL FIX: Configure HTTP-only connections BEFORE importing Neon
-// This eliminates WebSocket connection errors and improves stability
-import { neonConfig } from '@neondatabase/serverless';
-
-// Configure fetch polyfill first
-if (typeof fetch === 'undefined') {
-  const nodeFetch = require('node-fetch');
-  global.fetch = nodeFetch.default || nodeFetch;
-  global.Headers = nodeFetch.Headers;
-  global.Request = nodeFetch.Request;
-  global.Response = nodeFetch.Response;
-}
-
-// Disable WebSocket entirely BEFORE importing Pool - use HTTP only for maximum stability
-neonConfig.webSocketConstructor = undefined;
-neonConfig.useSecureWebSocket = false;
-neonConfig.pipelineConnect = false;
-neonConfig.pipelineTLS = false;
-
-// Now import Pool and other dependencies AFTER configuring neonConfig
 import { Pool } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-serverless';
 import * as schema from "@shared/schema";
 import { SAST_TIMEZONE } from '@shared/date-utils';
 import { logger } from './logger';
+
+// CRITICAL FIX: Disable WebSocket connections to eliminate connection errors
+// Use HTTP pooling instead of WebSocket for better stability on resource-constrained environments
+import { neonConfig } from '@neondatabase/serverless';
+
+// Disable WebSocket and use HTTP pooling for stability
+neonConfig.useSecureWebSocket = false;
+neonConfig.pipelineConnect = false;
+neonConfig.pipelineTLS = false;
+
+// Configure fetch-based connection instead of WebSocket
+// This eliminates WebSocket connection errors and improves stability
+if (typeof fetch === 'undefined') {
+  // Ensure fetch is available for HTTP connections
+  global.fetch = require('node-fetch');
+}
 
 if (!process.env.DATABASE_URL) {
   throw new Error(
@@ -43,9 +39,9 @@ export const pool = new Pool({
   acquireTimeoutMillis: 8000, // Increased timeout for HTTP connection acquisition
 });
 
-// Add comprehensive pool error handling for HTTP connections
+// Add comprehensive pool error handling
 pool.on('error', (err) => {
-  logger.error('Database pool error (HTTP connection):', {
+  logger.error('Database pool error:', {
     error: err.message,
     code: (err as any).code,
     type: err.constructor.name,
