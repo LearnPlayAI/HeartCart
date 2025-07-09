@@ -5,68 +5,12 @@ import * as schema from "@shared/schema";
 import { SAST_TIMEZONE } from '@shared/date-utils';
 import { logger } from './logger';
 
-// Enhanced WebSocket constructor with stable error handling
-class EnhancedWebSocket extends ws {
-  private retryCount = 0;
-  private maxRetries = 3;
-  private retryDelay = 1000;
+// Configure websocket for Neon Serverless with default WebSocket handling
+// Using native ws library without custom modifications for better stability
+neonConfig.webSocketConstructor = ws;
 
-  constructor(address: string, protocols?: string | string[], options?: ws.ClientOptions) {
-    // Add connection timeout and retry options
-    const enhancedOptions = {
-      ...options,
-      handshakeTimeout: 10000, // 10 second timeout
-      perMessageDeflate: false, // Disable compression for stability
-    };
-
-    super(address, protocols, enhancedOptions);
-    
-    // Add comprehensive error handling without property modification
-    this.on('error', (error) => {
-      // Safe error logging without modifying readonly properties
-      const errorInfo = {
-        message: error.message || 'Unknown WebSocket error',
-        code: (error as any).code || 'unknown',
-        type: error.constructor.name || 'Error',
-        address: address,
-        retryCount: this.retryCount
-      };
-      
-      logger.error('WebSocket connection error:', errorInfo);
-      
-      // Prevent the error from bubbling up as uncaught
-      // The Neon package will handle reconnection logic
-    });
-    
-    this.on('close', (code, reason) => {
-      if (code !== 1000) { // 1000 is normal closure
-        logger.warn('WebSocket connection closed unexpectedly:', {
-          code,
-          reason: reason ? reason.toString() : 'No reason provided',
-          address: address,
-          retryCount: this.retryCount
-        });
-      }
-    });
-
-    // Add connection established handler
-    this.on('open', () => {
-      this.retryCount = 0; // Reset retry count on successful connection
-      logger.debug('WebSocket connection established successfully', { address });
-    });
-
-    // Add ping/pong handling for connection stability
-    this.on('ping', () => {
-      this.pong();
-    });
-  }
-}
-
-// Configure websocket for Neon Serverless with enhanced error handling
-neonConfig.webSocketConstructor = EnhancedWebSocket;
-
-// Remove the malformed wsProxy configuration that was causing double wss:// URLs
-// The webSocketConstructor setting is sufficient for Neon serverless
+// Using default Neon WebSocket configuration for optimal stability
+// No custom WebSocket implementations to avoid connection issues
 
 if (!process.env.DATABASE_URL) {
   throw new Error(
