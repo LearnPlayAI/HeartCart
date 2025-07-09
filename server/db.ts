@@ -3,9 +3,40 @@ import { drizzle } from 'drizzle-orm/neon-serverless';
 import ws from "ws";
 import * as schema from "@shared/schema";
 import { SAST_TIMEZONE } from '@shared/date-utils';
+import { logger } from './logger';
 
-// Configure websocket for Neon Serverless with error handling
-neonConfig.webSocketConstructor = ws;
+// Enhanced WebSocket constructor with better error handling
+class EnhancedWebSocket extends ws {
+  constructor(address: string, protocols?: string | string[], options?: ws.ClientOptions) {
+    super(address, protocols, options);
+    
+    // Add comprehensive error handling
+    this.on('error', (error) => {
+      logger.error('WebSocket connection error:', {
+        error: error.message,
+        code: (error as any).code,
+        type: error.constructor.name,
+        address: address
+      });
+      
+      // Prevent the error from bubbling up as uncaught
+      // The Neon package will handle reconnection logic
+    });
+    
+    this.on('close', (code, reason) => {
+      if (code !== 1000) { // 1000 is normal closure
+        logger.warn('WebSocket connection closed unexpectedly:', {
+          code,
+          reason: reason.toString(),
+          address: address
+        });
+      }
+    });
+  }
+}
+
+// Configure websocket for Neon Serverless with enhanced error handling
+neonConfig.webSocketConstructor = EnhancedWebSocket;
 
 // Remove the malformed wsProxy configuration that was causing double wss:// URLs
 // The webSocketConstructor setting is sufficient for Neon serverless
@@ -22,13 +53,44 @@ export const pool = new Pool({
   // Add connection pool settings for better stability
   max: 20, // Maximum number of connections
   idleTimeoutMillis: 30000, // Close idle connections after 30 seconds
-  connectionTimeoutMillis: 2000, // Timeout for establishing connections
+  connectionTimeoutMillis: 5000, // Increased timeout for establishing connections
 });
 
-// Add pool error handling
+// Add comprehensive pool error handling
 pool.on('error', (err) => {
-  console.error('Database pool error:', err);
+  logger.error('Database pool error:', {
+    error: err.message,
+    code: (err as any).code,
+    type: err.constructor.name,
+    stack: err.stack
+  });
+  
   // Don't exit process, just log the error
+  // The pool will handle reconnection automatically
+});
+
+// Add connection event logging for debugging (with safe property access)
+pool.on('connect', (client) => {
+  logger.info('Database client connected', {
+    processId: client && (client as any).processID ? (client as any).processID : 'unknown',
+    connectionCount: pool.totalCount
+  });
+});
+
+pool.on('acquire', (client) => {
+  logger.debug('Database client acquired from pool', {
+    processId: client && (client as any).processID ? (client as any).processID : 'unknown',
+    idleCount: pool.idleCount,
+    totalCount: pool.totalCount
+  });
+});
+
+pool.on('release', (client) => {
+  logger.debug('Database client released to pool', {
+    processId: client && (client as any).processID ? (client as any).processID : 'unknown',
+    idleCount: pool.idleCount,
+    totalCount: pool.totalCount
+  });
 });
 
 // Initialize Drizzle ORM with our schema

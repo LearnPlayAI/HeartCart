@@ -14,26 +14,61 @@ import crypto from "crypto";
 
 // Add global error handling to prevent server crashes
 process.on('uncaughtException', (error) => {
-  logger.error('Uncaught Exception - Server will attempt to continue', {
-    error: error.message,
-    stack: error.stack,
-    timestamp: new Date().toISOString()
-  });
+  // Enhanced error handling for database connection issues
+  const isDatabaseError = error.stack?.includes('@neondatabase/serverless') || 
+                         error.stack?.includes('WebSocket') ||
+                         error.message?.includes('Cannot set property message');
   
-  // Log the error but don't exit the process
-  console.error('UNCAUGHT EXCEPTION:', error);
+  if (isDatabaseError) {
+    logger.warn('Database connection error caught - server will continue operating', {
+      error: error.message,
+      type: error.constructor.name,
+      source: 'database_connection',
+      timestamp: new Date().toISOString()
+    });
+    
+    // For database connection errors, we don't want to log the full stack trace
+    // as it contains sensitive connection information
+    console.error('DATABASE CONNECTION ERROR (handled):', error.message);
+  } else {
+    logger.error('Uncaught Exception - Server will attempt to continue', {
+      error: error.message,
+      stack: error.stack,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Log the error but don't exit the process
+    console.error('UNCAUGHT EXCEPTION:', error);
+  }
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-  logger.error('Unhandled Promise Rejection - Server will attempt to continue', {
-    reason: reason instanceof Error ? reason.message : String(reason),
-    stack: reason instanceof Error ? reason.stack : undefined,
-    promise: promise.toString(),
-    timestamp: new Date().toISOString()
-  });
+  // Enhanced handling for database-related promise rejections
+  const isDatabaseRejection = reason instanceof Error && 
+                             (reason.stack?.includes('@neondatabase/serverless') || 
+                              reason.stack?.includes('WebSocket') ||
+                              reason.message?.includes('Cannot set property message'));
   
-  // Log the error but don't exit the process
-  console.error('UNHANDLED REJECTION:', reason);
+  if (isDatabaseRejection) {
+    logger.warn('Database promise rejection caught - server will continue operating', {
+      reason: reason.message,
+      type: reason.constructor.name,
+      source: 'database_connection',
+      timestamp: new Date().toISOString()
+    });
+    
+    console.error('DATABASE PROMISE REJECTION (handled):', reason.message);
+  } else {
+    logger.error('Unhandled Promise Rejection - Server will attempt to continue', {
+      reason: reason instanceof Error ? reason.message : String(reason),
+      stack: reason instanceof Error ? reason.stack : undefined,
+      promise: promise.toString(),
+      timestamp: new Date().toISOString()
+    });
+    
+    // Log the error but don't exit the process
+    console.error('UNHANDLED REJECTION:', reason);
+  }
 });
 
 // Add process exit handlers for graceful shutdown
