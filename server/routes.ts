@@ -124,10 +124,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     fileFilter: (req, file, cb) => {
       // Accept only images
       if (file.mimetype.startsWith('image/')) {
-        console.log('Multer file accepted:', file.fieldname, file.originalname);
         cb(null, true);
       } else {
-        console.log('Multer file rejected (not an image):', file.fieldname, file.originalname);
         cb(null, false);
       }
     }
@@ -1636,9 +1634,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Temporary image upload endpoint for product creation
   app.post('/api/products/images/temp', isAuthenticated, (req: Request, res: Response, next: NextFunction) => {
-    console.log('Temp image upload - Request headers:', req.headers);
-    console.log('Temp image upload - Content-Type:', req.headers['content-type']);
-    
     // Continue to multer middleware
     upload.array('images')(req, res, async (err) => {
       if (err) {
@@ -1661,8 +1656,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           } 
         });
       }
-      
-      console.log('Received files:', req.files);
       
       if (!req.files || !Array.isArray(req.files) || req.files.length === 0) {
         return res.status(400).json({ 
@@ -6940,8 +6933,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const objectKey = req.params.path;
     
     try {
-      logger.debug(`Serving file from object storage: ${objectKey}`);
-      
       if (!objectKey || objectKey.trim() === '') {
         throw new BadRequestError("Invalid file path");
       }
@@ -6990,8 +6981,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
         try {
           // Use our buffer-based method for reliable file handling
-          logger.debug(`Retrieving file ${objectKey} using buffer-based approach (attempt ${attempt}/${MAX_RETRIES})`);
-          
           // Apply a small delay if this is a temp file to prevent race conditions
           if (objectKey.includes('/temp/')) {
             await new Promise(resolve => setTimeout(resolve, 100));
@@ -7020,8 +7009,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
               : 'no-cache'
           );
           
-          logger.debug(`Successfully retrieved file ${objectKey}: ${data.length} bytes, type: ${contentType || 'unknown'}`);
-          
           // Send the buffer directly (more reliable than streaming)
           return res.end(data);
         } catch (downloadError: any) {
@@ -7035,7 +7022,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (attempt < MAX_RETRIES) {
             // Exponential backoff
             const delay = Math.pow(2, attempt) * 200;
-            logger.debug(`Retrying file retrieval after ${delay}ms...`);
             await new Promise(resolve => setTimeout(resolve, delay));
           }
         }
