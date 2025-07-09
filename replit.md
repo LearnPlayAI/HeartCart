@@ -764,6 +764,22 @@ Changelog:
   * Removed startup and informational logging in production to minimize resource consumption
   * Production logging now focuses on essential error tracking only, preventing server crashes from log volume
   * Resource-optimized logging system specifically designed for small server environments (0.5CPU/1GB memory)
+- July 9, 2025. Database connection pool optimization for resource-constrained environment:
+  * CRITICAL FIX: Reduced maximum database connections from 20 to 5 for 0.5CPU/1GB server environment
+  * Enhanced connection pool configuration with min: 1, aggressive idle timeout (15s), and connection refresh (maxUses: 1000)
+  * Added connection acquisition timeout (5s) and reduced connection timeout (3s) for faster failure detection
+  * Implemented connection pool health monitoring with warnings when approaching max connections (>4)
+  * Enhanced database connection event logging with totalCount, idleCount, and waitingCount metrics
+  * Optimized pool settings prevent resource exhaustion and connection timeout errors
+  * Database connection system now properly scaled for small server environments preventing crashes
+- July 9, 2025. Complete API success logging elimination for resource optimization:
+  * CRITICAL OPTIMIZATION: API logging now only captures failures, errors, and slow requests - eliminated all successful request logging
+  * Modified API request middleware to only log when: HTTP status >= 400, request duration > 5 seconds, or API response contains success: false
+  * Eliminated noise from successful API calls like GET /api/favourites 304, GET /api/user 200, etc.
+  * Enhanced logging with detailed failure indicators: isHttpError, isSlowRequest, isApiFailure flags
+  * Applied to both production and development environments for consistent resource efficiency
+  * Significant reduction in log volume while maintaining comprehensive error tracking capabilities
+  * System now only logs actual problems, dramatically reducing resource consumption from successful API operations
 - July 4, 2025. CRITICAL PROFILE UPDATE FUNCTIONALITY FIX - Production-ready system completed:
   * RESOLVED PRODUCTION BLOCKER: Fixed missing PUT /api/user endpoint that was preventing profile updates
   * Root cause: Frontend called PUT /api/user but server only had PUT /api/users/:id endpoint

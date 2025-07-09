@@ -163,35 +163,34 @@ app.use((req, res, next) => {
     }
   }
 
-  // Minimal response logging for resource efficiency
+  // Minimal response logging for resource efficiency - only log failures and errors
   res.on("finish", () => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
-      // Only log errors and warnings in production to save resources
-      const logLevel = res.statusCode >= 400 ? 'warn' : 'info';
+      // Check if response indicates failure
+      const isHttpError = res.statusCode >= 400;
+      const isSlowRequest = duration > 5000;
+      const isApiFailure = capturedJsonResponse && capturedJsonResponse.success === false;
       
-      // In production, only log errors and slow requests
-      if (process.env.NODE_ENV === 'production') {
-        if (res.statusCode >= 400 || duration > 5000) { // Only log errors or slow requests (>5s)
-          logger[logLevel](`API ${logLevel.toUpperCase()}: ${req.method} ${path} ${res.statusCode} in ${duration}ms`, {
-            method: req.method,
-            path,
-            statusCode: res.statusCode,
-            duration: `${duration}ms`
-          });
-        }
-      } else {
-        // Development logging - reduced frequency
+      // Only log if there's an actual problem: HTTP errors, slow requests, or API failures
+      const shouldLog = isHttpError || isSlowRequest || isApiFailure;
+      
+      if (shouldLog) {
+        const logLevel = isHttpError ? 'warn' : 'info';
+        
         logger[logLevel](`API ${logLevel.toUpperCase()}: ${req.method} ${path} ${res.statusCode} in ${duration}ms`, {
           method: req.method,
           path,
           statusCode: res.statusCode,
-          duration: `${duration}ms`
+          duration: `${duration}ms`,
+          isHttpError,
+          isSlowRequest,
+          isApiFailure
         });
       }
       
-      // Keep the existing console log for compatibility (development only)
-      if (process.env.NODE_ENV === 'development') {
+      // Keep the existing console log for compatibility (development only) - only for failures
+      if (process.env.NODE_ENV === 'development' && shouldLog) {
         let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
         if (capturedJsonResponse) {
           logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
@@ -201,7 +200,7 @@ app.use((req, res, next) => {
           logLine = logLine.slice(0, 79) + "…";
         }
 
-        log(logLine);
+        console.log(logLine);
       }
     }
   });

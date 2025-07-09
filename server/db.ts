@@ -47,13 +47,16 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-// Configure database connection with enhanced error handling
+// Configure database connection optimized for resource-constrained environment (0.5CPU/1GB)
 export const pool = new Pool({ 
   connectionString: process.env.DATABASE_URL,
-  // Add connection pool settings for better stability
-  max: 20, // Maximum number of connections
-  idleTimeoutMillis: 30000, // Close idle connections after 30 seconds
-  connectionTimeoutMillis: 5000, // Increased timeout for establishing connections
+  // Optimized pool settings for small server
+  max: 5, // Reduced from 20 to 5 for resource-constrained environment
+  min: 1, // Minimum connections to maintain
+  idleTimeoutMillis: 15000, // Close idle connections after 15 seconds (reduced from 30s)
+  connectionTimeoutMillis: 3000, // Reduced connection timeout for faster failure detection
+  maxUses: 1000, // Connection refresh after 1000 uses to prevent memory leaks
+  acquireTimeoutMillis: 5000, // Timeout for acquiring connection from pool
 });
 
 // Add comprehensive pool error handling
@@ -69,13 +72,25 @@ pool.on('error', (err) => {
   // The pool will handle reconnection automatically
 });
 
-// Minimal connection event logging for production efficiency
-// Only log connection events in development to prevent resource exhaustion
+// Enhanced connection pool monitoring for resource-constrained environment
 if (process.env.NODE_ENV !== 'production') {
   pool.on('connect', (client) => {
     logger.info('Database client connected', {
-      connectionCount: pool.totalCount
+      totalCount: pool.totalCount,
+      idleCount: pool.idleCount,
+      waitingCount: pool.waitingCount
     });
+  });
+  
+  // Monitor pool health for debugging
+  pool.on('acquire', (client) => {
+    if (pool.totalCount > 4) { // Warn if approaching max connections
+      logger.warn('High database connection usage detected', {
+        totalCount: pool.totalCount,
+        idleCount: pool.idleCount,
+        waitingCount: pool.waitingCount
+      });
+    }
   });
 }
 
