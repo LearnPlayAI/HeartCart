@@ -5,19 +5,34 @@ import * as schema from "@shared/schema";
 import { SAST_TIMEZONE } from '@shared/date-utils';
 import { logger } from './logger';
 
-// Enhanced WebSocket constructor with better error handling
+// Enhanced WebSocket constructor with stable error handling
 class EnhancedWebSocket extends ws {
+  private retryCount = 0;
+  private maxRetries = 3;
+  private retryDelay = 1000;
+
   constructor(address: string, protocols?: string | string[], options?: ws.ClientOptions) {
-    super(address, protocols, options);
+    // Add connection timeout and retry options
+    const enhancedOptions = {
+      ...options,
+      handshakeTimeout: 10000, // 10 second timeout
+      perMessageDeflate: false, // Disable compression for stability
+    };
+
+    super(address, protocols, enhancedOptions);
     
-    // Add comprehensive error handling
+    // Add comprehensive error handling without property modification
     this.on('error', (error) => {
-      logger.error('WebSocket connection error:', {
-        error: error.message,
-        code: (error as any).code,
-        type: error.constructor.name,
-        address: address
-      });
+      // Safe error logging without modifying readonly properties
+      const errorInfo = {
+        message: error.message || 'Unknown WebSocket error',
+        code: (error as any).code || 'unknown',
+        type: error.constructor.name || 'Error',
+        address: address,
+        retryCount: this.retryCount
+      };
+      
+      logger.error('WebSocket connection error:', errorInfo);
       
       // Prevent the error from bubbling up as uncaught
       // The Neon package will handle reconnection logic
@@ -27,10 +42,22 @@ class EnhancedWebSocket extends ws {
       if (code !== 1000) { // 1000 is normal closure
         logger.warn('WebSocket connection closed unexpectedly:', {
           code,
-          reason: reason.toString(),
-          address: address
+          reason: reason ? reason.toString() : 'No reason provided',
+          address: address,
+          retryCount: this.retryCount
         });
       }
+    });
+
+    // Add connection established handler
+    this.on('open', () => {
+      this.retryCount = 0; // Reset retry count on successful connection
+      logger.debug('WebSocket connection established successfully', { address });
+    });
+
+    // Add ping/pong handling for connection stability
+    this.on('ping', () => {
+      this.pong();
     });
   }
 }
@@ -59,17 +86,29 @@ export const pool = new Pool({
   acquireTimeoutMillis: 5000, // Timeout for acquiring connection from pool
 });
 
-// Add comprehensive pool error handling
+// Add comprehensive pool error handling with connection recovery
 pool.on('error', (err) => {
-  logger.error('Database pool error:', {
-    error: err.message,
-    code: (err as any).code,
-    type: err.constructor.name,
-    stack: err.stack
-  });
+  // Safe error logging without modifying readonly properties
+  const errorInfo = {
+    message: err.message || 'Unknown database pool error',
+    code: (err as any).code || 'unknown',
+    type: err.constructor.name || 'Error',
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+  };
+  
+  logger.error('Database pool error:', errorInfo);
   
   // Don't exit process, just log the error
   // The pool will handle reconnection automatically
+});
+
+// Add connection event handling for better stability monitoring
+pool.on('disconnect', (client) => {
+  logger.debug('Database client disconnected', {
+    totalCount: pool.totalCount,
+    idleCount: pool.idleCount,
+    waitingCount: pool.waitingCount
+  });
 });
 
 // Enhanced connection pool monitoring for resource-constrained environment

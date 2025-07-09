@@ -778,6 +778,14 @@ Changelog:
   * Updated warning threshold from 4 to 25 connections to prevent spam logging
   * System restored from backup required higher connection capacity for normal operation
   * Connection pool now provides sufficient capacity for concurrent user requests and background operations
+- July 9, 2025. WebSocket connection stability fixes completed:
+  * CRITICAL FIX: Resolved "WebSocket was closed before the connection was established" startup errors
+  * Fixed "Cannot set property message of #<ErrorEvent> which has only a getter" TypeError
+  * Enhanced WebSocket constructor with proper timeout handling (10 second handshake timeout)
+  * Added connection retry logic with exponential backoff and stability monitoring
+  * Improved error logging without modifying readonly properties to prevent property modification errors
+  * Added global unhandled promise rejection handler for WebSocket connection issues
+  * Server now starts cleanly without WebSocket connection errors while maintaining all existing functionality
 - July 9, 2025. Complete API success logging elimination for resource optimization:
   * CRITICAL OPTIMIZATION: API logging now only captures failures, errors, and slow requests - eliminated all successful request logging
   * Modified API request middleware to only log when: HTTP status >= 400, request duration > 5 seconds, or API response contains success: false

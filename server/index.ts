@@ -17,7 +17,8 @@ process.on('uncaughtException', (error) => {
   // Enhanced error handling for database connection issues
   const isDatabaseError = error.stack?.includes('@neondatabase/serverless') || 
                          error.stack?.includes('WebSocket') ||
-                         error.message?.includes('Cannot set property message');
+                         error.message?.includes('Cannot set property message') ||
+                         error.message?.includes('which has only a getter');
   
   if (isDatabaseError) {
     logger.warn('Database connection error caught - server will continue operating', {
@@ -39,6 +40,30 @@ process.on('uncaughtException', (error) => {
     
     // Log the error but don't exit the process
     console.error('UNCAUGHT EXCEPTION:', error);
+  }
+});
+
+// Add unhandled promise rejection handler for WebSocket connection issues
+process.on('unhandledRejection', (reason, promise) => {
+  const isWebSocketError = reason && typeof reason === 'object' && 
+                          ('message' in reason && String(reason.message).includes('WebSocket')) ||
+                          ('stack' in reason && String(reason.stack).includes('WebSocket'));
+  
+  if (isWebSocketError) {
+    logger.warn('WebSocket promise rejection caught - server will continue operating', {
+      reason: reason ? String(reason) : 'Unknown reason',
+      source: 'websocket_promise',
+      timestamp: new Date().toISOString()
+    });
+    
+    console.error('WEBSOCKET PROMISE REJECTION (handled):', reason);
+  } else {
+    logger.error('Unhandled Promise Rejection - Server will attempt to continue', {
+      reason: reason ? String(reason) : 'Unknown reason',
+      timestamp: new Date().toISOString()
+    });
+    
+    console.error('UNHANDLED PROMISE REJECTION:', reason);
   }
 });
 
