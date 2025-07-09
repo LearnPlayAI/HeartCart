@@ -1,0 +1,36 @@
+✅ Unified Email Service initialized successfully with MailerSend
+Replit Object Storage client initialization completed
+{"timestamp":"2025-07-09T09:07:36.000Z","level":"ERROR","message":"Failed to initialize PostgreSQL session store, using memory store instead","context":{"error":{}}}
+{"timestamp":"2025-07-09T09:07:36.000Z","level":"INFO","message":"Registering authentication testing routes"}
+{"timestamp":"2025-07-09T09:07:36.000Z","level":"INFO","message":"Registering database testing routes"}
+{"timestamp":"2025-07-09T09:07:36.000Z","level":"INFO","message":"Registering API testing routes"}
+{"timestamp":"2025-07-09T09:07:36.000Z","level":"INFO","message":"Registering storage testing routes"}
+{"timestamp":"2025-07-09T09:07:36.000Z","level":"INFO","message":"Registering file manager testing routes"}
+{"timestamp":"2025-07-09T09:07:36.000Z","level":"INFO","message":"Server started successfully on port 5000"}
+7:07:36 AM [express] serving on port 5000
+{"timestamp":"2025-07-09T09:07:37.000Z","level":"INFO","message":"Database client connected","context":{"processId":null,"connectionCount":1}}
+{"timestamp":"2025-07-09T09:07:37.000Z","level":"DEBUG","message":"Database client acquired from pool","context":{"processId":null,"idleCount":0,"totalCount":1}}
+Error releasing database connection: TypeError: Cannot read properties of undefined (reading 'processID')
+    at Cn.<anonymous> (/home/runner/workspace/server/db.ts:90:32)
+    at Cn.emit (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:397:12)
+    at Cn._release (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1397:6)
+    at An.release (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1395:70)
+    at setSessionTimezone (/home/runner/workspace/server/db.ts:128:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+{"timestamp":"2025-07-09T09:07:37.000Z","level":"INFO","message":"Database timezone set to Africa/Johannesburg"}
+Object Store access verified successfully
+Object Store successfully initialized
+{"timestamp":"2025-07-09T09:07:39.000Z","level":"INFO","message":"Database client connected","context":{"processId":null,"connectionCount":2}}
+{"timestamp":"2025-07-09T09:07:39.000Z","level":"DEBUG","message":"Database client acquired from pool","context":{"processId":null,"idleCount":0,"totalCount":2}}
+{"timestamp":"2025-07-09T09:07:39.000Z","level":"ERROR","message":"Uncaught Exception - Server will attempt to continue","context":{"error":"Cannot read properties of null (reading 'processID')","stack":"TypeError: Cannot read properties of null (reading 'processID')\n    at Cn.<anonymous> (/home/runner/workspace/server/db.ts:90:32)\n    at Cn.emit (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:397:12)\n    at Cn._release (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1397:6)\n    at An.release (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1395:70)\n    at _r.<anonymous> (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1410:59)\n    at _r.handleReadyForQuery (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:926:55)\n    at An._handleReadyForQuery (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1288:3)\n    at fn.emit (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:397:12)\n    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1212:29\n    at cn.parse (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1127:71)","timestamp":"2025-07-09T07:07:39.126Z"}}
+UNCAUGHT EXCEPTION: TypeError: Cannot read properties of null (reading 'processID')
+    at Cn.<anonymous> (/home/runner/workspace/server/db.ts:90:32)
+    at Cn.emit (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:397:12)
+    at Cn._release (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1397:6)
+    at An.release (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1395:70)
+    at _r.<anonymous> (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1410:59)
+    at _r.handleReadyForQuery (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:926:55)
+    at An._handleReadyForQuery (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1288:3)
+    at fn.emit (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:397:12)
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1212:29
+    at cn.parse (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1127:71)

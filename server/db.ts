@@ -69,29 +69,17 @@ pool.on('error', (err) => {
   // The pool will handle reconnection automatically
 });
 
-// Add connection event logging for debugging (with safe property access)
-pool.on('connect', (client) => {
-  logger.info('Database client connected', {
-    processId: client && (client as any).processID ? (client as any).processID : 'unknown',
-    connectionCount: pool.totalCount
+// Minimal connection event logging for production efficiency
+// Only log connection events in development to prevent resource exhaustion
+if (process.env.NODE_ENV !== 'production') {
+  pool.on('connect', (client) => {
+    logger.info('Database client connected', {
+      connectionCount: pool.totalCount
+    });
   });
-});
+}
 
-pool.on('acquire', (client) => {
-  logger.debug('Database client acquired from pool', {
-    processId: client && (client as any).processID ? (client as any).processID : 'unknown',
-    idleCount: pool.idleCount,
-    totalCount: pool.totalCount
-  });
-});
-
-pool.on('release', (client) => {
-  logger.debug('Database client released to pool', {
-    processId: client && (client as any).processID ? (client as any).processID : 'unknown',
-    idleCount: pool.idleCount,
-    totalCount: pool.totalCount
-  });
-});
+// Remove acquire/release logging entirely as it's too frequent for resource-constrained environments
 
 // Initialize Drizzle ORM with our schema
 export const db = drizzle({ client: pool, schema });

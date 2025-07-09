@@ -16,10 +16,10 @@ export enum LogLevel {
   FATAL = 4,
 }
 
-// Default log level based on environment
+// Default log level based on environment - optimized for resource-constrained production
 const DEFAULT_LOG_LEVEL = process.env.NODE_ENV === 'production' 
-  ? LogLevel.INFO 
-  : LogLevel.DEBUG;
+  ? LogLevel.WARN // Only warnings and errors in production to reduce resource usage
+  : LogLevel.INFO; // Reduced development logging from DEBUG to INFO
 
 // Current log level (can be configured at runtime)
 let currentLogLevel = Number(process.env.LOG_LEVEL ?? DEFAULT_LOG_LEVEL);
@@ -52,10 +52,26 @@ function formatLogEntry(level: LogLevel, message: string, context?: Record<strin
 
 /**
  * Write log entry to the appropriate output
+ * Optimized for resource-constrained environments
  */
 function writeLog(level: LogLevel, message: string, context?: Record<string, any>): void {
   // Skip logging if below current log level
   if (level < currentLogLevel) return;
+  
+  // In production, limit context size to prevent memory issues
+  if (process.env.NODE_ENV === 'production' && context) {
+    // Only include essential context fields and limit object size
+    const essentialKeys = ['error', 'statusCode', 'method', 'path', 'userId', 'orderId'];
+    const limitedContext: Record<string, any> = {};
+    
+    for (const key of essentialKeys) {
+      if (context[key] !== undefined) {
+        limitedContext[key] = context[key];
+      }
+    }
+    
+    context = limitedContext;
+  }
   
   const formattedLog = formatLogEntry(level, message, context);
   

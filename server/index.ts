@@ -124,7 +124,10 @@ app.use((req, res, next) => {
 // Set database timezone to SAST at server startup
 setSessionTimezone()
   .then(() => {
-    logger.info(`Database timezone set to ${SAST_TIMEZONE}`);
+    // Only log in development to reduce production noise
+    if (process.env.NODE_ENV !== 'production') {
+      logger.info(`Database timezone set to ${SAST_TIMEZONE}`);
+    }
   })
   .catch(error => {
     logger.error(`Failed to set database timezone`, error);
@@ -143,63 +146,63 @@ app.use((req, res, next) => {
     return originalResJson.apply(res, [bodyJson, ...args]);
   };
 
-  // Log request details
+  // Minimal request logging for resource efficiency
   if (path.startsWith("/api")) {
     const requestId = req.headers['x-request-id'] || crypto.randomUUID();
     res.setHeader('X-Request-ID', requestId);
     
-    // Only log API requests in development to reduce production noise
+    // No request logging in production to save resources
+    // Only log in development for debugging
     if (process.env.NODE_ENV === 'development') {
+      // Only log essential info - no query params or user agent to reduce memory usage
       logger.debug(`API Request: ${req.method} ${path}`, {
         method: req.method,
         path,
-        query: req.query,
-        requestId,
-        userAgent: req.headers['user-agent'],
-        ip: req.ip,
+        requestId
       });
     }
   }
 
-  // Log response details when request completes
+  // Minimal response logging for resource efficiency
   res.on("finish", () => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
-      // Log to our structured logger
+      // Only log errors and warnings in production to save resources
       const logLevel = res.statusCode >= 400 ? 'warn' : 'info';
       
-      const logContext = {
-        method: req.method,
-        path,
-        statusCode: res.statusCode,
-        duration: `${duration}ms`,
-        requestId: res.getHeader('X-Request-ID'),
-      };
-      
-      if (res.statusCode >= 500) {
-        logger.error(`API Error: ${req.method} ${path} ${res.statusCode} in ${duration}ms`, logContext);
-      } else if (res.statusCode >= 400) {
-        logger.warn(`API Warning: ${req.method} ${path} ${res.statusCode} in ${duration}ms`, logContext);
-      } else {
-        // Log successful API calls as INFO in production, DEBUG in development
-        if (process.env.NODE_ENV === 'production') {
-          logger.info(`API Success: ${req.method} ${path} ${res.statusCode} in ${duration}ms`, logContext);
-        } else {
-          logger.debug(`API Success: ${req.method} ${path} ${res.statusCode} in ${duration}ms`, logContext);
+      // In production, only log errors and slow requests
+      if (process.env.NODE_ENV === 'production') {
+        if (res.statusCode >= 400 || duration > 5000) { // Only log errors or slow requests (>5s)
+          logger[logLevel](`API ${logLevel.toUpperCase()}: ${req.method} ${path} ${res.statusCode} in ${duration}ms`, {
+            method: req.method,
+            path,
+            statusCode: res.statusCode,
+            duration: `${duration}ms`
+          });
         }
+      } else {
+        // Development logging - reduced frequency
+        logger[logLevel](`API ${logLevel.toUpperCase()}: ${req.method} ${path} ${res.statusCode} in ${duration}ms`, {
+          method: req.method,
+          path,
+          statusCode: res.statusCode,
+          duration: `${duration}ms`
+        });
       }
       
-      // Keep the existing console log for compatibility
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
+      // Keep the existing console log for compatibility (development only)
+      if (process.env.NODE_ENV === 'development') {
+        let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
+        if (capturedJsonResponse) {
+          logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+        }
 
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
+        if (logLine.length > 80) {
+          logLine = logLine.slice(0, 79) + "…";
+        }
 
-      log(logLine);
+        log(logLine);
+      }
     }
   });
 
@@ -251,7 +254,10 @@ app.get('/api/social-preview/product-image/:id', handleProductSocialImage);
     host: "0.0.0.0",
     reusePort: true,
   }, () => {
+    // Only log server startup in development to reduce production noise
+  if (process.env.NODE_ENV !== 'production') {
     logger.info(`Server started successfully on port ${port}`);
+  }
     log(`serving on port ${port}`);
   });
 })();
