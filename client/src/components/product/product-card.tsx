@@ -146,13 +146,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const { user } = useAuth();
   const [quickViewOpen, setQuickViewOpen] = useState(false);
   const [imageError, setImageError] = useState(false);
-  const [disclaimersModalOpen, setDisclaimersModalOpen] = useState(false);
-  const [pendingCartItem, setPendingCartItem] = useState<{
-    productId: number;
-    quantity: number;
-    itemPrice: number;
-    attributeSelections: Record<string, string>;
-  } | null>(null);
+  // disclaimersModalOpen state removed - disclaimer now shown during checkout process only
+  // pendingCartItem state removed - disclaimer now shown during checkout process only
   
   // Calculate unified pricing using centralized logic
   const pricing = calculateProductPricing(
@@ -189,15 +184,13 @@ const ProductCard: React.FC<ProductCardProps> = ({
         }
       }
       
-      // If no required attributes, prepare cart item and show disclaimers modal
-      setPendingCartItem({
+      // If no required attributes, add item directly to cart (no disclaimers modal)
+      addItem({
         productId: product.id,
         quantity: 1,
         itemPrice: cartPrice,
         attributeSelections: {}
       });
-      setDisclaimersModalOpen(true);
-      
 
     } catch (error) {
       console.error('Error adding item to cart:', error);
@@ -211,16 +204,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
     }
   };
 
-  const handleAcceptDisclaimers = () => {
-    if (pendingCartItem) {
-      addItem(pendingCartItem);
-      
-      
-      // Reset state
-      setPendingCartItem(null);
-      setDisclaimersModalOpen(false);
-    }
-  };
+  // handleAcceptDisclaimers removed - disclaimer now shown during checkout process only
   
   const renderStars = (rating: number | null = 0) => {
     const stars = [];
