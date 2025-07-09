@@ -978,12 +978,42 @@ export class DatabaseEmailService {
 
       await this.mailerSend.email.send(emailParams);
       
+      // Log email to database for audit trail
+      const emailLogData: InsertEmailLog = {
+        userId: null,
+        recipientEmail: data.email,
+        emailType: 'order_status',
+        templateId: null,
+        subject: `Order Update - ${data.orderNumber}`,
+        deliveryStatus: 'sent',
+        errorMessage: null,
+        mailerSendId: null,
+        metadata: null
+      };
+      
+      await storage.logEmail(emailLogData);
+      
       logger.info('Order status email sent successfully', { 
         email: data.email,
         orderNumber: data.orderNumber,
         status: data.status 
       });
     } catch (error) {
+      // Log failed email to database
+      const failedEmailLogData: InsertEmailLog = {
+        userId: null,
+        recipientEmail: data.email,
+        emailType: 'order_status',
+        templateId: null,
+        subject: `Order Update - ${data.orderNumber}`,
+        deliveryStatus: 'failed',
+        errorMessage: error instanceof Error ? error.message : String(error),
+        mailerSendId: null,
+        metadata: null
+      };
+      
+      await storage.logEmail(failedEmailLogData);
+      
       logger.error('Error sending order status email', { error, data });
       throw error;
     }

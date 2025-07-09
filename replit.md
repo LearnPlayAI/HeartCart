@@ -806,6 +806,16 @@ Changelog:
   * Applied to both production and development environments for consistent resource efficiency
   * Significant reduction in log volume while maintaining comprehensive error tracking capabilities
   * System now only logs actual problems, dramatically reducing resource consumption from successful API operations
+- July 9, 2025. Systematic JSON response handling fix for admin order management:
+  * CRITICAL FIX: Resolved systematic JSON response handling issues across admin pages causing red toast errors
+  * Fixed users.tsx (6 instances): Removed incorrect .json() calls on apiRequest() responses
+  * Fixed order-detail.tsx (1 instance): Corrected invoice generation mutation response handling
+  * Verified order-detail.tsx mutations (status, payment, tracking) are properly implemented without JSON issues
+  * Verified orders.tsx mutations (status, payment updates) are correctly using apiRequest() without .json() calls
+  * Distinguished between files using fetch() (which need .json()) vs apiRequest() (which return parsed objects)
+  * Fixed root cause: Components were calling .json() on apiRequest() responses that already return parsed JSON objects
+  * All order status update functionality now works correctly without red toast errors
+  * Email notifications for "shipped" and "delivered" status changes confirmed properly implemented on server side
 - July 4, 2025. CRITICAL PROFILE UPDATE FUNCTIONALITY FIX - Production-ready system completed:
   * RESOLVED PRODUCTION BLOCKER: Fixed missing PUT /api/user endpoint that was preventing profile updates
   * Root cause: Frontend called PUT /api/user but server only had PUT /api/users/:id endpoint

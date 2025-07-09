@@ -188,8 +188,7 @@ export default function UserAdminPage() {
         params.append('status', statusFilter);
       }
       
-      const response = await apiRequest('GET', `/api/admin/users?${params.toString()}`);
-      return response.json();
+      return await apiRequest('GET', `/api/admin/users?${params.toString()}`);
     }
   });
 
@@ -199,11 +198,7 @@ export default function UserAdminPage() {
   // Update user mutation
   const updateUserMutation = useMutation({
     mutationFn: async ({ userId, data }: { userId: number; data: EditUserData }) => {
-      const response = await apiRequest('PUT', `/api/admin/users/${userId}`, data);
-      if (!response.ok) {
-        throw new Error('Failed to update user');
-      }
-      return response.json();
+      return await apiRequest('PUT', `/api/admin/users/${userId}`, data);
     },
     onSuccess: () => {
       
@@ -220,11 +215,7 @@ export default function UserAdminPage() {
   // Reset password mutation
   const resetPasswordMutation = useMutation({
     mutationFn: async ({ userId, newPassword }: { userId: number; newPassword: string }) => {
-      const response = await apiRequest('POST', `/api/admin/users/${userId}/reset-password`, { newPassword });
-      if (!response.ok) {
-        throw new Error('Failed to reset password');
-      }
-      return response.json();
+      return await apiRequest('POST', `/api/admin/users/${userId}/reset-password`, { newPassword });
     },
     onSuccess: () => {
       
@@ -240,11 +231,7 @@ export default function UserAdminPage() {
   // Delete user mutation
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: number) => {
-      const response = await apiRequest('DELETE', `/api/admin/users/${userId}`);
-      if (!response.ok) {
-        throw new Error('Failed to delete user');
-      }
-      return response.json();
+      return await apiRequest('DELETE', `/api/admin/users/${userId}`);
     },
     onSuccess: () => {
       
@@ -261,11 +248,7 @@ export default function UserAdminPage() {
   // Toggle user status mutation
   const toggleStatusMutation = useMutation({
     mutationFn: async ({ userId, isActive }: { userId: number; isActive: boolean }) => {
-      const response = await apiRequest('PATCH', `/api/admin/users/${userId}/status`, { isActive });
-      if (!response.ok) {
-        throw new Error('Failed to update user status');
-      }
-      return response.json();
+      return await apiRequest('PATCH', `/api/admin/users/${userId}/status`, { isActive });
     },
     onSuccess: () => {
       
@@ -280,11 +263,7 @@ export default function UserAdminPage() {
   // Toggle user role mutation
   const toggleRoleMutation = useMutation({
     mutationFn: async ({ userId, role }: { userId: number; role: string }) => {
-      const response = await apiRequest('PATCH', `/api/admin/users/${userId}/role`, { role });
-      if (!response.ok) {
-        throw new Error('Failed to update user role');
-      }
-      return response.json();
+      return await apiRequest('PATCH', `/api/admin/users/${userId}/role`, { role });
     },
     onSuccess: () => {
       

@@ -541,7 +541,7 @@ export default function AdminOrderDetail() {
         throw new Error(errorMessage);
       }
 
-      return response.json();
+      return response;
     },
     onSuccess: () => {
       toast({
