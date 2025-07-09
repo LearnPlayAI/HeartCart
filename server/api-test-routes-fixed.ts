@@ -36,7 +36,10 @@ export function registerApiTestRoutes(app: Express): void {
     return;
   }
   
-  logger.info('Registering API testing routes');
+  // Only log in development to reduce production noise
+  if (process.env.NODE_ENV !== 'production') {
+    logger.info('Registering API testing routes');
+  }
   
   // Custom admin check middleware that works with the override in routes.ts
   const apiTestAdminCheck = (req: Request, res: Response, next: NextFunction) => {

@@ -45,7 +45,10 @@ export class UnifiedEmailService {
       this.fromSender = new Sender("sales@teemeyou.shop", "TeeMeYou");
 
       this.isInitialized = true;
-      console.log('✅ Unified Email Service initialized successfully with MailerSend');
+      // Only log in development to reduce production noise
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('✅ Unified Email Service initialized successfully with MailerSend');
+      }
     } catch (error) {
       console.error('❌ Failed to initialize MailerSend email service:', error);
       this.isInitialized = false;

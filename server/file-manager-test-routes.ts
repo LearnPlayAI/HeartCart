@@ -71,7 +71,10 @@ export function registerFileManagerTestRoutes(app: Express): void {
     return;
   }
   
-  logger.info('Registering file manager testing routes');
+  // Only log in development to reduce production noise
+  if (process.env.NODE_ENV !== 'production') {
+    logger.info('Registering file manager testing routes');
+  }
   
   // Custom admin check middleware
   const fileTestAdminCheck = (req: Request, res: Response, next: NextFunction) => {

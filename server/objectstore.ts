@@ -52,7 +52,10 @@ export class ObjectStorageService {
       // Operations will wait if needed through the ensureInitialized method
       this.initializeStorage()
         .then(() => {
-          console.log('Replit Object Storage client initialization completed');
+          // Only log in development to reduce production noise
+          if (process.env.NODE_ENV !== 'production') {
+            console.log('Replit Object Storage client initialization completed');
+          }
         })
         .catch(error => {
           console.error('Failed to fully initialize Replit Object Storage:', error);
@@ -87,7 +90,10 @@ export class ObjectStorageService {
    */
   private async initializeStorage(): Promise<void> {
     try {
-      console.log('Initializing Replit Object Storage...');
+      // Only log in development to reduce production noise
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Initializing Replit Object Storage...');
+      }
       
       // Mark as initialized immediately - test operations will happen on first use
       this.initialized = true;

@@ -62,7 +62,10 @@ class ObjectStoreService {
       try {
         await this.verifyAccess();
         this.isInitialized = true;
-        console.log('Object Store successfully initialized');
+        // Only log in development to reduce production noise
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('Object Store successfully initialized');
+        }
       } catch (error) {
         console.error('Failed to initialize Object Store:', error);
         throw error;
@@ -87,7 +90,10 @@ class ObjectStoreService {
         throw new Error(`Object Store access error: ${errorMessage}`);
       }
       
-      console.log('Object Store access verified successfully');
+      // Only log in development to reduce production noise
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Object Store access verified successfully');
+      }
     } catch (error) {
       console.error('Object Store access verification failed:', error);
       throw new Error(`Failed to verify Object Store access: ${error instanceof Error ? error.message : String(error)}`);
@@ -636,14 +642,20 @@ class ObjectStoreService {
   async exists(objectKey: string): Promise<boolean> {
     await this.initialize();
     
-    console.log(`Checking if file exists: ${objectKey}`);
+    // Only log in development to reduce production noise
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`Checking if file exists: ${objectKey}`);
+    }
     
     try {
       // First try the direct exists method
       const existsResult = await this.objectStore.exists(objectKey);
       
       if (!('err' in existsResult) && existsResult.value === true) {
-        console.log(`Direct exists check confirmed file exists: ${objectKey}`);
+        // Only log in development to reduce production noise
+        if (process.env.NODE_ENV !== 'production') {
+          console.log(`Direct exists check confirmed file exists: ${objectKey}`);
+        }
         return true;
       }
       
@@ -653,7 +665,10 @@ class ObjectStoreService {
       const objectName = objectPathParts.pop() || '';
       const folderPath = objectPathParts.join('/');
       
-      console.log(`Fallback existence check using list on folder: ${folderPath}`);
+      // Only log in development to reduce production noise
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`Fallback existence check using list on folder: ${folderPath}`);
+      }
       
       const listResult = await this.objectStore.list(folderPath);
       
@@ -674,14 +689,20 @@ class ObjectStoreService {
             
             // If we found a matching key/name
             if (foundKey === objectKey) {
-              console.log(`File found in listing: ${objectKey}`);
+              // Only log in development to reduce production noise
+              if (process.env.NODE_ENV !== 'production') {
+                console.log(`File found in listing: ${objectKey}`);
+              }
               return true;
             }
           }
         }
       }
       
-      console.log(`File not found after checking listing: ${objectKey}`);
+      // Only log in development to reduce production noise
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`File not found after checking listing: ${objectKey}`);
+      }
       return false;
     } catch (error) {
       console.error(`Error checking if ${objectKey} exists:`, error);

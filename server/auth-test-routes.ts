@@ -31,7 +31,10 @@ export function registerAuthTestRoutes(app: Express): void {
     return;
   }
   
-  logger.info('Registering authentication testing routes');
+  // Only log in development to reduce production noise
+  if (process.env.NODE_ENV !== 'production') {
+    logger.info('Registering authentication testing routes');
+  }
   
   // Test password validation
   app.post("/api/auth-test/validate-password", isAdmin, async (req: Request, res: Response) => {

@@ -12345,14 +12345,17 @@ export class DatabaseStorage implements IStorage {
           .returning();
       }
 
-      logger.info('Calculated user credit balance from transactions', {
-        userId,
-        totalEarned,
-        totalUsed,
-        totalCreditAmount,
-        availableCreditAmount,
-        transactionCount: transactions.length
-      });
+      // Only log in development to reduce production noise
+      if (process.env.NODE_ENV !== 'production') {
+        logger.info('Calculated user credit balance from transactions', {
+          userId,
+          totalEarned,
+          totalUsed,
+          totalCreditAmount,
+          availableCreditAmount,
+          transactionCount: transactions.length
+        });
+      }
 
       return existingCredit;
     } catch (error) {

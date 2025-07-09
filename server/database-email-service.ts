@@ -136,7 +136,10 @@ export class DatabaseEmailService {
     });
 
     this.sender = new Sender('sales@teemeyou.shop', 'TeeMeYou Support');
-    logger.info('DatabaseEmailService initialized with MailerSend');
+    // Only log in development to reduce production noise
+    if (process.env.NODE_ENV !== 'production') {
+      logger.info('DatabaseEmailService initialized with MailerSend');
+    }
   }
 
   /**

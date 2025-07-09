@@ -40,7 +40,10 @@ export function registerStorageTestRoutes(app: Express): void {
     return;
   }
   
-  logger.info('Registering storage testing routes');
+  // Only log in development to reduce production noise
+  if (process.env.NODE_ENV !== 'production') {
+    logger.info('Registering storage testing routes');
+  }
   
   // Custom admin check middleware that works with the override in routes.ts
   const storageTestAdminCheck = (req: Request, res: Response, next: NextFunction) => {

@@ -1,0 +1,23 @@
+{"timestamp":"2025-07-09T09:10:53.000Z","level":"INFO","message":"DatabaseEmailService initialized with MailerSend"}
+Initializing Replit Object Storage...
+Replit Object Storage initialized successfully
+✅ Unified Email Service initialized successfully with MailerSend
+Replit Object Storage client initialization completed
+{"timestamp":"2025-07-09T09:10:53.000Z","level":"ERROR","message":"Failed to initialize PostgreSQL session store, using memory store instead","context":{"error":{}}}
+{"timestamp":"2025-07-09T09:10:53.000Z","level":"INFO","message":"Registering authentication testing routes"}
+{"timestamp":"2025-07-09T09:10:53.000Z","level":"INFO","message":"Registering database testing routes"}
+{"timestamp":"2025-07-09T09:10:53.000Z","level":"INFO","message":"Registering API testing routes"}
+{"timestamp":"2025-07-09T09:10:53.000Z","level":"INFO","message":"Registering storage testing routes"}
+{"timestamp":"2025-07-09T09:10:53.000Z","level":"INFO","message":"Registering file manager testing routes"}
+{"timestamp":"2025-07-09T09:10:53.000Z","level":"INFO","message":"Server started successfully on port 5000"}
+7:10:53 AM [express] serving on port 5000
+{"timestamp":"2025-07-09T09:10:54.000Z","level":"INFO","message":"Database client connected","context":{"connectionCount":1}}
+{"timestamp":"2025-07-09T09:10:54.000Z","level":"INFO","message":"Database timezone set to Africa/Johannesburg"}
+Object Store access verified successfully
+Object Store successfully initialized
+{"timestamp":"2025-07-09T09:11:03.000Z","level":"INFO","message":"Database client connected","context":{"connectionCount":2}}
+{"timestamp":"2025-07-09T09:11:27.000Z","level":"INFO","message":"API INFO: GET /api/health 200 in 4ms","context":{"method":"GET","path":"/api/health","statusCode":200,"duration":"4ms"}}
+7:11:27 AM [express] GET /api/health 200 in 4ms :: {"status":"ok","timestamp":"2025-07-09T07:11:27.5…
+{"timestamp":"2025-07-09T09:11:27.000Z","level":"INFO","message":"API INFO: GET /api/health 200 in 0ms","context":{"method":"GET","path":"/api/health","statusCode":200,"duration":"0ms"}}
+7:11:27 AM [express] GET /api/health 200 in 0ms :: {"status":"ok","timestamp":"2025-07-09T07:11:27.8…
+{"timestamp":"2025-07-09T09:11:32.000Z","level":"INFO","message":"Database client connected","context":{"connectionCount":3}}
