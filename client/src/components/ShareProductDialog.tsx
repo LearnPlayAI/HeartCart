@@ -37,9 +37,9 @@ export default function ShareProductDialog({
   // For WhatsApp sharing, use social preview URL to ensure rich card display
   const socialPreviewUrl = `https://teemeyou.shop/api/social-preview/product/${productId}`;
   
-  // Fetch dynamic product sharing template from system settings
+  // Fetch dynamic product sharing template from public settings (available to all users)
   const { data: sharingTemplate, isLoading: templateLoading, error: templateError } = useQuery({
-    queryKey: ['/api/admin/settings/product_sharing_message'],
+    queryKey: ['/api/settings/product_sharing_message'],
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
   });

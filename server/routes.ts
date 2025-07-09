@@ -185,6 +185,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register YoCo webhook routes
   app.use("/api/webhooks", webhookRoutes);
   
+  // PUBLIC SETTINGS ENDPOINTS (no authentication required)
+  // These endpoints allow all users to access certain settings for sharing functionality
+  // while keeping admin-only access for editing
+  
+  // Get product sharing message template (PUBLIC - for all users)
+  app.get("/api/settings/product_sharing_message", asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const setting = await storage.getSystemSetting('product_sharing_message');
+      
+      // Default fallback template if setting doesn't exist
+      const defaultTemplate = `🎯 *[PRODUCT_NAME]* 🎯
+
+💰 *Price: R[PRICE]*
+
+🛍️ Shop on TeeMeYou - South Africa's trusted online marketplace
+🚚 Fast delivery across SA
+💳 Secure payment options
+⭐ Quality guaranteed
+
+🇿🇦 Connect with South Africa's community
+
+🤝 Bringing people together 🎯 Trusted community 📍 Local connections
+
+👆 Tap to view full details and photos
+
+[PRODUCT_URL]`;
+      
+      const responseData = {
+        settingKey: 'product_sharing_message',
+        settingValue: setting?.settingValue || defaultTemplate,
+        isDefault: !setting // indicates if this is the default template
+      };
+      
+      logger.info("Public product sharing message accessed successfully");
+      return sendSuccess(res, responseData);
+    } catch (error) {
+      logger.error("Error fetching public product sharing message", { error });
+      return sendError(res, "Failed to fetch product sharing message", 500);
+    }
+  }));
+  
   // Add route for getting order by checkout ID (for card payments)
   app.get("/api/orders/by-checkout/:checkoutId", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
     try {
