@@ -1432,7 +1432,7 @@ export class DatabaseStorage implements IStorage {
     },
   ): Promise<{ products: Product[]; total: number }> {
     try {
-      console.log('getAllProducts called with:', { limit, offset, categoryId, search, options });
+      // Debug logs removed for production - these were causing noise in production logs
 
       // Create conditions array
       const conditions: SQL<unknown>[] = [];
@@ -1462,7 +1462,7 @@ export class DatabaseStorage implements IStorage {
             categoryIds.push(...categoryWithChildren.children.map(child => child.id));
           }
 
-          console.log(`Category filtering: categoryId=${categoryId}, categoryIds=[${categoryIds.join(', ')}]`);
+          // Debug logs removed for production - these were causing noise in production logs
           
           // Filter products by any of these category IDs
           conditions.push(inArray(products.categoryId, categoryIds));
@@ -1490,7 +1490,7 @@ export class DatabaseStorage implements IStorage {
           // Collect all child category IDs (not including the parent itself for this filter)
           const childCategoryIds = parentCategoryWithChildren.children.map(child => child.id);
           
-          console.log(`Parent category filtering: parentCategoryId=${options.parentCategoryId}, childCategoryIds=[${childCategoryIds.join(', ')}]`);
+          // Debug logs removed for production - these were causing noise in production logs
           
           // Filter products by any of the child category IDs
           if (childCategoryIds.length > 0) {
@@ -1887,7 +1887,7 @@ export class DatabaseStorage implements IStorage {
           productList = dataResult;
         }
         
-        console.log('Products found:', productList.length, 'Total:', total);
+        // Debug logs removed for production - these were causing noise in production logs
         
         // Enrich products with main image URLs
         const enrichedProducts = await this.enrichProductsWithMainImage(productList);
@@ -1936,7 +1936,7 @@ export class DatabaseStorage implements IStorage {
 
           // If category doesn't exist or is inactive, return undefined (unless we're including inactive products)
           if (!category || !category.isActive) {
-            console.log(`Product ${id} has inactive category ${product.categoryId}, includeCategoryInactive: ${options?.includeCategoryInactive}`);
+            // Debug logs removed for production - these were causing noise in production logs
             return undefined;
           }
         } catch (categoryError) {
@@ -2425,7 +2425,7 @@ export class DatabaseStorage implements IStorage {
     try {
       // Split query into individual terms and create search patterns
       const searchTerms = query.trim().split(/\s+/).filter(term => term.length > 0);
-      console.log(`Searching products with terms: ${searchTerms.join(', ')}`);
+      // Debug logs removed for production - these were causing noise in production logs
       
       // Get all products first, then apply sophisticated ranking
       const allProductsResult = await this.getAllProducts(
@@ -2511,7 +2511,7 @@ export class DatabaseStorage implements IStorage {
         .slice(offset, offset + limit)
         .map(item => item.product);
 
-      console.log(`Found ${rankedProducts.length} ranked products`);
+      // Debug logs removed for production - these were causing noise in production logs
       
       // Enrich products with main image URLs
       return await this.enrichProductsWithMainImage(rankedProducts);
@@ -3145,8 +3145,7 @@ export class DatabaseStorage implements IStorage {
 
   async addToCart(cartItem: InsertCartItem): Promise<CartItem> {
     try {
-      console.log(`🔍 NEW CART DEBUG - Received cartItem:`, cartItem);
-      console.log(`🔍 NEW CART DEBUG - itemPrice value:`, cartItem.itemPrice, typeof cartItem.itemPrice);
+      // Debug logs removed for production - these were causing noise in production logs
       
       // Check if the item is already in the cart (same user and product)
       const [existingItem] = await db
@@ -3233,14 +3232,14 @@ export class DatabaseStorage implements IStorage {
           attributeSelections: formattedAttributeSelections
         };
 
-        console.log(`🔍 NEW CART DEBUG - Inserting:`, itemToInsert);
+        // Debug logs removed for production - these were causing noise in production logs
 
         const [newItem] = await db
           .insert(cartItems)
           .values(itemToInsert)
           .returning();
 
-        console.log(`🔍 NEW CART DEBUG - Database returned:`, newItem);
+        // Debug logs removed for production - these were causing noise in production logs
 
         logger.info(`Added new item to cart`, {
           cartItemId: newItem.id,
@@ -3549,25 +3548,7 @@ export class DatabaseStorage implements IStorage {
       let successfulItemInserts = 0;
       let failedItemInserts = 0;
 
-      console.log('\n🔥🔥🔥 STORAGE.TS ORDER ITEMS INSERTION 🔥🔥🔥');
-      console.log('▶'.repeat(80));
-      console.log('STARTING ORDER ITEMS INSERTION:');
-      console.log('  orderId:', orderToUse.id);
-      console.log('  orderNumber:', orderToUse.orderNumber);
-      console.log('  itemsToInsert:', items.length);
-      console.log('ITEMS DATA:');
-      items.forEach((item, index) => {
-        console.log(`  [${index}]:`, {
-          productId: item.productId,
-          productName: item.productName,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          totalPrice: item.totalPrice,
-          selectedAttributes: item.selectedAttributes,
-          hasAllFields: !!(item.productId && item.productName && item.quantity && item.unitPrice && item.totalPrice)
-        });
-      });
-      console.log('▶'.repeat(80));
+      // Debug logs removed for production - these were causing noise in production logs
 
       for (const item of items) {
         try {
@@ -3590,13 +3571,7 @@ export class DatabaseStorage implements IStorage {
 
           successfulItemInserts++;
 
-          console.log('✅ ORDER ITEM INSERTED SUCCESSFULLY:', {
-            orderId: orderToUse.id,
-            orderItemId: orderItem.id,
-            productId: item.productId,
-            productName: item.productName,
-            insertionSuccess: true
-          });
+          // Debug logs removed for production - these were causing noise in production logs
 
           logger.debug(`Added item to order`, {
             orderId: orderToUse.id,
@@ -3637,18 +3612,7 @@ export class DatabaseStorage implements IStorage {
         } catch (itemError) {
           failedItemInserts++;
           
-          console.log('\n❌❌❌ ORDER ITEM INSERTION FAILED! ❌❌❌');
-          console.log('ERROR:', itemError instanceof Error ? itemError.message : String(itemError));
-          console.log('STACK:', itemError instanceof Error ? itemError.stack : undefined);
-          console.log('ORDER ID:', orderToUse.id);
-          console.log('PRODUCT ID:', item.productId);
-          console.log('PRODUCT NAME:', item.productName);
-          console.log('ITEM DATA:', {
-            ...item,
-            orderId: orderToUse.id,
-            createdAt: new Date().toISOString()
-          });
-          console.log('❌'.repeat(80));
+          // Debug logs removed for production - these were causing noise in production logs
           
           logger.error(`Error inserting order item`, {
             error: itemError,
@@ -5551,12 +5515,7 @@ export class DatabaseStorage implements IStorage {
     try {
       const now = new Date().toISOString();
       
-      // Log the supplier data being inserted for debugging
-      console.log('🔍 SUPPLIER DEBUG - About to insert:', {
-        ...supplier,
-        createdAt: now,
-        updatedAt: now,
-      });
+      // Debug logs removed for production - these were causing noise in production logs
       
       const [newSupplier] = await db
         .insert(suppliers)
@@ -5567,7 +5526,7 @@ export class DatabaseStorage implements IStorage {
         })
         .returning();
         
-      console.log('🔍 SUPPLIER DEBUG - Successfully created:', newSupplier);
+      // Debug logs removed for production - these were causing noise in production logs
       return newSupplier;
     } catch (error) {
       console.error(`🔍 SUPPLIER DEBUG - Error creating supplier "${supplier.name}":`, error);
@@ -5649,7 +5608,7 @@ export class DatabaseStorage implements IStorage {
 
   // Catalog operations
   async getAllCatalogs(activeOnly = true): Promise<any[]> {
-    console.log('DEBUG: getAllCatalogs() WITH activeOnly parameter called, activeOnly =', activeOnly);
+    // Debug logs removed for production - these were causing noise in production logs
     try {
       // Get catalogs with supplier information using raw SQL to ensure it works
       try {
@@ -5692,7 +5651,7 @@ export class DatabaseStorage implements IStorage {
         const catalogData = result.rows;
         
         // Debug log to see what we're getting from raw SQL
-        console.log('Raw SQL result:', JSON.stringify(catalogData, null, 2));
+        // Debug logs removed for production - these were causing noise in production logs
 
         // Add product count for each catalog
         try {

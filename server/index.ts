@@ -113,14 +113,17 @@ app.use((req, res, next) => {
     const requestId = req.headers['x-request-id'] || crypto.randomUUID();
     res.setHeader('X-Request-ID', requestId);
     
-    logger.debug(`API Request: ${req.method} ${path}`, {
-      method: req.method,
-      path,
-      query: req.query,
-      requestId,
-      userAgent: req.headers['user-agent'],
-      ip: req.ip,
-    });
+    // Only log API requests in development to reduce production noise
+    if (process.env.NODE_ENV === 'development') {
+      logger.debug(`API Request: ${req.method} ${path}`, {
+        method: req.method,
+        path,
+        query: req.query,
+        requestId,
+        userAgent: req.headers['user-agent'],
+        ip: req.ip,
+      });
+    }
   }
 
   // Log response details when request completes
@@ -143,7 +146,12 @@ app.use((req, res, next) => {
       } else if (res.statusCode >= 400) {
         logger.warn(`API Warning: ${req.method} ${path} ${res.statusCode} in ${duration}ms`, logContext);
       } else {
-        logger.debug(`API Success: ${req.method} ${path} ${res.statusCode} in ${duration}ms`, logContext);
+        // Log successful API calls as INFO in production, DEBUG in development
+        if (process.env.NODE_ENV === 'production') {
+          logger.info(`API Success: ${req.method} ${path} ${res.statusCode} in ${duration}ms`, logContext);
+        } else {
+          logger.debug(`API Success: ${req.method} ${path} ${res.statusCode} in ${duration}ms`, logContext);
+        }
       }
       
       // Keep the existing console log for compatibility

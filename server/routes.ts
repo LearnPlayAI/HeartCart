@@ -342,7 +342,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           throw new NotFoundError(`Category with ID ${categoryId} not found`, 'category');
         }
         
-        logger.debug(`Getting attributes for category ${categoryId}`);
+        // Debug logs removed for production - these were causing noise in production logs
         
         // Add cache control headers to ensure clients always get fresh data
         res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -405,7 +405,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           throw new NotFoundError(`Category with ID ${categoryId} not found`, 'category');
         }
         
-        logger.debug(`Getting required attributes for products in category ${categoryId}`);
+        // Debug logs removed for production - these were causing noise in production logs
         
         // Add cache control headers to ensure clients always get fresh data
         res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -821,8 +821,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     withStandardResponse(async (req: Request, res: Response) => {
       const { limit, offset, categoryId, parentCategoryId, search, minTmyPercent, status, sortField, sortOrder, onPromotion, featuredProducts, newArrivals } = req.query;
       
-      console.log('DEBUG: Query params received:', JSON.stringify(req.query, null, 2));
-      console.log('DEBUG: Destructured values:', { onPromotion, featuredProducts, newArrivals });
+      // Debug logs removed for production - these were causing noise in production logs
       
       const user = req.user as any;
       const isAdmin = user && user.role === 'admin';
