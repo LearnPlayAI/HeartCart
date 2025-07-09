@@ -47,11 +47,11 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-// Configure database connection optimized for resource-constrained environment (0.5CPU/1GB)
+// Configure database connection with increased pool size for stability
 export const pool = new Pool({ 
   connectionString: process.env.DATABASE_URL,
-  // Optimized pool settings for small server
-  max: 5, // Reduced from 20 to 5 for resource-constrained environment
+  // Increased pool settings for better connection availability
+  max: 30, // Increased from 5 to 30 for improved connection availability
   min: 1, // Minimum connections to maintain
   idleTimeoutMillis: 15000, // Close idle connections after 15 seconds (reduced from 30s)
   connectionTimeoutMillis: 3000, // Reduced connection timeout for faster failure detection
@@ -84,7 +84,7 @@ if (process.env.NODE_ENV !== 'production') {
   
   // Monitor pool health for debugging
   pool.on('acquire', (client) => {
-    if (pool.totalCount > 4) { // Warn if approaching max connections
+    if (pool.totalCount > 25) { // Warn if approaching max connections (25 out of 30)
       logger.warn('High database connection usage detected', {
         totalCount: pool.totalCount,
         idleCount: pool.idleCount,

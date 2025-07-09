@@ -772,6 +772,12 @@ Changelog:
   * Enhanced database connection event logging with totalCount, idleCount, and waitingCount metrics
   * Optimized pool settings prevent resource exhaustion and connection timeout errors
   * Database connection system now properly scaled for small server environments preventing crashes
+- July 9, 2025. Database connection pool increase for stability after system restoration:
+  * CRITICAL FIX: Increased maximum database connections from 5 to 30 to resolve connection exhaustion issues
+  * Previous 5-connection limit was too aggressive and caused high database connection usage warnings
+  * Updated warning threshold from 4 to 25 connections to prevent spam logging
+  * System restored from backup required higher connection capacity for normal operation
+  * Connection pool now provides sufficient capacity for concurrent user requests and background operations
 - July 9, 2025. Complete API success logging elimination for resource optimization:
   * CRITICAL OPTIMIZATION: API logging now only captures failures, errors, and slow requests - eliminated all successful request logging
   * Modified API request middleware to only log when: HTTP status >= 400, request duration > 5 seconds, or API response contains success: false
