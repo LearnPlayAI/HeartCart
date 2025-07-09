@@ -7,8 +7,8 @@ import { SAST_TIMEZONE } from '@shared/date-utils';
 // Configure websocket for Neon Serverless with error handling
 neonConfig.webSocketConstructor = ws;
 
-// Add connection error handling for WebSocket
-neonConfig.wsProxy = (host) => `wss://${host}`;
+// Remove the malformed wsProxy configuration that was causing double wss:// URLs
+// The webSocketConstructor setting is sufficient for Neon serverless
 
 if (!process.env.DATABASE_URL) {
   throw new Error(
