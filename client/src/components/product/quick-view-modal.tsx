@@ -15,7 +15,7 @@ import { StandardApiResponse } from '@/types/api';
 import { Product } from '@shared/schema';
 import { ensureValidImageUrl } from '@/utils/file-manager';
 import { calculateProductPricing } from '@/utils/pricing';
-import DisclaimersModal from './disclaimers-modal';
+// DisclaimersModal import removed - disclaimer now shown during checkout process only
 import { 
   Attribute, 
   AttributeOption, 
@@ -41,13 +41,8 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
   const [quantity, setQuantity] = useState(1);
   const [selectedAttributes, setSelectedAttributes] = useState<Record<number, string>>({});
   const [currentImage, setCurrentImage] = useState<string | null>(null);
-  const [disclaimersModalOpen, setDisclaimersModalOpen] = useState(false);
-  const [pendingCartItem, setPendingCartItem] = useState<{
-    productId: number;
-    quantity: number;
-    itemPrice: number;
-    attributeSelections: Record<string, string>;
-  } | null>(null);
+  // disclaimersModalOpen state removed - disclaimer now shown during checkout process only
+  // pendingCartItem state removed - disclaimer now shown during checkout process only
   const { addItem } = useCart();
   const [, navigate] = useLocation();
   const { toast } = useToast();
@@ -319,27 +314,19 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
       });
     }
     
-    // Prepare cart item and show disclaimers modal
-    setPendingCartItem({
+    // Add item directly to cart without disclaimer modal
+    addItem({
       productId: product.id,
       quantity: quantity,
       itemPrice: cartPrice,
       attributeSelections
     });
-    setDisclaimersModalOpen(true);
+    
+    // Close the quick view modal after adding to cart
+    onOpenChange(false);
   };
 
-  const handleAcceptDisclaimers = () => {
-    if (pendingCartItem) {
-      addItem(pendingCartItem);
-      
-      
-      // Reset state and close modals
-      setPendingCartItem(null);
-      setDisclaimersModalOpen(false);
-      onOpenChange(false);
-    }
-  };
+  // handleAcceptDisclaimers function removed - disclaimer now shown during checkout process only
   
   // Calculate promotional price if available
   const calculatePromotionalPrice = (basePrice: number, promotion: any) => {
@@ -592,13 +579,7 @@ export default function QuickViewModal({ open, onOpenChange, productSlug, produc
       </DialogContent>
     </Dialog>
 
-    {/* Disclaimers Modal */}
-    <DisclaimersModal
-      open={disclaimersModalOpen}
-      onOpenChange={setDisclaimersModalOpen}
-      onAccept={handleAcceptDisclaimers}
-      productName={product.name}
-    />
+    {/* Disclaimers Modal removed - disclaimer now shown during checkout process only */}
     </>
   );
 }

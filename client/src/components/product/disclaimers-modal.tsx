@@ -34,7 +34,7 @@ export default function DisclaimersModal({
         <DialogHeader>
           <DialogTitle className="text-xl font-bold">Important Information</DialogTitle>
           <DialogDescription>
-            Please review the following important information before adding {productName} to your cart.
+            Please review the following important information before proceeding to checkout.
           </DialogDescription>
         </DialogHeader>
         
@@ -96,7 +96,7 @@ export default function DisclaimersModal({
             onClick={onAccept}
             className="w-full sm:w-auto bg-[#FF69B4] hover:bg-[#FF1493] text-white"
           >
-            Accept & Add to Cart
+            Accept & Checkout
           </Button>
         </DialogFooter>
       </DialogContent>

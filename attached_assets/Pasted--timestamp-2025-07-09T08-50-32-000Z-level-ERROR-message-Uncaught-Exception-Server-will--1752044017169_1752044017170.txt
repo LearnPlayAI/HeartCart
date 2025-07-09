@@ -1,0 +1,18 @@
+{"timestamp":"2025-07-09T08:50:32.000Z","level":"ERROR","message":"Uncaught Exception - Server will attempt to continue","context":{"error":"Cannot set property message of #<ErrorEvent> which has only a getter","stack":"TypeError: Cannot set property message of #<ErrorEvent> which has only a getter\n    at An._connectionCallback (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1384:72)\n    at An._handleErrorWhileConnecting (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1290:38)\n    at An._handleErrorEvent (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1291:33)\n    at fn.emit (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:397:12)\n    at v.reportStreamError (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1201:46)\n    at v.emit (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:397:12)\n    at WebSocket.<anonymous> (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:986:42)\n    at callListener (/home/runner/workspace/node_modules/ws/lib/event-target.js:290:14)\n    at WebSocket.onError (/home/runner/workspace/node_modules/ws/lib/event-target.js:230:9)\n    at WebSocket.emit (node:events:518:28)\n    at emitErrorAndClose (/home/runner/workspace/node_modules/ws/lib/websocket.js:1041:13)\n    at processTicksAndRejections (node:internal/process/task_queues:82:21)\n    at runNextTicks (node:internal/process/task_queues:64:3)\n    at listOnTimeout (node:internal/timers:545:9)\n    at process.processTimers (node:internal/timers:519:7)","timestamp":"2025-07-09T06:50:32.463Z"}}
+UNCAUGHT EXCEPTION: TypeError: Cannot set property message of #<ErrorEvent> which has only a getter
+    at An._connectionCallback (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1384:72)
+    at An._handleErrorWhileConnecting (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1290:38)
+    at An._handleErrorEvent (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1291:33)
+    at fn.emit (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:397:12)
+    at v.reportStreamError (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1201:46)
+    at v.emit (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:397:12)
+    at WebSocket.<anonymous> (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:986:42)
+    at callListener (/home/runner/workspace/node_modules/ws/lib/event-target.js:290:14)
+    at WebSocket.onError (/home/runner/workspace/node_modules/ws/lib/event-target.js:230:9)
+    at WebSocket.emit (node:events:518:28)
+    at emitErrorAndClose (/home/runner/workspace/node_modules/ws/lib/websocket.js:1041:13)
+    at processTicksAndRejections (node:internal/process/task_queues:82:21)
+    at runNextTicks (node:internal/process/task_queues:64:3)
+    at listOnTimeout (node:internal/timers:545:9)
+    at process.processTimers (node:internal/timers:519:7)
+{"timestamp":"2025-07-09T08:50:42.000Z","level":"DEBUG","message":"API Request: GET /api/products","context":{"method":"GET","path":"/api/products","query":{"limit":"3"},"requestId":"2fe0a689-d52b-4798-86b2-4c773dcf4482","userAgent":"curl/8.7.1","ip":"127.0.0.1"}}

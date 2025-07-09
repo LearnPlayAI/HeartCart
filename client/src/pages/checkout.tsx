@@ -18,6 +18,7 @@ import { calculateProductPricing, getPromotionalBadgeText, calculateShippingCost
 import { useCredits } from "@/hooks/use-credits";
 import PudoLockerPicker from "@/components/PudoLockerPicker";
 import { calculateVAT, formatVATAmount, formatVATRate } from "@shared/vat-utils";
+import DisclaimersModal from "@/components/product/disclaimers-modal";
 import { 
   CreditCard, 
   Truck, 
@@ -107,6 +108,8 @@ export default function CheckoutPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedLocker, setSelectedLocker] = useState(null);
   const [savePreferredTrigger, setSavePreferredTrigger] = useState(false);
+  const [disclaimersModalOpen, setDisclaimersModalOpen] = useState(false);
+  const [pendingFormData, setPendingFormData] = useState<CheckoutFormData | null>(null);
 
   const { creditBalance, formattedBalance, balanceLoading, transactions } = useCredits();
 
@@ -441,8 +444,6 @@ export default function CheckoutPage() {
       return;
     }
 
-
-
     // Validate PUDO locker selection for PUDO shipping
     if (data.shippingMethod === "pudo" && !selectedLocker) {
       toast({
@@ -453,7 +454,18 @@ export default function CheckoutPage() {
       return;
     }
 
+    // Show disclaimer modal before processing order
+    setPendingFormData(data);
+    setDisclaimersModalOpen(true);
+  };
+
+  const handleAcceptDisclaimers = async () => {
+    if (!pendingFormData) return;
+
+    setDisclaimersModalOpen(false);
     setIsProcessing(true);
+
+    const data = pendingFormData;
 
     try {
       // Save preferred locker selection during checkout
@@ -1251,6 +1263,13 @@ export default function CheckoutPage() {
           />
         </div>
       </div>
+      
+      {/* Disclaimers Modal */}
+      <DisclaimersModal
+        open={disclaimersModalOpen}
+        onOpenChange={setDisclaimersModalOpen}
+        onAccept={handleAcceptDisclaimers}
+      />
     </div>
   );
 }

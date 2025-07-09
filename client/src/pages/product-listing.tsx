@@ -36,7 +36,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
-import DisclaimersModal from '@/components/product/disclaimers-modal';
+
 import { 
   Accordion, 
   AccordionContent, 
@@ -145,15 +145,7 @@ const ProductListing = () => {
   const [quickViewOpen, setQuickViewOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   
-  // Disclaimers modal state
-  const [disclaimersModalOpen, setDisclaimersModalOpen] = useState(false);
-  const [pendingCartItem, setPendingCartItem] = useState<{
-    productId: number;
-    quantity: number;
-    itemPrice: number;
-    attributeSelections: Record<string, string>;
-    productName: string;
-  } | null>(null);
+  // Removed disclaimer modal state - disclaimer now shown during checkout process only
   const [priceRange, setPriceRange] = useState([0, 5000]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(() => {
     // First check for saved state from navigation
@@ -728,23 +720,7 @@ const ProductListing = () => {
     setLocation(`/products?${newSearchParams.toString()}`);
   };
 
-  // Handle disclaimer acceptance
-  const handleAcceptDisclaimers = () => {
-    if (pendingCartItem) {
-      addItem({
-        productId: pendingCartItem.productId,
-        quantity: pendingCartItem.quantity,
-        itemPrice: pendingCartItem.itemPrice,
-        attributeSelections: pendingCartItem.attributeSelections
-      });
-      
-      
-      
-      // Reset state and close modal
-      setPendingCartItem(null);
-      setDisclaimersModalOpen(false);
-    }
-  };
+  // Removed handleAcceptDisclaimers function - disclaimer now shown during checkout process only
   
   // Handle attribute filter changes
   const handleAttributeFilterChange = (attributeId: number, attributeName: string, optionValue: string, isChecked: boolean) => {
@@ -1544,7 +1520,7 @@ const ProductListing = () => {
                                       }
                                     }
                                     
-                                    // If no required attributes, show disclaimers modal before adding to cart
+                                    // If no required attributes, add item directly to cart
                                     // Calculate correct promotional price for cart
                                     const productPromotion = activePromotions
                                       .flatMap((promo: any) => promo.products?.map((pp: any) => ({ ...pp, promotion: promo })) || [])
@@ -1560,27 +1536,23 @@ const ProductListing = () => {
 
                                     const cartPricing = getCartPrice(product.price, product.salePrice, promotionInfo || undefined);
                                     
-                                    // Prepare cart item and show disclaimers modal
-                                    setPendingCartItem({
+                                    // Add item directly to cart without disclaimer modal
+                                    addItem({
                                       productId: product.id,
                                       quantity: 1,
                                       itemPrice: cartPricing,
-                                      attributeSelections: {},
-                                      productName: product.name
+                                      attributeSelections: {}
                                     });
-                                    setDisclaimersModalOpen(true);
                                   } catch (error) {
                                     console.error('Error checking product attributes:', error);
-                                    // Fallback: show disclaimers modal before adding to cart
+                                    // Fallback: add item directly to cart without disclaimer modal
                                     const fallbackCartPricing = getCartPrice(product.price, product.salePrice, undefined);
-                                    setPendingCartItem({
+                                    addItem({
                                       productId: product.id,
                                       quantity: 1,
                                       itemPrice: fallbackCartPricing,
-                                      attributeSelections: {},
-                                      productName: product.name
+                                      attributeSelections: {}
                                     });
-                                    setDisclaimersModalOpen(true);
                                   }
                                 }}
                               >
@@ -1681,12 +1653,7 @@ const ProductListing = () => {
         />
       )}
 
-      {/* Disclaimers Modal */}
-      <DisclaimersModal
-        open={disclaimersModalOpen}
-        onOpenChange={setDisclaimersModalOpen}
-        onAccept={handleAcceptDisclaimers}
-      />
+      {/* Disclaimers Modal removed - disclaimer now shown during checkout process only */}
     </>
   );
 };
