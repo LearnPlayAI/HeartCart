@@ -117,13 +117,11 @@ export function setupAuth(app: Express): void {
       maxAge: SESSION_MAX_AGE, // Maximum lifetime
       path: '/', // Restrict cookie to root path
     },
-    // Use standard PostgreSQL session store with proper timestamp typing
-    store: new PostgresSessionStore({
-      pool,
-      tableName: 'session',
-      createTableIfMissing: true,
-      // Cleanup expired sessions periodically
-      pruneSessionInterval: 60, // Check for expired sessions every minute
+    // TEMPORARILY use memory store to eliminate WebSocket connection errors
+    // PostgreSQL session store will be re-enabled after HTTP connection fix is verified
+    store: new (require('memorystore')(session))({
+      checkPeriod: 86400000, // Prune expired entries every 24h
+      ttl: SESSION_MAX_AGE, // Match session max age
     })
   };
 
