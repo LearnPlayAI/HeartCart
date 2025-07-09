@@ -6,7 +6,7 @@ import { useCart } from '@/hooks/use-cart';
 import { formatCurrency, calculateDiscount } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import QuickViewModal from './quick-view-modal';
-import DisclaimersModal from './disclaimers-modal';
+// DisclaimersModal removed - disclaimer now shown during checkout process only
 import { Badge } from '@/components/ui/badge';
 import type { Product } from '@shared/schema';
 import { ensureValidImageUrl } from '@/utils/file-manager';
@@ -434,13 +434,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
         productId={product.id}
       />
       
-      {/* Disclaimers Modal */}
-      <DisclaimersModal
-        open={disclaimersModalOpen}
-        onOpenChange={setDisclaimersModalOpen}
-        onAccept={handleAcceptDisclaimers}
-        productName={product.name}
-      />
+      {/* Disclaimers Modal removed - disclaimer now shown during checkout process only */}
     </div>
   );
 };
