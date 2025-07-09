@@ -778,6 +778,11 @@ Changelog:
   * Updated warning threshold from 4 to 25 connections to prevent spam logging
   * System restored from backup required higher connection capacity for normal operation
   * Connection pool now provides sufficient capacity for concurrent user requests and background operations
+- July 9, 2025. Database connection pool further increased for production load:
+  * CRITICAL FIX: Increased maximum database connections from 30 to 50 due to connection exhaustion under production load
+  * Updated warning threshold from 25 to 40 connections to provide early warning before pool exhaustion
+  * Production e-commerce platform requires higher connection capacity for concurrent user sessions
+  * Connection pool now optimized for public-facing e-commerce traffic with proper monitoring
 - July 9, 2025. WebSocket connection stability fixes completed:
   * CRITICAL FIX: Resolved "WebSocket was closed before the connection was established" startup errors
   * Fixed "Cannot set property message of #<ErrorEvent> which has only a getter" TypeError

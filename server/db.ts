@@ -22,7 +22,7 @@ if (!process.env.DATABASE_URL) {
 export const pool = new Pool({ 
   connectionString: process.env.DATABASE_URL,
   // Increased pool settings for better connection availability
-  max: 30, // Increased from 5 to 30 for improved connection availability
+  max: 50, // Increased from 30 to 50 for improved connection availability
   min: 1, // Minimum connections to maintain
   idleTimeoutMillis: 15000, // Close idle connections after 15 seconds (reduced from 30s)
   connectionTimeoutMillis: 3000, // Reduced connection timeout for faster failure detection
@@ -67,7 +67,7 @@ if (process.env.NODE_ENV !== 'production') {
   
   // Monitor pool health for debugging
   pool.on('acquire', (client) => {
-    if (pool.totalCount > 25) { // Warn if approaching max connections (25 out of 30)
+    if (pool.totalCount > 40) { // Warn if approaching max connections (40 out of 50)
       logger.warn('High database connection usage detected', {
         totalCount: pool.totalCount,
         idleCount: pool.idleCount,
