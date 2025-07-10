@@ -1921,6 +1921,24 @@ router.get("/user-carts", isAdmin, asyncHandler(async (req: Request, res: Respon
   }
 }));
 
+// Get cart summary statistics (MUST come before :userId route)
+router.get("/user-carts/stats", isAdmin, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const stats = await storage.getUserCartStats();
+    
+    logger.info("Admin cart summary stats fetched successfully", { 
+      totalAbandonedCarts: stats.totalAbandonedCarts,
+      totalAbandonedValue: stats.totalAbandonedValue,
+      adminUserId: req.user?.id
+    });
+    
+    return sendSuccess(res, stats);
+  } catch (error) {
+    logger.error("Error fetching cart summary stats", { error });
+    return sendError(res, "Failed to fetch cart summary stats", 500);
+  }
+}));
+
 // Get specific user's cart details
 router.get("/user-carts/:userId", isAdmin, asyncHandler(async (req: Request, res: Response) => {
   try {
@@ -1943,24 +1961,6 @@ router.get("/user-carts/:userId", isAdmin, asyncHandler(async (req: Request, res
   } catch (error) {
     logger.error("Error fetching user cart details", { error, userId: req.params.userId });
     return sendError(res, "Failed to fetch user cart details", 500);
-  }
-}));
-
-// Get cart summary statistics
-router.get("/user-carts/stats", isAdmin, asyncHandler(async (req: Request, res: Response) => {
-  try {
-    const stats = await storage.getUserCartStats();
-    
-    logger.info("Admin cart summary stats fetched successfully", { 
-      totalAbandonedCarts: stats.totalAbandonedCarts,
-      totalAbandonedValue: stats.totalAbandonedValue,
-      adminUserId: req.user?.id
-    });
-    
-    return sendSuccess(res, stats);
-  } catch (error) {
-    logger.error("Error fetching cart summary stats", { error });
-    return sendError(res, "Failed to fetch cart summary stats", 500);
   }
 }));
 
