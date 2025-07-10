@@ -14396,7 +14396,7 @@ export class DatabaseStorage implements IStorage {
           userPhoneNumber: users.phoneNumber,
           productName: products.name,
           productPrice: products.price,
-          productImageUrl: products.image_url,
+          productImageUrl: products.imageUrl,
           productSlug: products.slug,
         })
         .from(cartItems)
@@ -14532,7 +14532,7 @@ export class DatabaseStorage implements IStorage {
           productId: products.id,
           productName: products.name,
           productPrice: products.price,
-          productImageUrl: products.image_url,
+          productImageUrl: products.imageUrl,
           productSlug: products.slug,
         })
         .from(cartItems)
