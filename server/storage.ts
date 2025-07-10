@@ -14602,10 +14602,10 @@ export class DatabaseStorage implements IStorage {
         .leftJoin(products, eq(cartItems.productId, products.id))
         .where(isNotNull(products.id));
 
-      const totalAbandonedCarts = statsResult.totalCarts || 0;
+      const totalAbandonedCarts = Number(statsResult.totalCarts) || 0;
       const totalAbandonedValue = Number(statsResult.totalValue) || 0;
       const averageCartValue = totalAbandonedCarts > 0 ? totalAbandonedValue / totalAbandonedCarts : 0;
-      const cartsLast24Hours = statsResult.cartsLast24Hours || 0;
+      const cartsLast24Hours = Number(statsResult.cartsLast24Hours) || 0;
 
       return {
         totalAbandonedCarts,

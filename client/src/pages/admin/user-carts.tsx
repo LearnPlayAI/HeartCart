@@ -108,7 +108,7 @@ export default function UserCartsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {statsLoading ? '...' : stats?.totalAbandonedCarts || 0}
+                {statsLoading ? '...' : Number(stats?.totalAbandonedCarts) || 0}
               </div>
               <p className="text-xs text-muted-foreground">
                 Unique users with items in cart
@@ -123,7 +123,7 @@ export default function UserCartsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {statsLoading ? '...' : formatCurrency(stats?.totalAbandonedValue || 0)}
+                {statsLoading ? '...' : formatCurrency(Number(stats?.totalAbandonedValue) || 0)}
               </div>
               <p className="text-xs text-muted-foreground">
                 Total value of abandoned items
@@ -138,7 +138,7 @@ export default function UserCartsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {statsLoading ? '...' : formatCurrency(stats?.averageCartValue || 0)}
+                {statsLoading ? '...' : formatCurrency(Number(stats?.averageCartValue) || 0)}
               </div>
               <p className="text-xs text-muted-foreground">
                 Average value per cart
@@ -153,7 +153,7 @@ export default function UserCartsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {statsLoading ? '...' : stats?.cartsLast24Hours || 0}
+                {statsLoading ? '...' : Number(stats?.cartsLast24Hours) || 0}
               </div>
               <p className="text-xs text-muted-foreground">
                 New carts last 24 hours
