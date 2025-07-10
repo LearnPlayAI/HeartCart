@@ -24,13 +24,12 @@ export default function UserCartDetailPage() {
 
   // Fetch user cart details
   const { data: cartData, isLoading, error } = useQuery({
-    queryKey: ['/api/admin/user-carts', userId],
+    queryKey: [`/api/admin/user-carts/${userId}`],
     enabled: !!userId,
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
 
-  // Debug log to see the data structure
-  console.log('Cart data:', cartData);
+
 
   // The server now returns proper structure with user at top level
   const userData = cartData?.data?.user;

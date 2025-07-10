@@ -144,6 +144,11 @@ Changelog:
   * Added "User Carts" navigation item to admin layout with shopping basket icon
   * Fixed navigation visibility by adding User Carts to correct admin layout file (layout.tsx) with ShoppingBasket icon import
   * Fixed User Carts pages to use correct admin layout component and removed unused admin-layout.tsx file to prevent future confusion
+  * CRITICAL FIX: Resolved cart detail page API endpoint issue where detail page was calling wrong endpoint
+  * Fixed getUserCartsByUserId method to properly fetch itemPrice from cart_items table instead of current product price
+  * Updated detail page queryKey to call /api/admin/user-carts/${userId} instead of wrong endpoint
+  * System now displays consolidated cart data (one line per user) on main page and individual cart items on detail page
+  * All cart data shows historical pricing from when items were added to cart, not current product prices
   * System enables admins to view abandoned carts and contact customers to increase conversion rates
   * All existing functionality preserved - implementation followed existing patterns and database schema
 - June 27, 2025. Implemented unified MailerSend email system with 5 email scenarios:

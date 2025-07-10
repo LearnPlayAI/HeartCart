@@ -62,8 +62,7 @@ export default function UserCartsPage() {
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
 
-  // Debug log to see the new data structure
-  console.log('Carts data:', cartsData);
+
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);

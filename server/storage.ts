@@ -14531,6 +14531,7 @@ export class DatabaseStorage implements IStorage {
         .select({
           id: cartItems.id,
           quantity: cartItems.quantity,
+          itemPrice: cartItems.itemPrice, // Add the cart item price
           createdAt: cartItems.createdAt,
           productId: products.id,
           productName: products.name,
@@ -14549,8 +14550,8 @@ export class DatabaseStorage implements IStorage {
       const cartItemsWithDetails = cartItemsResult.map(item => ({
         id: item.id,
         quantity: item.quantity,
-        itemPrice: Number(item.productPrice),
-        itemTotal: Number(item.productPrice) * item.quantity,
+        itemPrice: Number(item.itemPrice), // Use cart item price, not current product price
+        itemTotal: Number(item.itemPrice) * item.quantity,
         daysSinceAdded: Math.floor((Date.now() - new Date(item.createdAt).getTime()) / (1000 * 60 * 60 * 24)),
         createdAt: new Date(item.createdAt),
         product: {
