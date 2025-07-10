@@ -32,6 +32,13 @@ export default function UserCartDetailPage() {
   // Debug log to see the data structure
   console.log('Cart data:', cartData);
 
+  // The server now returns proper structure with user at top level
+  const userData = cartData?.data?.user;
+  const cartItems = cartData?.data?.cartItems || [];
+  const totalItems = cartData?.data?.totalItems || 0;
+  const totalCartValue = cartData?.data?.totalCartValue || 0;
+  const oldestItemDate = cartData?.data?.oldestItemDate;
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-ZA', {
       style: 'currency',
@@ -80,7 +87,7 @@ export default function UserCartDetailPage() {
     );
   }
 
-  if (!cartData || !cartData.data) {
+  if (!cartData || !cartData.data || (!userData && cartItems.length === 0)) {
     return (
       <AdminLayout title="User Cart Details" subtitle="View user's abandoned cart">
         <div className="text-center py-8">
@@ -109,7 +116,7 @@ export default function UserCartDetailPage() {
                 <CardTitle className="flex items-center gap-2">
                   <Avatar className="h-8 w-8">
                     <AvatarFallback>
-                      {cartData?.data?.user.username?.charAt(0).toUpperCase() || '?'}
+                      {userData?.username?.charAt(0).toUpperCase() || '?'}
                     </AvatarFallback>
                   </Avatar>
                   Customer Information
@@ -118,10 +125,10 @@ export default function UserCartDetailPage() {
               <CardContent className="space-y-4">
                 <div>
                   <h3 className="font-medium">
-                    {cartData?.data?.user.fullName || cartData?.data?.user.username}
+                    {userData?.fullName || userData?.username}
                   </h3>
                   <p className="text-sm text-muted-foreground">
-                    @{cartData?.data?.user.username}
+                    @{userData?.username}
                   </p>
                 </div>
 
@@ -131,29 +138,29 @@ export default function UserCartDetailPage() {
                   <div className="flex items-center gap-2 text-sm">
                     <Mail className="h-4 w-4 text-muted-foreground" />
                     <a 
-                      href={`mailto:${cartData?.data?.user.email}`}
+                      href={`mailto:${userData?.email}`}
                       className="text-blue-600 hover:text-blue-800"
                     >
-                      {cartData?.data?.user.email}
+                      {userData?.email}
                     </a>
                   </div>
 
-                  {cartData?.data?.user.phoneNumber && (
+                  {userData?.phoneNumber && (
                     <div className="flex items-center gap-2 text-sm">
                       <Phone className="h-4 w-4 text-muted-foreground" />
                       <a 
-                        href={`tel:${cartData?.data?.user.phoneNumber}`}
+                        href={`tel:${userData?.phoneNumber}`}
                         className="text-blue-600 hover:text-blue-800"
                       >
-                        {cartData?.data?.user.phoneNumber}
+                        {userData?.phoneNumber}
                       </a>
                     </div>
                   )}
 
-                  {cartData?.data?.user.lastLogin && (
+                  {userData?.lastLogin && (
                     <div className="flex items-center gap-2 text-sm">
                       <Clock className="h-4 w-4 text-muted-foreground" />
-                      <span>Last login: {formatDate(cartData.data.user.lastLogin)}</span>
+                      <span>Last login: {formatDate(userData.lastLogin)}</span>
                     </div>
                   )}
                 </div>
@@ -164,19 +171,19 @@ export default function UserCartDetailPage() {
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium">Total Items:</span>
-                    <span className="text-sm">{cartData?.data?.totalItems || 0}</span>
+                    <span className="text-sm">{totalItems}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium">Cart Value:</span>
                     <span className="text-sm font-bold">
-                      {formatCurrency(cartData?.data?.totalCartValue || 0)}
+                      {formatCurrency(totalCartValue)}
                     </span>
                   </div>
-                  {cartData?.data?.oldestItemDate && (
+                  {oldestItemDate && (
                     <div className="flex justify-between items-center">
                       <span className="text-sm font-medium">Oldest Item:</span>
                       <span className="text-sm">
-                        {formatDate(cartData.data.oldestItemDate.toString())}
+                        {formatDate(oldestItemDate.toString())}
                       </span>
                     </div>
                   )}
@@ -188,17 +195,17 @@ export default function UserCartDetailPage() {
                 <div className="space-y-2">
                   <Button 
                     className="w-full" 
-                    onClick={() => window.open(`mailto:${cartData?.data?.user.email}?subject=Complete your order - TeeMeYou&body=Hi ${cartData?.data?.user.fullName || cartData?.data?.user.username},%0D%0A%0D%0AWe noticed you have some items in your cart that you haven't purchased yet. Would you like help completing your order?%0D%0A%0D%0ABest regards,%0D%0ATeeMeYou Team`, '_blank')}
+                    onClick={() => window.open(`mailto:${userData?.email}?subject=Complete your order - TeeMeYou&body=Hi ${userData?.fullName || userData?.username},%0D%0A%0D%0AWe noticed you have some items in your cart that you haven't purchased yet. Would you like help completing your order?%0D%0A%0D%0ABest regards,%0D%0ATeeMeYou Team`, '_blank')}
                   >
                     <Mail className="h-4 w-4 mr-2" />
                     Send Email
                   </Button>
                   
-                  {cartData?.data?.user.phoneNumber && (
+                  {userData?.phoneNumber && (
                     <Button 
                       variant="outline" 
                       className="w-full"
-                      onClick={() => window.open(`https://wa.me/${cartData?.data?.user.phoneNumber.replace(/\D/g, '')}?text=Hi ${cartData?.data?.user.fullName || cartData?.data?.user.username}! We noticed you have some items in your TeeMeYou cart. Would you like help completing your order?`, '_blank')}
+                      onClick={() => window.open(`https://wa.me/${userData?.phoneNumber?.replace(/\D/g, '')}?text=Hi ${userData?.fullName || userData?.username}! We noticed you have some items in your TeeMeYou cart. Would you like help completing your order?`, '_blank')}
                     >
                       <Phone className="h-4 w-4 mr-2" />
                       WhatsApp

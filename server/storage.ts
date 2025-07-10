@@ -14353,14 +14353,8 @@ export class DatabaseStorage implements IStorage {
 
   // User Carts Admin Methods
   async getUserCarts(page: number = 1, limit: number = 10, search?: string): Promise<{
-    cartItems: Array<{
-      id: number;
+    userCarts: Array<{
       userId: number;
-      productId: number;
-      quantity: number;
-      cartTotal: number;
-      daysSinceAdded: number;
-      createdAt: Date;
       user: {
         id: number;
         username: string;
@@ -14368,13 +14362,12 @@ export class DatabaseStorage implements IStorage {
         fullName?: string;
         phoneNumber?: string;
       };
-      product: {
-        id: number;
-        name: string;
-        price: number;
-        imageUrl?: string;
-        slug: string;
-      };
+      totalItems: number;
+      totalCartValue: number;
+      itemCount: number;
+      daysSinceAdded: number;
+      oldestItemDate: Date;
+      newestItemDate: Date;
     }>;
     totalItems: number;
     totalPages: number;
@@ -14382,11 +14375,11 @@ export class DatabaseStorage implements IStorage {
   }> {
     try {
       const offset = (page - 1) * limit;
-      let query = db
+      
+      // First, get all cart items with user and product info
+      let baseQuery = db
         .select({
-          id: cartItems.id,
           userId: cartItems.userId,
-          productId: cartItems.productId,
           quantity: cartItems.quantity,
           itemPrice: cartItems.itemPrice,
           createdAt: cartItems.createdAt,
@@ -14395,9 +14388,6 @@ export class DatabaseStorage implements IStorage {
           userFullName: users.fullName,
           userPhoneNumber: users.phoneNumber,
           productName: products.name,
-          productPrice: products.price,
-          productImageUrl: products.imageUrl,
-          productSlug: products.slug,
         })
         .from(cartItems)
         .leftJoin(users, eq(cartItems.userId, users.id))
@@ -14408,7 +14398,7 @@ export class DatabaseStorage implements IStorage {
         ));
 
       if (search) {
-        query = query.where(
+        baseQuery = baseQuery.where(
           or(
             ilike(users.username, `%${search}%`),
             ilike(users.email, `%${search}%`),
@@ -14418,52 +14408,65 @@ export class DatabaseStorage implements IStorage {
         );
       }
 
-      const [itemsResult, totalResult] = await Promise.all([
-        query.orderBy(desc(cartItems.createdAt)).limit(limit).offset(offset),
-        db.select({ count: sql<number>`count(*)` }).from(cartItems)
-          .leftJoin(users, eq(cartItems.userId, users.id))
-          .leftJoin(products, eq(cartItems.productId, products.id))
-          .where(and(
-            isNotNull(users.id),
-            isNotNull(products.id),
-            search ? or(
-              ilike(users.username, `%${search}%`),
-              ilike(users.email, `%${search}%`),
-              ilike(users.fullName, `%${search}%`),
-              ilike(products.name, `%${search}%`)
-            ) : undefined
-          ))
-      ]);
+      const allCartItems = await baseQuery;
 
-      const totalItems = totalResult[0]?.count || 0;
+      // Group by user and calculate consolidated values
+      const userCartsMap = new Map();
+      
+      allCartItems.forEach(item => {
+        if (!userCartsMap.has(item.userId)) {
+          userCartsMap.set(item.userId, {
+            userId: item.userId,
+            user: {
+              id: item.userId,
+              username: item.userName || '',
+              email: item.userEmail || '',
+              fullName: item.userFullName || '',
+              phoneNumber: item.userPhoneNumber || '',
+            },
+            totalItems: 0,
+            totalCartValue: 0,
+            itemCount: 0,
+            itemDates: []
+          });
+        }
+        
+        const userCart = userCartsMap.get(item.userId);
+        userCart.totalItems += item.quantity;
+        userCart.totalCartValue += Number(item.itemPrice) * item.quantity;
+        userCart.itemCount += 1;
+        userCart.itemDates.push(new Date(item.createdAt));
+      });
+
+      // Convert map to array and calculate date ranges
+      const userCartsArray = Array.from(userCartsMap.values()).map(cart => {
+        const sortedDates = cart.itemDates.sort((a, b) => a.getTime() - b.getTime());
+        const oldestDate = sortedDates[0];
+        const newestDate = sortedDates[sortedDates.length - 1];
+        const daysSinceAdded = Math.floor((Date.now() - oldestDate.getTime()) / (1000 * 60 * 60 * 24));
+        
+        return {
+          userId: cart.userId,
+          user: cart.user,
+          totalItems: cart.totalItems,
+          totalCartValue: cart.totalCartValue,
+          itemCount: cart.itemCount,
+          daysSinceAdded,
+          oldestItemDate: oldestDate,
+          newestItemDate: newestDate
+        };
+      });
+
+      // Sort by newest item date (most recently added first)
+      userCartsArray.sort((a, b) => b.newestItemDate.getTime() - a.newestItemDate.getTime());
+
+      // Apply pagination
+      const totalItems = userCartsArray.length;
       const totalPages = Math.ceil(totalItems / limit);
-
-      const cartItemsWithDetails = itemsResult.map(item => ({
-        id: item.id,
-        userId: item.userId,
-        productId: item.productId,
-        quantity: item.quantity,
-        cartTotal: Number(item.itemPrice) * item.quantity,
-        daysSinceAdded: Math.floor((Date.now() - new Date(item.createdAt).getTime()) / (1000 * 60 * 60 * 24)),
-        createdAt: new Date(item.createdAt),
-        user: {
-          id: item.userId,
-          username: item.userName || '',
-          email: item.userEmail || '',
-          fullName: item.userFullName || '',
-          phoneNumber: item.userPhoneNumber || '',
-        },
-        product: {
-          id: item.productId,
-          name: item.productName || '',
-          price: Number(item.productPrice),
-          imageUrl: item.productImageUrl || '',
-          slug: item.productSlug || '',
-        },
-      }));
+      const paginatedUserCarts = userCartsArray.slice(offset, offset + limit);
 
       return {
-        cartItems: cartItemsWithDetails,
+        userCarts: paginatedUserCarts,
         totalItems,
         totalPages,
         currentPage: page,

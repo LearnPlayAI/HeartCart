@@ -62,6 +62,9 @@ export default function UserCartsPage() {
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
 
+  // Debug log to see the new data structure
+  console.log('Carts data:', cartsData);
+
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
   };
@@ -205,21 +208,21 @@ export default function UserCartsPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {cartsData?.data?.cartItems?.map((cartItem) => (
-                        <TableRow key={`${cartItem.userId}-${cartItem.id}`}>
+                      {cartsData?.data?.userCarts?.map((userCart) => (
+                        <TableRow key={userCart.userId}>
                           <TableCell>
                             <div className="flex items-center gap-3">
                               <Avatar className="h-8 w-8">
                                 <AvatarFallback>
-                                  {cartItem.user.username?.charAt(0).toUpperCase() || '?'}
+                                  {userCart.user.username?.charAt(0).toUpperCase() || '?'}
                                 </AvatarFallback>
                               </Avatar>
                               <div>
                                 <div className="font-medium">
-                                  {cartItem.user.fullName || cartItem.user.username}
+                                  {userCart.user.fullName || userCart.user.username}
                                 </div>
                                 <div className="text-sm text-muted-foreground">
-                                  @{cartItem.user.username}
+                                  @{userCart.user.username}
                                 </div>
                               </div>
                             </div>
@@ -229,20 +232,20 @@ export default function UserCartsPage() {
                               <div className="flex items-center gap-2 text-sm">
                                 <Mail className="h-3 w-3" />
                                 <a 
-                                  href={`mailto:${cartItem.user.email}`}
+                                  href={`mailto:${userCart.user.email}`}
                                   className="text-blue-600 hover:text-blue-800"
                                 >
-                                  {cartItem.user.email}
+                                  {userCart.user.email}
                                 </a>
                               </div>
-                              {cartItem.user.phoneNumber && (
+                              {userCart.user.phoneNumber && (
                                 <div className="flex items-center gap-2 text-sm">
                                   <Phone className="h-3 w-3" />
                                   <a 
-                                    href={`tel:${cartItem.user.phoneNumber}`}
+                                    href={`tel:${userCart.user.phoneNumber}`}
                                     className="text-blue-600 hover:text-blue-800"
                                   >
-                                    {cartItem.user.phoneNumber}
+                                    {userCart.user.phoneNumber}
                                   </a>
                                 </div>
                               )}
@@ -251,24 +254,24 @@ export default function UserCartsPage() {
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <Package className="h-4 w-4 text-muted-foreground" />
-                              <span>{cartItem.quantity}</span>
+                              <span>{userCart.totalItems}</span>
                             </div>
                           </TableCell>
                           <TableCell>
                             <div className="font-medium">
-                              {formatCurrency(cartItem.cartTotal)}
+                              {formatCurrency(userCart.totalCartValue)}
                             </div>
                           </TableCell>
                           <TableCell>
-                            <Badge variant={cartItem.daysSinceAdded > 7 ? 'destructive' : 'secondary'}>
-                              {cartItem.daysSinceAdded} days
+                            <Badge variant={userCart.daysSinceAdded > 7 ? 'destructive' : 'secondary'}>
+                              {userCart.daysSinceAdded} days
                             </Badge>
                           </TableCell>
                           <TableCell>
                             <Button 
                               variant="outline" 
                               size="sm"
-                              onClick={() => handleViewCartDetails(cartItem.userId)}
+                              onClick={() => handleViewCartDetails(userCart.userId)}
                             >
                               <Eye className="h-4 w-4 mr-1" />
                               View Cart
@@ -305,8 +308,8 @@ export default function UserCartsPage() {
                         
                         <PaginationItem>
                           <PaginationNext
-                            onClick={() => currentPage < cartsData.totalPages && handlePageChange(currentPage + 1)}
-                            className={currentPage === cartsData.totalPages ? "pointer-events-none opacity-50" : ""}
+                            onClick={() => currentPage < cartsData.data.totalPages && handlePageChange(currentPage + 1)}
+                            className={currentPage === cartsData.data.totalPages ? "pointer-events-none opacity-50" : ""}
                           />
                         </PaginationItem>
                       </PaginationContent>
