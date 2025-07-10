@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRoute } from 'wouter';
 import { AdminLayout } from '@/components/admin/layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,12 +15,16 @@ import {
   Package,
   DollarSign,
   Clock,
-  ExternalLink
+  ExternalLink,
+  Send
 } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
+import { apiRequest } from '@/lib/queryClient';
 
 export default function UserCartDetailPage() {
   const [match, params] = useRoute('/admin/user-carts/:userId');
   const userId = params?.userId ? parseInt(params.userId) : null;
+  const queryClient = useQueryClient();
 
   // Fetch user cart details
   const { data: cartData, isLoading, error } = useQuery({
@@ -29,7 +33,25 @@ export default function UserCartDetailPage() {
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
 
-
+  // Send cart abandonment email mutation
+  const sendEmailMutation = useMutation({
+    mutationFn: async (userId: number) => {
+      return await apiRequest('POST', `/api/admin/user-carts/${userId}/send-email`, {});
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Email sent successfully",
+        description: `Cart abandonment email sent to ${data.data.recipientEmail}`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error sending email",
+        description: error.message || "Failed to send cart abandonment email",
+        variant: "destructive",
+      });
+    },
+  });
 
   // The server now returns proper structure with user at top level
   const userData = cartData?.data?.user;
@@ -194,10 +216,20 @@ export default function UserCartDetailPage() {
                 <div className="space-y-2">
                   <Button 
                     className="w-full" 
-                    onClick={() => window.open(`mailto:${userData?.email}?subject=Complete your order - TeeMeYou&body=Hi ${userData?.fullName || userData?.username},%0D%0A%0D%0AWe noticed you have some items in your cart that you haven't purchased yet. Would you like help completing your order?%0D%0A%0D%0ABest regards,%0D%0ATeeMeYou Team`, '_blank')}
+                    onClick={() => sendEmailMutation.mutate(userId!)}
+                    disabled={sendEmailMutation.isPending || !userId}
                   >
-                    <Mail className="h-4 w-4 mr-2" />
-                    Send Email
+                    {sendEmailMutation.isPending ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-4 w-4 mr-2" />
+                        Send Cart Abandonment Email
+                      </>
+                    )}
                   </Button>
                   
                   {userData?.phoneNumber && (

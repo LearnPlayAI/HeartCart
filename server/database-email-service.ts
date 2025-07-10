@@ -117,6 +117,24 @@ export interface OrderConfirmationWithPaymentEmailData {
   invoicePath?: string; // For PDF invoice attachment
 }
 
+export interface CartAbandonmentEmailData {
+  email: string;
+  customerName: string;
+  userId: number;
+  cartItems: Array<{
+    productName: string;
+    productSlug: string;
+    quantity: number;
+    itemPrice: number;
+    itemTotal: number;
+    imageUrl?: string;
+    daysSinceAdded: number;
+  }>;
+  totalItems: number;
+  totalCartValue: number;
+  daysSinceOldest: number;
+}
+
 /**
  * Database-driven email service using MailerSend
  * All tokens and email logs are stored in PostgreSQL database
@@ -1854,6 +1872,257 @@ export class DatabaseEmailService {
       });
     } catch (error) {
       logger.error('Error sending combined order confirmation and payment email', { error, data });
+      throw error;
+    }
+  }
+
+  /**
+   * Send cart abandonment email
+   */
+  async sendCartAbandonmentEmail(data: CartAbandonmentEmailData): Promise<void> {
+    try {
+      // Generate cart items HTML with hot pink styling
+      const cartItemsHtml = data.cartItems.map(item => `
+        <tr>
+          <td style="padding: 12px; border-bottom: 1px solid #e9ecef; vertical-align: top;">
+            <div style="display: flex; align-items: center;">
+              ${item.imageUrl ? `
+                <img src="${item.imageUrl}" 
+                     alt="${item.productName}" 
+                     style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; margin-right: 12px; border: 2px solid #FF69B4;">
+              ` : ''}
+              <div>
+                <strong style="color: #E91E63; font-size: 16px;">${item.productName}</strong>
+                <br>
+                <small style="color: #6c757d; font-size: 12px;">Added ${item.daysSinceAdded} day${item.daysSinceAdded !== 1 ? 's' : ''} ago</small>
+              </div>
+            </div>
+          </td>
+          <td style="padding: 12px; border-bottom: 1px solid #e9ecef; text-align: center; font-weight: 500;">${item.quantity}</td>
+          <td style="padding: 12px; border-bottom: 1px solid #e9ecef; text-align: right; font-weight: 500;">R ${item.itemPrice.toFixed(2)}</td>
+          <td style="padding: 12px; border-bottom: 1px solid #e9ecef; text-align: right;"><strong style="color: #10B981; font-size: 16px;">R ${item.itemTotal.toFixed(2)}</strong></td>
+        </tr>
+      `).join('');
+
+      // Generate motivational message based on cart age
+      const motivationalMessage = data.daysSinceOldest <= 1 
+        ? "Your cart is waiting for you! Complete your purchase today and enjoy fast shipping."
+        : data.daysSinceOldest <= 3
+        ? "Don't miss out! Your favorite items are still available but they're selling fast."
+        : "Your cart is about to expire! Complete your purchase before these great items sell out.";
+
+      // Generate urgency badge
+      const urgencyBadge = data.daysSinceOldest <= 1
+        ? '<span style="background: #10B981; color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold;">✓ AVAILABLE</span>'
+        : data.daysSinceOldest <= 3
+        ? '<span style="background: #F59E0B; color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold;">⏰ SELLING FAST</span>'
+        : '<span style="background: #FF69B4; color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold;">🔥 ALMOST SOLD OUT</span>';
+
+      const emailParams = new EmailParams()
+        .setFrom(this.sender)
+        .setTo([new Recipient(data.email, data.customerName)])
+        .setSubject(`${data.customerName}, your cart misses you! 💕 Complete your purchase`)
+        .setSettings({
+          track_clicks: false,
+          track_opens: true
+        })
+        .setHtml(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Complete Your Purchase - TeeMeYou</title>
+          </head>
+          <body style="margin: 0; padding: 0; background: linear-gradient(135deg, #F3F4F6 0%, #FFFFFF 100%); font-family: 'Segoe UI', Arial, sans-serif;">
+            <div class="container" style="max-width: 600px; margin: 20px auto; background: #FFFFFF; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 32px rgba(255, 105, 180, 0.2);">
+              
+              <!-- Header -->
+              <div class="header" style="background: linear-gradient(135deg, #FF69B4 0%, #E91E63 100%); padding: 40px; text-align: center; position: relative;">
+                <div style="position: absolute; top: 0; left: 0; width: 100%; height: 6px; background: linear-gradient(90deg, #FF69B4 0%, #FF1493 50%, #E91E63 100%);"></div>
+                <div style="display: inline-block; background: #FFFFFF; padding: 12px; border-radius: 50%; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);">
+                  <span style="font-size: 28px; color: #FF69B4;">🛒</span>
+                </div>
+                <h1 style="color: #FFFFFF; margin: 0; font-size: 36px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3); letter-spacing: 1px;">TeeMeYou</h1>
+                <p style="color: #FFFFFF; margin: 8px 0 0 0; font-size: 18px; opacity: 0.9;">Your Cart is Calling!</p>
+              </div>
+            
+            <div style="background: #FFFFFF; padding: 40px; border-radius: 0 0 12px 12px;">
+              <div style="text-align: center; margin-bottom: 30px;">
+                <div style="display: inline-block; background: linear-gradient(135deg, #FF69B4 0%, #E91E63 100%); padding: 12px; border-radius: 50%; margin-bottom: 15px;">
+                  <span style="font-size: 32px; color: #FFFFFF;">💝</span>
+                </div>
+                <h2 style="color: #E91E63; margin: 0; font-size: 28px; font-weight: 600;">Hi ${data.customerName}!</h2>
+                <p style="color: #6B7280; margin: 8px 0 0 0; font-size: 16px;">You left ${data.totalItems} item${data.totalItems !== 1 ? 's' : ''} in your cart</p>
+              </div>
+              
+              <div style="background: linear-gradient(135deg, #FFF0F6 0%, #FFE4E1 100%); padding: 20px; border-left: 4px solid #FF69B4; margin: 25px 0; border-radius: 8px; text-align: center;">
+                <p style="margin: 0; font-size: 18px; color: #E91E63; font-weight: 600;">
+                  ${motivationalMessage}
+                </p>
+                <div style="margin-top: 15px;">
+                  ${urgencyBadge}
+                </div>
+              </div>
+              
+              <div style="background: linear-gradient(135deg, #FFF0F6 0%, #FFFFFF 100%); padding: 25px; border-radius: 12px; border: 2px solid #FF69B4; margin: 25px 0; box-shadow: 0 4px 12px rgba(255, 105, 180, 0.1);">
+                <h3 style="color: #E91E63; margin: 0 0 20px 0; font-size: 20px; font-weight: 600; text-align: center;">Your Cart Items</h3>
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                  <thead>
+                    <tr style="background: linear-gradient(135deg, #FF69B4 0%, #E91E63 100%);">
+                      <th style="padding: 15px 12px; text-align: left; border-bottom: 2px solid #E91E63; color: #FFFFFF; font-weight: 600;">Item</th>
+                      <th style="padding: 15px 12px; text-align: center; border-bottom: 2px solid #E91E63; color: #FFFFFF; font-weight: 600;">Qty</th>
+                      <th style="padding: 15px 12px; text-align: right; border-bottom: 2px solid #E91E63; color: #FFFFFF; font-weight: 600;">Price</th>
+                      <th style="padding: 15px 12px; text-align: right; border-bottom: 2px solid #E91E63; color: #FFFFFF; font-weight: 600;">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${cartItemsHtml}
+                  </tbody>
+                  <tfoot>
+                    <tr style="background: linear-gradient(135deg, #FFF0F6 0%, #FFE4E1 100%);">
+                      <td colspan="3" style="padding: 15px 12px; text-align: right; font-weight: bold; font-size: 18px; color: #E91E63;">Cart Total:</td>
+                      <td style="padding: 15px 12px; text-align: right; font-weight: bold; font-size: 18px; color: #10B981;">R ${data.totalCartValue.toFixed(2)}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+              
+              <div style="background: linear-gradient(135deg, #10B981 0%, #059669 100%); padding: 20px; border-radius: 12px; margin: 25px 0; text-align: center; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
+                <p style="margin: 0; color: #FFFFFF; font-weight: bold; font-size: 16px; display: flex; align-items: center; justify-content: center;">
+                  <span style="font-size: 20px; margin-right: 8px;">🚚</span>
+                  FREE SHIPPING on orders over R300!
+                </p>
+                <p style="margin: 8px 0 0 0; color: #DCFCE7; font-size: 14px;">
+                  ${data.totalCartValue >= 300 ? 'Your order qualifies for free shipping!' : `Add R${(300 - data.totalCartValue).toFixed(2)} more to qualify`}
+                </p>
+              </div>
+              
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="https://teemeyou.shop/cart" 
+                   style="background: linear-gradient(135deg, #FF69B4 0%, #E91E63 100%); 
+                          color: white; 
+                          padding: 18px 36px; 
+                          text-decoration: none; 
+                          border-radius: 8px; 
+                          font-weight: 600; 
+                          font-size: 18px; 
+                          display: inline-block;
+                          box-shadow: 0 4px 15px rgba(255, 105, 180, 0.4);
+                          text-transform: uppercase;
+                          letter-spacing: 0.5px;
+                          margin: 0 10px 10px 0;">
+                  🛒 Complete Purchase
+                </a>
+                <br>
+                <a href="https://teemeyou.shop/products" 
+                   style="background: transparent; 
+                          color: #FF69B4; 
+                          padding: 12px 24px; 
+                          text-decoration: none; 
+                          border: 2px solid #FF69B4;
+                          border-radius: 8px; 
+                          font-weight: 500; 
+                          font-size: 16px; 
+                          display: inline-block;
+                          margin: 0 10px 10px 0;">
+                  Continue Shopping
+                </a>
+              </div>
+              
+              <div style="background: linear-gradient(135deg, #FFF0F6 0%, #FFE4E1 100%); padding: 20px; border-left: 4px solid #FF69B4; border-radius: 8px; margin: 25px 0;">
+                <h4 style="margin: 0 0 15px 0; color: #E91E63; display: flex; align-items: center;">
+                  <span style="font-size: 18px; margin-right: 8px;">💎</span>
+                  Why choose TeeMeYou?
+                </h4>
+                <ul style="margin: 0; padding-left: 20px; color: #4A5568; line-height: 1.8;">
+                  <li style="margin-bottom: 8px;">✓ Premium quality products</li>
+                  <li style="margin-bottom: 8px;">✓ Fast shipping across South Africa</li>
+                  <li style="margin-bottom: 8px;">✓ 30-day money-back guarantee</li>
+                  <li style="margin-bottom: 8px;">✓ Excellent customer service</li>
+                </ul>
+              </div>
+              
+              <hr style="border: none; border-top: 2px solid #FF69B4; margin: 30px 0; opacity: 0.3;">
+              
+              <!-- Footer -->
+              <div style="background: #4A5568; padding: 25px; text-align: center; border-radius: 12px; margin: 25px 0;">
+                <div style="margin-bottom: 15px;">
+                  <span style="display: inline-block; background: #FFFFFF; padding: 8px 12px; border-radius: 20px; margin: 0 5px; box-shadow: 0 2px 8px rgba(255, 105, 180, 0.2);">
+                    <span style="font-size: 16px; color: #FF69B4;">🛍️</span>
+                  </span>
+                </div>
+                <p style="color: #FFFFFF; margin: 0; font-size: 14px; font-weight: 500;">
+                  © 2024 TeeMeYou • South Africa's Premium Shopping Platform
+                </p>
+                <p style="color: #CBD5E0; margin: 8px 0 0 0; font-size: 12px;">
+                  <a href="https://teemeyou.shop" style="color: #FF69B4; text-decoration: none;">teemeyou.shop</a> | 
+                  <a href="mailto:sales@teemeyou.shop" style="color: #FF69B4; text-decoration: none;">sales@teemeyou.shop</a>
+                </p>
+                <p style="color: #9CA3AF; margin: 12px 0 0 0; font-size: 11px;">
+                  This email was sent because you have items in your cart. 
+                  <a href="https://teemeyou.shop/cart" style="color: #FF69B4; text-decoration: none;">View Cart</a>
+                </p>
+              </div>
+            </div>
+          </body>
+          </html>
+        `)
+        .setText(`
+          Your Cart is Waiting - TeeMeYou
+          
+          Hi ${data.customerName}!
+          
+          You left ${data.totalItems} item${data.totalItems !== 1 ? 's' : ''} in your cart:
+          
+          ${data.cartItems.map(item => 
+            `- ${item.productName} x ${item.quantity} = R ${item.itemTotal.toFixed(2)}`
+          ).join('\n')}
+          
+          Cart Total: R ${data.totalCartValue.toFixed(2)}
+          
+          ${motivationalMessage}
+          
+          ${data.totalCartValue >= 300 ? 'Your order qualifies for free shipping!' : `Add R${(300 - data.totalCartValue).toFixed(2)} more to qualify for free shipping!`}
+          
+          Complete your purchase: https://teemeyou.shop/cart
+          Continue shopping: https://teemeyou.shop/products
+          
+          Best regards,
+          The TeeMeYou Team
+          https://teemeyou.shop
+        `);
+
+      // Send email
+      const response = await this.mailerSend.email.send(emailParams);
+      
+      // Log email with proper response handling and SAST time
+      const emailLogData: InsertEmailLog = {
+        userId: data.userId,
+        recipientEmail: data.email,
+        emailType: 'cart_abandonment',
+        subject: `${data.customerName}, your cart misses you! 💕 Complete your purchase`,
+        deliveryStatus: response.statusCode === 202 ? 'sent' : 'failed',
+        mailerSendId: response.body?.message_id || null,
+        errorMessage: response.statusCode !== 202 ? `HTTP ${response.statusCode}` : null,
+        sentAt: this.getSASTTime()
+      };
+
+      await storage.logEmail(emailLogData);
+      
+      if (response.statusCode === 202) {
+        logger.info('Cart abandonment email sent successfully', { 
+          email: data.email,
+          userId: data.userId,
+          cartItems: data.totalItems,
+          cartValue: data.totalCartValue,
+          messageId: response.body?.message_id 
+        });
+      } else {
+        throw new Error(`Email send failed with status ${response.statusCode}`);
+      }
+    } catch (error) {
+      logger.error('Error sending cart abandonment email', { error, data });
       throw error;
     }
   }

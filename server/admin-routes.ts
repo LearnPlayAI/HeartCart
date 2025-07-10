@@ -1964,4 +1964,69 @@ router.get("/user-carts/:userId", isAdmin, asyncHandler(async (req: Request, res
   }
 }));
 
+// Send cart abandonment email to specific user
+router.post("/user-carts/:userId/send-email", isAdmin, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.userId);
+    
+    if (isNaN(userId)) {
+      return sendError(res, "Invalid user ID", 400);
+    }
+
+    // Get user cart data
+    const cartData = await storage.getUserCartsByUserId(userId);
+    
+    if (!cartData.user) {
+      return sendError(res, "User not found", 404);
+    }
+
+    if (!cartData.cartItems || cartData.cartItems.length === 0) {
+      return sendError(res, "User has no items in cart", 400);
+    }
+
+    // Prepare email data
+    const emailData = {
+      email: cartData.user.email,
+      customerName: cartData.user.firstName || cartData.user.username,
+      userId: userId,
+      cartItems: cartData.cartItems.map(item => ({
+        productName: item.productName,
+        productSlug: item.product?.slug || `product-${item.productId}`,
+        quantity: item.quantity,
+        itemPrice: parseFloat(item.itemPrice.toString()),
+        itemTotal: parseFloat(item.itemPrice.toString()) * item.quantity,
+        imageUrl: item.product?.imageUrl,
+        daysSinceAdded: Math.floor((new Date().getTime() - new Date(item.createdAt).getTime()) / (1000 * 60 * 60 * 24))
+      })),
+      totalItems: cartData.totalItems,
+      totalCartValue: cartData.totalCartValue,
+      daysSinceOldest: Math.floor((new Date().getTime() - new Date(cartData.oldestItemDate).getTime()) / (1000 * 60 * 60 * 24))
+    };
+
+    // Send cart abandonment email
+    await databaseEmailService.sendCartAbandonmentEmail(emailData);
+    
+    logger.info("Cart abandonment email sent successfully", { 
+      userId,
+      email: cartData.user.email,
+      totalItems: cartData.totalItems,
+      totalValue: cartData.totalCartValue,
+      adminUserId: req.user?.id
+    });
+    
+    return sendSuccess(res, { 
+      message: "Cart abandonment email sent successfully",
+      emailSent: true,
+      recipientEmail: cartData.user.email,
+      cartItemsCount: cartData.totalItems
+    });
+  } catch (error) {
+    logger.error("Error sending cart abandonment email", { 
+      error: error instanceof Error ? error.message : String(error),
+      userId: req.params.userId 
+    });
+    return sendError(res, "Failed to send cart abandonment email", 500);
+  }
+}));
+
 export { router as adminRoutes };
