@@ -124,6 +124,7 @@ import {
   sql,
   inArray,
   isNull,
+  isNotNull,
   not,
   SQL,
   count,
@@ -13964,6 +13965,646 @@ export class DatabaseStorage implements IStorage {
       }
     } catch (error) {
       logger.error('Error marking all unpaid commissions as paid', { error, repId });
+      throw error;
+    }
+  }
+
+  // User Cart Management Methods for Admin Panel
+  /**
+   * Get all cart items with user and product details for admin review
+   * Used for abandoned cart analysis and customer outreach
+   */
+  async getCartItemsWithUserAndProductDetails(
+    page: number = 1,
+    limit: number = 20,
+    searchTerm?: string
+  ): Promise<{
+    cartItems: Array<{
+      id: number;
+      userId: number;
+      productId: number;
+      quantity: number;
+      itemPrice: string;
+      createdAt: Date;
+      updatedAt: Date;
+      attributeSelections: any;
+      user: {
+        id: number;
+        username: string;
+        email: string;
+        fullName: string | null;
+        phoneNumber: string | null;
+        lastLogin: string | null;
+      };
+      product: {
+        id: number;
+        name: string;
+        slug: string;
+        imageUrl: string | null;
+        price: number;
+        salePrice: number | null;
+        isActive: boolean;
+      };
+      cartTotal: number;
+      daysSinceAdded: number;
+    }>;
+    totalCount: number;
+    totalPages: number;
+    currentPage: number;
+  }> {
+    try {
+      const offset = (page - 1) * limit;
+      
+      // Build where condition for search
+      let whereCondition = sql`true`;
+      if (searchTerm) {
+        whereCondition = sql`(
+          ${users.username} ILIKE ${`%${searchTerm}%`} OR
+          ${users.email} ILIKE ${`%${searchTerm}%`} OR
+          ${users.fullName} ILIKE ${`%${searchTerm}%`} OR
+          ${products.name} ILIKE ${`%${searchTerm}%`}
+        )`;
+      }
+
+      // Get cart items with user and product details
+      const cartItemsQuery = db
+        .select({
+          id: cartItems.id,
+          userId: cartItems.userId,
+          productId: cartItems.productId,
+          quantity: cartItems.quantity,
+          itemPrice: cartItems.itemPrice,
+          createdAt: cartItems.createdAt,
+          updatedAt: cartItems.updatedAt,
+          attributeSelections: cartItems.attributeSelections,
+          userName: users.username,
+          userEmail: users.email,
+          userFullName: users.fullName,
+          userPhoneNumber: users.phoneNumber,
+          userLastLogin: users.lastLogin,
+          productName: products.name,
+          productSlug: products.slug,
+          productImageUrl: products.imageUrl,
+          productPrice: products.price,
+          productSalePrice: products.salePrice,
+          productIsActive: products.isActive,
+        })
+        .from(cartItems)
+        .innerJoin(users, eq(cartItems.userId, users.id))
+        .innerJoin(products, eq(cartItems.productId, products.id))
+        .where(whereCondition)
+        .orderBy(desc(cartItems.createdAt))
+        .limit(limit)
+        .offset(offset);
+
+      const results = await cartItemsQuery;
+
+      // Get total count for pagination
+      const [totalResult] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(cartItems)
+        .innerJoin(users, eq(cartItems.userId, users.id))
+        .innerJoin(products, eq(cartItems.productId, products.id))
+        .where(whereCondition);
+
+      const totalCount = Number(totalResult?.count) || 0;
+      const totalPages = Math.ceil(totalCount / limit);
+
+      // Process results to calculate cart totals and format data
+      const processedItems = results.map(item => {
+        const cartTotal = Number(item.itemPrice) * item.quantity;
+        const daysSinceAdded = Math.floor(
+          (Date.now() - new Date(item.createdAt).getTime()) / (1000 * 60 * 60 * 24)
+        );
+
+        return {
+          id: item.id,
+          userId: item.userId,
+          productId: item.productId,
+          quantity: item.quantity,
+          itemPrice: item.itemPrice,
+          createdAt: item.createdAt,
+          updatedAt: item.updatedAt,
+          attributeSelections: item.attributeSelections,
+          user: {
+            id: item.userId,
+            username: item.userName,
+            email: item.userEmail,
+            fullName: item.userFullName,
+            phoneNumber: item.userPhoneNumber,
+            lastLogin: item.userLastLogin,
+          },
+          product: {
+            id: item.productId,
+            name: item.productName,
+            slug: item.productSlug,
+            imageUrl: item.productImageUrl,
+            price: item.productPrice,
+            salePrice: item.productSalePrice,
+            isActive: item.productIsActive,
+          },
+          cartTotal,
+          daysSinceAdded,
+        };
+      });
+
+      return {
+        cartItems: processedItems,
+        totalCount,
+        totalPages,
+        currentPage: page,
+      };
+    } catch (error) {
+      logger.error('Error getting cart items with user and product details', { error });
+      throw error;
+    }
+  }
+
+  /**
+   * Get specific user's cart details for admin review
+   */
+  async getCartItemsByUser(userId: number): Promise<{
+    user: {
+      id: number;
+      username: string;
+      email: string;
+      fullName: string | null;
+      phoneNumber: string | null;
+      lastLogin: string | null;
+    };
+    cartItems: Array<{
+      id: number;
+      productId: number;
+      quantity: number;
+      itemPrice: string;
+      createdAt: Date;
+      attributeSelections: any;
+      product: {
+        id: number;
+        name: string;
+        slug: string;
+        imageUrl: string | null;
+        price: number;
+        salePrice: number | null;
+        isActive: boolean;
+      };
+      itemTotal: number;
+      daysSinceAdded: number;
+    }>;
+    totalCartValue: number;
+    totalItems: number;
+    oldestItemDate: Date | null;
+  }> {
+    try {
+      // Get user details
+      const user = await db.query.users.findFirst({
+        where: eq(users.id, userId),
+        columns: {
+          id: true,
+          username: true,
+          email: true,
+          fullName: true,
+          phoneNumber: true,
+          lastLogin: true,
+        },
+      });
+
+      if (!user) {
+        throw new Error(`User with ID ${userId} not found`);
+      }
+
+      // Get user's cart items with product details
+      const cartItemsQuery = db
+        .select({
+          id: cartItems.id,
+          productId: cartItems.productId,
+          quantity: cartItems.quantity,
+          itemPrice: cartItems.itemPrice,
+          createdAt: cartItems.createdAt,
+          attributeSelections: cartItems.attributeSelections,
+          productName: products.name,
+          productSlug: products.slug,
+          productImageUrl: products.imageUrl,
+          productPrice: products.price,
+          productSalePrice: products.salePrice,
+          productIsActive: products.isActive,
+        })
+        .from(cartItems)
+        .innerJoin(products, eq(cartItems.productId, products.id))
+        .where(eq(cartItems.userId, userId))
+        .orderBy(desc(cartItems.createdAt));
+
+      const results = await cartItemsQuery;
+
+      // Calculate totals and format data
+      let totalCartValue = 0;
+      let totalItems = 0;
+      let oldestItemDate: Date | null = null;
+
+      const processedItems = results.map(item => {
+        const itemTotal = Number(item.itemPrice) * item.quantity;
+        totalCartValue += itemTotal;
+        totalItems += item.quantity;
+
+        if (!oldestItemDate || item.createdAt < oldestItemDate) {
+          oldestItemDate = item.createdAt;
+        }
+
+        const daysSinceAdded = Math.floor(
+          (Date.now() - new Date(item.createdAt).getTime()) / (1000 * 60 * 60 * 24)
+        );
+
+        return {
+          id: item.id,
+          productId: item.productId,
+          quantity: item.quantity,
+          itemPrice: item.itemPrice,
+          createdAt: item.createdAt,
+          attributeSelections: item.attributeSelections,
+          product: {
+            id: item.productId,
+            name: item.productName,
+            slug: item.productSlug,
+            imageUrl: item.productImageUrl,
+            price: item.productPrice,
+            salePrice: item.productSalePrice,
+            isActive: item.productIsActive,
+          },
+          itemTotal,
+          daysSinceAdded,
+        };
+      });
+
+      return {
+        user,
+        cartItems: processedItems,
+        totalCartValue,
+        totalItems,
+        oldestItemDate,
+      };
+    } catch (error) {
+      logger.error('Error getting cart items by user', { error, userId });
+      throw error;
+    }
+  }
+
+  /**
+   * Get cart summary statistics for admin dashboard
+   */
+  async getCartSummaryStats(): Promise<{
+    totalAbandonedCarts: number;
+    totalAbandonedValue: number;
+    totalAbandonedItems: number;
+    averageCartValue: number;
+    cartsLast24Hours: number;
+    cartsLast7Days: number;
+    cartsLast30Days: number;
+    topAbandonedProducts: Array<{
+      productId: number;
+      productName: string;
+      productImageUrl: string | null;
+      abandonedCount: number;
+      totalValue: number;
+    }>;
+  }> {
+    try {
+      // Get total abandoned carts count
+      const [totalCartsResult] = await db
+        .select({ count: sql<number>`count(DISTINCT ${cartItems.userId})` })
+        .from(cartItems);
+
+      const totalAbandonedCarts = Number(totalCartsResult?.count) || 0;
+
+      // Get total abandoned value and items
+      const [totalValueResult] = await db
+        .select({
+          totalValue: sql<number>`sum(${cartItems.itemPrice}::numeric * ${cartItems.quantity})`,
+          totalItems: sql<number>`sum(${cartItems.quantity})`,
+        })
+        .from(cartItems);
+
+      const totalAbandonedValue = Number(totalValueResult?.totalValue) || 0;
+      const totalAbandonedItems = Number(totalValueResult?.totalItems) || 0;
+      const averageCartValue = totalAbandonedCarts > 0 ? totalAbandonedValue / totalAbandonedCarts : 0;
+
+      // Get carts by time periods
+      const now = new Date();
+      const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+      const [carts24hResult] = await db
+        .select({ count: sql<number>`count(DISTINCT ${cartItems.userId})` })
+        .from(cartItems)
+        .where(gte(cartItems.createdAt, twentyFourHoursAgo));
+
+      const [carts7dResult] = await db
+        .select({ count: sql<number>`count(DISTINCT ${cartItems.userId})` })
+        .from(cartItems)
+        .where(gte(cartItems.createdAt, sevenDaysAgo));
+
+      const [carts30dResult] = await db
+        .select({ count: sql<number>`count(DISTINCT ${cartItems.userId})` })
+        .from(cartItems)
+        .where(gte(cartItems.createdAt, thirtyDaysAgo));
+
+      const cartsLast24Hours = Number(carts24hResult?.count) || 0;
+      const cartsLast7Days = Number(carts7dResult?.count) || 0;
+      const cartsLast30Days = Number(carts30dResult?.count) || 0;
+
+      // Get top abandoned products
+      const topAbandonedProductsQuery = db
+        .select({
+          productId: cartItems.productId,
+          productName: products.name,
+          productImageUrl: products.imageUrl,
+          abandonedCount: sql<number>`count(*)`,
+          totalValue: sql<number>`sum(${cartItems.itemPrice}::numeric * ${cartItems.quantity})`,
+        })
+        .from(cartItems)
+        .innerJoin(products, eq(cartItems.productId, products.id))
+        .groupBy(cartItems.productId, products.name, products.imageUrl)
+        .orderBy(desc(sql<number>`count(*)`))
+        .limit(10);
+
+      const topAbandonedProducts = await topAbandonedProductsQuery;
+
+      return {
+        totalAbandonedCarts,
+        totalAbandonedValue,
+        totalAbandonedItems,
+        averageCartValue,
+        cartsLast24Hours,
+        cartsLast7Days,
+        cartsLast30Days,
+        topAbandonedProducts: topAbandonedProducts.map(product => ({
+          productId: product.productId,
+          productName: product.productName,
+          productImageUrl: product.productImageUrl,
+          abandonedCount: Number(product.abandonedCount),
+          totalValue: Number(product.totalValue),
+        })),
+      };
+    } catch (error) {
+      logger.error('Error getting cart summary stats', { error });
+      throw error;
+    }
+  }
+
+  // User Carts Admin Methods
+  async getUserCarts(page: number = 1, limit: number = 10, search?: string): Promise<{
+    cartItems: Array<{
+      id: number;
+      userId: number;
+      productId: number;
+      quantity: number;
+      cartTotal: number;
+      daysSinceAdded: number;
+      createdAt: Date;
+      user: {
+        id: number;
+        username: string;
+        email: string;
+        fullName?: string;
+        phoneNumber?: string;
+      };
+      product: {
+        id: number;
+        name: string;
+        price: number;
+        imageUrl?: string;
+        slug: string;
+      };
+    }>;
+    totalItems: number;
+    totalPages: number;
+    currentPage: number;
+  }> {
+    try {
+      const offset = (page - 1) * limit;
+      let query = db
+        .select({
+          id: cartItems.id,
+          userId: cartItems.userId,
+          productId: cartItems.productId,
+          quantity: cartItems.quantity,
+          createdAt: cartItems.createdAt,
+          userName: users.username,
+          userEmail: users.email,
+          userFullName: users.fullName,
+          userPhoneNumber: users.phoneNumber,
+          productName: products.name,
+          productPrice: products.price,
+          productImageUrl: products.image_url,
+          productSlug: products.slug,
+        })
+        .from(cartItems)
+        .leftJoin(users, eq(cartItems.userId, users.id))
+        .leftJoin(products, eq(cartItems.productId, products.id))
+        .where(and(
+          isNotNull(users.id),
+          isNotNull(products.id)
+        ));
+
+      if (search) {
+        query = query.where(
+          or(
+            ilike(users.username, `%${search}%`),
+            ilike(users.email, `%${search}%`),
+            ilike(users.fullName, `%${search}%`),
+            ilike(products.name, `%${search}%`)
+          )
+        );
+      }
+
+      const [itemsResult, totalResult] = await Promise.all([
+        query.orderBy(desc(cartItems.createdAt)).limit(limit).offset(offset),
+        db.select({ count: sql<number>`count(*)` }).from(cartItems)
+          .leftJoin(users, eq(cartItems.userId, users.id))
+          .leftJoin(products, eq(cartItems.productId, products.id))
+          .where(and(
+            isNotNull(users.id),
+            isNotNull(products.id),
+            search ? or(
+              ilike(users.username, `%${search}%`),
+              ilike(users.email, `%${search}%`),
+              ilike(users.fullName, `%${search}%`),
+              ilike(products.name, `%${search}%`)
+            ) : undefined
+          ))
+      ]);
+
+      const totalItems = totalResult[0]?.count || 0;
+      const totalPages = Math.ceil(totalItems / limit);
+
+      const cartItemsWithDetails = itemsResult.map(item => ({
+        id: item.id,
+        userId: item.userId,
+        productId: item.productId,
+        quantity: item.quantity,
+        cartTotal: Number(item.productPrice) * item.quantity,
+        daysSinceAdded: Math.floor((Date.now() - new Date(item.createdAt).getTime()) / (1000 * 60 * 60 * 24)),
+        createdAt: new Date(item.createdAt),
+        user: {
+          id: item.userId,
+          username: item.userName || '',
+          email: item.userEmail || '',
+          fullName: item.userFullName || '',
+          phoneNumber: item.userPhoneNumber || '',
+        },
+        product: {
+          id: item.productId,
+          name: item.productName || '',
+          price: Number(item.productPrice),
+          imageUrl: item.productImageUrl || '',
+          slug: item.productSlug || '',
+        },
+      }));
+
+      return {
+        cartItems: cartItemsWithDetails,
+        totalItems,
+        totalPages,
+        currentPage: page,
+      };
+    } catch (error) {
+      logger.error('Error getting user carts', { error });
+      throw error;
+    }
+  }
+
+  async getUserCartsByUserId(userId: number): Promise<{
+    user: {
+      id: number;
+      username: string;
+      email: string;
+      fullName?: string;
+      phoneNumber?: string;
+      lastLogin?: Date;
+    };
+    cartItems: Array<{
+      id: number;
+      quantity: number;
+      itemPrice: number;
+      itemTotal: number;
+      daysSinceAdded: number;
+      createdAt: Date;
+      product: {
+        id: number;
+        name: string;
+        price: number;
+        imageUrl?: string;
+        slug: string;
+      };
+    }>;
+    totalItems: number;
+    totalCartValue: number;
+    oldestItemDate?: Date;
+  }> {
+    try {
+      const userResult = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+
+      if (!userResult.length) {
+        throw new Error('User not found');
+      }
+
+      const user = userResult[0];
+
+      const cartItemsResult = await db
+        .select({
+          id: cartItems.id,
+          quantity: cartItems.quantity,
+          createdAt: cartItems.createdAt,
+          productId: products.id,
+          productName: products.name,
+          productPrice: products.price,
+          productImageUrl: products.image_url,
+          productSlug: products.slug,
+        })
+        .from(cartItems)
+        .leftJoin(products, eq(cartItems.productId, products.id))
+        .where(and(
+          eq(cartItems.userId, userId),
+          isNotNull(products.id)
+        ))
+        .orderBy(desc(cartItems.createdAt));
+
+      const cartItemsWithDetails = cartItemsResult.map(item => ({
+        id: item.id,
+        quantity: item.quantity,
+        itemPrice: Number(item.productPrice),
+        itemTotal: Number(item.productPrice) * item.quantity,
+        daysSinceAdded: Math.floor((Date.now() - new Date(item.createdAt).getTime()) / (1000 * 60 * 60 * 24)),
+        createdAt: new Date(item.createdAt),
+        product: {
+          id: item.productId,
+          name: item.productName || '',
+          price: Number(item.productPrice),
+          imageUrl: item.productImageUrl || '',
+          slug: item.productSlug || '',
+        },
+      }));
+
+      const totalItems = cartItemsWithDetails.reduce((sum, item) => sum + item.quantity, 0);
+      const totalCartValue = cartItemsWithDetails.reduce((sum, item) => sum + item.itemTotal, 0);
+      const oldestItemDate = cartItemsWithDetails.length > 0 
+        ? new Date(Math.min(...cartItemsWithDetails.map(item => item.createdAt.getTime())))
+        : undefined;
+
+      return {
+        user: {
+          id: user.id,
+          username: user.username || '',
+          email: user.email || '',
+          fullName: user.fullName || '',
+          phoneNumber: user.phoneNumber || '',
+          lastLogin: user.lastLogin ? new Date(user.lastLogin) : undefined,
+        },
+        cartItems: cartItemsWithDetails,
+        totalItems,
+        totalCartValue,
+        oldestItemDate,
+      };
+    } catch (error) {
+      logger.error('Error getting user cart by user ID', { error, userId });
+      throw error;
+    }
+  }
+
+  async getUserCartStats(): Promise<{
+    totalAbandonedCarts: number;
+    totalAbandonedValue: number;
+    averageCartValue: number;
+    cartsLast24Hours: number;
+  }> {
+    try {
+      const [statsResult] = await db
+        .select({
+          totalCarts: sql<number>`count(distinct ${cartItems.userId})`,
+          totalValue: sql<number>`sum(${cartItems.quantity} * ${products.price})`,
+          cartsLast24Hours: sql<number>`count(distinct case when ${cartItems.createdAt} >= now() - interval '1 day' then ${cartItems.userId} end)`,
+        })
+        .from(cartItems)
+        .leftJoin(products, eq(cartItems.productId, products.id))
+        .where(isNotNull(products.id));
+
+      const totalAbandonedCarts = statsResult.totalCarts || 0;
+      const totalAbandonedValue = Number(statsResult.totalValue) || 0;
+      const averageCartValue = totalAbandonedCarts > 0 ? totalAbandonedValue / totalAbandonedCarts : 0;
+      const cartsLast24Hours = statsResult.cartsLast24Hours || 0;
+
+      return {
+        totalAbandonedCarts,
+        totalAbandonedValue,
+        averageCartValue,
+        cartsLast24Hours,
+      };
+    } catch (error) {
+      logger.error('Error getting user cart stats', { error });
       throw error;
     }
   }

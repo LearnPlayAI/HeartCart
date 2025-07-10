@@ -78,6 +78,8 @@ import EditSalesRepPage from "@/pages/admin/sales-reps/edit";
 import SalesRepCommissionsPage from "@/pages/admin/sales-reps/commissions";
 import RecordPaymentPage from "@/pages/admin/sales-reps/record-payment";
 import ManageUsersPage from "@/pages/admin/sales-reps/manage-users";
+import UserCartsPage from "@/pages/admin/user-carts";
+import UserCartDetailPage from "@/pages/admin/user-cart-detail";
 
 // Developer Pages
 import DeveloperDashboard from "@/pages/developer";
@@ -242,6 +244,8 @@ function App() {
                   <AdminProtectedRoute path="/admin/orders" component={AdminOrders} />
                   <AdminProtectedRoute path="/admin/orders/:id" component={AdminOrderDetail} />
                   <AdminProtectedRoute path="/admin/supplier-orders" component={SupplierOrders} />
+                  <AdminProtectedRoute path="/admin/user-carts" component={UserCartsPage} />
+                  <AdminProtectedRoute path="/admin/user-carts/:userId" component={UserCartDetailPage} />
                   <AdminProtectedRoute path="/admin/users" component={UserAdminPageFixed} />
                   <AdminProtectedRoute path="/admin/sales-reps" component={SalesRepsPage} />
                   <AdminProtectedRoute path="/admin/sales-reps/create" component={CreateSalesRepPage} />

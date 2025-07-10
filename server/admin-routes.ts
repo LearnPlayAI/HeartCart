@@ -1896,4 +1896,72 @@ router.get("/sales-reps/:id/assignment-stats", isAdmin, asyncHandler(async (req:
   }
 }));
 
+// User Cart Management Endpoints for Admin Panel
+// Get all user carts with pagination and search
+router.get("/user-carts", isAdmin, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const searchTerm = req.query.search as string;
+
+    const result = await storage.getUserCarts(page, limit, searchTerm);
+    
+    logger.info("Admin user carts fetched successfully", { 
+      page, 
+      limit, 
+      searchTerm,
+      totalCount: result.totalCount,
+      adminUserId: req.user?.id
+    });
+    
+    return sendSuccess(res, result);
+  } catch (error) {
+    logger.error("Error fetching admin user carts", { error });
+    return sendError(res, "Failed to fetch user carts", 500);
+  }
+}));
+
+// Get specific user's cart details
+router.get("/user-carts/:userId", isAdmin, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.userId);
+    
+    if (isNaN(userId)) {
+      return sendError(res, "Invalid user ID", 400);
+    }
+
+    const result = await storage.getUserCartsByUserId(userId);
+    
+    logger.info("Admin user cart details fetched successfully", { 
+      userId,
+      totalItems: result.totalItems,
+      totalValue: result.totalCartValue,
+      adminUserId: req.user?.id
+    });
+    
+    return sendSuccess(res, result);
+  } catch (error) {
+    logger.error("Error fetching user cart details", { error, userId: req.params.userId });
+    return sendError(res, "Failed to fetch user cart details", 500);
+  }
+}));
+
+// Get cart summary statistics
+router.get("/user-carts/stats", isAdmin, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const stats = await storage.getUserCartStats();
+    
+    logger.info("Admin cart summary stats fetched successfully", { 
+      totalAbandonedCarts: stats.totalAbandonedCarts,
+      totalAbandonedValue: stats.totalAbandonedValue,
+      adminUserId: req.user?.id
+    });
+    
+    return sendSuccess(res, stats);
+  } catch (error) {
+    logger.error("Error fetching cart summary stats", { error });
+    return sendError(res, "Failed to fetch cart summary stats", 500);
+  }
+}));
+
 export { router as adminRoutes };

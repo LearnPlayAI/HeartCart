@@ -132,6 +132,18 @@ TeeMeYou is a comprehensive e-commerce platform built as a dropshipping solution
 ```
 Changelog:
 - June 27, 2025. Initial setup
+- July 10, 2025. Complete User Carts Admin System implemented:
+  * Added comprehensive user cart management section to admin interface
+  * Implemented backend storage methods: getUserCarts, getUserCartsByUserId, getUserCartStats
+  * Added API endpoints: /api/admin/user-carts, /api/admin/user-carts/:userId, /api/admin/user-carts/stats
+  * Created complete frontend with UserCartsPage and UserCartDetailPage components
+  * Added statistics dashboard showing total abandoned carts, cart values, and recent activity
+  * Implemented search functionality across usernames and product names
+  * Added contact features: direct email and WhatsApp links for customer follow-up
+  * Integrated pagination and comprehensive cart detail views
+  * Added "User Carts" navigation item to admin layout with shopping basket icon
+  * System enables admins to view abandoned carts and contact customers to increase conversion rates
+  * All existing functionality preserved - implementation followed existing patterns and database schema
 - June 27, 2025. Implemented unified MailerSend email system with 5 email scenarios:
   * Account verification emails with token-based security
   * Password reset emails with 1-hour expiration

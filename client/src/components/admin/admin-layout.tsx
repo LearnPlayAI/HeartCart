@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
 import { useAuth } from '@/hooks/use-auth';
-import { ChevronRight, Home, Package, ShoppingCart, Users, PieChart, Settings, Database, Book, Grid, List, Layers, Box, Image, FileText, Gift } from 'lucide-react';
+import { ChevronRight, Home, Package, ShoppingCart, Users, PieChart, Settings, Database, Book, Grid, List, Layers, Box, Image, FileText, Gift, ShoppingBasket } from 'lucide-react';
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -29,6 +29,7 @@ function AdminLayout({ children, title, subtitle }: AdminLayoutProps) {
     { name: 'Global Attributes', href: '/admin/global-attributes', icon: <List className="h-5 w-5" /> },
     { name: 'Promotions', href: '/admin/promotions', icon: <Gift className="h-5 w-5" /> },
     { name: 'Orders', href: '/admin/orders', icon: <ShoppingCart className="h-5 w-5" /> },
+    { name: 'User Carts', href: '/admin/user-carts', icon: <ShoppingBasket className="h-5 w-5" /> },
     { name: 'User Admin', href: '/admin/users', icon: <Users className="h-5 w-5" /> },
     { name: 'Pricing', href: '/admin/pricing', icon: <PieChart className="h-5 w-5" /> },
     { name: 'Batch Upload', href: '/admin/batch-upload', icon: <FileText className="h-5 w-5" /> },
