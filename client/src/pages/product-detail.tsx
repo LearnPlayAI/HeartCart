@@ -177,35 +177,30 @@ const ProductDetailContent = ({
   queryClient: any;
 }) => {
   
-  // Fetch active promotions for this product (only if not already fetched)
+  // Fetch active promotions for this product - no cache for real-time pricing
   const { data: promotionsResponse } = useQuery<any>({
-    queryKey: ['/api/promotions/active-with-products'],
+    queryKey: ['/api/promotions/active-with-products', product?.id],
     enabled: !!product?.id,
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes to prevent refetching
+    staleTime: 0, // No cache - always fetch fresh promotional data
+    gcTime: 0, // Don't keep in cache when component unmounts
+    refetchOnWindowFocus: true, // Refetch when window gains focus
+    refetchOnMount: true, // Always refetch on mount
   });
 
   // Find if this product is in any active promotion
-  console.log('Product Detail - Raw promotions response:', promotionsResponse);
-  
-  // API returns data directly, not wrapped in success/data structure
   const activePromotions = promotionsResponse?.data || promotionsResponse || [];
-  console.log('Product Detail - Active promotions:', activePromotions);
   
   const productPromotion = activePromotions
     .flatMap((promo: any) => promo.products?.map((pp: any) => ({ ...pp, promotion: promo })) || [])
     .find((pp: any) => pp.productId === product?.id);
 
-  console.log('Product Detail - Found product promotion:', productPromotion);
-
   const promotionInfo = productPromotion ? {
     promotionName: productPromotion.promotion.promotionName,
-    promotionDiscount: productPromotion.extraDiscountPercentage || productPromotion.discountOverride || productPromotion.promotion.discountValue,
-    promotionDiscountType: productPromotion.promotion.promotionType,
+    promotionDiscount: productPromotion.discountOverride || productPromotion.promotion.discountValue,
+    promotionDiscountType: productPromotion.promotion.discountType,
     promotionEndDate: productPromotion.promotion.endDate,
     promotionalPrice: productPromotion.promotionalPrice ? Number(productPromotion.promotionalPrice) : null
   } : null;
-
-  console.log('Product Detail - Final promotion info:', promotionInfo);
 
   // Calculate unified pricing using centralized logic
   const pricing = product ? calculateProductPricing(
@@ -213,6 +208,13 @@ const ProductDetailContent = ({
     product.salePrice ? Number(product.salePrice) : null,
     promotionInfo
   ) : null;
+
+  // Debug: Log the promotion info and pricing for the specific product
+  if (product?.id === 642) {
+    console.log('🔍 Product 642 Debug - Promotion Info:', promotionInfo);
+    console.log('🔍 Product 642 Debug - Calculated Pricing:', pricing);
+    console.log('🔍 Product 642 Debug - Promotions Response:', promotionsResponse);
+  }
 
 
 
@@ -315,9 +317,7 @@ const ProductDetailContent = ({
     );
   }
   
-  const discount = product.salePrice
-    ? calculateDiscount(product.price, product.salePrice)
-    : 0;
+
   
   const handleQuantityChange = (newQuantity: number) => {
     if (newQuantity > 0 && newQuantity <= 10) {

@@ -34,6 +34,7 @@ export function calculateProductPricing(
   let finalPrice = basePrice;
   let totalDiscountPercentage = 0;
   let extraPromotionalDiscount = 0;
+  let wasPrice = basePrice; // Track what the "was" price should be
 
   // Apply sale price if available
   if (salePrice && salePrice < basePrice) {
@@ -48,13 +49,20 @@ export function calculateProductPricing(
     // Priority 1: Use direct promotional price if available
     if (promotionInfo.promotionalPrice && promotionInfo.promotionalPrice > 0) {
       finalPrice = promotionInfo.promotionalPrice;
+      
+      // FIXED: When using promotional price, "was" price should be the price before promotion
+      // If there's a sale price, show the original base price as "was" price
+      // If no sale price, show base price as "was" price  
+      wasPrice = basePrice; // Always show original base price as "was" price for promotions
+      
       totalDiscountPercentage = ((basePrice - finalPrice) / basePrice) * 100;
       
       // Calculate extra promotional discount from the price before promotion
-      // Only show extra discount if there's actually a difference from the previous price
       if (priceBeforePromotion > finalPrice) {
         extraPromotionalDiscount = ((priceBeforePromotion - finalPrice) / priceBeforePromotion) * 100;
       }
+      
+
     } else {
       // Priority 2: Apply promotional discount calculation
       const promotionDiscount = Number(promotionInfo.promotionDiscount) || 0;
@@ -65,8 +73,12 @@ export function calculateProductPricing(
         finalPrice = finalPrice - discountAmount;
         extraPromotionalDiscount = promotionDiscount;
         
+        // For percentage promotions, "was" price should be the original base price
+        wasPrice = basePrice;
+        
         // Calculate total discount from original base price
         totalDiscountPercentage = ((basePrice - finalPrice) / basePrice) * 100;
+
       } else if (promotionInfo.promotionDiscountType === 'fixed') {
         // Apply fixed amount discount
         const newPrice = Math.max(0, finalPrice - promotionDiscount);
@@ -74,20 +86,31 @@ export function calculateProductPricing(
           extraPromotionalDiscount = ((finalPrice - newPrice) / finalPrice) * 100;
         }
         finalPrice = newPrice;
+        wasPrice = basePrice; // Show original base price
         totalDiscountPercentage = ((basePrice - finalPrice) / basePrice) * 100;
+        
+        console.log('💵 Applied fixed promotion:', { 
+          finalPrice, 
+          wasPrice,
+          promotionDiscount,
+          totalDiscountPercentage 
+        });
       }
     }
   }
 
-  return {
+  const result = {
     displayPrice: Math.round(finalPrice * 100) / 100, // Round to 2 decimal places
-    originalPrice: basePrice,
+    originalPrice: wasPrice, // FIXED: Use wasPrice instead of always basePrice
     discountPercentage: Math.round(totalDiscountPercentage),
     hasDiscount: finalPrice < basePrice,
     promotionPrice: promotionInfo ? finalPrice : undefined,
     salePrice: salePrice || undefined,
     extraPromotionalDiscount: Math.round(extraPromotionalDiscount)
   };
+
+  console.log('✅ Final pricing result:', result);
+  return result;
 }
 
 /**
