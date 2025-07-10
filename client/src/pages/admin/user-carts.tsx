@@ -108,7 +108,7 @@ export default function UserCartsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {statsLoading ? '...' : Number(stats?.totalAbandonedCarts) || 0}
+                {statsLoading ? '...' : Number(stats?.data?.totalAbandonedCarts) || 0}
               </div>
               <p className="text-xs text-muted-foreground">
                 Unique users with items in cart
@@ -123,7 +123,7 @@ export default function UserCartsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {statsLoading ? '...' : formatCurrency(Number(stats?.totalAbandonedValue) || 0)}
+                {statsLoading ? '...' : formatCurrency(Number(stats?.data?.totalAbandonedValue) || 0)}
               </div>
               <p className="text-xs text-muted-foreground">
                 Total value of abandoned items
@@ -138,7 +138,7 @@ export default function UserCartsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {statsLoading ? '...' : formatCurrency(Number(stats?.averageCartValue) || 0)}
+                {statsLoading ? '...' : formatCurrency(Number(stats?.data?.averageCartValue) || 0)}
               </div>
               <p className="text-xs text-muted-foreground">
                 Average value per cart
@@ -153,7 +153,7 @@ export default function UserCartsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {statsLoading ? '...' : Number(stats?.cartsLast24Hours) || 0}
+                {statsLoading ? '...' : Number(stats?.data?.cartsLast24Hours) || 0}
               </div>
               <p className="text-xs text-muted-foreground">
                 New carts last 24 hours
@@ -205,7 +205,7 @@ export default function UserCartsPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {cartsData?.cartItems?.map((cartItem) => (
+                      {cartsData?.data?.cartItems?.map((cartItem) => (
                         <TableRow key={`${cartItem.userId}-${cartItem.id}`}>
                           <TableCell>
                             <div className="flex items-center gap-3">
@@ -281,7 +281,7 @@ export default function UserCartsPage() {
                 </div>
 
                 {/* Pagination */}
-                {cartsData && cartsData.totalPages > 1 && (
+                {cartsData?.data && cartsData.data.totalPages > 1 && (
                   <div className="flex justify-center mt-4">
                     <Pagination>
                       <PaginationContent>
@@ -292,7 +292,7 @@ export default function UserCartsPage() {
                           />
                         </PaginationItem>
                         
-                        {Array.from({ length: cartsData.totalPages }).map((_, i) => (
+                        {Array.from({ length: cartsData.data.totalPages }).map((_, i) => (
                           <PaginationItem key={i}>
                             <PaginationLink
                               onClick={() => handlePageChange(i + 1)}

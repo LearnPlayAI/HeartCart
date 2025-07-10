@@ -29,6 +29,9 @@ export default function UserCartDetailPage() {
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
 
+  // Debug log to see the data structure
+  console.log('Cart data:', cartData);
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-ZA', {
       style: 'currency',
@@ -77,6 +80,16 @@ export default function UserCartDetailPage() {
     );
   }
 
+  if (!cartData || !cartData.data) {
+    return (
+      <AdminLayout title="User Cart Details" subtitle="View user's abandoned cart">
+        <div className="text-center py-8">
+          <p className="text-muted-foreground">No cart data available</p>
+        </div>
+      </AdminLayout>
+    );
+  }
+
   return (
     <AdminLayout title="User Cart Details" subtitle="View user's abandoned cart">
       <div className="space-y-6">
@@ -96,7 +109,7 @@ export default function UserCartDetailPage() {
                 <CardTitle className="flex items-center gap-2">
                   <Avatar className="h-8 w-8">
                     <AvatarFallback>
-                      {cartData?.user.username?.charAt(0).toUpperCase() || '?'}
+                      {cartData?.data?.user.username?.charAt(0).toUpperCase() || '?'}
                     </AvatarFallback>
                   </Avatar>
                   Customer Information
@@ -105,10 +118,10 @@ export default function UserCartDetailPage() {
               <CardContent className="space-y-4">
                 <div>
                   <h3 className="font-medium">
-                    {cartData?.user.fullName || cartData?.user.username}
+                    {cartData?.data?.user.fullName || cartData?.data?.user.username}
                   </h3>
                   <p className="text-sm text-muted-foreground">
-                    @{cartData?.user.username}
+                    @{cartData?.data?.user.username}
                   </p>
                 </div>
 
@@ -118,29 +131,29 @@ export default function UserCartDetailPage() {
                   <div className="flex items-center gap-2 text-sm">
                     <Mail className="h-4 w-4 text-muted-foreground" />
                     <a 
-                      href={`mailto:${cartData?.user.email}`}
+                      href={`mailto:${cartData?.data?.user.email}`}
                       className="text-blue-600 hover:text-blue-800"
                     >
-                      {cartData?.user.email}
+                      {cartData?.data?.user.email}
                     </a>
                   </div>
 
-                  {cartData?.user.phoneNumber && (
+                  {cartData?.data?.user.phoneNumber && (
                     <div className="flex items-center gap-2 text-sm">
                       <Phone className="h-4 w-4 text-muted-foreground" />
                       <a 
-                        href={`tel:${cartData?.user.phoneNumber}`}
+                        href={`tel:${cartData?.data?.user.phoneNumber}`}
                         className="text-blue-600 hover:text-blue-800"
                       >
-                        {cartData?.user.phoneNumber}
+                        {cartData?.data?.user.phoneNumber}
                       </a>
                     </div>
                   )}
 
-                  {cartData?.user.lastLogin && (
+                  {cartData?.data?.user.lastLogin && (
                     <div className="flex items-center gap-2 text-sm">
                       <Clock className="h-4 w-4 text-muted-foreground" />
-                      <span>Last login: {formatDate(cartData.user.lastLogin)}</span>
+                      <span>Last login: {formatDate(cartData.data.user.lastLogin)}</span>
                     </div>
                   )}
                 </div>
@@ -151,19 +164,19 @@ export default function UserCartDetailPage() {
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium">Total Items:</span>
-                    <span className="text-sm">{cartData?.totalItems || 0}</span>
+                    <span className="text-sm">{cartData?.data?.totalItems || 0}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium">Cart Value:</span>
                     <span className="text-sm font-bold">
-                      {formatCurrency(cartData?.totalCartValue || 0)}
+                      {formatCurrency(cartData?.data?.totalCartValue || 0)}
                     </span>
                   </div>
-                  {cartData?.oldestItemDate && (
+                  {cartData?.data?.oldestItemDate && (
                     <div className="flex justify-between items-center">
                       <span className="text-sm font-medium">Oldest Item:</span>
                       <span className="text-sm">
-                        {formatDate(cartData.oldestItemDate.toString())}
+                        {formatDate(cartData.data.oldestItemDate.toString())}
                       </span>
                     </div>
                   )}
@@ -175,17 +188,17 @@ export default function UserCartDetailPage() {
                 <div className="space-y-2">
                   <Button 
                     className="w-full" 
-                    onClick={() => window.open(`mailto:${cartData?.user.email}?subject=Complete your order - TeeMeYou&body=Hi ${cartData?.user.fullName || cartData?.user.username},%0D%0A%0D%0AWe noticed you have some items in your cart that you haven't purchased yet. Would you like help completing your order?%0D%0A%0D%0ABest regards,%0D%0ATeeMeYou Team`, '_blank')}
+                    onClick={() => window.open(`mailto:${cartData?.data?.user.email}?subject=Complete your order - TeeMeYou&body=Hi ${cartData?.data?.user.fullName || cartData?.data?.user.username},%0D%0A%0D%0AWe noticed you have some items in your cart that you haven't purchased yet. Would you like help completing your order?%0D%0A%0D%0ABest regards,%0D%0ATeeMeYou Team`, '_blank')}
                   >
                     <Mail className="h-4 w-4 mr-2" />
                     Send Email
                   </Button>
                   
-                  {cartData?.user.phoneNumber && (
+                  {cartData?.data?.user.phoneNumber && (
                     <Button 
                       variant="outline" 
                       className="w-full"
-                      onClick={() => window.open(`https://wa.me/${cartData?.user.phoneNumber.replace(/\D/g, '')}?text=Hi ${cartData?.user.fullName || cartData?.user.username}! We noticed you have some items in your TeeMeYou cart. Would you like help completing your order?`, '_blank')}
+                      onClick={() => window.open(`https://wa.me/${cartData?.data?.user.phoneNumber.replace(/\D/g, '')}?text=Hi ${cartData?.data?.user.fullName || cartData?.data?.user.username}! We noticed you have some items in your TeeMeYou cart. Would you like help completing your order?`, '_blank')}
                     >
                       <Phone className="h-4 w-4 mr-2" />
                       WhatsApp
@@ -202,17 +215,17 @@ export default function UserCartDetailPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Package className="h-5 w-5" />
-                  Cart Items ({cartData?.cartItems?.length || 0})
+                  Cart Items ({cartData?.data?.cartItems?.length || 0})
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {cartData?.cartItems?.length === 0 ? (
+                {cartData?.data?.cartItems?.length === 0 ? (
                   <div className="text-center py-8">
                     <p className="text-muted-foreground">No items in cart</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {cartData?.cartItems?.map((item) => (
+                    {cartData?.data?.cartItems?.map((item) => (
                       <div key={item.id} className="flex gap-4 p-4 border rounded-lg">
                         <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
                           {item.product.imageUrl ? (
