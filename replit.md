@@ -830,6 +830,17 @@ Changelog:
   * Compliance requirement met: When admin VAT toggle is off, customers see absolutely no VAT mentions
   * All existing functionality maintained: database queries, connection pool (30 connections), monitoring, error handling
   * Clean startup logs with no connection-related error messages during initialization
+- July 10, 2025. Complete promotional pricing system consistency and cart persistence implementation:
+  * CRITICAL FIX: Fixed promotional pricing capture consistency across all add-to-cart methods in the e-commerce system
+  * Updated product detail page to use itemPrice field instead of adjustedPrice for cart integration
+  * Fixed cart page and cart drawer to use stored promotional prices from database instead of recalculating
+  * Verified all components (product listing, product card, quick view modal) use correct promotional pricing with getCartPrice() function
+  * Cart system now preserves promotional prices when items are added and displays them consistently across all views
+  * Fixed cart item field structure to match backend expectations (itemPrice vs adjustedPrice mismatch resolved)
+  * All add-to-cart operations now consistently capture promotional pricing using proper calculateProductPricing() logic
+  * System maintains promotional price integrity from product display through cart storage to checkout process
+  * Verified promotional pricing works correctly: products with promotions show correct discounted price and preserve pricing in cart
+  * Complete end-to-end promotional pricing workflow operational: product display → add to cart → cart persistence → consistent pricing
 - July 9, 2025. Complete API success logging elimination for resource optimization:
   * CRITICAL OPTIMIZATION: API logging now only captures failures, errors, and slow requests - eliminated all successful request logging
   * Modified API request middleware to only log when: HTTP status >= 400, request duration > 5 seconds, or API response contains success: false
