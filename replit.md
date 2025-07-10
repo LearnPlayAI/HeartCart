@@ -151,6 +151,10 @@ Changelog:
   * All cart data shows historical pricing from when items were added to cart, not current product prices
   * System enables admins to view abandoned carts and contact customers to increase conversion rates
   * All existing functionality preserved - implementation followed existing patterns and database schema
+  * CART ABANDONMENT EMAIL FIXES: Fixed "undefined" product name mapping issue by correcting data structure access from item.productName to item.product?.name
+  * Removed all product images from cart abandonment email template while preserving proper product details display
+  * Removed 30-day money-back guarantee reference from email (company doesn't offer this policy)
+  * Cart abandonment emails now link directly to /checkout page instead of cart page for optimized conversion flow
 - June 27, 2025. Implemented unified MailerSend email system with 5 email scenarios:
   * Account verification emails with token-based security
   * Password reset emails with 1-hour expiration

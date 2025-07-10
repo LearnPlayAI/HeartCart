@@ -2039,7 +2039,6 @@ export class DatabaseEmailService {
                 <ul style="margin: 0; padding-left: 20px; color: #4A5568; line-height: 1.8;">
                   <li style="margin-bottom: 8px;">✓ Premium quality products</li>
                   <li style="margin-bottom: 8px;">✓ Fast shipping across South Africa</li>
-                  <li style="margin-bottom: 8px;">✓ 30-day money-back guarantee</li>
                   <li style="margin-bottom: 8px;">✓ Excellent customer service</li>
                 </ul>
               </div>
