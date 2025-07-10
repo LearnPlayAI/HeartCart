@@ -186,29 +186,9 @@ const ProductDetailView = ({
     totalAdjustment: number
   } | null>(null);
 
-  // Fetch active promotions for this product - no cache for real-time pricing
-  const { data: promotionsResponse } = useQuery<any>({
-    queryKey: ['/api/promotions/active-with-products', product?.id],
-    enabled: !!product?.id,
-    staleTime: 0, // No cache - always fetch fresh promotional data
-    gcTime: 0, // Don't keep in cache when component unmounts
-    refetchOnWindowFocus: true, // Refetch when window gains focus
-    refetchOnMount: true, // Always refetch on mount
-  });
-
-  // Find if this product is in any active promotion
-  const activePromotions = promotionsResponse?.data || promotionsResponse || [];
-  const productPromotion = activePromotions
-    .flatMap((promo: any) => promo.products?.map((pp: any) => ({ ...pp, promotion: promo })) || [])
-    .find((pp: any) => pp.productId === product?.id);
-
-  const promotionInfo = productPromotion ? {
-    promotionName: productPromotion.promotion.promotionName,
-    promotionDiscount: productPromotion.extraDiscountPercentage || productPromotion.discountOverride || productPromotion.promotion.discountValue,
-    promotionDiscountType: productPromotion.promotion.promotionType,
-    promotionEndDate: productPromotion.promotion.endDate,
-    promotionalPrice: productPromotion.promotionalPrice ? Number(productPromotion.promotionalPrice) : null
-  } : null;
+  // Use server-calculated promotional pricing data instead of client-side fetching
+  const serverPromotionInfo = (product as any)?.promotionInfo;
+  const serverPricing = (product as any)?.pricing;
   
   // Get related products based on category
   const { 
@@ -454,14 +434,14 @@ const ProductDetailView = ({
       });
     }
     
-    // Use base price without adjustments per requirements
-    const basePrice = product.salePrice || product.price;
+    // Use promotional price if available, otherwise use sale price or base price
+    const itemPrice = displayPrice; // This includes promotional pricing from server
     
     // Create the cart item with attribute selections  
     const cartItem = {
       productId: product.id,
       quantity,
-      itemPrice: basePrice,
+      itemPrice,
       attributeSelections,
       discountData: null,
       totalDiscount: 0,
@@ -546,12 +526,21 @@ const ProductDetailView = ({
     );
   }
   
-  // Calculate discount percentage and display price
-  const discount = product.salePrice
-    ? calculateDiscount(product.price, product.salePrice)
-    : 0;
+  // Use server-calculated promotional pricing data
+  const displayPrice = serverPricing?.displayPrice || product.salePrice || product.price;
+  const originalPrice = serverPricing?.originalPrice || product.price;
+  const discount = serverPricing?.discountPercentage || 
+    (product.salePrice ? calculateDiscount(product.price, product.salePrice) : 0);
+  const hasDiscount = serverPricing?.hasDiscount || (product.salePrice && product.salePrice < product.price);
   
-  const displayPrice = product.salePrice || product.price;
+  console.log('✅ Server pricing data:', {
+    serverPricing,
+    serverPromotionInfo,
+    displayPrice,
+    originalPrice,
+    discount,
+    hasDiscount
+  });
   
   // Log product data for debugging
   console.log('Product data:', product);
@@ -828,32 +817,30 @@ const ProductDetailView = ({
             {/* Price */}
             <div className="flex items-baseline">
               <span className="text-3xl font-bold text-[#FF69B4]">
-                {formatCurrency(promotionInfo?.promotionalPrice || product.salePrice || product.price)}
+                {formatCurrency(displayPrice)}
               </span>
-              {(product.salePrice || promotionInfo) && (
+              {hasDiscount && (
                 <>
                   <span className="text-gray-500 text-lg ml-2 line-through">
-                    {formatCurrency(promotionInfo ? (product.salePrice || product.price) : product.price)}
+                    {formatCurrency(originalPrice)}
                   </span>
                   <span className="ml-2 px-2 py-1 bg-[#FF69B4]/10 text-[#FF69B4] rounded-full text-sm">
-                    {promotionInfo && promotionInfo.promotionalPrice ? 
-                      Math.round(((product.price - promotionInfo.promotionalPrice) / product.price) * 100)
-                      : discount}% OFF
+                    {discount}% OFF
                   </span>
                 </>
               )}
             </div>
             
             {/* Promotional Info - positioned below price */}
-            {promotionInfo && promotionInfo.promotionDiscount > 0 && (
+            {serverPromotionInfo && serverPromotionInfo.promotionName && (
               <div className="flex items-center gap-3 mt-2">
                 <Badge 
                   className="bg-red-500 hover:bg-red-600 text-white text-xs px-2 py-1 rounded-md shadow-sm"
                 >
-                  EXTRA {promotionInfo.promotionDiscount}% OFF!
+                  PROMOTION
                 </Badge>
                 <span className="text-sm font-medium text-gray-700">
-                  {promotionInfo.promotionName}
+                  {serverPromotionInfo.promotionName}
                 </span>
               </div>
             )}
