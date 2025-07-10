@@ -177,49 +177,32 @@ const ProductDetailContent = ({
   queryClient: any;
 }) => {
   
-  // Fetch active promotions for this product - no cache for real-time pricing
-  const { data: promotionsResponse } = useQuery<any>({
-    queryKey: ['/api/promotions/active-with-products'],
-    enabled: !!product?.id,
-    staleTime: 0, // No cache - always fetch fresh promotional data
-    gcTime: 0, // Don't keep in cache when component unmounts
-    refetchOnWindowFocus: true, // Refetch when window gains focus
-    refetchOnMount: true, // Always refetch on mount
-  });
+  // Use server-calculated pricing directly (no client-side promotional data fetching needed)
+  const promotionInfo = product?.promotionInfo || null;
+  const serverPricing = product?.serverPricing || null;
 
-  // Find if this product is in any active promotion
-  const activePromotions = promotionsResponse?.data || promotionsResponse || [];
-  
-  // Debug logging for promotional data structure
-  if (product?.id === 642) {
-    console.log('🔍 Product 642 Debug - Promotions Response:', promotionsResponse);
-    console.log('🔍 Product 642 Debug - Active Promotions:', activePromotions);
-  }
-  
-  const productPromotion = activePromotions
-    .flatMap((promo: any) => promo.products?.map((pp: any) => ({ ...pp, promotion: promo })) || [])
-    .find((pp: any) => pp.productId === product?.id);
-
-  const promotionInfo = productPromotion ? {
-    promotionName: productPromotion.promotion.promotionName,
-    promotionDiscount: productPromotion.discountOverride || productPromotion.promotion.discountValue,
-    promotionDiscountType: productPromotion.promotion.discountType,
-    promotionEndDate: productPromotion.promotion.endDate,
-    promotionalPrice: productPromotion.promotionalPrice ? Number(productPromotion.promotionalPrice) : null
-  } : null;
-
-  // Calculate unified pricing using centralized logic
-  const pricing = product ? calculateProductPricing(
+  // Calculate unified pricing using server data or fallback to client calculation
+  const pricing = serverPricing ? {
+    displayPrice: serverPricing.displayPrice,
+    originalPrice: serverPricing.originalPrice,
+    salePrice: serverPricing.salePrice,
+    hasDiscount: serverPricing.hasPromotion || (serverPricing.salePrice && serverPricing.salePrice < serverPricing.originalPrice),
+    discountPercentage: serverPricing.hasPromotion ? 
+      Math.round(((serverPricing.originalPrice - serverPricing.displayPrice) / serverPricing.originalPrice) * 100) :
+      (serverPricing.salePrice ? Math.round(((serverPricing.originalPrice - serverPricing.salePrice) / serverPricing.originalPrice) * 100) : 0),
+    promotionPrice: serverPricing.hasPromotion ? serverPricing.displayPrice : null,
+    extraPromotionalDiscount: serverPricing.promotionDiscount || 0
+  } : (product ? calculateProductPricing(
     Number(product.price) || 0,
     product.salePrice ? Number(product.salePrice) : null,
     promotionInfo
-  ) : null;
+  ) : null);
 
-  // Debug: Log the promotion info and pricing for the specific product
+  // Debug: Log the server pricing for the specific product
   if (product?.id === 642) {
-    console.log('🔍 Product 642 Debug - Product Promotion:', productPromotion);
+    console.log('🔍 Product 642 Debug - Server Pricing:', serverPricing);
     console.log('🔍 Product 642 Debug - Promotion Info:', promotionInfo);
-    console.log('🔍 Product 642 Debug - Calculated Pricing:', pricing);
+    console.log('🔍 Product 642 Debug - Final Pricing:', pricing);
   }
 
 
@@ -423,12 +406,8 @@ const ProductDetailContent = ({
       });
     }
     
-    // Use the same getCartPrice function as product cards and quick view for consistency
-    const itemPrice = getCartPrice(
-      Number(product.price) || 0,
-      product.salePrice ? Number(product.salePrice) : null,
-      promotionInfo
-    );
+    // Use server-calculated pricing for correct promotional prices
+    const itemPrice = pricing ? pricing.displayPrice : (currentPrice || product.salePrice || product.price);
     
     // Add item to cart with correct field names matching cart hook expectations
     addToCart({

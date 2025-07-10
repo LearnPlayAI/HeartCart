@@ -4,6 +4,102 @@ import { z } from "zod";
 import { withStandardResponse } from "./response-wrapper";
 import { isAuthenticated, isAdmin } from "./auth-middleware";
 
+// Server-side promotional pricing calculation function
+export async function calculatePromotionalPricing(product: any) {
+  try {
+    // Get active promotions with products
+    const activePromotions = await storage.getActivePromotionsWithProducts();
+    
+    // Find if this product has any active promotions
+    const productPromotion = activePromotions
+      .flatMap((promo: any) => promo.products?.map((pp: any) => ({ ...pp, promotion: promo })) || [])
+      .find((pp: any) => pp.productId === product.id);
+
+    let promotionInfo = null;
+    let pricing = null;
+
+    if (productPromotion) {
+      // Product has a promotion
+      promotionInfo = {
+        promotionName: productPromotion.promotion.promotionName,
+        promotionDiscount: productPromotion.discountOverride || productPromotion.promotion.discountValue,
+        promotionDiscountType: productPromotion.promotion.discountType,
+        promotionEndDate: productPromotion.promotion.endDate,
+        promotionalPrice: productPromotion.promotionalPrice ? Number(productPromotion.promotionalPrice) : null
+      };
+
+      // Calculate pricing with promotion
+      const basePrice = Number(product.price);
+      const salePrice = product.salePrice ? Number(product.salePrice) : null;
+      const promotionalPrice = promotionInfo.promotionalPrice;
+
+      if (promotionalPrice && promotionalPrice > 0) {
+        // Use direct promotional price
+        pricing = {
+          displayPrice: promotionalPrice,
+          originalPrice: basePrice,
+          discountPercentage: Math.round(((basePrice - promotionalPrice) / basePrice) * 100),
+          hasDiscount: true,
+          salePrice: salePrice,
+          extraPromotionalDiscount: salePrice ? Math.round(((salePrice - promotionalPrice) / salePrice) * 100) : 0
+        };
+      } else {
+        // Calculate from promotion discount
+        const currentPrice = salePrice || basePrice;
+        const discountAmount = promotionInfo.promotionDiscountType === 'percentage' 
+          ? currentPrice * (Number(promotionInfo.promotionDiscount) / 100)
+          : Number(promotionInfo.promotionDiscount);
+        
+        const finalPrice = Math.max(0, currentPrice - discountAmount);
+        
+        pricing = {
+          displayPrice: finalPrice,
+          originalPrice: basePrice,
+          discountPercentage: Math.round(((basePrice - finalPrice) / basePrice) * 100),
+          hasDiscount: true,
+          salePrice: salePrice,
+          extraPromotionalDiscount: Math.round(((currentPrice - finalPrice) / currentPrice) * 100)
+        };
+      }
+    } else {
+      // No promotion - use sale price or base price
+      const basePrice = Number(product.price);
+      const salePrice = product.salePrice ? Number(product.salePrice) : null;
+      const displayPrice = salePrice || basePrice;
+
+      pricing = {
+        displayPrice: displayPrice,
+        originalPrice: basePrice,
+        discountPercentage: salePrice ? Math.round(((basePrice - salePrice) / basePrice) * 100) : 0,
+        hasDiscount: !!salePrice && salePrice < basePrice,
+        salePrice: salePrice,
+        extraPromotionalDiscount: 0
+      };
+    }
+
+    return { pricing, promotionInfo };
+  } catch (error) {
+    console.error('Error calculating promotional pricing:', error);
+    
+    // Fallback pricing calculation
+    const basePrice = Number(product.price);
+    const salePrice = product.salePrice ? Number(product.salePrice) : null;
+    const displayPrice = salePrice || basePrice;
+
+    return {
+      pricing: {
+        displayPrice: displayPrice,
+        originalPrice: basePrice,
+        discountPercentage: salePrice ? Math.round(((basePrice - salePrice) / basePrice) * 100) : 0,
+        hasDiscount: !!salePrice && salePrice < basePrice,
+        salePrice: salePrice,
+        extraPromotionalDiscount: 0
+      },
+      promotionInfo: null
+    };
+  }
+}
+
 const router = Router();
 
 // We're using isAdmin middleware imported from auth-middleware.ts

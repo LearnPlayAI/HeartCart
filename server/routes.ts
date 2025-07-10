@@ -44,6 +44,7 @@ import registerProductDraftRoutes from "./product-draft-routes";
 import pricingRoutes from "./pricing-routes";
 import batchUploadRoutes from "./batch-upload-routes";
 import aiApiRoutes from "./routes/ai-api";
+import { calculatePromotionalPricing } from "./pricing-routes";
 import { orderRoutes } from "./order-routes";
 import { adminRoutes } from "./admin-routes";
 import paymentRoutes from "./payment-routes";
@@ -963,10 +964,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
           throw new NotFoundError(`Product with slug '${slug}' not found`, 'product');
         }
         
+        // Calculate promotional pricing server-side
+        const activePromotions = await storage.getActivePromotionsWithProducts();
+        const productPromotion = activePromotions
+          .flatMap((promo: any) => promo.products?.map((pp: any) => ({ ...pp, promotion: promo })) || [])
+          .find((pp: any) => pp.productId === product.id);
+
+        const promotionInfo = productPromotion ? {
+          promotionName: productPromotion.promotion.promotionName,
+          promotionDiscount: productPromotion.discountOverride || productPromotion.promotion.discountValue,
+          promotionDiscountType: productPromotion.promotion.discountType,
+          promotionEndDate: productPromotion.promotion.endDate,
+          promotionalPrice: productPromotion.promotionalPrice ? Number(productPromotion.promotionalPrice) : null
+        } : null;
+
+        // Enhanced product with server-side promotional pricing
+        const enhancedProduct = {
+          ...product,
+          promotionInfo,
+          // Add server-calculated pricing for immediate use
+          serverPricing: promotionInfo ? {
+            displayPrice: Number(promotionInfo.promotionalPrice),
+            originalPrice: Number(product.price),
+            salePrice: product.salePrice ? Number(product.salePrice) : null,
+            hasPromotion: true,
+            promotionDiscount: promotionInfo.promotionDiscount
+          } : {
+            displayPrice: product.salePrice ? Number(product.salePrice) : Number(product.price),
+            originalPrice: Number(product.price),
+            salePrice: product.salePrice ? Number(product.salePrice) : null,
+            hasPromotion: false,
+            promotionDiscount: null
+          }
+        };
+        
         // Return standardized response format
         res.json({
           success: true,
-          data: product
+          data: enhancedProduct
         });
       } catch (error) {
         // Log detailed error for debugging
@@ -1084,10 +1119,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           throw new NotFoundError(`Product with ID ${id} not found`, 'product');
         }
         
+        // Calculate promotional pricing using the shared pricing function
+        const { pricing, promotionInfo } = await calculatePromotionalPricing(product);
+
+        // Enhanced product with server-side promotional pricing
+        const enhancedProduct = {
+          ...product,
+          promotionInfo,
+          pricing
+        };
+        
         // Return standardized response format
         res.json({
           success: true,
-          data: product
+          data: enhancedProduct
         });
       } catch (error) {
         // If it's already a known error type (like NotFoundError), rethrow
