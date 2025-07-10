@@ -26,11 +26,13 @@ export default function UserCartDetailPage() {
   const userId = params?.userId ? parseInt(params.userId) : null;
   const queryClient = useQueryClient();
 
-  // Fetch user cart details
+  // Fetch user cart details with fresh data on page access
   const { data: cartData, isLoading, error } = useQuery({
     queryKey: [`/api/admin/user-carts/${userId}`],
     enabled: !!userId,
-    staleTime: 2 * 60 * 1000, // 2 minutes
+    staleTime: 0, // Always fetch fresh data
+    refetchOnWindowFocus: true, // Refetch when window gains focus
+    refetchOnMount: true, // Refetch when component mounts
   });
 
   // Send cart abandonment email mutation

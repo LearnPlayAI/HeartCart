@@ -50,16 +50,20 @@ export default function UserCartsPage() {
     return () => clearTimeout(timeoutId);
   }, [searchTerm]);
 
-  // Fetch cart statistics
+  // Fetch cart statistics with fresh data on page access
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['/api/admin/user-carts/stats'],
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 0, // Always fetch fresh data
+    refetchOnWindowFocus: true, // Refetch when window gains focus
+    refetchOnMount: true, // Refetch when component mounts
   });
 
-  // Fetch cart items with pagination
+  // Fetch cart items with pagination and fresh data
   const { data: cartsData, isLoading: cartsLoading, error } = useQuery({
     queryKey: ['/api/admin/user-carts', { page: currentPage, search: debouncedSearchTerm }],
-    staleTime: 2 * 60 * 1000, // 2 minutes
+    staleTime: 0, // Always fetch fresh data
+    refetchOnWindowFocus: true, // Refetch when window gains focus
+    refetchOnMount: true, // Refetch when component mounts
   });
 
 
