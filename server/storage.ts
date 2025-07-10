@@ -14388,6 +14388,7 @@ export class DatabaseStorage implements IStorage {
           userId: cartItems.userId,
           productId: cartItems.productId,
           quantity: cartItems.quantity,
+          itemPrice: cartItems.itemPrice,
           createdAt: cartItems.createdAt,
           userName: users.username,
           userEmail: users.email,
@@ -14442,7 +14443,7 @@ export class DatabaseStorage implements IStorage {
         userId: item.userId,
         productId: item.productId,
         quantity: item.quantity,
-        cartTotal: Number(item.productPrice) * item.quantity,
+        cartTotal: Number(item.itemPrice) * item.quantity,
         daysSinceAdded: Math.floor((Date.now() - new Date(item.createdAt).getTime()) / (1000 * 60 * 60 * 24)),
         createdAt: new Date(item.createdAt),
         user: {
@@ -14468,7 +14469,16 @@ export class DatabaseStorage implements IStorage {
         currentPage: page,
       };
     } catch (error) {
-      logger.error('Error getting user carts', { error });
+      logger.error('Error getting user carts', { 
+        error: error instanceof Error ? {
+          message: error.message,
+          stack: error.stack,
+          name: error.name
+        } : error,
+        page,
+        limit,
+        search 
+      });
       throw error;
     }
   }

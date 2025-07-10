@@ -1,0 +1,20 @@
+{"timestamp":"2025-07-10T11:54:54.000Z","level":"WARN","message":"High database connection usage detected","context":{"totalCount":50,"idleCount":49,"waitingCount":0}}
+{"timestamp":"2025-07-10T11:54:54.000Z","level":"WARN","message":"High database connection usage detected","context":{"totalCount":50,"idleCount":49,"waitingCount":0}}
+{"timestamp":"2025-07-10T11:54:54.000Z","level":"WARN","message":"High database connection usage detected","context":{"totalCount":50,"idleCount":49,"waitingCount":0}}
+{"timestamp":"2025-07-10T11:54:54.000Z","level":"WARN","message":"High database connection usage detected","context":{"totalCount":50,"idleCount":49,"waitingCount":0}}
+{"timestamp":"2025-07-10T11:54:54.000Z","level":"INFO","message":"Admin users fetched successfully","context":{"userCount":20,"total":"43","page":1,"totalPages":3}}
+{"timestamp":"2025-07-10T11:54:54.000Z","level":"WARN","message":"High database connection usage detected","context":{"totalCount":50,"idleCount":49,"waitingCount":0}}
+{"timestamp":"2025-07-10T11:54:55.000Z","level":"WARN","message":"High database connection usage detected","context":{"totalCount":50,"idleCount":49,"waitingCount":0}}
+{"timestamp":"2025-07-10T11:54:55.000Z","level":"WARN","message":"High database connection usage detected","context":{"totalCount":50,"idleCount":48,"waitingCount":0}}
+{"timestamp":"2025-07-10T11:54:55.000Z","level":"WARN","message":"High database connection usage detected","context":{"totalCount":50,"idleCount":48,"waitingCount":0}}
+{"timestamp":"2025-07-10T11:54:55.000Z","level":"WARN","message":"High database connection usage detected","context":{"totalCount":50,"idleCount":48,"waitingCount":0}}
+{"timestamp":"2025-07-10T11:54:55.000Z","level":"WARN","message":"High database connection usage detected","context":{"totalCount":50,"idleCount":48,"waitingCount":0}}
+{"timestamp":"2025-07-10T11:54:55.000Z","level":"ERROR","message":"Error getting user carts","context":{"error":{}}}
+{"timestamp":"2025-07-10T11:54:55.000Z","level":"ERROR","message":"Error fetching admin user carts","context":{"error":{}}}
+{"timestamp":"2025-07-10T11:54:55.000Z","level":"ERROR","message":"API Error: Failed to fetch user carts","context":{"statusCode":500}}
+{"timestamp":"2025-07-10T11:54:55.000Z","level":"WARN","message":"High database connection usage detected","context":{"totalCount":50,"idleCount":48,"waitingCount":1}}
+{"timestamp":"2025-07-10T11:54:55.000Z","level":"WARN","message":"High database connection usage detected","context":{"totalCount":50,"idleCount":47,"waitingCount":0}}
+{"timestamp":"2025-07-10T11:54:55.000Z","level":"INFO","message":"Admin cart summary stats fetched successfully","context":{"totalAbandonedCarts":"5","totalAbandonedValue":3134,"adminUserId":8}}
+{"timestamp":"2025-07-10T11:54:55.000Z","level":"WARN","message":"High database connection usage detected","context":{"totalCount":50,"idleCount":47,"waitingCount":0}}
+{"timestamp":"2025-07-10T11:54:55.000Z","level":"WARN","message":"API WARN: GET /api/admin/user-carts 500 in 77ms","context":{"method":"GET","path":"/api/admin/user-carts","statusCode":500,"duration":"77ms","isHttpError":true,"isSlowRequest":false,"isApiFailure":true}}
+GET /api/admin/user-carts 500 in 77ms :: {"success":false,"error":{"message":"F…

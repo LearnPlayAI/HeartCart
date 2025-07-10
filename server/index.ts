@@ -43,56 +43,39 @@ process.on('uncaughtException', (error) => {
   }
 });
 
-// Add unhandled promise rejection handler for WebSocket connection issues
+// Add single comprehensive unhandled promise rejection handler
 process.on('unhandledRejection', (reason, promise) => {
-  const isWebSocketError = reason && typeof reason === 'object' && 
-                          ('message' in reason && String(reason.message).includes('WebSocket')) ||
-                          ('stack' in reason && String(reason.stack).includes('WebSocket'));
+  // Safely extract error information without modifying readonly properties
+  const errorMessage = reason instanceof Error ? reason.message : String(reason);
+  const errorStack = reason instanceof Error ? reason.stack : undefined;
+  const errorType = reason instanceof Error ? reason.constructor.name : typeof reason;
   
-  if (isWebSocketError) {
-    logger.warn('WebSocket promise rejection caught - server will continue operating', {
-      reason: reason ? String(reason) : 'Unknown reason',
-      source: 'websocket_promise',
-      timestamp: new Date().toISOString()
-    });
-    
-    console.error('WEBSOCKET PROMISE REJECTION (handled):', reason);
-  } else {
-    logger.error('Unhandled Promise Rejection - Server will attempt to continue', {
-      reason: reason ? String(reason) : 'Unknown reason',
-      timestamp: new Date().toISOString()
-    });
-    
-    console.error('UNHANDLED PROMISE REJECTION:', reason);
-  }
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-  // Enhanced handling for database-related promise rejections
-  const isDatabaseRejection = reason instanceof Error && 
-                             (reason.stack?.includes('@neondatabase/serverless') || 
-                              reason.stack?.includes('WebSocket') ||
-                              reason.message?.includes('Cannot set property message'));
+  // Check for database/WebSocket related rejections
+  const isDatabaseRejection = errorStack?.includes('@neondatabase/serverless') || 
+                             errorStack?.includes('WebSocket') ||
+                             errorMessage?.includes('Cannot set property message') ||
+                             errorMessage?.includes('which has only a getter');
   
   if (isDatabaseRejection) {
-    logger.warn('Database promise rejection caught - server will continue operating', {
-      reason: reason.message,
-      type: reason.constructor.name,
+    // Handle database connection errors gracefully without modifying error objects
+    logger.warn('Database connection error caught - server will continue operating', {
+      message: errorMessage,
+      type: errorType,
       source: 'database_connection',
       timestamp: new Date().toISOString()
     });
     
-    console.error('DATABASE PROMISE REJECTION (handled):', reason.message);
+    console.error('DATABASE CONNECTION ERROR (handled):', errorMessage);
   } else {
+    // Handle other promise rejections
     logger.error('Unhandled Promise Rejection - Server will attempt to continue', {
-      reason: reason instanceof Error ? reason.message : String(reason),
-      stack: reason instanceof Error ? reason.stack : undefined,
-      promise: promise.toString(),
+      message: errorMessage,
+      type: errorType,
+      stack: process.env.NODE_ENV === 'development' ? errorStack : undefined,
       timestamp: new Date().toISOString()
     });
     
-    // Log the error but don't exit the process
-    console.error('UNHANDLED REJECTION:', reason);
+    console.error('UNHANDLED REJECTION:', errorMessage);
   }
 });
 
@@ -146,17 +129,33 @@ app.use((req, res, next) => {
   next();
 });
 
-// Set database timezone to SAST at server startup
-setSessionTimezone()
-  .then(() => {
-    // Only log in development to reduce production noise
-    if (process.env.NODE_ENV !== 'production') {
-      logger.info(`Database timezone set to ${SAST_TIMEZONE}`);
+// Wait for database to be ready before starting server
+async function waitForDatabase() {
+  const maxAttempts = 10;
+  const delayMs = 1000;
+  
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      // Try to set timezone - this will test if database is accessible
+      await setSessionTimezone();
+      logger.info("Database timezone set to Africa/Johannesburg");
+      return true;
+    } catch (error) {
+      logger.warn(`Database connection attempt ${attempt}/${maxAttempts} failed`, {
+        error: error instanceof Error ? error.message : String(error),
+        attempt,
+        retryingIn: attempt < maxAttempts ? `${delayMs}ms` : 'giving up'
+      });
+      
+      if (attempt < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      }
     }
-  })
-  .catch(error => {
-    logger.error(`Failed to set database timezone`, error);
-  });
+  }
+  
+  logger.error("Failed to establish database connection after maximum attempts");
+  return false;
+}
 
 // API request logging middleware
 app.use((req, res, next) => {
@@ -249,6 +248,15 @@ app.get('/api/social-preview/product/:id', handleProductSocialPreview);
 app.get('/api/social-preview/product-image/:id', handleProductSocialImage);
 
 (async () => {
+  // Wait for database to be ready before starting server
+  logger.info("Checking database connection...");
+  const isDatabaseReady = await waitForDatabase();
+  
+  if (!isDatabaseReady) {
+    logger.error("Cannot start server - database connection failed");
+    process.exit(1);
+  }
+  
   // Add product meta tag injection middleware for Facebook sharing BEFORE other routes
   app.use(injectProductMetaTags);
   
