@@ -1886,11 +1886,15 @@ export class DatabaseEmailService {
         <tr>
           <td style="padding: 12px; border-bottom: 1px solid #e9ecef; vertical-align: top;">
             <div style="display: flex; align-items: center;">
-              ${item.imageUrl ? `
+              ${item.imageUrl && item.imageUrl !== 'undefined' ? `
                 <img src="${item.imageUrl}" 
                      alt="${item.productName}" 
                      style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; margin-right: 12px; border: 2px solid #FF69B4;">
-              ` : ''}
+              ` : `
+                <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #FF69B4 0%, #E91E63 100%); border-radius: 8px; margin-right: 12px; display: flex; align-items: center; justify-content: center; border: 2px solid #FF69B4;">
+                  <span style="font-size: 20px; color: #FFFFFF;">📦</span>
+                </div>
+              `}
               <div>
                 <strong style="color: #E91E63; font-size: 16px;">${item.productName}</strong>
                 <br>
@@ -1981,20 +1985,28 @@ export class DatabaseEmailService {
                   </tbody>
                   <tfoot>
                     <tr style="background: linear-gradient(135deg, #FFF0F6 0%, #FFE4E1 100%);">
-                      <td colspan="3" style="padding: 15px 12px; text-align: right; font-weight: bold; font-size: 18px; color: #E91E63;">Cart Total:</td>
-                      <td style="padding: 15px 12px; text-align: right; font-weight: bold; font-size: 18px; color: #10B981;">R ${data.totalCartValue.toFixed(2)}</td>
+                      <td colspan="3" style="padding: 12px; text-align: right; font-weight: 500; font-size: 16px; color: #E91E63;">Subtotal:</td>
+                      <td style="padding: 12px; text-align: right; font-weight: 500; font-size: 16px; color: #6B7280;">R ${data.totalCartValue.toFixed(2)}</td>
+                    </tr>
+                    <tr style="background: linear-gradient(135deg, #FFF0F6 0%, #FFE4E1 100%);">
+                      <td colspan="3" style="padding: 12px; text-align: right; font-weight: 500; font-size: 16px; color: #E91E63;">Shipping:</td>
+                      <td style="padding: 12px; text-align: right; font-weight: 500; font-size: 16px; color: #6B7280;">R 85.00</td>
+                    </tr>
+                    <tr style="background: linear-gradient(135deg, #FFF0F6 0%, #FFE4E1 100%);">
+                      <td colspan="3" style="padding: 15px 12px; text-align: right; font-weight: bold; font-size: 18px; color: #E91E63;">Total:</td>
+                      <td style="padding: 15px 12px; text-align: right; font-weight: bold; font-size: 18px; color: #10B981;">R ${(data.totalCartValue + 85).toFixed(2)}</td>
                     </tr>
                   </tfoot>
                 </table>
               </div>
               
-              <div style="background: linear-gradient(135deg, #10B981 0%, #059669 100%); padding: 20px; border-radius: 12px; margin: 25px 0; text-align: center; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
+              <div style="background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%); padding: 20px; border-radius: 12px; margin: 25px 0; text-align: center; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);">
                 <p style="margin: 0; color: #FFFFFF; font-weight: bold; font-size: 16px; display: flex; align-items: center; justify-content: center;">
                   <span style="font-size: 20px; margin-right: 8px;">🚚</span>
-                  FREE SHIPPING on orders over R300!
+                  Fast shipping across South Africa!
                 </p>
-                <p style="margin: 8px 0 0 0; color: #DCFCE7; font-size: 14px;">
-                  ${data.totalCartValue >= 300 ? 'Your order qualifies for free shipping!' : `Add R${(300 - data.totalCartValue).toFixed(2)} more to qualify`}
+                <p style="margin: 8px 0 0 0; color: #DBEAFE; font-size: 14px;">
+                  Professional delivery service with R85 shipping cost
                 </p>
               </div>
               
@@ -2083,7 +2095,7 @@ export class DatabaseEmailService {
           
           ${motivationalMessage}
           
-          ${data.totalCartValue >= 300 ? 'Your order qualifies for free shipping!' : `Add R${(300 - data.totalCartValue).toFixed(2)} more to qualify for free shipping!`}
+          Total with shipping: R ${(data.totalCartValue + 85).toFixed(2)} (includes R85 shipping cost)
           
           Complete your purchase: https://teemeyou.shop/cart
           Continue shopping: https://teemeyou.shop/products
