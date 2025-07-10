@@ -1583,7 +1583,7 @@ export class DatabaseStorage implements IStorage {
 
       if (needsPromotionJoin) {
         // Add promotion filter conditions
-        const currentTime = new Date().toISOString();
+        const today = new Date().toISOString().split('T')[0]; // "2025-07-10"
         
         if (needsCategoryJoin && needsDraftsJoin) {
           // Join with categories, product_drafts, and promotions tables
@@ -1599,8 +1599,8 @@ export class DatabaseStorage implements IStorage {
             .where(and(
               ...joinConditions,
               eq(promotions.isActive, true),
-              sql`${promotions.startDate} <= ${currentTime}`,
-              sql`${promotions.endDate} >= ${currentTime}`
+              sql`${promotions.startDate} <= ${today}`,
+              sql`${promotions.endDate} >= ${today}`
             ));
 
           dataQuery = db
@@ -1617,7 +1617,7 @@ export class DatabaseStorage implements IStorage {
             .where(and(
               ...joinConditions,
               eq(promotions.isActive, true),
-              sql`${promotions.startDate} <= ${currentTime}`,
+              sql`${promotions.startDate} <= ${today}`,
               sql`${promotions.endDate} >= ${currentTime}`
             ));
         } else if (needsCategoryJoin) {
@@ -1633,7 +1633,7 @@ export class DatabaseStorage implements IStorage {
             .where(and(
               ...joinConditions,
               eq(promotions.isActive, true),
-              sql`${promotions.startDate} <= ${currentTime}`,
+              sql`${promotions.startDate} <= ${today}`,
               sql`${promotions.endDate} >= ${currentTime}`
             ));
 
@@ -1646,7 +1646,7 @@ export class DatabaseStorage implements IStorage {
             .where(and(
               ...joinConditions,
               eq(promotions.isActive, true),
-              sql`${promotions.startDate} <= ${currentTime}`,
+              sql`${promotions.startDate} <= ${today}`,
               sql`${promotions.endDate} >= ${currentTime}`
             ));
         } else if (needsDraftsJoin) {
@@ -1664,13 +1664,13 @@ export class DatabaseStorage implements IStorage {
             countQuery = countQuery.where(and(
               whereCondition,
               eq(promotions.isActive, true),
-              sql`${promotions.startDate} <= ${currentTime}`,
+              sql`${promotions.startDate} <= ${today}`,
               sql`${promotions.endDate} >= ${currentTime}`
             ));
           } else {
             countQuery = countQuery.where(and(
               eq(promotions.isActive, true),
-              sql`${promotions.startDate} <= ${currentTime}`,
+              sql`${promotions.startDate} <= ${today}`,
               sql`${promotions.endDate} >= ${currentTime}`
             ));
           }
@@ -1690,13 +1690,13 @@ export class DatabaseStorage implements IStorage {
             dataQuery = dataQuery.where(and(
               whereCondition,
               eq(promotions.isActive, true),
-              sql`${promotions.startDate} <= ${currentTime}`,
+              sql`${promotions.startDate} <= ${today}`,
               sql`${promotions.endDate} >= ${currentTime}`
             ));
           } else {
             dataQuery = dataQuery.where(and(
               eq(promotions.isActive, true),
-              sql`${promotions.startDate} <= ${currentTime}`,
+              sql`${promotions.startDate} <= ${today}`,
               sql`${promotions.endDate} >= ${currentTime}`
             ));
           }
@@ -1714,13 +1714,13 @@ export class DatabaseStorage implements IStorage {
             countQuery = countQuery.where(and(
               whereCondition,
               eq(promotions.isActive, true),
-              sql`${promotions.startDate} <= ${currentTime}`,
+              sql`${promotions.startDate} <= ${today}`,
               sql`${promotions.endDate} >= ${currentTime}`
             ));
           } else {
             countQuery = countQuery.where(and(
               eq(promotions.isActive, true),
-              sql`${promotions.startDate} <= ${currentTime}`,
+              sql`${promotions.startDate} <= ${today}`,
               sql`${promotions.endDate} >= ${currentTime}`
             ));
           }
@@ -1735,13 +1735,13 @@ export class DatabaseStorage implements IStorage {
             dataQuery = dataQuery.where(and(
               whereCondition,
               eq(promotions.isActive, true),
-              sql`${promotions.startDate} <= ${currentTime}`,
+              sql`${promotions.startDate} <= ${today}`,
               sql`${promotions.endDate} >= ${currentTime}`
             ));
           } else {
             dataQuery = dataQuery.where(and(
               eq(promotions.isActive, true),
-              sql`${promotions.startDate} <= ${currentTime}`,
+              sql`${promotions.startDate} <= ${today}`,
               sql`${promotions.endDate} >= ${currentTime}`
             ));
           }
@@ -2173,7 +2173,7 @@ export class DatabaseStorage implements IStorage {
     }
 
     try {
-      const currentTime = new Date().toISOString();
+      const today = new Date().toISOString().split('T')[0]; // "2025-07-10"
       
       // Get all active promotional product IDs, randomized once
       const query = db
@@ -2189,8 +2189,8 @@ export class DatabaseStorage implements IStorage {
             eq(promotions.isActive, true),
             eq(products.isActive, true),
             eq(categories.isActive, true),
-            lte(promotions.startDate, currentTime),
-            gte(promotions.endDate, currentTime)
+            lte(promotions.startDate, today),
+            gte(promotions.endDate, today)
           )
         )
         .orderBy(sql`RANDOM()`);
@@ -10502,15 +10502,17 @@ export class DatabaseStorage implements IStorage {
 
   async getActivePromotions(): Promise<Promotion[]> {
     try {
-      const now = new Date().toISOString();
+      // Use just the date portion (YYYY-MM-DD) for comparison since promotion dates are stored as date strings
+      const today = new Date().toISOString().split('T')[0]; // "2025-07-10"
+      
       return await db
         .select()
         .from(promotions)
         .where(
           and(
             eq(promotions.isActive, true),
-            lte(promotions.startDate, now),
-            gte(promotions.endDate, now)
+            lte(promotions.startDate, today), // startDate <= today
+            gte(promotions.endDate, today)    // endDate >= today
           )
         )
         .orderBy(desc(promotions.createdAt));

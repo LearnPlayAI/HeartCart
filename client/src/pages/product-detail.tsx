@@ -12,7 +12,7 @@ import ShareProductDialog from '@/components/ShareProductDialog';
 import { useCart } from '@/hooks/use-cart';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency, calculateDiscount } from '@/lib/utils';
-import { calculateProductPricing } from '@/utils/pricing';
+import { calculateProductPricing, getCartPrice } from '@/utils/pricing';
 import { 
   Select,
   SelectContent,
@@ -417,8 +417,12 @@ const ProductDetailContent = ({
       });
     }
     
-    // Use promotional price if available, ensuring it's properly captured
-    const itemPrice = pricing?.displayPrice || currentPrice || product.salePrice || product.price;
+    // Use the same getCartPrice function as product cards and quick view for consistency
+    const itemPrice = getCartPrice(
+      Number(product.price) || 0,
+      product.salePrice ? Number(product.salePrice) : null,
+      promotionInfo
+    );
     
     // Add item to cart with correct field names matching cart hook expectations
     addToCart({
