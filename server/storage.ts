@@ -1618,7 +1618,7 @@ export class DatabaseStorage implements IStorage {
               ...joinConditions,
               eq(promotions.isActive, true),
               sql`${promotions.startDate} <= ${today}`,
-              sql`${promotions.endDate} >= ${currentTime}`
+              sql`${promotions.endDate} >= ${today}`
             ));
         } else if (needsCategoryJoin) {
           // Join with categories and promotions tables
@@ -1634,7 +1634,7 @@ export class DatabaseStorage implements IStorage {
               ...joinConditions,
               eq(promotions.isActive, true),
               sql`${promotions.startDate} <= ${today}`,
-              sql`${promotions.endDate} >= ${currentTime}`
+              sql`${promotions.endDate} >= ${today}`
             ));
 
           dataQuery = db
@@ -1647,7 +1647,7 @@ export class DatabaseStorage implements IStorage {
               ...joinConditions,
               eq(promotions.isActive, true),
               sql`${promotions.startDate} <= ${today}`,
-              sql`${promotions.endDate} >= ${currentTime}`
+              sql`${promotions.endDate} >= ${today}`
             ));
         } else if (needsDraftsJoin) {
           // Join with product_drafts and promotions tables
@@ -1665,13 +1665,13 @@ export class DatabaseStorage implements IStorage {
               whereCondition,
               eq(promotions.isActive, true),
               sql`${promotions.startDate} <= ${today}`,
-              sql`${promotions.endDate} >= ${currentTime}`
+              sql`${promotions.endDate} >= ${today}`
             ));
           } else {
             countQuery = countQuery.where(and(
               eq(promotions.isActive, true),
               sql`${promotions.startDate} <= ${today}`,
-              sql`${promotions.endDate} >= ${currentTime}`
+              sql`${promotions.endDate} >= ${today}`
             ));
           }
 
@@ -1691,13 +1691,13 @@ export class DatabaseStorage implements IStorage {
               whereCondition,
               eq(promotions.isActive, true),
               sql`${promotions.startDate} <= ${today}`,
-              sql`${promotions.endDate} >= ${currentTime}`
+              sql`${promotions.endDate} >= ${today}`
             ));
           } else {
             dataQuery = dataQuery.where(and(
               eq(promotions.isActive, true),
               sql`${promotions.startDate} <= ${today}`,
-              sql`${promotions.endDate} >= ${currentTime}`
+              sql`${promotions.endDate} >= ${today}`
             ));
           }
         } else {
@@ -1715,13 +1715,13 @@ export class DatabaseStorage implements IStorage {
               whereCondition,
               eq(promotions.isActive, true),
               sql`${promotions.startDate} <= ${today}`,
-              sql`${promotions.endDate} >= ${currentTime}`
+              sql`${promotions.endDate} >= ${today}`
             ));
           } else {
             countQuery = countQuery.where(and(
               eq(promotions.isActive, true),
               sql`${promotions.startDate} <= ${today}`,
-              sql`${promotions.endDate} >= ${currentTime}`
+              sql`${promotions.endDate} >= ${today}`
             ));
           }
 
@@ -1736,13 +1736,13 @@ export class DatabaseStorage implements IStorage {
               whereCondition,
               eq(promotions.isActive, true),
               sql`${promotions.startDate} <= ${today}`,
-              sql`${promotions.endDate} >= ${currentTime}`
+              sql`${promotions.endDate} >= ${today}`
             ));
           } else {
             dataQuery = dataQuery.where(and(
               eq(promotions.isActive, true),
               sql`${promotions.startDate} <= ${today}`,
-              sql`${promotions.endDate} >= ${currentTime}`
+              sql`${promotions.endDate} >= ${today}`
             ));
           }
         }
