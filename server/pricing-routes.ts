@@ -26,7 +26,7 @@ export async function calculatePromotionalPricing(product: any) {
       const promotion = activeProductPromotions[0];
       
       // Get specific product promotion details
-      const productPromotionProducts = await storage.getProductsForPromotion(promotion.id);
+      const productPromotionProducts = await storage.getPromotionProducts(promotion.id);
       const productPromotion = productPromotionProducts.find(pp => pp.productId === product.id);
 
       promotionInfo = {
