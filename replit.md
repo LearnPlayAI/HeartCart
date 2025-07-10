@@ -819,6 +819,15 @@ Changelog:
   * Replaced custom EnhancedWebSocket class with native Neon WebSocket handling using default ws library
   * Root cause was custom WebSocket modifications interfering with Neon's tested connection logic
   * Server now starts with zero WebSocket connection errors while preserving all database functionality
+- July 10, 2025. Complete VAT hiding system implementation when admin toggle is disabled:
+  * CRITICAL COMPLIANCE FIX: Completely eliminated ALL VAT mentions from customer-facing areas when admin VAT toggle is disabled
+  * Fixed cart drawer to conditionally display VAT only when `cartTotals?.vatBreakdown?.vatRegistered` is true
+  * Fixed cart page to conditionally display VAT line item and VAT information section only when VAT is registered
+  * Fixed email templates (payment confirmation, order confirmation) to completely hide VAT instead of showing "Not VAT registered"
+  * Fixed invoice PDF generation to completely hide VAT sections instead of showing "Not VAT registered"
+  * System now shows NO VAT information anywhere when toggle is disabled (previously showed "VAT (0%): R0.00")
+  * All VAT display logic now uses `data.vatRegistered && data.vatAmount > 0` condition for complete hiding
+  * Compliance requirement met: When admin VAT toggle is off, customers see absolutely no VAT mentions
   * All existing functionality maintained: database queries, connection pool (30 connections), monitoring, error handling
   * Clean startup logs with no connection-related error messages during initialization
 - July 9, 2025. Complete API success logging elimination for resource optimization:

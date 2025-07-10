@@ -232,14 +232,16 @@ export default function CartPage() {
                       <span>R{cartTotals ? cartTotals.shippingCost.toFixed(2) : '85.00'}</span>
                     </div>
                     
-                    {/* Server-side VAT Line Item - Always show for transparency */}
-                    <div className="flex justify-between text-sm items-center">
-                      <div className="flex items-center gap-1">
-                        <Calculator className="h-3 w-3 text-orange-500" />
-                        <span>VAT ({cartTotals ? cartTotals.vatRate : 0}%):</span>
+                    {/* Server-side VAT Line Item - Only show when VAT is registered */}
+                    {cartTotals?.vatBreakdown?.vatRegistered && (
+                      <div className="flex justify-between text-sm items-center">
+                        <div className="flex items-center gap-1">
+                          <Calculator className="h-3 w-3 text-orange-500" />
+                          <span>VAT ({cartTotals ? cartTotals.vatRate : 0}%):</span>
+                        </div>
+                        <span>R{cartTotals ? cartTotals.vatAmount.toFixed(2) : '0.00'}</span>
                       </div>
-                      <span>R{cartTotals ? cartTotals.vatAmount.toFixed(2) : '0.00'}</span>
-                    </div>
+                    )}
                     
                     <Separator />
                     <div className="flex justify-between font-bold text-lg">
@@ -249,7 +251,7 @@ export default function CartPage() {
                   </div>
 
                   {/* VAT Information */}
-                  {vatRegistered && (
+                  {cartTotals?.vatBreakdown?.vatRegistered && (
                     <div className="text-xs text-gray-500 bg-orange-50 p-2 rounded">
                       VAT included in total price
                     </div>

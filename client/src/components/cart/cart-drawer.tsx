@@ -378,11 +378,13 @@ const CartDrawer = () => {
                 </div>
               </div>
               
-              {/* VAT Display - Server-side calculated for transparency */}
-              <div className="flex justify-between mb-2 text-sm">
-                <span className="text-gray-600">VAT ({cartTotals?.vatRate || 0}%):</span>
-                <span className="font-medium">{formatCurrency(cartTotals?.vatAmount || 0)}</span>
-              </div>
+              {/* VAT Display - Only show when VAT is registered */}
+              {cartTotals?.vatBreakdown?.vatRegistered && (
+                <div className="flex justify-between mb-2 text-sm">
+                  <span className="text-gray-600">VAT ({cartTotals?.vatRate || 0}%):</span>
+                  <span className="font-medium">{formatCurrency(cartTotals?.vatAmount || 0)}</span>
+                </div>
+              )}
               
               <Separator className="my-2" />
               <div className="flex justify-between mb-2 text-sm font-bold">

@@ -645,11 +645,7 @@ export class InvoiceGenerator {
                 <tr style="font-size: 12px; opacity: 0.8;">
                     <td class="label">VAT No: ${data.vatRegistrationNumber}</td>
                     <td class="amount"></td>
-                </tr>` : `
-                <tr>
-                    <td class="label">VAT (0%):</td>
-                    <td class="amount">Not VAT registered</td>
-                </tr>`}
+                </tr>` : ''}
                 <tr>
                     <td class="label">TOTAL:</td>
                     <td class="amount">${formatCurrency(data.totalAmount)}</td>
@@ -667,8 +663,7 @@ export class InvoiceGenerator {
                 <h5>Important Notice</h5>
                 ${data.vatRegistered && data.vatAmount > 0 ? `
                 <p>• VAT Registered Company - VAT No: ${data.vatRegistrationNumber}</p>
-                <p>• VAT at ${data.vatRate}% included in total amount</p>` : `
-                <p>• This company is not currently registered for VAT</p>`}
+                <p>• VAT at ${data.vatRate}% included in total amount</p>` : ''}
                 <p>• Business Registration Number: 2025/499123/07</p>
                 <p>• This document serves as proof of purchase and payment</p>
             </div>

@@ -1208,20 +1208,24 @@ export default function CheckoutPage() {
                   </div>
                 </div>
                 
-                {/* VAT Line Item - Always show for transparency */}
-                <div className="flex justify-between text-sm items-center">
-                  <div className="flex items-center gap-1">
-                    <Calculator className="h-3 w-3 text-orange-500" />
-                    <span>VAT ({formatVATRate(effectiveVATRate)}):</span>
-                  </div>
-                  <span>{formatVATAmount(vatCalculation.vatAmount)}</span>
-                </div>
-                
-                {/* VAT Registration Info (only show if registered) */}
-                {vatRegisteredValue && vatRegistrationNumber && (
-                  <div className="text-xs text-gray-500">
-                    VAT Reg: {vatRegistrationNumber}
-                  </div>
+                {/* VAT Line Item - Only show when VAT is being applied */}
+                {shouldApplyVAT && (
+                  <>
+                    <div className="flex justify-between text-sm items-center">
+                      <div className="flex items-center gap-1">
+                        <Calculator className="h-3 w-3 text-orange-500" />
+                        <span>VAT ({formatVATRate(effectiveVATRate)}):</span>
+                      </div>
+                      <span>{formatVATAmount(vatCalculation.vatAmount)}</span>
+                    </div>
+                    
+                    {/* VAT Registration Info (only show if registered) */}
+                    {vatRegisteredValue && vatRegistrationNumber && (
+                      <div className="text-xs text-gray-500">
+                        VAT Reg: {vatRegistrationNumber}
+                      </div>
+                    )}
+                  </>
                 )}
                 
                 {autoCreditAmount > 0 && (
