@@ -1881,25 +1881,14 @@ export class DatabaseEmailService {
    */
   async sendCartAbandonmentEmail(data: CartAbandonmentEmailData): Promise<void> {
     try {
-      // Generate cart items HTML with hot pink styling
+      // Generate cart items HTML with hot pink styling (no images)
       const cartItemsHtml = data.cartItems.map(item => `
         <tr>
           <td style="padding: 12px; border-bottom: 1px solid #e9ecef; vertical-align: top;">
-            <div style="display: flex; align-items: center;">
-              ${item.imageUrl && item.imageUrl !== 'undefined' ? `
-                <img src="${item.imageUrl}" 
-                     alt="${item.productName}" 
-                     style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; margin-right: 12px; border: 2px solid #FF69B4;">
-              ` : `
-                <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #FF69B4 0%, #E91E63 100%); border-radius: 8px; margin-right: 12px; display: flex; align-items: center; justify-content: center; border: 2px solid #FF69B4;">
-                  <span style="font-size: 20px; color: #FFFFFF;">📦</span>
-                </div>
-              `}
-              <div>
-                <strong style="color: #E91E63; font-size: 16px;">${item.productName}</strong>
-                <br>
-                <small style="color: #6c757d; font-size: 12px;">Added ${item.daysSinceAdded} day${item.daysSinceAdded !== 1 ? 's' : ''} ago</small>
-              </div>
+            <div>
+              <strong style="color: #E91E63; font-size: 16px;">${item.productName || 'Product'}</strong>
+              <br>
+              <small style="color: #6c757d; font-size: 12px;">Added ${item.daysSinceAdded} day${item.daysSinceAdded !== 1 ? 's' : ''} ago</small>
             </div>
           </td>
           <td style="padding: 12px; border-bottom: 1px solid #e9ecef; text-align: center; font-weight: 500;">${item.quantity}</td>

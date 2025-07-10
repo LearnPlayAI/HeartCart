@@ -1987,20 +1987,20 @@ router.post("/user-carts/:userId/send-email", isAdmin, asyncHandler(async (req: 
     // Prepare email data
     const emailData = {
       email: cartData.user.email,
-      customerName: cartData.user.firstName || cartData.user.username,
+      customerName: cartData.user.fullName || cartData.user.username,
       userId: userId,
       cartItems: cartData.cartItems.map(item => ({
-        productName: item.productName,
-        productSlug: item.product?.slug || `product-${item.productId}`,
+        productName: item.product?.name || 'Product',
+        productSlug: item.product?.slug || `product-${item.id}`,
         quantity: item.quantity,
-        itemPrice: parseFloat(item.itemPrice.toString()),
-        itemTotal: parseFloat(item.itemPrice.toString()) * item.quantity,
+        itemPrice: item.itemPrice,
+        itemTotal: item.itemTotal,
         imageUrl: item.product?.imageUrl,
-        daysSinceAdded: Math.floor((new Date().getTime() - new Date(item.createdAt).getTime()) / (1000 * 60 * 60 * 24))
+        daysSinceAdded: item.daysSinceAdded
       })),
       totalItems: cartData.totalItems,
       totalCartValue: cartData.totalCartValue,
-      daysSinceOldest: Math.floor((new Date().getTime() - new Date(cartData.oldestItemDate).getTime()) / (1000 * 60 * 60 * 24))
+      daysSinceOldest: cartData.oldestItemDate ? Math.floor((new Date().getTime() - new Date(cartData.oldestItemDate).getTime()) / (1000 * 60 * 60 * 24)) : 0
     };
 
     // Send cart abandonment email
