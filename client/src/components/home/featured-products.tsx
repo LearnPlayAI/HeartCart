@@ -72,14 +72,12 @@ const FeaturedProductsSection = () => {
     }
   }, [response, currentPageProducts, page, limit]);
   
-  // Reset pagination and force refetch when component mounts
+  // Reset pagination when component mounts
   useEffect(() => {
     setPage(1);
     setAllProducts([]);
     setHasMoreProducts(true);
-    // Force refetch on mount
-    refetch();
-  }, [refetch]);
+  }, []);
   
   // Create a map of product promotions for quick lookup
   const activePromotions = promotionsResponse?.success ? promotionsResponse.data : [];

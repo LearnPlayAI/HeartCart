@@ -142,6 +142,7 @@ Changelog:
   * Added contact features: direct email and WhatsApp links for customer follow-up
   * Integrated pagination and comprehensive cart detail views
   * Added "User Carts" navigation item to admin layout with shopping basket icon
+  * Fixed navigation visibility by adding User Carts to correct admin layout file (layout.tsx) with ShoppingBasket icon import
   * System enables admins to view abandoned carts and contact customers to increase conversion rates
   * All existing functionality preserved - implementation followed existing patterns and database schema
 - June 27, 2025. Implemented unified MailerSend email system with 5 email scenarios:
