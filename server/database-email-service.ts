@@ -2011,7 +2011,7 @@ export class DatabaseEmailService {
               </div>
               
               <div style="text-align: center; margin: 30px 0;">
-                <a href="https://teemeyou.shop/cart" 
+                <a href="https://teemeyou.shop/checkout" 
                    style="background: linear-gradient(135deg, #FF69B4 0%, #E91E63 100%); 
                           color: white; 
                           padding: 18px 36px; 
@@ -2097,7 +2097,7 @@ export class DatabaseEmailService {
           
           Total with shipping: R ${(data.totalCartValue + 85).toFixed(2)} (includes R85 shipping cost)
           
-          Complete your purchase: https://teemeyou.shop/cart
+          Complete your purchase: https://teemeyou.shop/checkout
           Continue shopping: https://teemeyou.shop/products
           
           Best regards,
