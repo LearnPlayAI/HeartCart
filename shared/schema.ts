@@ -95,7 +95,7 @@ export const products = pgTable("products", {
   salePrice: doublePrecision("sale_price"),
   discount: integer("discount"),
   discountLabel: text("discount_label"), // New field for displaying discount type/occasion
-  image_url: text("image_url"),
+  imageUrl: text("image_url"),
   additionalImages: text("additional_images").array(),
   stock: integer("stock").notNull(), // Added to match DB structure - used as stockQuantity in UI
   minimumOrder: integer("minimum_order").default(1), // New field for supplier requirements
