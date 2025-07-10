@@ -7,25 +7,34 @@ import { isAuthenticated, isAdmin } from "./auth-middleware";
 // Server-side promotional pricing calculation function
 export async function calculatePromotionalPricing(product: any) {
   try {
-    // Get active promotions with products
-    const activePromotions = await storage.getActivePromotionsWithProducts();
+    // Get active promotions for this specific product
+    const productPromotions = await storage.getProductPromotions(product.id);
     
-    // Find if this product has any active promotions
-    const productPromotion = activePromotions
-      .flatMap((promo: any) => promo.products?.map((pp: any) => ({ ...pp, promotion: promo })) || [])
-      .find((pp: any) => pp.productId === product.id);
+    // Filter only active promotions
+    const activePromotions = await storage.getActivePromotions();
+    const activePromotionIds = activePromotions.map(p => p.id);
+    
+    const activeProductPromotions = productPromotions.filter(promo => 
+      activePromotionIds.includes(promo.id)
+    );
 
     let promotionInfo = null;
     let pricing = null;
 
-    if (productPromotion) {
-      // Product has a promotion
+    if (activeProductPromotions.length > 0) {
+      // Use the first active promotion (you could add logic to prioritize)
+      const promotion = activeProductPromotions[0];
+      
+      // Get specific product promotion details
+      const productPromotionProducts = await storage.getProductsForPromotion(promotion.id);
+      const productPromotion = productPromotionProducts.find(pp => pp.productId === product.id);
+
       promotionInfo = {
-        promotionName: productPromotion.promotion.promotionName,
-        promotionDiscount: productPromotion.discountOverride || productPromotion.promotion.discountValue,
-        promotionDiscountType: productPromotion.promotion.discountType,
-        promotionEndDate: productPromotion.promotion.endDate,
-        promotionalPrice: productPromotion.promotionalPrice ? Number(productPromotion.promotionalPrice) : null
+        promotionName: promotion.promotionName,
+        promotionDiscount: productPromotion?.discountOverride || promotion.discountValue,
+        promotionDiscountType: promotion.discountType,
+        promotionEndDate: promotion.endDate,
+        promotionalPrice: productPromotion?.promotionalPrice ? Number(productPromotion.promotionalPrice) : null
       };
 
       // Calculate pricing with promotion
