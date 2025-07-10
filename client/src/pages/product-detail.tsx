@@ -404,18 +404,29 @@ const ProductDetailContent = ({
         }) 
       : [];
     
-    const cartItem = {
-      productId: product.id,
-      product,
-      quantity,
-      combinationId: selectedCombination?.id,
-      combinationHash: selectedCombination?.combinationHash,
-      selectedAttributes,
-      globalAttributes: cartGlobalAttributes,
-      adjustedPrice: pricing?.displayPrice || currentPrice || product.salePrice || product.price
-    };
+    // Format attribute selections for the cart (convert from ID-based to name-based)
+    const attributeSelections: Record<string, string> = {};
+    if (hasRequiredGlobalAttributes) {
+      globalAttributes.forEach(attrItem => {
+        const { attribute } = attrItem;
+        const selectedValue = selectedAttributes[attribute.id];
+        if (selectedValue) {
+          const attributeName = attribute.displayName || attribute.name;
+          attributeSelections[attributeName] = selectedValue;
+        }
+      });
+    }
     
-    addToCart(cartItem);
+    // Use promotional price if available, ensuring it's properly captured
+    const itemPrice = pricing?.displayPrice || currentPrice || product.salePrice || product.price;
+    
+    // Add item to cart with correct field names matching cart hook expectations
+    addToCart({
+      productId: product.id,
+      quantity,
+      itemPrice: itemPrice,
+      attributeSelections
+    });
     
     
   };

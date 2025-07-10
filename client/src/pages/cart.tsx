@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { calculateProductPricing, getPromotionalBadgeText } from "@/utils/pricing";
 
 import { 
   ShoppingCart, 
@@ -33,13 +32,6 @@ export default function CartPage() {
     gcTime: 0,
   });
 
-  // Fetch active promotions for pricing
-  const { data: promotionsResponse } = useQuery({
-    queryKey: ["/api/promotions/active-with-products"],
-    staleTime: 0,
-    gcTime: 0,
-  });
-
   // Fetch cart totals with VAT calculations from server-side
   const { data: cartTotalsResponse, isLoading: totalsLoading, error: totalsError } = useQuery({
     queryKey: ["/api/cart/totals"],
@@ -48,22 +40,6 @@ export default function CartPage() {
   });
 
   const cartItems = cartResponse?.data || [];
-  const activePromotions = promotionsResponse?.data || [];
-
-  // Create promotion map
-  const promotionMap = new Map();
-  activePromotions.forEach((promotion: any) => {
-    if (promotion.products) {
-      promotion.products.forEach((pp: any) => {
-        promotionMap.set(pp.productId, {
-          promotionName: promotion.promotionName,
-          promotionDiscount: promotion.discountValue ? promotion.discountValue.toString() : '0',
-          promotionEndDate: promotion.endDate,
-          promotionalPrice: pp.promotionalPrice ? parseFloat(pp.promotionalPrice) : null
-        });
-      });
-    }
-  });
 
   const isEmpty = !cartItems || cartItems.length === 0;
 
@@ -122,12 +98,11 @@ export default function CartPage() {
             {/* Cart Items */}
             <div className="lg:col-span-2 space-y-4">
               {cartItems.map((item: any) => {
-                const promotionInfo = item.product ? promotionMap.get(item.product.id) : null;
-                const pricing = item.product ? calculateProductPricing(
-                  item.product.price || 0,
-                  item.product.salePrice,
-                  promotionInfo
-                ) : null;
+                // Use stored itemPrice instead of recalculating current promotional pricing
+                // This preserves the promotional price that was valid when item was added to cart
+                const storedPrice = parseFloat(item.itemPrice || 0);
+                const originalPrice = item.product?.price || 0;
+                const hasStoredDiscount = storedPrice < originalPrice;
                 
                 return (
                   <Card key={item.id}>
@@ -150,33 +125,27 @@ export default function CartPage() {
                         <div className="flex-1">
                           <h3 className="font-medium">{item.product?.name || 'Product'}</h3>
                           
-                          {/* Pricing */}
+                          {/* Pricing - Use stored promotional price */}
                           <div className="mt-2">
-                            {pricing ? (
-                              <div className="flex items-center gap-2">
-                                <span className="text-lg font-bold text-pink-600">
-                                  R{pricing.displayPrice.toFixed(2)}
-                                </span>
-                                {pricing.hasDiscount && (
-                                  <span className="text-sm text-gray-500 line-through">
-                                    R{pricing.originalPrice.toFixed(2)}
-                                  </span>
-                                )}
-                              </div>
-                            ) : (
+                            <div className="flex items-center gap-2">
                               <span className="text-lg font-bold text-pink-600">
-                                R{parseFloat(item.itemPrice || 0).toFixed(2)}
+                                R{storedPrice.toFixed(2)}
                               </span>
-                            )}
+                              {hasStoredDiscount && (
+                                <span className="text-sm text-gray-500 line-through">
+                                  R{originalPrice.toFixed(2)}
+                                </span>
+                              )}
+                            </div>
                           </div>
                           
-                          {/* Promotional Badge */}
-                          {promotionInfo && (
+                          {/* Promotional Badge - Show discount percentage if stored price is lower */}
+                          {hasStoredDiscount && (
                             <Badge 
                               variant="secondary" 
                               className="bg-red-100 text-red-700 text-xs mt-1"
                             >
-                              {getPromotionalBadgeText(promotionInfo)}
+                              {Math.round(((originalPrice - storedPrice) / originalPrice) * 100)}% OFF
                             </Badge>
                           )}
                           
@@ -198,10 +167,10 @@ export default function CartPage() {
                           </div>
                         </div>
                         
-                        {/* Item Total */}
+                        {/* Item Total - Use stored promotional price */}
                         <div className="text-right">
                           <div className="text-lg font-bold">
-                            R{((pricing?.displayPrice || parseFloat(item.itemPrice || 0)) * item.quantity).toFixed(2)}
+                            R{(storedPrice * item.quantity).toFixed(2)}
                           </div>
                         </div>
                       </div>
