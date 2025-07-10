@@ -179,7 +179,7 @@ const ProductDetailContent = ({
   
   // Fetch active promotions for this product - no cache for real-time pricing
   const { data: promotionsResponse } = useQuery<any>({
-    queryKey: ['/api/promotions/active-with-products', product?.id],
+    queryKey: ['/api/promotions/active-with-products'],
     enabled: !!product?.id,
     staleTime: 0, // No cache - always fetch fresh promotional data
     gcTime: 0, // Don't keep in cache when component unmounts
@@ -189,6 +189,12 @@ const ProductDetailContent = ({
 
   // Find if this product is in any active promotion
   const activePromotions = promotionsResponse?.data || promotionsResponse || [];
+  
+  // Debug logging for promotional data structure
+  if (product?.id === 642) {
+    console.log('🔍 Product 642 Debug - Promotions Response:', promotionsResponse);
+    console.log('🔍 Product 642 Debug - Active Promotions:', activePromotions);
+  }
   
   const productPromotion = activePromotions
     .flatMap((promo: any) => promo.products?.map((pp: any) => ({ ...pp, promotion: promo })) || [])
@@ -211,9 +217,9 @@ const ProductDetailContent = ({
 
   // Debug: Log the promotion info and pricing for the specific product
   if (product?.id === 642) {
+    console.log('🔍 Product 642 Debug - Product Promotion:', productPromotion);
     console.log('🔍 Product 642 Debug - Promotion Info:', promotionInfo);
     console.log('🔍 Product 642 Debug - Calculated Pricing:', pricing);
-    console.log('🔍 Product 642 Debug - Promotions Response:', promotionsResponse);
   }
 
 
