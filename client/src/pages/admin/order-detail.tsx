@@ -367,12 +367,19 @@ export default function AdminOrderDetail() {
   // Hydrate form fields with existing order data
   useEffect(() => {
     if (order) {
-      setSupplierOrderNumber(order.supplierOrderNumber || "");
-      setSupplierOrderDate(order.supplierOrderDate || "");
-      setAdminNotes(order.adminNotes || "");
-      setActualShippingCost(order.actualShippingCost?.toString() || "");
+      setActualShippingCost(order.actualShippingCost?.toString() || "60");
     }
   }, [order]);
+
+  useEffect(() => {
+    if (supplierOrders && supplierOrders.length > 0) {
+      // Use data from the first supplier order for the group-level fields
+      const firstSupplierOrder = supplierOrders[0];
+      setSupplierOrderNumber(firstSupplierOrder.supplierOrderNumber || "");
+      setSupplierOrderDate(firstSupplierOrder.orderDate || "");
+      setAdminNotes(firstSupplierOrder.notes || "");
+    }
+  }, [supplierOrders]);
 
   // Helper function to get supplier status for a product
   const getSupplierStatus = (productId: number) => {
