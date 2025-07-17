@@ -27,6 +27,8 @@ export interface InvoiceData {
   vatRate: number;
   vatRegistered: boolean;
   vatRegistrationNumber: string;
+  creditUsed?: number; // Store credit used for this order
+  remainingBalance?: number; // Customer's remaining credit balance after order
   totalAmount: number;
   paymentMethod: string;
   paymentReceivedDate: string;
@@ -255,6 +257,15 @@ export class InvoiceGenerator {
     }
     
     yPosition += 7;
+    
+    // Store credit used (if any)
+    if (data.creditUsed && data.creditUsed > 0) {
+      doc.setFont('helvetica', 'normal');
+      doc.text('Store Credit Used:', totalsX, yPosition);
+      doc.text(`-R${data.creditUsed.toFixed(2)}`, totalsX + 30, yPosition);
+      yPosition += 7;
+    }
+    
     doc.setFont('helvetica', 'bold');
     doc.text('Total:', totalsX, yPosition);
     doc.text(`R${data.totalAmount.toFixed(2)}`, totalsX + 30, yPosition);

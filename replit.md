@@ -131,7 +131,7 @@ TeeMeYou is a comprehensive e-commerce platform built as a dropshipping solution
 ## Changelog
 ```
 Changelog:
-- July 17, 2025. Customer Credits Admin Management System implemented:
+- July 17, 2025. Customer Credits Admin Management System and Invoice Integration implemented:
   * Added comprehensive customer credits management section to admin interface
   * Implemented backend API endpoints: /api/credits/admin/overview, /api/credits/admin/customers, /api/credits/admin/:userId/adjust, /api/credits/admin/transactions
   * Added storage methods: getCreditOverview, getCustomersWithCredits, getAllCreditTransactions
@@ -145,6 +145,12 @@ Changelog:
   * System enables admins to view credit overview statistics, manage customer credit balances, and track all credit transactions
   * All existing credit functionality preserved - implementation extends existing credit system without disruption
   * Credit management features include: overview dashboard, customer search, credit adjustments, transaction history, and real-time balance tracking
+  * CREDIT INVOICE INTEGRATION COMPLETED: Credit usage now properly reflected on generated invoices when customers use store credit
+  * Updated InvoiceData interface to include creditUsed and remainingBalance fields for comprehensive credit tracking
+  * Enhanced PDF invoice generation to display credit usage as negative line item (e.g., "Store Credit Used: -R150.00")
+  * Updated both admin manual invoice generation and automatic Yoco webhook invoice generation to include credit data
+  * Credit invoice system fully operational - invoices show subtotal, shipping, store credit used, and final total with proper calculations
+  * System tested and confirmed operational with demonstration email sent to admin@teemeyou.shop showing credit invoice functionality
 - June 27, 2025. Initial setup
 - July 10, 2025. Complete User Carts Admin System implemented:
   * Added comprehensive user cart management section to admin interface

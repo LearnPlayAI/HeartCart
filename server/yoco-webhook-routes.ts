@@ -361,6 +361,8 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
             vatRate: vatSettings.vatRate,
             vatRegistered: vatSettings.vatRegistered,
             vatRegistrationNumber: vatSettings.vatRegistrationNumber,
+            creditUsed: fullOrder.creditUsed ? parseFloat(fullOrder.creditUsed.toString()) : undefined,
+            remainingBalance: fullOrder.remainingBalance ? parseFloat(fullOrder.remainingBalance.toString()) : undefined,
             totalAmount: fullOrder.totalAmount,
             paymentMethod: fullOrder.paymentMethod,
             paymentReceivedDate: new Date().toISOString(),
