@@ -562,6 +562,14 @@ Changelog:
   * Changed cache invalidation from '/api/admin/supplier-orders' to '/api/admin/supplier-orders/order' to match actual query key
   * All supplier order information fields now properly save and load: supplier order number, order date, notes
   * Actual shipping cost field saves correctly and is used in profit calculations throughout admin dashboard
+- July 17, 2025. Accurate profit calculation system with rep commission and shipping profit corrections:
+  * CRITICAL FIX: Rep commissions now only counted as costs when actually paid out (not just earned)
+  * Updated financial summary to query repPayments table for actual commission costs instead of repCommissions table
+  * Implemented shipping profit calculation: R85 customer charge × delivered orders - actual shipping costs
+  * Enhanced admin dashboard to display shipping profits separately in green with + sign
+  * Total profit now includes shipping profits for accurate business profitability assessment
+  * System correctly shows R0 commission costs when no commissions have been paid out yet
+  * Comprehensive profit calculation includes all actual costs: products, payment fees, shipping, packaging, and paid commissions only
 - July 2, 2025. Complete featured products system with redirect-based navigation:
   * Created new /featured page displaying ALL featured products without pagination limitations
   * Added /api/featured-products/all endpoint for fetching complete featured product catalog

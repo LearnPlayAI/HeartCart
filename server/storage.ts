@@ -7676,7 +7676,7 @@ export class DatabaseStorage implements IStorage {
     };
   }> {
     try {
-      // Get all delivered orders with their items, product cost prices, and commission data
+      // Get all delivered orders with their items and product cost prices
       const deliveredOrders = await db
         .select({
           orderId: orders.id,
@@ -7686,13 +7686,18 @@ export class DatabaseStorage implements IStorage {
           itemQuantity: orderItems.quantity,
           itemProductId: orderItems.productId,
           productCostPrice: products.costPrice,
-          commissionAmount: repCommissions.commissionAmount,
         })
         .from(orders)
         .innerJoin(orderItems, eq(orders.id, orderItems.orderId))
         .innerJoin(products, eq(orderItems.productId, products.id))
-        .leftJoin(repCommissions, eq(orders.id, repCommissions.orderId))
         .where(eq(orders.status, 'delivered'));
+
+      // Get actual paid commission amounts from repPayments table
+      const paidCommissions = await db
+        .select({
+          amount: repPayments.amount,
+        })
+        .from(repPayments);
 
       // Process the results to calculate totals
       const orderTotals = new Map<number, {
@@ -7700,7 +7705,6 @@ export class DatabaseStorage implements IStorage {
         transactionFeeAmount: number;
         actualShippingCost: number;
         productCosts: number;
-        commissionAmount: number;
       }>();
 
       // Group by order ID to avoid double-counting order-level costs
@@ -7713,7 +7717,6 @@ export class DatabaseStorage implements IStorage {
             transactionFeeAmount: row.transactionFeeAmount || 0,
             actualShippingCost: row.actualShippingCost || 60, // Default to R60 if not set
             productCosts: 0,
-            commissionAmount: row.commissionAmount ? parseFloat(row.commissionAmount.toString()) : 0,
           });
         }
 
@@ -7726,19 +7729,22 @@ export class DatabaseStorage implements IStorage {
         }
       }
 
+      // Calculate total paid commission costs from repPayments table
+      const totalPaidCommissions = paidCommissions.reduce((sum, payment) => {
+        return sum + parseFloat(payment.amount.toString());
+      }, 0);
+
       // Calculate summary totals
       const deliveredOrderCount = orderTotals.size;
       let totalRevenue = 0;
       let totalProductCosts = 0;
       let totalPaymentProcessingFees = 0;
-      let totalRepCommissions = 0;
       let totalShippingCosts = 0;
 
       for (const [orderId, orderData] of orderTotals) {
         totalRevenue += orderData.totalAmount;
         totalProductCosts += orderData.productCosts;
         totalPaymentProcessingFees += orderData.transactionFeeAmount;
-        totalRepCommissions += orderData.commissionAmount;
         totalShippingCosts += orderData.actualShippingCost;
       }
 
@@ -7751,7 +7757,8 @@ export class DatabaseStorage implements IStorage {
       const totalShippingProfits = totalShippingRevenue - totalShippingCosts;
 
       // Calculate totals - shipping profits are added to profit, not costs
-      const totalCosts = totalProductCosts + totalPaymentProcessingFees + totalRepCommissions + totalShippingCosts + totalPackagingCosts;
+      // Only count rep commissions that have been actually paid out
+      const totalCosts = totalProductCosts + totalPaymentProcessingFees + totalPaidCommissions + totalShippingCosts + totalPackagingCosts;
       const totalProfit = totalRevenue - totalCosts + totalShippingProfits;
 
       logger.info("Financial summary calculated", {
@@ -7763,7 +7770,7 @@ export class DatabaseStorage implements IStorage {
         breakdown: {
           productCosts: totalProductCosts,
           paymentProcessingFees: totalPaymentProcessingFees,
-          repCommissions: totalRepCommissions,
+          repCommissions: totalPaidCommissions,
           shippingCosts: totalShippingCosts,
           shippingProfits: totalShippingProfits,
           packagingCosts: totalPackagingCosts,
@@ -7778,7 +7785,7 @@ export class DatabaseStorage implements IStorage {
         breakdown: {
           productCosts: totalProductCosts,
           paymentProcessingFees: totalPaymentProcessingFees,
-          repCommissions: totalRepCommissions,
+          repCommissions: totalPaidCommissions,
           shippingCosts: totalShippingCosts,
           shippingProfits: totalShippingProfits,
           packagingCosts: totalPackagingCosts,
