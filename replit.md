@@ -570,6 +570,17 @@ Changelog:
   * Total profit now includes shipping profits for accurate business profitability assessment
   * System correctly shows R0 commission costs when no commissions have been paid out yet
   * Comprehensive profit calculation includes all actual costs: products, payment fees, shipping, packaging, and paid commissions only
+- July 17, 2025. Complete date range filtering system for financial analysis implemented:
+  * Enhanced getFinancialSummary method to accept startDate, endDate, and orderStatus parameters
+  * Added comprehensive filtering UI with date range picker and order status dropdown (all orders vs delivered orders)
+  * Updated backend storage methods to filter orders by date range using SQL gte/lte operators
+  * Added commission payment filtering by date range for accurate cost calculations
+  * Created new admin dashboard filter controls with clear filter option and filter summary display
+  * All financial calculations now server-side processed with proper date range and order status filtering
+  * Updated API endpoints to accept query parameters: startDate, endDate, orderStatus (all|delivered)
+  * Enhanced admin dashboard with professional filter card UI including date pickers and status selection
+  * Financial data displays context-aware descriptions based on selected filters
+  * System maintains accurate profit calculations across all filter combinations
 - July 2, 2025. Complete featured products system with redirect-based navigation:
   * Created new /featured page displaying ALL featured products without pagination limitations
   * Added /api/featured-products/all endpoint for fetching complete featured product catalog

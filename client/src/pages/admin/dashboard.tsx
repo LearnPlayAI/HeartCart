@@ -1,10 +1,13 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { AdminLayout } from "@/components/admin/layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import { 
@@ -22,7 +25,9 @@ import {
   BarChart3,
   Eye,
   Calendar,
-  Edit
+  Edit,
+  CalendarDays,
+  Filter
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { useDateFormat } from "@/hooks/use-date-format";
@@ -81,12 +86,40 @@ interface User {
 }
 
 /**
- * Financial Statistics Component - Updated to show comprehensive profit metrics
+ * Financial Statistics Component with Date Range and Order Status Filtering
  */
 function FinancialStats() {
+  // State for filters
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
+  const [orderStatus, setOrderStatus] = useState<'all' | 'delivered'>('delivered');
+
+  // Build query parameters
+  const queryParams = useMemo(() => {
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    params.append('orderStatus', orderStatus);
+    return params.toString();
+  }, [startDate, endDate, orderStatus]);
+
+  // Fetch financial summary with filters
   const { data: response, isLoading: isLoadingFinancials } = useQuery({
-    queryKey: ["/api/admin/financial-summary"],
+    queryKey: ["/api/admin/financial-summary", queryParams],
+    queryFn: async () => {
+      const response = await fetch(`/api/admin/financial-summary?${queryParams}`, {
+        credentials: 'include',
+      });
+      return response.json();
+    },
   });
+
+  // Helper to clear filters
+  const clearFilters = () => {
+    setStartDate("");
+    setEndDate("");
+    setOrderStatus('delivered');
+  };
 
   if (isLoadingFinancials) {
     return (
@@ -104,121 +137,159 @@ function FinancialStats() {
   }
 
   const financialData = response?.data;
-  if (!financialData) {
-    return (
-      <div className="grid gap-4 md:grid-cols-3 mb-6">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Revenue</CardTitle>
-            <div className="text-2xl font-bold text-green-600">{formatCurrency(0)}</div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <p className="text-xs text-muted-foreground">No delivered orders yet</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Costs</CardTitle>
-            <div className="text-2xl font-bold text-red-600">{formatCurrency(0)}</div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <p className="text-xs text-muted-foreground">No costs calculated yet</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Profit</CardTitle>
-            <div className="text-2xl font-bold text-blue-600">{formatCurrency(0)}</div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <p className="text-xs text-muted-foreground">No profit calculated yet</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  const { totalRevenue, totalCosts, totalProfit, deliveredOrderCount, breakdown } = financialData;
-  const profitMarginPercentage = totalRevenue > 0 ? ((totalProfit / totalRevenue) * 100).toFixed(1) : '0';
-
+  
   return (
-    <div className="grid gap-4 md:grid-cols-3 mb-6">
+    <div className="space-y-6">
+      {/* Filter Controls */}
       <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">Total Revenue</CardTitle>
-          <div className="text-2xl font-bold text-green-600">{formatCurrency(totalRevenue)}</div>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Filter className="h-5 w-5" />
+            Financial Analysis Filters
+          </CardTitle>
+          <CardDescription>
+            Filter financial data by date range and order status
+          </CardDescription>
         </CardHeader>
-        <CardContent className="pt-0">
-          <p className="text-xs text-muted-foreground">
-            From {deliveredOrderCount} delivered orders
-          </p>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">Total Costs</CardTitle>
-          <div className="text-2xl font-bold text-red-600">{formatCurrency(totalCosts)}</div>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <p className="text-xs text-muted-foreground">
-            Products, fees, commissions & logistics
-          </p>
-          <div className="mt-2 space-y-1">
-            <div className="flex justify-between text-xs">
-              <span>Products:</span>
-              <span>{formatCurrency(breakdown.productCosts)}</span>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="startDate">Start Date</Label>
+              <Input
+                id="startDate"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full"
+              />
             </div>
-            <div className="flex justify-between text-xs">
-              <span>Payment fees:</span>
-              <span>{formatCurrency(breakdown.paymentProcessingFees)}</span>
+            <div className="space-y-2">
+              <Label htmlFor="endDate">End Date</Label>
+              <Input
+                id="endDate"
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full"
+              />
             </div>
-            <div className="flex justify-between text-xs">
-              <span>Rep commissions:</span>
-              <span>{formatCurrency(breakdown.repCommissions)}</span>
+            <div className="space-y-2">
+              <Label htmlFor="orderStatus">Order Status</Label>
+              <Select value={orderStatus} onValueChange={(value: 'all' | 'delivered') => setOrderStatus(value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="delivered">Delivered Orders Only</SelectItem>
+                  <SelectItem value="all">All Orders</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <div className="flex justify-between text-xs">
-              <span>Shipping Costs:</span>
-              <span>{formatCurrency(breakdown.shippingCosts)}</span>
-            </div>
-            <div className="flex justify-between text-xs text-green-600">
-              <span>Shipping Profits:</span>
-              <span>+{formatCurrency(breakdown.shippingProfits)}</span>
-            </div>
-            <div className="flex justify-between text-xs">
-              <span>Packaging:</span>
-              <span>{formatCurrency(breakdown.packagingCosts)}</span>
+            <div className="space-y-2">
+              <Label>&nbsp;</Label>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={clearFilters}
+                  className="flex-1"
+                >
+                  Clear
+                </Button>
+              </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">Total Profit</CardTitle>
-          <div className={`text-2xl font-bold ${totalProfit >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
-            {formatCurrency(totalProfit)}
-          </div>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <p className="text-xs text-muted-foreground">
-            {profitMarginPercentage}% profit margin
-          </p>
-          <div className="mt-2 flex items-center text-xs">
-            {totalProfit >= 0 ? (
-              <>
-                <TrendingUp className="h-3 w-3 text-green-500 mr-1" />
-                <span className="text-green-600">Profitable business</span>
-              </>
+          
+          {/* Filter Summary */}
+          <div className="text-sm text-muted-foreground">
+            {startDate || endDate ? (
+              <>Showing data from {startDate || 'beginning'} to {endDate || 'now'} • </>
             ) : (
-              <>
-                <TrendingDown className="h-3 w-3 text-red-500 mr-1" />
-                <span className="text-red-600">Costs exceed revenue</span>
-              </>
+              <>Showing all-time data • </>
             )}
+            {orderStatus === 'delivered' ? 'Delivered orders only' : 'All orders'} • 
+            {financialData ? ` ${financialData.orderCount} orders` : ' Loading...'}
           </div>
         </CardContent>
       </Card>
+
+      {/* Financial Statistics */}
+      {isLoadingFinancials ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="animate-pulse">
+              <CardHeader className="pb-2">
+                <div className="h-4 bg-gray-200 rounded w-32 mb-2"></div>
+                <div className="h-8 bg-gray-200 rounded w-24"></div>
+              </CardHeader>
+            </Card>
+          ))}
+        </div>
+      ) : financialData ? (
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Total Revenue</CardTitle>
+              <div className="text-2xl font-bold text-green-600">{formatCurrency(financialData.totalRevenue)}</div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <p className="text-xs text-muted-foreground">
+                {orderStatus === 'delivered' ? 'From delivered orders' : 'From all orders'}
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Total Costs</CardTitle>
+              <div className="text-2xl font-bold text-red-600">{formatCurrency(financialData.totalCosts)}</div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <p className="text-xs text-muted-foreground">All business costs</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Total Profit</CardTitle>
+              <div className="text-2xl font-bold text-blue-600">{formatCurrency(financialData.totalProfit)}</div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <p className="text-xs text-muted-foreground">
+                Revenue minus costs {financialData.breakdown.shippingProfits > 0 ? '+ shipping profits' : ''}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Total Revenue</CardTitle>
+              <div className="text-2xl font-bold text-green-600">{formatCurrency(0)}</div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <p className="text-xs text-muted-foreground">No orders in selected range</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Total Costs</CardTitle>
+              <div className="text-2xl font-bold text-red-600">{formatCurrency(0)}</div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <p className="text-xs text-muted-foreground">No costs calculated</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Total Profit</CardTitle>
+              <div className="text-2xl font-bold text-blue-600">{formatCurrency(0)}</div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <p className="text-xs text-muted-foreground">No profit calculated</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

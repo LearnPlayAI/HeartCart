@@ -45,14 +45,26 @@ router.get("/orders", isAuthenticated, asyncHandler(async (req: Request, res: Re
   }
 }));
 
-// Get financial summary for delivered orders
+// Get financial summary with date range and order status filtering
 router.get("/financial-summary", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
   try {
     // TODO: Add admin role check here
-    const financialSummary = await storage.getFinancialSummary();
+    const { startDate, endDate, orderStatus } = req.query;
+    
+    // Validate orderStatus parameter
+    const validOrderStatus = orderStatus === 'all' || orderStatus === 'delivered' ? orderStatus : 'delivered';
+    
+    const financialSummary = await storage.getFinancialSummary(
+      startDate as string,
+      endDate as string,
+      validOrderStatus
+    );
     
     logger.info("Admin financial summary fetched successfully", { 
-      deliveredOrderCount: financialSummary.deliveredOrderCount,
+      orderCount: financialSummary.orderCount,
+      orderStatus: validOrderStatus,
+      startDate,
+      endDate,
       totalRevenue: financialSummary.totalRevenue,
       totalCosts: financialSummary.totalCosts,
       totalProfit: financialSummary.totalProfit

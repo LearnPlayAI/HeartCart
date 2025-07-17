@@ -7658,14 +7658,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   /**
-   * Get comprehensive financial summary for delivered orders only
+   * Get comprehensive financial summary with date range and order status filtering
    * Includes all revenue streams and cost components for accurate profit calculation
    */
-  async getFinancialSummary(): Promise<{
+  async getFinancialSummary(
+    startDate?: string,
+    endDate?: string,
+    orderStatus: 'all' | 'delivered' = 'delivered'
+  ): Promise<{
     totalRevenue: number;
     totalCosts: number;
     totalProfit: number;
-    deliveredOrderCount: number;
+    orderCount: number;
     breakdown: {
       productCosts: number;
       paymentProcessingFees: number;
@@ -7676,8 +7680,25 @@ export class DatabaseStorage implements IStorage {
     };
   }> {
     try {
-      // Get all delivered orders with their items and product cost prices
-      const deliveredOrders = await db
+      // Build where conditions based on filters
+      const whereConditions = [];
+      
+      // Order status filter
+      if (orderStatus === 'delivered') {
+        whereConditions.push(eq(orders.status, 'delivered'));
+      }
+      // For 'all' status, we don't add a status filter
+      
+      // Date range filter
+      if (startDate) {
+        whereConditions.push(gte(orders.createdAt, startDate));
+      }
+      if (endDate) {
+        whereConditions.push(lte(orders.createdAt, endDate));
+      }
+      
+      // Get filtered orders with their items and product cost prices
+      let query = db
         .select({
           orderId: orders.id,
           totalAmount: orders.totalAmount,
@@ -7689,15 +7710,36 @@ export class DatabaseStorage implements IStorage {
         })
         .from(orders)
         .innerJoin(orderItems, eq(orders.id, orderItems.orderId))
-        .innerJoin(products, eq(orderItems.productId, products.id))
-        .where(eq(orders.status, 'delivered'));
+        .innerJoin(products, eq(orderItems.productId, products.id));
+        
+      if (whereConditions.length > 0) {
+        query = query.where(and(...whereConditions));
+      }
+      
+      const filteredOrders = await query;
 
       // Get actual paid commission amounts from repPayments table
-      const paidCommissions = await db
+      // Filter by date range if specified
+      let commissionQuery = db
         .select({
           amount: repPayments.amount,
         })
         .from(repPayments);
+        
+      if (startDate || endDate) {
+        const commissionWhereConditions = [];
+        if (startDate) {
+          commissionWhereConditions.push(gte(repPayments.createdAt, startDate));
+        }
+        if (endDate) {
+          commissionWhereConditions.push(lte(repPayments.createdAt, endDate));
+        }
+        if (commissionWhereConditions.length > 0) {
+          commissionQuery = commissionQuery.where(and(...commissionWhereConditions));
+        }
+      }
+      
+      const paidCommissions = await commissionQuery;
 
       // Process the results to calculate totals
       const orderTotals = new Map<number, {
@@ -7708,7 +7750,7 @@ export class DatabaseStorage implements IStorage {
       }>();
 
       // Group by order ID to avoid double-counting order-level costs
-      for (const row of deliveredOrders) {
+      for (const row of filteredOrders) {
         const orderId = row.orderId;
         
         if (!orderTotals.has(orderId)) {
@@ -7735,7 +7777,7 @@ export class DatabaseStorage implements IStorage {
       }, 0);
 
       // Calculate summary totals
-      const deliveredOrderCount = orderTotals.size;
+      const orderCount = orderTotals.size;
       let totalRevenue = 0;
       let totalProductCosts = 0;
       let totalPaymentProcessingFees = 0;
@@ -7752,8 +7794,8 @@ export class DatabaseStorage implements IStorage {
       const PACKAGING_COST_PER_ORDER = 5; // R5 packaging cost
       const SHIPPING_REVENUE_PER_ORDER = 85; // R85 shipping charge per order
       
-      const totalPackagingCosts = deliveredOrderCount * PACKAGING_COST_PER_ORDER;
-      const totalShippingRevenue = deliveredOrderCount * SHIPPING_REVENUE_PER_ORDER;
+      const totalPackagingCosts = orderCount * PACKAGING_COST_PER_ORDER;
+      const totalShippingRevenue = orderCount * SHIPPING_REVENUE_PER_ORDER;
       const totalShippingProfits = totalShippingRevenue - totalShippingCosts;
 
       // Calculate totals - shipping profits are added to profit, not costs
@@ -7762,7 +7804,10 @@ export class DatabaseStorage implements IStorage {
       const totalProfit = totalRevenue - totalCosts + totalShippingProfits;
 
       logger.info("Financial summary calculated", {
-        deliveredOrderCount,
+        orderCount,
+        orderStatus,
+        startDate,
+        endDate,
         totalRevenue,
         totalCosts,
         totalProfit,
@@ -7781,7 +7826,7 @@ export class DatabaseStorage implements IStorage {
         totalRevenue,
         totalCosts,
         totalProfit,
-        deliveredOrderCount,
+        orderCount,
         breakdown: {
           productCosts: totalProductCosts,
           paymentProcessingFees: totalPaymentProcessingFees,
@@ -7799,7 +7844,7 @@ export class DatabaseStorage implements IStorage {
         totalRevenue: 0,
         totalCosts: 0,
         totalProfit: 0,
-        deliveredOrderCount: 0,
+        orderCount: 0,
         breakdown: {
           productCosts: 0,
           paymentProcessingFees: 0,
