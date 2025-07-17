@@ -7695,12 +7695,12 @@ export class DatabaseStorage implements IStorage {
       }
       // For 'all' status, we don't add a status filter
       
-      // Date range filter - convert to proper date format for comparison
+      // Date range filter - use string comparison for text-based date fields
       if (startDate) {
-        whereConditions.push(gte(orders.createdAt, `${startDate}T00:00:00.000Z`));
+        whereConditions.push(sql`${orders.createdAt} >= ${`${startDate}T00:00:00.000Z`}`);
       }
       if (endDate) {
-        whereConditions.push(lte(orders.createdAt, `${endDate}T23:59:59.999Z`));
+        whereConditions.push(sql`${orders.createdAt} <= ${`${endDate}T23:59:59.999Z`}`);
       }
       
       // Get filtered orders with their items and product cost prices
@@ -7736,10 +7736,10 @@ export class DatabaseStorage implements IStorage {
       if (startDate || endDate) {
         const commissionWhereConditions = [];
         if (startDate) {
-          commissionWhereConditions.push(gte(repPayments.createdAt, `${startDate}T00:00:00.000Z`));
+          commissionWhereConditions.push(sql`${repPayments.createdAt} >= ${`${startDate}T00:00:00.000Z`}`);
         }
         if (endDate) {
-          commissionWhereConditions.push(lte(repPayments.createdAt, `${endDate}T23:59:59.999Z`));
+          commissionWhereConditions.push(sql`${repPayments.createdAt} <= ${`${endDate}T23:59:59.999Z`}`);
         }
         if (commissionWhereConditions.length > 0) {
           commissionQuery = commissionQuery.where(and(...commissionWhereConditions));
