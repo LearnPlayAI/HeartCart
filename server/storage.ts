@@ -7677,6 +7677,7 @@ export class DatabaseStorage implements IStorage {
       shippingCosts: number;
       shippingProfits: number;
       packagingCosts: number;
+      customerCreditsUsed: number;
     };
   }> {
     try {
@@ -7704,6 +7705,7 @@ export class DatabaseStorage implements IStorage {
           totalAmount: orders.totalAmount,
           transactionFeeAmount: orders.transactionFeeAmount,
           actualShippingCost: orders.actualShippingCost,
+          creditUsed: orders.creditUsed,
           itemQuantity: orderItems.quantity,
           itemProductId: orderItems.productId,
           productCostPrice: products.costPrice,
@@ -7745,6 +7747,7 @@ export class DatabaseStorage implements IStorage {
       const orderTotals = new Map<number, {
         totalAmount: number;
         transactionFeeAmount: number;
+        creditUsed: number;
         actualShippingCost: number;
         productCosts: number;
       }>();
@@ -7757,6 +7760,7 @@ export class DatabaseStorage implements IStorage {
           orderTotals.set(orderId, {
             totalAmount: row.totalAmount,
             transactionFeeAmount: row.transactionFeeAmount || 0,
+            creditUsed: parseFloat(row.creditUsed?.toString() || '0'),
             actualShippingCost: row.actualShippingCost || 60, // Default to R60 if not set
             productCosts: 0,
           });
@@ -7782,12 +7786,14 @@ export class DatabaseStorage implements IStorage {
       let totalProductCosts = 0;
       let totalPaymentProcessingFees = 0;
       let totalShippingCosts = 0;
+      let totalCustomerCreditsUsed = 0;
 
       for (const [orderId, orderData] of orderTotals) {
         totalRevenue += orderData.totalAmount;
         totalProductCosts += orderData.productCosts;
         totalPaymentProcessingFees += orderData.transactionFeeAmount;
         totalShippingCosts += orderData.actualShippingCost;
+        totalCustomerCreditsUsed += orderData.creditUsed;
       }
 
       // Fixed costs per delivered order
@@ -7800,7 +7806,8 @@ export class DatabaseStorage implements IStorage {
 
       // Calculate totals - shipping profits are added to profit, not costs
       // Only count rep commissions that have been actually paid out
-      const totalCosts = totalProductCosts + totalPaymentProcessingFees + totalPaidCommissions + totalShippingCosts + totalPackagingCosts;
+      // Customer credits used are a cost to the business
+      const totalCosts = totalProductCosts + totalPaymentProcessingFees + totalPaidCommissions + totalShippingCosts + totalPackagingCosts + totalCustomerCreditsUsed;
       const totalProfit = totalRevenue - totalCosts + totalShippingProfits;
 
       logger.info("Financial summary calculated", {
@@ -7819,6 +7826,7 @@ export class DatabaseStorage implements IStorage {
           shippingCosts: totalShippingCosts,
           shippingProfits: totalShippingProfits,
           packagingCosts: totalPackagingCosts,
+          customerCreditsUsed: totalCustomerCreditsUsed,
         }
       });
 
@@ -7834,6 +7842,7 @@ export class DatabaseStorage implements IStorage {
           shippingCosts: totalShippingCosts,
           shippingProfits: totalShippingProfits,
           packagingCosts: totalPackagingCosts,
+          customerCreditsUsed: totalCustomerCreditsUsed,
         },
       };
     } catch (error) {
@@ -7852,6 +7861,7 @@ export class DatabaseStorage implements IStorage {
           shippingCosts: 0,
           shippingProfits: 0,
           packagingCosts: 0,
+          customerCreditsUsed: 0,
         },
       };
     }

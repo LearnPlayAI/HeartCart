@@ -581,6 +581,9 @@ Changelog:
   * Enhanced admin dashboard with professional filter card UI including date pickers and status selection
   * Financial data displays context-aware descriptions based on selected filters
   * System maintains accurate profit calculations across all filter combinations
+  * Added customer credits used as a cost item in Total Costs breakdown
+  * Customer credits used during purchases now properly counted as business costs in financial analysis
+  * Updated both backend calculations and frontend display to include customer credits line item
 - July 2, 2025. Complete featured products system with redirect-based navigation:
   * Created new /featured page displaying ALL featured products without pagination limitations
   * Added /api/featured-products/all endpoint for fetching complete featured product catalog

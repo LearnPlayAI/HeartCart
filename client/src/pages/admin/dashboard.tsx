@@ -270,6 +270,10 @@ function FinancialStats() {
                   <span>Packaging:</span>
                   <span>{formatCurrency(financialData.breakdown.packagingCosts)}</span>
                 </div>
+                <div className="flex justify-between text-xs">
+                  <span>Customer credits used:</span>
+                  <span>{formatCurrency(financialData.breakdown.customerCreditsUsed)}</span>
+                </div>
               </div>
             </CardContent>
           </Card>
