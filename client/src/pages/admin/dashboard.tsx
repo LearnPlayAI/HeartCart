@@ -245,6 +245,32 @@ function FinancialStats() {
             </CardHeader>
             <CardContent className="pt-0">
               <p className="text-xs text-muted-foreground">All business costs</p>
+              <div className="mt-2 space-y-1">
+                <div className="flex justify-between text-xs">
+                  <span>Product costs:</span>
+                  <span>{formatCurrency(financialData.breakdown.productCosts)}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span>Payment fees:</span>
+                  <span>{formatCurrency(financialData.breakdown.paymentProcessingFees)}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span>Rep commissions:</span>
+                  <span>{formatCurrency(financialData.breakdown.repCommissions)}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span>Shipping costs:</span>
+                  <span>{formatCurrency(financialData.breakdown.shippingCosts)}</span>
+                </div>
+                <div className="flex justify-between text-xs text-green-600">
+                  <span>Shipping profits:</span>
+                  <span>+{formatCurrency(financialData.breakdown.shippingProfits)}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span>Packaging:</span>
+                  <span>{formatCurrency(financialData.breakdown.packagingCosts)}</span>
+                </div>
+              </div>
             </CardContent>
           </Card>
           <Card>
