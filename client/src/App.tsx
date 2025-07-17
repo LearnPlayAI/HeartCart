@@ -36,7 +36,8 @@ import CartDrawer from "@/components/cart/cart-drawer";
 import { SessionExpiryWarning } from "@/components/session/session-expiry-warning";
 
 import MobileAppInstallButton from "@/components/pwa/MobileAppInstallButton";
-import React, { Suspense } from "react";
+import React, { Suspense, useState, useEffect } from "react";
+import { Loader2 } from "lucide-react";
 
 // Admin Pages
 import AdminDashboard from "@/pages/admin/dashboard";
@@ -95,7 +96,6 @@ import { DeveloperProtectedRoute } from "@/lib/developer-protected-route";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { useEffect } from "react";
 
 function AdminProtectedRoute({ 
   path, 
@@ -153,7 +153,7 @@ function AdminProtectedRoute({
   );
 }
 
-function App() {
+function AppCore() {
   return (
     <AuthProvider>
       <FavouritesProvider>
@@ -322,6 +322,77 @@ function App() {
       </FavouritesProvider>
     </AuthProvider>
   );
+}
+
+// Development delay wrapper component
+function AppWithDevelopmentDelay() {
+  const [isReady, setIsReady] = useState(false);
+  const [countdown, setCountdown] = useState(15);
+
+  useEffect(() => {
+    // Only apply delay in development environment
+    if (import.meta.env.DEV) {
+      const timer = setInterval(() => {
+        setCountdown(prev => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            setIsReady(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => clearInterval(timer);
+    } else {
+      // In production, load immediately
+      setIsReady(true);
+    }
+  }, []);
+
+  if (!isReady) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-pink-50 to-purple-50">
+        <div className="text-center p-8">
+          <div className="mb-6">
+            <img 
+              src="/site_files/CompanyLogo.jpg" 
+              alt="TEE ME YOU" 
+              className="w-20 h-20 mx-auto rounded-lg shadow-lg"
+            />
+          </div>
+          <div className="mb-4">
+            <Loader2 className="h-12 w-12 animate-spin text-pink-500 mx-auto" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Initializing Database</h2>
+          <p className="text-gray-600 mb-4">
+            Please wait while we connect to the database and initialize the system
+          </p>
+          <div className="bg-white rounded-lg shadow-md p-4 max-w-md mx-auto">
+            <div className="text-3xl font-bold text-pink-500 mb-2">{countdown}</div>
+            <p className="text-sm text-gray-500">seconds remaining</p>
+            <div className="mt-3">
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div 
+                  className="bg-gradient-to-r from-pink-500 to-purple-500 h-2 rounded-full transition-all duration-1000"
+                  style={{ width: `${((15 - countdown) / 15) * 100}%` }}
+                ></div>
+              </div>
+            </div>
+          </div>
+          <p className="text-xs text-gray-400 mt-4">
+            Development mode - Database initialization delay
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return <AppCore />;
+}
+
+function App() {
+  return <AppWithDevelopmentDelay />;
 }
 
 export default App;

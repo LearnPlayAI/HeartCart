@@ -131,6 +131,14 @@ TeeMeYou is a comprehensive e-commerce platform built as a dropshipping solution
 ## Changelog
 ```
 Changelog:
+- July 17, 2025. Development-only database initialization delay implemented:
+  * Added 15-second delay in development environment only to prevent white page loading issues after server restarts
+  * Created AppWithDevelopmentDelay wrapper component with countdown timer and branded loading screen
+  * Delay only activates when import.meta.env.DEV is true (development mode)
+  * Production deployments load immediately without any delay
+  * Loading screen includes TeeMeYou branding, progress bar, and countdown timer
+  * Prevents database connection timing issues that caused preview page to get stuck on white screen
+  * Resolves issue where API calls were attempted before database was fully initialized
 - July 17, 2025. Customer Credits Admin Management System implemented:
   * Added comprehensive customer credits management section to admin interface
   * Implemented backend API endpoints: /api/credits/admin/overview, /api/credits/admin/customers, /api/credits/admin/:userId/adjust, /api/credits/admin/transactions
