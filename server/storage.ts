@@ -557,6 +557,10 @@ export interface IStorage {
   useUserCredits(userId: number, amount: number, description: string, orderId: number): Promise<CreditTransaction>;
   createOrUpdateCustomerCredit(userId: number): Promise<CustomerCredit>;
   
+  // Promotional Credit System operations
+  parsePromotionalCreditValue(lastName: string): number;
+  getPromotionalCreditAmount(repCode: string): Promise<number>;
+  
   // Order Item Supplier Status operations
   getOrderItemById(orderItemId: number): Promise<(OrderItem & { order?: Order }) | undefined>;
   updateOrderItemSupplierStatus(orderItemId: number, statusData: Partial<InsertOrderItemSupplierStatus>): Promise<OrderItemSupplierStatus>;
@@ -12381,6 +12385,72 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       logger.error('Error getting user credit transactions', { error, userId, limit, offset });
       throw error;
+    }
+  }
+
+  /**
+   * Helper function to parse monetary value from promotional sales rep lastName
+   * Supports formats like "R50", "R100", "50", "100"
+   */
+  parsePromotionalCreditValue(lastName: string): number {
+    try {
+      // Remove 'R' prefix if present and any whitespace
+      const cleanValue = lastName.replace(/^R\s*/i, '').trim();
+      
+      // Parse as number
+      const amount = parseFloat(cleanValue);
+      
+      // Validate it's a positive number
+      if (isNaN(amount) || amount <= 0) {
+        logger.warn('Invalid promotional credit value in lastName', { lastName, cleanValue });
+        return 0;
+      }
+      
+      return amount;
+    } catch (error) {
+      logger.error('Error parsing promotional credit value', { error, lastName });
+      return 0;
+    }
+  }
+
+  /**
+   * Check if a repCode belongs to a promotional sales rep and return the credit amount
+   * Returns 0 if not a promotional rep or invalid amount
+   */
+  async getPromotionalCreditAmount(repCode: string): Promise<number> {
+    try {
+      if (!repCode || repCode.trim() === '') {
+        return 0;
+      }
+
+      // Get the sales rep by code
+      const salesRep = await this.getSalesRepByCode(repCode);
+      
+      if (!salesRep) {
+        logger.debug('RepCode not found', { repCode });
+        return 0;
+      }
+
+      // Check if it's a promotional rep (firstName === "PROMO")
+      if (salesRep.firstName !== 'PROMO') {
+        logger.debug('RepCode is not promotional', { repCode, firstName: salesRep.firstName });
+        return 0;
+      }
+
+      // Parse the credit amount from lastName
+      const creditAmount = this.parsePromotionalCreditValue(salesRep.lastName);
+      
+      logger.info('Promotional credit amount determined', {
+        repCode,
+        salesRepId: salesRep.id,
+        lastName: salesRep.lastName,
+        creditAmount
+      });
+      
+      return creditAmount;
+    } catch (error) {
+      logger.error('Error getting promotional credit amount', { error, repCode });
+      return 0;
     }
   }
 

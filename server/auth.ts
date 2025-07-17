@@ -236,7 +236,7 @@ export function setupAuth(app: Express): void {
     try {
       // Body is already validated by the middleware using our registrationSchema
       // Extract fields directly (trim already handled by Zod schema)
-      const { username, email, password, fullName, confirmPassword } = req.body;
+      const { username, email, password, fullName, confirmPassword, repCode } = req.body;
       
       // Log registration attempt (without sensitive data)
       logger.debug('Registration attempt', { 
@@ -297,8 +297,41 @@ export function setupAuth(app: Express): void {
         role: userRole,
         isActive: allowUserCreation,
         userCreationEnabled: allowUserCreation,
+        repCode: repCode || null,
         ip: req.ip 
       });
+
+      // Check for promotional credit assignment
+      if (repCode && repCode.trim() !== '') {
+        try {
+          const promotionalCreditAmount = await storage.getPromotionalCreditAmount(repCode);
+          
+          if (promotionalCreditAmount > 0) {
+            // Award the promotional store credit
+            await storage.addUserCredits(
+              user.id,
+              promotionalCreditAmount,
+              `Registration promotion credit from repCode: ${repCode}`
+            );
+            
+            logger.info('Promotional credit awarded to new user', {
+              userId: user.id,
+              username,
+              email,
+              repCode,
+              creditAmount: promotionalCreditAmount
+            });
+          }
+        } catch (creditError) {
+          logger.error('Error processing promotional credit during registration', {
+            error: creditError,
+            userId: user.id,
+            username,
+            repCode
+          });
+          // Continue with registration even if credit assignment fails
+        }
+      }
 
       // Send email verification
       try {
