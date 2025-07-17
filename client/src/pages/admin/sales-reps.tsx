@@ -1,10 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 
-import { Users, DollarSign, TrendingUp, Plus, Edit2, Eye, Calendar, Share2, Copy, MessageCircle, UserCog } from "lucide-react";
+import { Users, DollarSign, TrendingUp, Plus, Edit2, Eye, Calendar, Share2, Copy, MessageCircle, UserCog, Search } from "lucide-react";
 import { AdminLayout } from "@/components/admin/layout";
 
 interface SalesRep {
@@ -26,10 +28,33 @@ interface SalesRep {
 
 export default function SalesRepsPage() {
   const [, setLocation] = useLocation();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+
+  // Debounce search term with 2-second delay
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   // Fetch sales reps overview with server-side calculations
   const { data: overviewResponse, isLoading } = useQuery({
-    queryKey: ['/api/admin/sales-reps/overview']
+    queryKey: ['/api/admin/sales-reps/overview', debouncedSearchTerm],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (debouncedSearchTerm.trim()) {
+        params.append('search', debouncedSearchTerm.trim());
+      }
+      
+      const response = await fetch(`/api/admin/sales-reps/overview?${params}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch sales reps overview');
+      }
+      return response.json();
+    }
   });
 
   const salesReps = Array.isArray(overviewResponse?.data?.salesReps) ? overviewResponse.data.salesReps : [];
@@ -117,13 +142,25 @@ Register now and start shopping! 🛍️`;
               Manage your sales team and track commission performance
             </p>
           </div>
-          <Button 
-            onClick={() => setLocation('/admin/sales-reps/create')}
-            className="bg-pink-500 hover:bg-pink-600 shrink-0"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Sales Rep
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1 sm:flex-initial">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                type="text"
+                placeholder="Search sales reps..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9 pr-4 py-2 w-full sm:w-64"
+              />
+            </div>
+            <Button 
+              onClick={() => setLocation('/admin/sales-reps/create')}
+              className="bg-pink-500 hover:bg-pink-600 shrink-0"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add Sales Rep
+            </Button>
+          </div>
         </div>
 
         {/* Stats Cards */}
@@ -202,9 +239,22 @@ Register now and start shopping! 🛍️`;
             <CardTitle className="flex items-center gap-2">
               <Users className="w-5 h-5 text-gray-500" />
               Sales Representatives
+              {debouncedSearchTerm && (
+                <Badge variant="secondary" className="ml-2">
+                  {salesReps.length} result{salesReps.length !== 1 ? 's' : ''}
+                </Badge>
+              )}
             </CardTitle>
             <CardDescription>
-              Manage your sales team members and their performance
+              {debouncedSearchTerm 
+                ? `Search results for "${debouncedSearchTerm}"` 
+                : "Manage your sales team members and their performance"
+              }
+              {isLoading && (
+                <span className="ml-2 text-pink-500">
+                  <span className="animate-pulse">Searching...</span>
+                </span>
+              )}
             </CardDescription>
           </CardHeader>
           <CardContent className="p-0">

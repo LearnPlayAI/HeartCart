@@ -543,6 +543,15 @@ Changelog:
   * Enhanced category sidebar with modern TeeMeYou pink gradient styling, improved hover states, and visual hierarchy
   * Fixed navigation runtime errors by using setLocation method instead of router.navigate for promotional redirects
   * Updated flash deals component branding consistency: changed "Special Deals" text to "Promotions" throughout interface
+- July 17, 2025. Sales representative search functionality with PROMO priority sorting:
+  * Implemented comprehensive server-side search system for /admin/sales-reps page with case-insensitive partial matching
+  * Search works across all sales rep fields: firstName, lastName, email, phoneNumber, repCode, and notes using PostgreSQL ILIKE operator
+  * Added automatic PROMO rep priority sorting ensuring sales rep with firstName "PROMO" always appears first in results
+  * Implemented 2-second debounce delay to prevent excessive API calls during search typing
+  * Enhanced frontend with search input field, loading states, and results count display
+  * Updated backend storage methods and API endpoints to support search parameters
+  * Search functionality maintains all existing features while adding efficient filtering capabilities
+  * Production-ready with proper error handling and performance optimization
   * Maintained all existing filter functionality while leveraging existing promotional system architecture
 - July 2, 2025. Complete featured products system with redirect-based navigation:
   * Created new /featured page displaying ALL featured products without pagination limitations

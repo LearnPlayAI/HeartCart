@@ -1289,7 +1289,8 @@ router.put("/settings/:key", isAuthenticated, asyncHandler(async (req: Request, 
 // Sales Rep Commission System Admin Routes
 router.get("/sales-reps", isAdmin, asyncHandler(async (req: Request, res: Response) => {
   try {
-    const reps = await storage.getAllSalesReps();
+    const searchTerm = req.query.search as string;
+    const reps = await storage.getAllSalesReps(searchTerm);
     
     // Get earnings for each rep
     const repsWithEarnings = await Promise.all(
@@ -1303,7 +1304,7 @@ router.get("/sales-reps", isAdmin, asyncHandler(async (req: Request, res: Respon
       })
     );
     
-    logger.info("Admin sales reps fetched successfully", { repCount: reps.length });
+    logger.info("Admin sales reps fetched successfully", { repCount: reps.length, searchTerm });
     return sendSuccess(res, repsWithEarnings);
   } catch (error) {
     logger.error("Error fetching admin sales reps", { error });
@@ -1314,10 +1315,11 @@ router.get("/sales-reps", isAdmin, asyncHandler(async (req: Request, res: Respon
 // Get sales reps overview with server-side calculated statistics
 router.get("/sales-reps/overview", isAdmin, asyncHandler(async (req: Request, res: Response) => {
   try {
-    logger.info("Fetching sales reps overview with server-side calculations");
+    const searchTerm = req.query.search as string;
+    logger.info("Fetching sales reps overview with server-side calculations", { searchTerm });
 
-    // Get all sales reps with earnings data
-    const reps = await storage.getAllSalesReps();
+    // Get all sales reps with earnings data (with optional search)
+    const reps = await storage.getAllSalesReps(searchTerm);
     
     // Enrich each rep with earnings and payment data
     const enrichedReps = await Promise.all(reps.map(async (rep) => {

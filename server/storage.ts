@@ -13671,13 +13671,35 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getAllSalesReps(): Promise<SalesRep[]> {
+  async getAllSalesReps(searchTerm?: string): Promise<SalesRep[]> {
     try {
-      const reps = await db
+      let query = db
         .select()
-        .from(salesReps)
-        .orderBy(salesReps.firstName);
+        .from(salesReps);
+
+      // Add search filter if search term is provided
+      if (searchTerm && searchTerm.trim() !== '') {
+        const searchPattern = `%${searchTerm.trim()}%`;
+        query = query.where(
+          or(
+            ilike(salesReps.firstName, searchPattern),
+            ilike(salesReps.lastName, searchPattern),
+            ilike(salesReps.email, searchPattern),
+            ilike(salesReps.phoneNumber, searchPattern),
+            ilike(salesReps.repCode, searchPattern),
+            ilike(salesReps.notes, searchPattern)
+          )
+        );
+      }
+
+      // Order by PROMO first, then by firstName and lastName
+      query = query.orderBy(
+        sql`CASE WHEN ${salesReps.firstName} ILIKE 'PROMO' THEN 0 ELSE 1 END`,
+        salesReps.firstName,
+        salesReps.lastName
+      );
       
+      const reps = await query;
       return reps;
     } catch (error) {
       logger.error('Error getting all sales reps', { error });
