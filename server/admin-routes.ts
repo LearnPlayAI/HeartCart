@@ -45,6 +45,26 @@ router.get("/orders", isAuthenticated, asyncHandler(async (req: Request, res: Re
   }
 }));
 
+// Get financial summary for delivered orders
+router.get("/financial-summary", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    // TODO: Add admin role check here
+    const financialSummary = await storage.getFinancialSummary();
+    
+    logger.info("Admin financial summary fetched successfully", { 
+      deliveredOrderCount: financialSummary.deliveredOrderCount,
+      totalRevenue: financialSummary.totalRevenue,
+      totalCosts: financialSummary.totalCosts,
+      totalProfit: financialSummary.totalProfit
+    });
+    
+    return sendSuccess(res, financialSummary);
+  } catch (error) {
+    logger.error("Error fetching admin financial summary", { error });
+    return sendError(res, "Failed to fetch financial summary", 500);
+  }
+}));
+
 // Get specific order by ID for admin
 router.get("/orders/:id", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
   try {

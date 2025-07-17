@@ -194,6 +194,19 @@ export interface IStorage {
   // API Testing support methods
   getProductWithSlug(): Promise<Product | undefined>;
   getAllOrders(): Promise<Order[]>;
+  getFinancialSummary(): Promise<{
+    totalRevenue: number;
+    totalCosts: number;
+    totalProfit: number;
+    deliveredOrderCount: number;
+    breakdown: {
+      productCosts: number;
+      paymentProcessingFees: number;
+      repCommissions: number;
+      shippingCosts: number;
+      packagingCosts: number;
+    };
+  }>;
 
   getAllAttributes(): Promise<Attribute[]>;
 
@@ -7599,7 +7612,142 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  /**
+   * Get comprehensive financial summary for delivered orders only
+   * Includes all revenue streams and cost components for accurate profit calculation
+   */
+  async getFinancialSummary(): Promise<{
+    totalRevenue: number;
+    totalCosts: number;
+    totalProfit: number;
+    deliveredOrderCount: number;
+    breakdown: {
+      productCosts: number;
+      paymentProcessingFees: number;
+      repCommissions: number;
+      shippingCosts: number;
+      packagingCosts: number;
+    };
+  }> {
+    try {
+      // Get all delivered orders with their items, product cost prices, and commission data
+      const deliveredOrders = await db
+        .select({
+          orderId: orders.id,
+          totalAmount: orders.totalAmount,
+          transactionFeeAmount: orders.transactionFeeAmount,
+          itemQuantity: orderItems.quantity,
+          itemProductId: orderItems.productId,
+          productCostPrice: products.costPrice,
+          commissionAmount: repCommissions.commissionAmount,
+        })
+        .from(orders)
+        .innerJoin(orderItems, eq(orders.id, orderItems.orderId))
+        .innerJoin(products, eq(orderItems.productId, products.id))
+        .leftJoin(repCommissions, eq(orders.id, repCommissions.orderId))
+        .where(eq(orders.status, 'delivered'));
 
+      // Process the results to calculate totals
+      const orderTotals = new Map<number, {
+        totalAmount: number;
+        transactionFeeAmount: number;
+        productCosts: number;
+        commissionAmount: number;
+      }>();
+
+      // Group by order ID to avoid double-counting order-level costs
+      for (const row of deliveredOrders) {
+        const orderId = row.orderId;
+        
+        if (!orderTotals.has(orderId)) {
+          orderTotals.set(orderId, {
+            totalAmount: row.totalAmount,
+            transactionFeeAmount: row.transactionFeeAmount || 0,
+            productCosts: 0,
+            commissionAmount: row.commissionAmount ? parseFloat(row.commissionAmount.toString()) : 0,
+          });
+        }
+
+        const orderData = orderTotals.get(orderId)!;
+        
+        // Add product costs (costPrice × quantity)
+        if (row.productCostPrice) {
+          const costPrice = parseFloat(row.productCostPrice.toString());
+          orderData.productCosts += costPrice * row.itemQuantity;
+        }
+      }
+
+      // Calculate summary totals
+      const deliveredOrderCount = orderTotals.size;
+      let totalRevenue = 0;
+      let totalProductCosts = 0;
+      let totalPaymentProcessingFees = 0;
+      let totalRepCommissions = 0;
+
+      for (const [orderId, orderData] of orderTotals) {
+        totalRevenue += orderData.totalAmount;
+        totalProductCosts += orderData.productCosts;
+        totalPaymentProcessingFees += orderData.transactionFeeAmount;
+        totalRepCommissions += orderData.commissionAmount;
+      }
+
+      // Fixed costs per delivered order
+      const SHIPPING_COST_PER_ORDER = 60; // R60 actual shipping cost
+      const PACKAGING_COST_PER_ORDER = 5; // R5 packaging cost
+      
+      const totalShippingCosts = deliveredOrderCount * SHIPPING_COST_PER_ORDER;
+      const totalPackagingCosts = deliveredOrderCount * PACKAGING_COST_PER_ORDER;
+
+      // Calculate totals
+      const totalCosts = totalProductCosts + totalPaymentProcessingFees + totalRepCommissions + totalShippingCosts + totalPackagingCosts;
+      const totalProfit = totalRevenue - totalCosts;
+
+      logger.info("Financial summary calculated", {
+        deliveredOrderCount,
+        totalRevenue,
+        totalCosts,
+        totalProfit,
+        breakdown: {
+          productCosts: totalProductCosts,
+          paymentProcessingFees: totalPaymentProcessingFees,
+          repCommissions: totalRepCommissions,
+          shippingCosts: totalShippingCosts,
+          packagingCosts: totalPackagingCosts,
+        }
+      });
+
+      return {
+        totalRevenue,
+        totalCosts,
+        totalProfit,
+        deliveredOrderCount,
+        breakdown: {
+          productCosts: totalProductCosts,
+          paymentProcessingFees: totalPaymentProcessingFees,
+          repCommissions: totalRepCommissions,
+          shippingCosts: totalShippingCosts,
+          packagingCosts: totalPackagingCosts,
+        },
+      };
+    } catch (error) {
+      logger.error("Error calculating financial summary", { error });
+      
+      // Return empty state on error
+      return {
+        totalRevenue: 0,
+        totalCosts: 0,
+        totalProfit: 0,
+        deliveredOrderCount: 0,
+        breakdown: {
+          productCosts: 0,
+          paymentProcessingFees: 0,
+          repCommissions: 0,
+          shippingCosts: 0,
+          packagingCosts: 0,
+        },
+      };
+    }
+  }
 
   // ===============================================================
   // USER ADMIN MANAGEMENT METHODS

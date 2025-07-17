@@ -81,14 +81,14 @@ interface User {
 }
 
 /**
- * Financial Statistics Component
+ * Financial Statistics Component - Updated to show comprehensive profit metrics
  */
 function FinancialStats() {
-  const { data: response, isLoading: isLoadingOrders } = useQuery({
-    queryKey: ["/api/admin/orders"],
+  const { data: response, isLoading: isLoadingFinancials } = useQuery({
+    queryKey: ["/api/admin/financial-summary"],
   });
 
-  if (isLoadingOrders) {
+  if (isLoadingFinancials) {
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
         {[1, 2, 3].map((i) => (
@@ -103,8 +103,8 @@ function FinancialStats() {
     );
   }
 
-  const orders = response?.data || [];
-  if (!Array.isArray(orders) || orders.length === 0) {
+  const financialData = response?.data;
+  if (!financialData) {
     return (
       <div className="grid gap-4 md:grid-cols-3 mb-6">
         <Card>
@@ -113,39 +113,33 @@ function FinancialStats() {
             <div className="text-2xl font-bold text-green-600">{formatCurrency(0)}</div>
           </CardHeader>
           <CardContent className="pt-0">
-            <p className="text-xs text-muted-foreground">No orders yet</p>
+            <p className="text-xs text-muted-foreground">No delivered orders yet</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Payments Received</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Costs</CardTitle>
+            <div className="text-2xl font-bold text-red-600">{formatCurrency(0)}</div>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <p className="text-xs text-muted-foreground">No costs calculated yet</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Profit</CardTitle>
             <div className="text-2xl font-bold text-blue-600">{formatCurrency(0)}</div>
           </CardHeader>
           <CardContent className="pt-0">
-            <p className="text-xs text-muted-foreground">No confirmed payments</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Payments Pending</CardTitle>
-            <div className="text-2xl font-bold text-yellow-600">{formatCurrency(0)}</div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <p className="text-xs text-muted-foreground">No pending payments</p>
+            <p className="text-xs text-muted-foreground">No profit calculated yet</p>
           </CardContent>
         </Card>
       </div>
     );
   }
 
-  // Calculate financial statistics
-  const totalRevenue = orders.reduce((sum: number, order: any) => sum + (order.totalAmount || 0), 0);
-  const paymentsReceived = orders
-    .filter((order: any) => order.status === "confirmed")
-    .reduce((sum: number, order: any) => sum + (order.totalAmount || 0), 0);
-  const paymentsPending = orders
-    .filter((order: any) => order.status === "pending")
-    .reduce((sum: number, order: any) => sum + (order.totalAmount || 0), 0);
+  const { totalRevenue, totalCosts, totalProfit, deliveredOrderCount, breakdown } = financialData;
+  const profitMarginPercentage = totalRevenue > 0 ? ((totalProfit / totalRevenue) * 100).toFixed(1) : '0';
 
   return (
     <div className="grid gap-4 md:grid-cols-3 mb-6">
@@ -155,31 +149,70 @@ function FinancialStats() {
           <div className="text-2xl font-bold text-green-600">{formatCurrency(totalRevenue)}</div>
         </CardHeader>
         <CardContent className="pt-0">
-          <p className="text-xs text-muted-foreground">All-time revenue from {orders.length} orders</p>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">Payments Received</CardTitle>
-          <div className="text-2xl font-bold text-blue-600">{formatCurrency(paymentsReceived)}</div>
-        </CardHeader>
-        <CardContent className="pt-0">
           <p className="text-xs text-muted-foreground">
-            Confirmed payments ({orders.filter(o => o.status === "confirmed").length} orders)
+            From {deliveredOrderCount} delivered orders
           </p>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">Payments Pending</CardTitle>
-          <div className="text-2xl font-bold text-yellow-600">{formatCurrency(paymentsPending)}</div>
+          <CardTitle className="text-sm font-medium text-muted-foreground">Total Costs</CardTitle>
+          <div className="text-2xl font-bold text-red-600">{formatCurrency(totalCosts)}</div>
         </CardHeader>
         <CardContent className="pt-0">
           <p className="text-xs text-muted-foreground">
-            Awaiting payment ({orders.filter(o => o.status === "pending").length} orders)
+            Products, fees, commissions & logistics
           </p>
+          <div className="mt-2 space-y-1">
+            <div className="flex justify-between text-xs">
+              <span>Products:</span>
+              <span>{formatCurrency(breakdown.productCosts)}</span>
+            </div>
+            <div className="flex justify-between text-xs">
+              <span>Payment fees:</span>
+              <span>{formatCurrency(breakdown.paymentProcessingFees)}</span>
+            </div>
+            <div className="flex justify-between text-xs">
+              <span>Rep commissions:</span>
+              <span>{formatCurrency(breakdown.repCommissions)}</span>
+            </div>
+            <div className="flex justify-between text-xs">
+              <span>Shipping:</span>
+              <span>{formatCurrency(breakdown.shippingCosts)}</span>
+            </div>
+            <div className="flex justify-between text-xs">
+              <span>Packaging:</span>
+              <span>{formatCurrency(breakdown.packagingCosts)}</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium text-muted-foreground">Total Profit</CardTitle>
+          <div className={`text-2xl font-bold ${totalProfit >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+            {formatCurrency(totalProfit)}
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <p className="text-xs text-muted-foreground">
+            {profitMarginPercentage}% profit margin
+          </p>
+          <div className="mt-2 flex items-center text-xs">
+            {totalProfit >= 0 ? (
+              <>
+                <TrendingUp className="h-3 w-3 text-green-500 mr-1" />
+                <span className="text-green-600">Profitable business</span>
+              </>
+            ) : (
+              <>
+                <TrendingDown className="h-3 w-3 text-red-500 mr-1" />
+                <span className="text-red-600">Costs exceed revenue</span>
+              </>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>
