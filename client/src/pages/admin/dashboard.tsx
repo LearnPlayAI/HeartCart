@@ -178,8 +178,12 @@ function FinancialStats() {
               <span>{formatCurrency(breakdown.repCommissions)}</span>
             </div>
             <div className="flex justify-between text-xs">
-              <span>Shipping:</span>
+              <span>Shipping Costs:</span>
               <span>{formatCurrency(breakdown.shippingCosts)}</span>
+            </div>
+            <div className="flex justify-between text-xs text-green-600">
+              <span>Shipping Profits:</span>
+              <span>+{formatCurrency(breakdown.shippingProfits)}</span>
             </div>
             <div className="flex justify-between text-xs">
               <span>Packaging:</span>

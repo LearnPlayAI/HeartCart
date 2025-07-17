@@ -7671,6 +7671,7 @@ export class DatabaseStorage implements IStorage {
       paymentProcessingFees: number;
       repCommissions: number;
       shippingCosts: number;
+      shippingProfits: number;
       packagingCosts: number;
     };
   }> {
@@ -7743,23 +7744,28 @@ export class DatabaseStorage implements IStorage {
 
       // Fixed costs per delivered order
       const PACKAGING_COST_PER_ORDER = 5; // R5 packaging cost
+      const SHIPPING_REVENUE_PER_ORDER = 85; // R85 shipping charge per order
       
       const totalPackagingCosts = deliveredOrderCount * PACKAGING_COST_PER_ORDER;
+      const totalShippingRevenue = deliveredOrderCount * SHIPPING_REVENUE_PER_ORDER;
+      const totalShippingProfits = totalShippingRevenue - totalShippingCosts;
 
-      // Calculate totals
+      // Calculate totals - shipping profits are added to profit, not costs
       const totalCosts = totalProductCosts + totalPaymentProcessingFees + totalRepCommissions + totalShippingCosts + totalPackagingCosts;
-      const totalProfit = totalRevenue - totalCosts;
+      const totalProfit = totalRevenue - totalCosts + totalShippingProfits;
 
       logger.info("Financial summary calculated", {
         deliveredOrderCount,
         totalRevenue,
         totalCosts,
         totalProfit,
+        shippingRevenue: totalShippingRevenue,
         breakdown: {
           productCosts: totalProductCosts,
           paymentProcessingFees: totalPaymentProcessingFees,
           repCommissions: totalRepCommissions,
           shippingCosts: totalShippingCosts,
+          shippingProfits: totalShippingProfits,
           packagingCosts: totalPackagingCosts,
         }
       });
@@ -7774,6 +7780,7 @@ export class DatabaseStorage implements IStorage {
           paymentProcessingFees: totalPaymentProcessingFees,
           repCommissions: totalRepCommissions,
           shippingCosts: totalShippingCosts,
+          shippingProfits: totalShippingProfits,
           packagingCosts: totalPackagingCosts,
         },
       };
@@ -7791,6 +7798,7 @@ export class DatabaseStorage implements IStorage {
           paymentProcessingFees: 0,
           repCommissions: 0,
           shippingCosts: 0,
+          shippingProfits: 0,
           packagingCosts: 0,
         },
       };
