@@ -131,6 +131,20 @@ TeeMeYou is a comprehensive e-commerce platform built as a dropshipping solution
 ## Changelog
 ```
 Changelog:
+- July 17, 2025. Customer Credits Admin Management System implemented:
+  * Added comprehensive customer credits management section to admin interface
+  * Implemented backend API endpoints: /api/credits/admin/overview, /api/credits/admin/customers, /api/credits/admin/:userId/adjust, /api/credits/admin/transactions
+  * Added storage methods: getCreditOverview, getCustomersWithCredits, getAllCreditTransactions
+  * Created complete frontend CustomerCreditsPage component with dashboard overview cards
+  * Added search and filtering functionality for customers with credits
+  * Implemented manual credit adjustment system with transaction history
+  * Added modal components for adding credits and viewing transaction history
+  * Integrated real-time credit balance updates with 30-second refresh intervals
+  * Added navigation item "Customer Credits" to admin layout with CreditCard icon
+  * Replaced "Payments" navigation item with "Customer Credits" for better admin workflow
+  * System enables admins to view credit overview statistics, manage customer credit balances, and track all credit transactions
+  * All existing credit functionality preserved - implementation extends existing credit system without disruption
+  * Credit management features include: overview dashboard, customer search, credit adjustments, transaction history, and real-time balance tracking
 - June 27, 2025. Initial setup
 - July 10, 2025. Complete User Carts Admin System implemented:
   * Added comprehensive user cart management section to admin interface

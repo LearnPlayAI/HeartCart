@@ -80,6 +80,7 @@ import RecordPaymentPage from "@/pages/admin/sales-reps/record-payment";
 import ManageUsersPage from "@/pages/admin/sales-reps/manage-users";
 import UserCartsPage from "@/pages/admin/user-carts";
 import UserCartDetailPage from "@/pages/admin/user-cart-detail";
+import CustomerCreditsPage from "@/pages/admin/customer-credits";
 
 // Developer Pages
 import DeveloperDashboard from "@/pages/developer";
@@ -253,6 +254,7 @@ function App() {
                   <AdminProtectedRoute path="/admin/sales-reps/:id/commissions" component={SalesRepCommissionsPage} />
                   <AdminProtectedRoute path="/admin/sales-reps/:id/record-payment" component={RecordPaymentPage} />
                   <AdminProtectedRoute path="/admin/sales-reps/:id/manage-users" component={ManageUsersPage} />
+                  <AdminProtectedRoute path="/admin/customer-credits" component={CustomerCreditsPage} />
                   <AdminProtectedRoute path="/admin/ai-settings" component={AdminAISettings} />
                   <AdminProtectedRoute path="/admin/batch-upload" component={BatchUpload} />
                   <AdminProtectedRoute path="/admin/auth-test" component={AuthTestDashboard} />

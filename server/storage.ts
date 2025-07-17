@@ -570,6 +570,11 @@ export interface IStorage {
   useUserCredits(userId: number, amount: number, description: string, orderId: number): Promise<CreditTransaction>;
   createOrUpdateCustomerCredit(userId: number): Promise<CustomerCredit>;
   
+  // Admin Credit Management operations
+  getCreditOverview(): Promise<any>;
+  getCustomersWithCredits(limit?: number, offset?: number, search?: string, hasCredits?: boolean): Promise<any[]>;
+  getAllCreditTransactions(limit?: number, offset?: number, userId?: number, transactionType?: string): Promise<CreditTransaction[]>;
+  
   // Promotional Credit System operations
   parsePromotionalCreditValue(lastName: string): number;
   getPromotionalCreditAmount(repCode: string): Promise<number>;
@@ -12915,6 +12920,189 @@ export class DatabaseStorage implements IStorage {
       return newCredit;
     } catch (error) {
       logger.error('Error creating or updating customer credit', { error, userId });
+      throw error;
+    }
+  }
+
+  // Admin Credit Management Methods
+  async getCreditOverview(): Promise<any> {
+    try {
+      // Get total credits issued
+      const [totalCreditsResult] = await db
+        .select({ 
+          totalIssued: sql<number>`COALESCE(SUM(CASE WHEN transaction_type = 'earned' THEN amount ELSE 0 END), 0)`,
+          totalUsed: sql<number>`COALESCE(SUM(CASE WHEN transaction_type = 'used' THEN amount ELSE 0 END), 0)`,
+          totalTransactions: sql<number>`COUNT(*)`,
+        })
+        .from(creditTransactions);
+
+      // Get total customers with credits
+      const [customersWithCreditsResult] = await db
+        .select({ 
+          count: sql<number>`COUNT(DISTINCT user_id)` 
+        })
+        .from(creditTransactions);
+
+      // Get outstanding credit balance
+      const [outstandingBalanceResult] = await db
+        .select({ 
+          totalOutstanding: sql<number>`COALESCE(SUM(CAST(available_credit_amount AS DECIMAL(10,2))), 0)` 
+        })
+        .from(customerCredits)
+        .where(sql`CAST(available_credit_amount AS DECIMAL(10,2)) > 0`);
+
+      // Get recent credit activity (last 30 days)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      const [recentActivityResult] = await db
+        .select({ 
+          recentTransactions: sql<number>`COUNT(*)`,
+          recentAmount: sql<number>`COALESCE(SUM(CASE WHEN transaction_type = 'earned' THEN amount ELSE 0 END), 0)`,
+        })
+        .from(creditTransactions)
+        .where(sql`created_at >= ${thirtyDaysAgo.toISOString()}`);
+
+      return {
+        totalCreditsIssued: parseFloat(totalCreditsResult.totalIssued.toString()),
+        totalCreditsUsed: parseFloat(totalCreditsResult.totalUsed.toString()),
+        totalOutstandingCredits: parseFloat(outstandingBalanceResult.totalOutstanding.toString()),
+        totalCustomersWithCredits: parseInt(customersWithCreditsResult.count.toString()),
+        totalTransactions: parseInt(totalCreditsResult.totalTransactions.toString()),
+        recentActivity: {
+          transactionCount: parseInt(recentActivityResult.recentTransactions.toString()),
+          creditAmount: parseFloat(recentActivityResult.recentAmount.toString()),
+        }
+      };
+    } catch (error) {
+      logger.error('Error getting credit overview', { error });
+      throw error;
+    }
+  }
+
+  async getCustomersWithCredits(limit: number = 50, offset: number = 0, search?: string, hasCredits: boolean = false): Promise<any[]> {
+    try {
+      let query = db
+        .select({
+          userId: users.id,
+          username: users.username,
+          email: users.email,
+          fullName: users.fullName,
+          totalCreditAmount: customerCredits.totalCreditAmount,
+          availableCreditAmount: customerCredits.availableCreditAmount,
+          lastActivity: sql<string>`(
+            SELECT MAX(created_at) 
+            FROM "creditTransactions" 
+            WHERE "creditTransactions"."userId" = users.id
+          )`,
+          transactionCount: sql<number>`(
+            SELECT COUNT(*) 
+            FROM "creditTransactions" 
+            WHERE "creditTransactions"."userId" = users.id
+          )`,
+          createdAt: customerCredits.createdAt,
+          updatedAt: customerCredits.updatedAt,
+        })
+        .from(users)
+        .leftJoin(customerCredits, eq(users.id, customerCredits.userId));
+
+      // Apply search filter
+      if (search) {
+        query = query.where(
+          or(
+            ilike(users.username, `%${search}%`),
+            ilike(users.email, `%${search}%`),
+            ilike(users.fullName, `%${search}%`)
+          )
+        );
+      }
+
+      // Apply hasCredits filter
+      if (hasCredits) {
+        query = query.where(
+          and(
+            isNotNull(customerCredits.availableCreditAmount),
+            sql`CAST(${customerCredits.availableCreditAmount} AS DECIMAL(10,2)) > 0`
+          )
+        );
+      }
+
+      const customers = await query
+        .orderBy(desc(customerCredits.updatedAt))
+        .limit(limit)
+        .offset(offset);
+
+      return customers.map(customer => ({
+        ...customer,
+        totalCreditAmount: customer.totalCreditAmount || '0',
+        availableCreditAmount: customer.availableCreditAmount || '0',
+        transactionCount: parseInt(customer.transactionCount?.toString() || '0'),
+        hasCredits: parseFloat(customer.availableCreditAmount || '0') > 0
+      }));
+    } catch (error) {
+      logger.error('Error getting customers with credits', { error, limit, offset, search, hasCredits });
+      throw error;
+    }
+  }
+
+  async getAllCreditTransactions(limit: number = 50, offset: number = 0, userId?: number, transactionType?: string): Promise<CreditTransaction[]> {
+    try {
+      let query = db
+        .select({
+          id: creditTransactions.id,
+          userId: creditTransactions.userId,
+          orderId: creditTransactions.orderId,
+          supplierOrderId: creditTransactions.supplierOrderId,
+          transactionType: creditTransactions.transactionType,
+          amount: creditTransactions.amount,
+          description: creditTransactions.description,
+          createdAt: creditTransactions.createdAt,
+          // Join user info
+          username: users.username,
+          email: users.email,
+          fullName: users.fullName,
+          // Join order info if available
+          orderNumber: orders.orderNumber,
+        })
+        .from(creditTransactions)
+        .leftJoin(users, eq(creditTransactions.userId, users.id))
+        .leftJoin(orders, eq(creditTransactions.orderId, orders.id));
+
+      // Apply userId filter
+      if (userId) {
+        query = query.where(eq(creditTransactions.userId, userId));
+      }
+
+      // Apply transactionType filter
+      if (transactionType && transactionType !== 'all') {
+        query = query.where(eq(creditTransactions.transactionType, transactionType));
+      }
+
+      const transactions = await query
+        .orderBy(desc(creditTransactions.createdAt))
+        .limit(limit)
+        .offset(offset);
+
+      return transactions.map(transaction => ({
+        id: transaction.id,
+        userId: transaction.userId,
+        orderId: transaction.orderId,
+        supplierOrderId: transaction.supplierOrderId,
+        transactionType: transaction.transactionType,
+        amount: transaction.amount,
+        description: transaction.description,
+        createdAt: transaction.createdAt,
+        user: {
+          username: transaction.username,
+          email: transaction.email,
+          fullName: transaction.fullName,
+        },
+        order: transaction.orderNumber ? {
+          orderNumber: transaction.orderNumber,
+        } : undefined,
+      })) as CreditTransaction[];
+    } catch (error) {
+      logger.error('Error getting all credit transactions', { error, limit, offset, userId, transactionType });
       throw error;
     }
   }

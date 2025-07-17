@@ -38,7 +38,7 @@ function Navigation({ className, isCollapsed, onNavigate }: { className?: string
     { path: "/admin/users", label: "User Admin", icon: Users },
     { path: "/admin/customers", label: "Customers", icon: Users },
     { path: "/admin/sales-reps", label: "Sales Reps", icon: Users },
-    { path: "/admin/payments", label: "Payments", icon: CreditCard },
+    { path: "/admin/customer-credits", label: "Customer Credits", icon: CreditCard },
     { path: "/admin/settings", label: "Settings", icon: Settings },
   ];
 

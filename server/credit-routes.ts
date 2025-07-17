@@ -226,4 +226,143 @@ router.post("/admin/generate-credit", isAuthenticated, asyncHandler(async (req, 
   }
 }));
 
+// Admin route: Get credit overview/dashboard statistics
+router.get("/admin/overview", isAuthenticated, asyncHandler(async (req, res) => {
+  if (req.user?.role !== 'admin') {
+    return res.status(403).json({
+      success: false,
+      error: "Admin access required"
+    });
+  }
+
+  try {
+    const overview = await storage.getCreditOverview();
+    
+    res.json({
+      success: true,
+      data: overview
+    });
+  } catch (error) {
+    console.error("Error fetching credit overview:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch credit overview"
+    });
+  }
+}));
+
+// Admin route: Get all customers with credits
+router.get("/admin/customers", isAuthenticated, asyncHandler(async (req, res) => {
+  if (req.user?.role !== 'admin') {
+    return res.status(403).json({
+      success: false,
+      error: "Admin access required"
+    });
+  }
+
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 50;
+  const offset = (page - 1) * limit;
+  const search = req.query.search as string;
+  const hasCredits = req.query.hasCredits === 'true';
+
+  try {
+    const customers = await storage.getCustomersWithCredits(limit, offset, search, hasCredits);
+    
+    res.json({
+      success: true,
+      data: customers,
+      meta: {
+        page,
+        limit,
+        search: search || '',
+        hasCredits
+      }
+    });
+  } catch (error) {
+    console.error("Error fetching customers with credits:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch customers with credits"
+    });
+  }
+}));
+
+// Admin route: Adjust user credit balance
+router.put("/admin/:userId/adjust", isAuthenticated, asyncHandler(async (req, res) => {
+  if (req.user?.role !== 'admin') {
+    return res.status(403).json({
+      success: false,
+      error: "Admin access required"
+    });
+  }
+
+  const userId = parseInt(req.params.userId);
+  
+  const adjustCreditSchema = z.object({
+    amount: z.number(),
+    description: z.string().min(1),
+    transactionType: z.enum(['earned', 'used', 'refund']).optional()
+  });
+
+  try {
+    const { amount, description, transactionType } = adjustCreditSchema.parse(req.body);
+    
+    let result;
+    if (amount > 0) {
+      result = await storage.addUserCredits(userId, amount, description);
+    } else {
+      result = await storage.useUserCredits(userId, Math.abs(amount), description, 0);
+    }
+    
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    console.error("Error adjusting user credits:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to adjust user credits"
+    });
+  }
+}));
+
+// Admin route: Get all credit transactions
+router.get("/admin/transactions", isAuthenticated, asyncHandler(async (req, res) => {
+  if (req.user?.role !== 'admin') {
+    return res.status(403).json({
+      success: false,
+      error: "Admin access required"
+    });
+  }
+
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 50;
+  const offset = (page - 1) * limit;
+  const userId = req.query.userId ? parseInt(req.query.userId as string) : undefined;
+  const transactionType = req.query.transactionType as string;
+
+  try {
+    const transactions = await storage.getAllCreditTransactions(limit, offset, userId, transactionType);
+    
+    res.json({
+      success: true,
+      data: transactions,
+      meta: {
+        page,
+        limit,
+        userId,
+        transactionType: transactionType || 'all'
+      }
+    });
+  } catch (error) {
+    console.error("Error fetching credit transactions:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch credit transactions"
+    });
+  }
+}));
+
 export default router;
