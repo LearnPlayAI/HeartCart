@@ -479,7 +479,7 @@ export default function AdminOrderDetail() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/orders', orderId] });
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/supplier-orders', orderId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/supplier-orders/order', orderId] });
       toast({ 
         title: "Success",
         description: "Supplier order information updated successfully" 

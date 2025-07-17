@@ -553,6 +553,15 @@ Changelog:
   * Search functionality maintains all existing features while adding efficient filtering capabilities
   * Production-ready with proper error handling and performance optimization
   * Maintained all existing filter functionality while leveraging existing promotional system architecture
+- July 17, 2025. Order detail page supplier information and actual shipping cost system completed:
+  * Fixed supplier order data hydration issue where fields weren't loading existing database values on page load
+  * Corrected data source from order object to supplierOrders array for proper form field population
+  * Fixed actual shipping cost save functionality preventing R69 updates from being stored
+  * Updated profit calculation system to use actual shipping costs instead of fixed R60 per order
+  * CRITICAL FIX: Fixed cache invalidation mismatch in supplier order mutation preventing data persistence
+  * Changed cache invalidation from '/api/admin/supplier-orders' to '/api/admin/supplier-orders/order' to match actual query key
+  * All supplier order information fields now properly save and load: supplier order number, order date, notes
+  * Actual shipping cost field saves correctly and is used in profit calculations throughout admin dashboard
 - July 2, 2025. Complete featured products system with redirect-based navigation:
   * Created new /featured page displaying ALL featured products without pagination limitations
   * Added /api/featured-products/all endpoint for fetching complete featured product catalog
