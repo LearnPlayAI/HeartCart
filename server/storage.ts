@@ -3808,6 +3808,51 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async updateOrderActualShippingCost(
+    id: number,
+    actualShippingCost: number,
+  ): Promise<Order | undefined> {
+    try {
+      // First check if the order exists
+      const [existingOrder] = await db
+        .select()
+        .from(orders)
+        .where(eq(orders.id, id));
+
+      if (!existingOrder) {
+        logger.warn(`Attempted to update actual shipping cost of non-existent order`, {
+          orderId: id,
+          actualShippingCost,
+        });
+        return undefined;
+      }
+
+      // Update the order with the new actual shipping cost
+      const [updatedOrder] = await db
+        .update(orders)
+        .set({
+          actualShippingCost,
+        })
+        .where(eq(orders.id, id))
+        .returning();
+
+      logger.info(`Updated order actual shipping cost`, {
+        orderId: id,
+        actualShippingCost,
+        userId: updatedOrder.userId,
+      });
+
+      return updatedOrder;
+    } catch (error) {
+      logger.error(`Error updating order actual shipping cost`, {
+        error,
+        orderId: id,
+        actualShippingCost,
+      });
+      throw error;
+    }
+  }
+
   async getOrderById(
     id: number,
   ): Promise<
@@ -7636,6 +7681,7 @@ export class DatabaseStorage implements IStorage {
           orderId: orders.id,
           totalAmount: orders.totalAmount,
           transactionFeeAmount: orders.transactionFeeAmount,
+          actualShippingCost: orders.actualShippingCost,
           itemQuantity: orderItems.quantity,
           itemProductId: orderItems.productId,
           productCostPrice: products.costPrice,
@@ -7651,6 +7697,7 @@ export class DatabaseStorage implements IStorage {
       const orderTotals = new Map<number, {
         totalAmount: number;
         transactionFeeAmount: number;
+        actualShippingCost: number;
         productCosts: number;
         commissionAmount: number;
       }>();
@@ -7663,6 +7710,7 @@ export class DatabaseStorage implements IStorage {
           orderTotals.set(orderId, {
             totalAmount: row.totalAmount,
             transactionFeeAmount: row.transactionFeeAmount || 0,
+            actualShippingCost: row.actualShippingCost || 60, // Default to R60 if not set
             productCosts: 0,
             commissionAmount: row.commissionAmount ? parseFloat(row.commissionAmount.toString()) : 0,
           });
@@ -7683,19 +7731,19 @@ export class DatabaseStorage implements IStorage {
       let totalProductCosts = 0;
       let totalPaymentProcessingFees = 0;
       let totalRepCommissions = 0;
+      let totalShippingCosts = 0;
 
       for (const [orderId, orderData] of orderTotals) {
         totalRevenue += orderData.totalAmount;
         totalProductCosts += orderData.productCosts;
         totalPaymentProcessingFees += orderData.transactionFeeAmount;
         totalRepCommissions += orderData.commissionAmount;
+        totalShippingCosts += orderData.actualShippingCost;
       }
 
       // Fixed costs per delivered order
-      const SHIPPING_COST_PER_ORDER = 60; // R60 actual shipping cost
       const PACKAGING_COST_PER_ORDER = 5; // R5 packaging cost
       
-      const totalShippingCosts = deliveredOrderCount * SHIPPING_COST_PER_ORDER;
       const totalPackagingCosts = deliveredOrderCount * PACKAGING_COST_PER_ORDER;
 
       // Calculate totals

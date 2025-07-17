@@ -100,6 +100,7 @@ interface Order {
   paymentMethod: string;
   subtotal: number;
   shippingCost: number;
+  actualShippingCost?: number;
   tax: number;
   total: number;
   createdAt: string;
@@ -108,6 +109,9 @@ interface Order {
   paymentStatus: string;
   trackingNumber?: string;
   paymentReceivedDate?: string;
+  supplierOrderNumber?: string;
+  supplierOrderDate?: string;
+  adminNotes?: string;
   items: OrderItem[];
   // PUDO Locker Information
   selectedLockerId?: number;
@@ -326,6 +330,12 @@ export default function AdminOrderDetail() {
   
   const [trackingInput, setTrackingInput] = useState("");
   const [paymentReceivedDate, setPaymentReceivedDate] = useState(new Date().toISOString().split('T')[0]);
+  
+  // Form state for supplier order information
+  const [supplierOrderNumber, setSupplierOrderNumber] = useState("");
+  const [supplierOrderDate, setSupplierOrderDate] = useState("");
+  const [adminNotes, setAdminNotes] = useState("");
+  const [actualShippingCost, setActualShippingCost] = useState("");
 
   // Force cache invalidation on component mount to ensure fresh data
   useEffect(() => {
@@ -353,6 +363,16 @@ export default function AdminOrderDetail() {
 
   const order = response?.data;
   const supplierOrders = supplierOrdersResponse?.data || [];
+  
+  // Hydrate form fields with existing order data
+  useEffect(() => {
+    if (order) {
+      setSupplierOrderNumber(order.supplierOrderNumber || "");
+      setSupplierOrderDate(order.supplierOrderDate || "");
+      setAdminNotes(order.adminNotes || "");
+      setActualShippingCost(order.actualShippingCost?.toString() || "");
+    }
+  }, [order]);
 
   // Helper function to get supplier status for a product
   const getSupplierStatus = (productId: number) => {
@@ -432,6 +452,57 @@ export default function AdminOrderDetail() {
       toast({ 
         variant: "destructive",
         description: "Failed to update tracking number" 
+      });
+    }
+  });
+
+  // Update supplier order information mutation
+  const updateSupplierOrderMutation = useMutation({
+    mutationFn: async ({ orderId, supplierOrderNumber, supplierOrderDate, adminNotes }: { 
+      orderId: number; 
+      supplierOrderNumber: string; 
+      supplierOrderDate: string; 
+      adminNotes: string; 
+    }) => {
+      return await apiRequest('POST', `/api/admin/supplier-orders/order/${orderId}/update-group`, {
+        supplierOrderNumber,
+        supplierOrderDate,
+        adminNotes
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/orders', orderId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/supplier-orders', orderId] });
+      toast({ 
+        title: "Success",
+        description: "Supplier order information updated successfully" 
+      });
+    },
+    onError: () => {
+      toast({ 
+        variant: "destructive",
+        description: "Failed to update supplier order information" 
+      });
+    }
+  });
+
+  // Update actual shipping cost mutation
+  const updateShippingCostMutation = useMutation({
+    mutationFn: async ({ orderId, actualShippingCost }: { orderId: number; actualShippingCost: number }) => {
+      return await apiRequest('PATCH', `/api/admin/orders/${orderId}/actual-shipping-cost`, { actualShippingCost });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/orders', orderId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/financial-summary'] });
+      toast({ 
+        title: "Success",
+        description: "Shipping cost updated successfully" 
+      });
+    },
+    onError: () => {
+      toast({ 
+        variant: "destructive",
+        description: "Failed to update shipping cost" 
       });
     }
   });
@@ -779,6 +850,105 @@ export default function AdminOrderDetail() {
                       Update
                     </Button>
                   </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Supplier Order Information */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Supplier Order Information</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium">Supplier Order Number:</label>
+                  <Input
+                    placeholder="Enter supplier order number"
+                    value={supplierOrderNumber}
+                    onChange={(e) => setSupplierOrderNumber(e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+                
+                <div>
+                  <label className="text-sm font-medium">Order Date:</label>
+                  <Input
+                    type="date"
+                    value={supplierOrderDate}
+                    onChange={(e) => setSupplierOrderDate(e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+                
+                <div>
+                  <label className="text-sm font-medium">Notes:</label>
+                  <textarea
+                    placeholder="Enter additional notes"
+                    value={adminNotes}
+                    onChange={(e) => setAdminNotes(e.target.value)}
+                    className="mt-1 w-full p-2 border border-gray-300 rounded-md resize-none"
+                    rows={3}
+                  />
+                </div>
+                
+                <Button
+                  onClick={() => updateSupplierOrderMutation.mutate({ 
+                    orderId: order.id, 
+                    supplierOrderNumber,
+                    supplierOrderDate,
+                    adminNotes
+                  })}
+                  disabled={updateSupplierOrderMutation.isPending}
+                  size="sm"
+                  className="w-full"
+                >
+                  {updateSupplierOrderMutation.isPending ? "Saving..." : "Save Supplier Order Info"}
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Shipping Cost</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium">Customer Shipping Cost:</label>
+                  <div className="bg-gray-50 p-2 rounded mt-1">
+                    <span className="text-sm font-medium">R85.00</span>
+                    <span className="text-xs text-gray-500 ml-2">(Fixed rate)</span>
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="text-sm font-medium">Actual Shipping Cost:</label>
+                  <div className="flex space-x-2 mt-1">
+                    <Input
+                      type="number"
+                      placeholder="Enter actual cost"
+                      value={actualShippingCost}
+                      onChange={(e) => setActualShippingCost(e.target.value)}
+                      className="flex-1"
+                      min="0"
+                      step="0.01"
+                    />
+                    <Button
+                      onClick={() => updateShippingCostMutation.mutate({ 
+                        orderId: order.id, 
+                        actualShippingCost: parseFloat(actualShippingCost) || 0
+                      })}
+                      disabled={updateShippingCostMutation.isPending || !actualShippingCost}
+                      size="sm"
+                    >
+                      {updateShippingCostMutation.isPending ? "Saving..." : "Save"}
+                    </Button>
+                  </div>
+                </div>
+                
+                <div className="text-xs text-gray-500">
+                  <p>This cost is used for profit calculations and doesn't affect customer payments.</p>
                 </div>
               </CardContent>
             </Card>

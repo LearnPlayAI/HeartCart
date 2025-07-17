@@ -170,7 +170,8 @@ export const orders = pgTable("orders", {
   shippingCity: text("shippingCity").notNull(),
   shippingPostalCode: text("shippingPostalCode").notNull(),
   shippingMethod: text("shippingMethod").notNull().default("standard"), // standard, express
-  shippingCost: doublePrecision("shippingCost").notNull().default(85), // R85 for PUDO
+  shippingCost: doublePrecision("shippingCost").notNull().default(85), // R85 for PUDO - customer payment amount
+  actualShippingCost: doublePrecision("actualShippingCost").default(60), // Actual shipping cost to company for profit calculation
   
   // Payment information
   paymentMethod: text("paymentMethod").notNull().default("eft"), // eft, card

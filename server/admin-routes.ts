@@ -527,6 +527,44 @@ router.patch("/orders/:id/tracking", isAuthenticated, asyncHandler(async (req: R
   }
 }));
 
+// Update actual shipping cost
+router.patch("/orders/:id/actual-shipping-cost", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    // TODO: Add admin role check here
+    const orderId = parseInt(req.params.id);
+    const { actualShippingCost } = req.body;
+    
+    if (isNaN(orderId)) {
+      return sendError(res, "Invalid order ID", 400);
+    }
+
+    if (actualShippingCost === undefined || actualShippingCost === null) {
+      return sendError(res, "Actual shipping cost is required", 400);
+    }
+
+    const parsedCost = parseFloat(actualShippingCost);
+    if (isNaN(parsedCost) || parsedCost < 0) {
+      return sendError(res, "Invalid shipping cost value", 400);
+    }
+
+    const updatedOrder = await storage.updateOrderActualShippingCost(orderId, parsedCost);
+    
+    if (!updatedOrder) {
+      return sendError(res, "Order not found", 404);
+    }
+
+    logger.info("Order actual shipping cost updated by admin", { 
+      orderId, 
+      actualShippingCost: parsedCost, 
+      adminUserId: req.user?.id 
+    });
+    return sendSuccess(res, updatedOrder);
+  } catch (error) {
+    logger.error("Error updating actual shipping cost", { error, orderId: req.params.id });
+    return sendError(res, "Failed to update actual shipping cost", 500);
+  }
+}));
+
 // Mark payment as received
 router.post("/orders/:id/payment-received", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
   try {
