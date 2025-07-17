@@ -12930,8 +12930,8 @@ export class DatabaseStorage implements IStorage {
       // Get total credits issued
       const [totalCreditsResult] = await db
         .select({ 
-          totalIssued: sql<number>`COALESCE(SUM(CASE WHEN transaction_type = 'earned' THEN amount ELSE 0 END), 0)`,
-          totalUsed: sql<number>`COALESCE(SUM(CASE WHEN transaction_type = 'used' THEN amount ELSE 0 END), 0)`,
+          totalIssued: sql<number>`COALESCE(SUM(CASE WHEN "transactionType" = 'earned' THEN CAST(amount AS DECIMAL(10,2)) ELSE 0 END), 0)`,
+          totalUsed: sql<number>`COALESCE(SUM(CASE WHEN "transactionType" = 'used' THEN CAST(amount AS DECIMAL(10,2)) ELSE 0 END), 0)`,
           totalTransactions: sql<number>`COUNT(*)`,
         })
         .from(creditTransactions);
@@ -12939,17 +12939,17 @@ export class DatabaseStorage implements IStorage {
       // Get total customers with credits
       const [customersWithCreditsResult] = await db
         .select({ 
-          count: sql<number>`COUNT(DISTINCT user_id)` 
+          count: sql<number>`COUNT(DISTINCT "userId")` 
         })
         .from(creditTransactions);
 
       // Get outstanding credit balance
       const [outstandingBalanceResult] = await db
         .select({ 
-          totalOutstanding: sql<number>`COALESCE(SUM(CAST(available_credit_amount AS DECIMAL(10,2))), 0)` 
+          totalOutstanding: sql<number>`COALESCE(SUM(CAST("availableCreditAmount" AS DECIMAL(10,2))), 0)` 
         })
         .from(customerCredits)
-        .where(sql`CAST(available_credit_amount AS DECIMAL(10,2)) > 0`);
+        .where(sql`CAST("availableCreditAmount" AS DECIMAL(10,2)) > 0`);
 
       // Get recent credit activity (last 30 days)
       const thirtyDaysAgo = new Date();
@@ -12958,10 +12958,10 @@ export class DatabaseStorage implements IStorage {
       const [recentActivityResult] = await db
         .select({ 
           recentTransactions: sql<number>`COUNT(*)`,
-          recentAmount: sql<number>`COALESCE(SUM(CASE WHEN transaction_type = 'earned' THEN amount ELSE 0 END), 0)`,
+          recentAmount: sql<number>`COALESCE(SUM(CASE WHEN "transactionType" = 'earned' THEN CAST(amount AS DECIMAL(10,2)) ELSE 0 END), 0)`,
         })
         .from(creditTransactions)
-        .where(sql`created_at >= ${thirtyDaysAgo.toISOString()}`);
+        .where(sql`"createdAt" >= ${thirtyDaysAgo.toISOString()}`);
 
       return {
         totalCreditsIssued: parseFloat(totalCreditsResult.totalIssued.toString()),
@@ -12991,7 +12991,7 @@ export class DatabaseStorage implements IStorage {
           totalCreditAmount: customerCredits.totalCreditAmount,
           availableCreditAmount: customerCredits.availableCreditAmount,
           lastActivity: sql<string>`(
-            SELECT MAX(created_at) 
+            SELECT MAX("createdAt") 
             FROM "creditTransactions" 
             WHERE "creditTransactions"."userId" = users.id
           )`,
