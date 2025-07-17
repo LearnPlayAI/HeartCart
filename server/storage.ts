@@ -7690,12 +7690,12 @@ export class DatabaseStorage implements IStorage {
       }
       // For 'all' status, we don't add a status filter
       
-      // Date range filter
+      // Date range filter - convert to proper date format for comparison
       if (startDate) {
-        whereConditions.push(gte(orders.createdAt, startDate));
+        whereConditions.push(gte(orders.createdAt, `${startDate}T00:00:00.000Z`));
       }
       if (endDate) {
-        whereConditions.push(lte(orders.createdAt, endDate));
+        whereConditions.push(lte(orders.createdAt, `${endDate}T23:59:59.999Z`));
       }
       
       // Get filtered orders with their items and product cost prices
@@ -7731,10 +7731,10 @@ export class DatabaseStorage implements IStorage {
       if (startDate || endDate) {
         const commissionWhereConditions = [];
         if (startDate) {
-          commissionWhereConditions.push(gte(repPayments.createdAt, startDate));
+          commissionWhereConditions.push(gte(repPayments.createdAt, `${startDate}T00:00:00.000Z`));
         }
         if (endDate) {
-          commissionWhereConditions.push(lte(repPayments.createdAt, endDate));
+          commissionWhereConditions.push(lte(repPayments.createdAt, `${endDate}T23:59:59.999Z`));
         }
         if (commissionWhereConditions.length > 0) {
           commissionQuery = commissionQuery.where(and(...commissionWhereConditions));
@@ -7846,7 +7846,13 @@ export class DatabaseStorage implements IStorage {
         },
       };
     } catch (error) {
-      logger.error("Error calculating financial summary", { error });
+      logger.error("Error calculating financial summary", { 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        startDate,
+        endDate,
+        orderStatus
+      });
       
       // Return empty state on error
       return {
