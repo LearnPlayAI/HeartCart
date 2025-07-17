@@ -4090,6 +4090,11 @@ export class DatabaseStorage implements IStorage {
           if (status === 'shipped') {
             updateData.shippedAt = now;
           }
+          
+          // If status is delivered, set deliveredAt timestamp
+          if (status === 'delivered') {
+            updateData.deliveredAt = now;
+          }
 
           // Update the order with the new status and timestamps
           const [updatedOrder] = await db

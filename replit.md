@@ -584,6 +584,9 @@ Changelog:
   * Added customer credits used as a cost item in Total Costs breakdown
   * Customer credits used during purchases now properly counted as business costs in financial analysis
   * Updated both backend calculations and frontend display to include customer credits line item
+  * Fixed date filtering issue in financial analysis by converting input dates to proper ISO format ranges
+  * Enhanced error handling for debugging date filtering issues  
+  * Fixed missing deliveredAt timestamp: orders now properly populate deliveredAt field when status changes to "delivered"
 - July 2, 2025. Complete featured products system with redirect-based navigation:
   * Created new /featured page displaying ALL featured products without pagination limitations
   * Added /api/featured-products/all endpoint for fetching complete featured product catalog
