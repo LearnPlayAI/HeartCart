@@ -347,6 +347,7 @@ export interface IStorage {
   getOrderItems(orderId: number): Promise<(OrderItem & { product: Product })[]>;
   updateOrderStatus(id: number, status: string): Promise<Order | undefined>;
   updateOrder(id: number, updateData: Partial<Order>): Promise<Order | undefined>;
+  deleteOrder(id: number): Promise<boolean>;
   
   // YoCo payment operations
   getOrderByYocoCheckoutId(checkoutId: string): Promise<Order | undefined>;
@@ -4321,6 +4322,69 @@ export class DatabaseStorage implements IStorage {
         error,
         orderId: id,
         updateData,
+      });
+      throw error;
+    }
+  }
+
+  // Delete order with cascade deletion of related records
+  async deleteOrder(id: number): Promise<boolean> {
+    try {
+      // First check if the order exists
+      const [existingOrder] = await db
+        .select()
+        .from(orders)
+        .where(eq(orders.id, id));
+
+      if (!existingOrder) {
+        logger.warn(`Attempted to delete non-existent order`, { orderId: id });
+        return false;
+      }
+
+      // Begin transaction to ensure all related records are deleted
+      await db.transaction(async (tx) => {
+        // Delete order status history
+        await tx
+          .delete(orderStatusHistory)
+          .where(eq(orderStatusHistory.orderId, id));
+
+        // Delete order item supplier status if it exists
+        const orderItemIds = await tx
+          .select({ id: orderItems.id })
+          .from(orderItems)
+          .where(eq(orderItems.orderId, id));
+
+        if (orderItemIds.length > 0) {
+          // Delete supplier status for each order item
+          for (const item of orderItemIds) {
+            await tx
+              .delete(orderItemSupplierStatus)
+              .where(eq(orderItemSupplierStatus.orderItemId, item.id));
+          }
+        }
+
+        // Delete order items
+        await tx
+          .delete(orderItems)
+          .where(eq(orderItems.orderId, id));
+
+        // Finally delete the order itself
+        await tx
+          .delete(orders)
+          .where(eq(orders.id, id));
+      });
+
+      logger.info(`Order deleted successfully`, {
+        orderId: id,
+        orderNumber: existingOrder.orderNumber,
+        customerEmail: existingOrder.customerEmail,
+      });
+
+      return true;
+    } catch (error) {
+      logger.error(`Error deleting order`, {
+        error,
+        orderId: id,
       });
       throw error;
     }

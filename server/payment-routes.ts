@@ -43,7 +43,7 @@ router.post('/card/checkout', isAuthenticated, asyncHandler(async (req: Request,
     try {
       const customer = await storage.getUserById(customerId);
       customerFullName = customer?.fullName || `${customer?.firstName || ''} ${customer?.lastName || ''}`.trim() || 'Unknown Customer';
-      customerPhone = customer?.phone || '+27712063084'; // Use default TeeMeYou contact number as fallback
+      customerPhone = customer?.phone || ''; // ALWAYS use customer's actual phone number, never fallback
       console.log('✅ Customer data fetched from database:', {
         customerId,
         customerFullName,
@@ -55,7 +55,7 @@ router.post('/card/checkout', isAuthenticated, asyncHandler(async (req: Request,
     } catch (error) {
       console.error('❌ Failed to fetch customer data from database:', error);
       customerFullName = 'Unknown Customer';
-      customerPhone = '+27712063084'; // Use default TeeMeYou contact number as fallback
+      customerPhone = ''; // ALWAYS use customer's actual phone number, never fallback
     }
 
     // Convert total amount to cents (YoCo requires cents)

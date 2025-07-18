@@ -131,6 +131,16 @@ TeeMeYou is a comprehensive e-commerce platform built as a dropshipping solution
 ## Changelog
 ```
 Changelog:
+- July 18, 2025. Complete admin order deletion system and phone number fallback fix implemented:
+  * Added comprehensive delete order functionality with admin-only access and confirmation dialogs
+  * Implemented backend DELETE endpoint `/api/admin/orders/:id` with proper validation and cascade deletion
+  * Enhanced OrderCard and OrderTable components with delete buttons, confirmation dialogs, and loading states
+  * Added proper cascade deletion for all related records: orderItems, orderStatusHistory, orderItemSupplierStatus
+  * CRITICAL FIX: Resolved admin fallback phone number issue - system now ALWAYS uses customer's actual phone number
+  * Fixed payment-routes.ts to never use fallback phone number "+27712063084" - always uses customer's actual phone from database
+  * Updated phone number handling to use customer's actual phone number or empty string, never admin fallback
+  * Delete functionality includes comprehensive safety measures with order details confirmation and automatic UI refresh
+  * Phone number fix ensures customer data integrity throughout order management system
 - July 17, 2025. Customer Credits Admin Management System and Invoice Integration implemented:
   * Added comprehensive customer credits management section to admin interface
   * Implemented backend API endpoints: /api/credits/admin/overview, /api/credits/admin/customers, /api/credits/admin/:userId/adjust, /api/credits/admin/transactions

@@ -5275,6 +5275,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
     })
   );
 
+  // Delete order endpoint (Admin only)
+  app.delete(
+    "/api/admin/orders/:id",
+    isAuthenticated,
+    asyncHandler(async (req: Request, res: Response) => {
+      const user = req.user as any;
+      const orderId = Number(req.params.id);
+      
+      // Check if user is admin
+      if (user.role !== 'admin') {
+        return res.status(403).json({
+          success: false,
+          error: { message: "Admin access required" }
+        });
+      }
+      
+      // Validate order ID
+      if (!orderId || isNaN(orderId)) {
+        return res.status(400).json({
+          success: false,
+          error: { message: "Valid order ID is required" }
+        });
+      }
+      
+      try {
+        // Check if order exists first
+        const existingOrder = await storage.getOrderById(orderId);
+        if (!existingOrder) {
+          return res.status(404).json({
+            success: false,
+            error: { message: "Order not found" }
+          });
+        }
+        
+        // Delete the order (this will cascade to delete related records)
+        const success = await storage.deleteOrder(orderId);
+        
+        if (!success) {
+          return res.status(500).json({
+            success: false,
+            error: { message: "Failed to delete order" }
+          });
+        }
+        
+        logger.info('Order deleted by admin', { 
+          adminId: user.id, 
+          orderId, 
+          orderNumber: existingOrder.orderNumber,
+          customerEmail: existingOrder.customerEmail
+        });
+        
+        return res.json({
+          success: true,
+          message: `Order #${existingOrder.orderNumber} deleted successfully`
+        });
+        
+      } catch (error) {
+        logger.error('Error deleting order', { 
+          error, 
+          adminId: user.id, 
+          orderId 
+        });
+        
+        return res.status(500).json({
+          success: false,
+          error: { message: "Failed to delete order" }
+        });
+      }
+    })
+  );
+
   // PRICING MANAGEMENT ROUTES - For admin use only
   
   // Get all pricing settings

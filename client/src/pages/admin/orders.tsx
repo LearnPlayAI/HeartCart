@@ -56,6 +56,7 @@ import {
   Upload,
   Search,
   Filter,
+  Trash2,
 } from 'lucide-react';
 
 // Types
@@ -298,13 +299,16 @@ function PudoTrackingModal({
 function OrderCard({ 
   order, 
   onStatusUpdate, 
-  onPaymentStatusUpdate 
+  onPaymentStatusUpdate,
+  onDelete
 }: { 
   order: Order; 
   onStatusUpdate: (orderId: number, status: string, trackingUrl?: string) => void;
   onPaymentStatusUpdate: (orderId: number, paymentStatus: string) => void;
+  onDelete: (orderId: number) => void;
 }) {
   const [showPudoModal, setShowPudoModal] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const statusConfig = getStatusConfig(order.status);
   const paymentConfig = getPaymentStatusConfig(order.paymentStatus);
 
@@ -319,6 +323,11 @@ function OrderCard({
   const handlePudoConfirm = (trackingUrl: string) => {
     onStatusUpdate(order.id, 'shipped', trackingUrl);
     setShowPudoModal(false);
+  };
+
+  const handleDeleteConfirm = () => {
+    onDelete(order.id);
+    setShowDeleteDialog(false);
   };
 
   return (
@@ -479,7 +488,16 @@ function OrderCard({
         </div>
 
         {/* Actions */}
-        <div className="flex justify-end pt-2">
+        <div className="flex justify-between pt-2">
+          <Button 
+            size="sm" 
+            variant="outline" 
+            className="text-red-600 border-red-300 hover:bg-red-50"
+            onClick={() => setShowDeleteDialog(true)}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Delete
+          </Button>
           <Link href={`/admin/orders/${order.id}`}>
             <Button size="sm" className="bg-[#ff1493] text-[#ffffff] hover:bg-[#ff1493]/90">
               <Eye className="h-4 w-4 mr-2" />
@@ -496,6 +514,51 @@ function OrderCard({
         onConfirm={handlePudoConfirm}
         order={order}
       />
+      
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-red-600" />
+              Confirm Delete Order
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete Order #{order.orderNumber}? This action cannot be undone and will permanently remove all order data including order items and status history.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <div className="bg-red-100 p-2 rounded-full">
+                <User className="h-4 w-4 text-red-600" />
+              </div>
+              <div className="flex-1">
+                <h4 className="font-medium text-red-900 mb-1">Order Details</h4>
+                <p className="text-sm text-red-700">
+                  Customer: <strong>{order.customerName}</strong><br />
+                  Email: {order.customerEmail}<br />
+                  Total: {formatCurrency(order.totalAmount)}<br />
+                  Status: {order.status}
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleDeleteConfirm}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete Order
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
@@ -504,11 +567,13 @@ function OrderCard({
 function OrderTable({ 
   orders, 
   onStatusUpdate, 
-  onPaymentStatusUpdate 
+  onPaymentStatusUpdate,
+  onDelete
 }: { 
   orders: Order[]; 
   onStatusUpdate: (orderId: number, status: string) => void;
   onPaymentStatusUpdate: (orderId: number, paymentStatus: string) => void;
+  onDelete: (orderId: number) => void;
 }) {
   return (
     <Card>
@@ -614,12 +679,22 @@ function OrderTable({
                   {formatDate(order.createdAt)}
                 </TableCell>
                 <TableCell>
-                  <Link href={`/admin/orders/${order.id}`}>
-                    <Button size="sm" variant="outline">
-                      <Eye className="h-4 w-4 mr-2" />
-                      View
+                  <div className="flex gap-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="text-red-600 border-red-300 hover:bg-red-50"
+                      onClick={() => onDelete(order.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
                     </Button>
-                  </Link>
+                    <Link href={`/admin/orders/${order.id}`}>
+                      <Button size="sm" variant="outline">
+                        <Eye className="h-4 w-4 mr-2" />
+                        View
+                      </Button>
+                    </Link>
+                  </div>
                 </TableCell>
               </TableRow>
             );
@@ -693,6 +768,31 @@ export default function AdminOrdersPage() {
     }
   });
 
+  // Delete order mutation
+  const deleteOrderMutation = useMutation({
+    mutationFn: async (orderId: number) => {
+      return await apiRequest('DELETE', `/api/admin/orders/${orderId}`);
+    },
+    onSuccess: (data) => {
+      // Invalidate and refetch orders list to update statistics and order display
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
+      refetch(); // Force immediate refetch
+      
+      toast({
+        title: "Order Deleted",
+        description: data.message || "Order has been successfully deleted.",
+      });
+    },
+    onError: (error: any) => {
+      console.error('Delete order error:', error);
+      toast({
+        variant: "destructive",
+        title: "Delete Failed",
+        description: error.message || "Failed to delete order. Please try again.",
+      });
+    }
+  });
+
   const orders = response?.data || [];
   
   // Handle status update
@@ -703,6 +803,11 @@ export default function AdminOrdersPage() {
   // Handle payment status update
   const handlePaymentStatusUpdate = (orderId: number, paymentStatus: string) => {
     updatePaymentStatusMutation.mutate({ orderId, paymentStatus });
+  };
+  
+  // Handle delete order
+  const handleDeleteOrder = (orderId: number) => {
+    deleteOrderMutation.mutate(orderId);
   };
   
   // Enhanced filtering and sorting logic
@@ -943,6 +1048,7 @@ export default function AdminOrdersPage() {
                   order={order} 
                   onStatusUpdate={handleStatusUpdate}
                   onPaymentStatusUpdate={handlePaymentStatusUpdate}
+                  onDelete={handleDeleteOrder}
                 />
               ))}
             </div>
@@ -951,6 +1057,7 @@ export default function AdminOrdersPage() {
               orders={filteredOrders} 
               onStatusUpdate={handleStatusUpdate}
               onPaymentStatusUpdate={handlePaymentStatusUpdate}
+              onDelete={handleDeleteOrder}
             />
           )}
         </div>
