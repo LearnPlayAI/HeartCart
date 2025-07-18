@@ -338,6 +338,7 @@ export default function AdminOrderDetail() {
   const [supplierOrderDate, setSupplierOrderDate] = useState("");
   const [adminNotes, setAdminNotes] = useState("");
   const [actualShippingCost, setActualShippingCost] = useState("");
+  const [copiedField, setCopiedField] = useState<string | null>(null);
 
   // Force cache invalidation on component mount to ensure fresh data
   useEffect(() => {
@@ -346,6 +347,50 @@ export default function AdminOrderDetail() {
       queryClient.removeQueries({ queryKey: ['/api/admin/supplier-orders', orderId] });
     }
   }, [queryClient, orderId]);
+
+  // Copy to clipboard function
+  const copyToClipboard = async (text: string, fieldName: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedField(fieldName);
+      toast({
+        title: "Copied to clipboard",
+        description: `${fieldName} copied successfully`,
+      });
+      setTimeout(() => setCopiedField(null), 2000);
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        description: "Failed to copy to clipboard",
+      });
+    }
+  };
+
+  // Copyable field component
+  const CopyableField = ({ label, value, fieldName }: { label: string; value: string; fieldName: string }) => (
+    <div>
+      <label className="text-sm font-medium text-gray-600">{label}</label>
+      <div className="flex items-center gap-2">
+        <p className="text-sm font-semibold text-gray-800 flex-1">
+          {value || 'Not provided'}
+        </p>
+        {value && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => copyToClipboard(value, fieldName)}
+            className="h-6 w-6 p-0 hover:bg-gray-100"
+          >
+            {copiedField === fieldName ? (
+              <Check className="h-3 w-3 text-green-600" />
+            ) : (
+              <Copy className="h-3 w-3 text-gray-500" />
+            )}
+          </Button>
+        )}
+      </div>
+    </div>
+  );
 
   const { data: response, isLoading, error } = useQuery({
     queryKey: ['/api/admin/orders', orderId],
@@ -1073,24 +1118,9 @@ export default function AdminOrderDetail() {
                   </h4>
                   <div className="space-y-3">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-sm font-medium text-gray-600">Customer Name</label>
-                        <p className="text-sm font-semibold text-gray-800">
-                          {order.customerName || 'Not provided'}
-                        </p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-600">Email Address</label>
-                        <p className="text-sm font-semibold text-gray-800">
-                          {order.customerEmail || 'Not provided'}
-                        </p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-600">Phone Number</label>
-                        <p className="text-sm font-semibold text-gray-800">
-                          {order.customerPhone || 'Not provided'}
-                        </p>
-                      </div>
+                      <CopyableField label="Customer Name" value={order.customerName} fieldName="Customer Name" />
+                      <CopyableField label="Email Address" value={order.customerEmail} fieldName="Email Address" />
+                      <CopyableField label="Phone Number" value={order.customerPhone} fieldName="Phone Number" />
                       <div>
                         <label className="text-sm font-medium text-gray-600">Payment Amount</label>
                         <p className="text-sm font-semibold text-gray-800">
@@ -1187,24 +1217,9 @@ export default function AdminOrderDetail() {
                   </h4>
                   <div className="space-y-3">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-sm font-medium text-gray-600">Customer Name</label>
-                        <p className="text-sm font-semibold text-gray-800">
-                          {order.customerName || 'Not provided'}
-                        </p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-600">Email Address</label>
-                        <p className="text-sm font-semibold text-gray-800">
-                          {order.customerEmail || 'Not provided'}
-                        </p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-600">Phone Number</label>
-                        <p className="text-sm font-semibold text-gray-800">
-                          {order.customerPhone || 'Not provided'}
-                        </p>
-                      </div>
+                      <CopyableField label="Customer Name" value={order.customerName} fieldName="Customer Name" />
+                      <CopyableField label="Email Address" value={order.customerEmail} fieldName="Email Address" />
+                      <CopyableField label="Phone Number" value={order.customerPhone} fieldName="Phone Number" />
                       <div>
                         <label className="text-sm font-medium text-gray-600">Payment Amount</label>
                         <p className="text-sm font-semibold text-gray-800">
@@ -1456,7 +1471,23 @@ export default function AdminOrderDetail() {
                         {(order.lockerDetails?.code || order.pudoLocker?.code)}
                       </div>
                       <span className="text-gray-400">•</span>
-                      <span className="font-medium">{(order.lockerDetails?.name || order.pudoLocker?.name)}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium flex-1">{(order.lockerDetails?.name || order.pudoLocker?.name)}</span>
+                        {(order.lockerDetails?.name || order.pudoLocker?.name) && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => copyToClipboard((order.lockerDetails?.name || order.pudoLocker?.name), 'PUDO Locker Name')}
+                            className="h-6 w-6 p-0 hover:bg-gray-100"
+                          >
+                            {copiedField === 'PUDO Locker Name' ? (
+                              <Check className="h-3 w-3 text-green-600" />
+                            ) : (
+                              <Copy className="h-3 w-3 text-gray-500" />
+                            )}
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
 
