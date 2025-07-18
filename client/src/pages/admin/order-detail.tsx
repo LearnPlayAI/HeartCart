@@ -351,7 +351,16 @@ export default function AdminOrderDetail() {
   // Copy to clipboard function
   const copyToClipboard = async (text: string, fieldName: string) => {
     try {
-      await navigator.clipboard.writeText(text);
+      let copyText = text;
+      
+      // Special handling for phone numbers - only copy last 9 digits
+      if (fieldName === 'Phone Number') {
+        // Remove any non-digit characters and get last 9 digits
+        const digitsOnly = text.replace(/\D/g, '');
+        copyText = digitsOnly.slice(-9);
+      }
+      
+      await navigator.clipboard.writeText(copyText);
       setCopiedField(fieldName);
       toast({
         title: "Copied to clipboard",
