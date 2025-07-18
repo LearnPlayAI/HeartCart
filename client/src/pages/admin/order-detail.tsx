@@ -47,7 +47,9 @@ import {
   MessageSquare,
   ShoppingCart,
   Building2,
-  Download
+  Download,
+  Copy,
+  Check
 } from 'lucide-react';
 import OrderStatusTimeline from '@/components/OrderStatusTimeline';
 
