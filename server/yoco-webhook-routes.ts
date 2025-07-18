@@ -8,7 +8,7 @@ import asyncHandler from 'express-async-handler';
 import { yocoService, YocoPaymentEvent } from './yoco-service.js';
 import { databaseEmailService } from './database-email-service.js';
 import { db } from './db';
-import { products } from '../shared/schema.js';
+import { products, users } from '../shared/schema.js';
 import { eq } from 'drizzle-orm';
 
 const router = Router();
@@ -99,7 +99,28 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
     
     // ENHANCED: Use fallback values for non-critical fields instead of failing entire order
     const finalCustomerFullName = customerFullName || cartData.customerName || `Customer ${customerId}`;
-    const finalCustomerPhone = customerPhone || cartData.customerPhone || '+27712063084'; // Use TeeMeYou contact as fallback
+    
+    // CRITICAL FIX: Always fetch the user's actual phone number - never use admin fallback
+    let finalCustomerPhone = customerPhone || cartData.customerPhone;
+    
+    // If phone number is missing from payment data, fetch it from the user's database profile
+    if (!finalCustomerPhone) {
+      try {
+        const userProfile = await db
+          .select({ phoneNumber: users.phoneNumber })
+          .from(users)
+          .where(eq(users.id, customerId))
+          .limit(1);
+        
+        if (userProfile.length > 0 && userProfile[0].phoneNumber) {
+          finalCustomerPhone = userProfile[0].phoneNumber;
+        } else {
+          return res.status(400).json({ error: 'Customer phone number not found in user profile' });
+        }
+      } catch (error) {
+        return res.status(400).json({ error: 'Failed to fetch customer phone number from database' });
+      }
+    }
     
     if (!finalCustomerFullName || finalCustomerFullName.trim() === '') {
       return res.status(400).json({ error: 'Customer name missing from payment data' });
