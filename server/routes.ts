@@ -286,6 +286,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register File Manager testing routes
   registerFileManagerTestRoutes(app);
   
+  // Credit deduction debug endpoint removed - issue has been resolved
+  
   // Register favourites and analytics routes
   app.use('/api', favouritesRoutes);
   
