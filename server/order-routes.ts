@@ -433,7 +433,7 @@ router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Respons
     }
     
     // ONLY NOW deduct credits after successful order creation using transaction-based system
-    logger.info("Credit deduction check initiated", {
+    logger.info("Processing credit deduction after order creation", {
       orderDataCreditUsed: orderData.creditUsed,
       userId: userId,
       orderId: newOrder.id,
@@ -446,7 +446,7 @@ router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Respons
       : orderData.creditUsed;
 
     if (creditUsedAmount && creditUsedAmount > 0) {
-      logger.info("Processing credit deduction for order", {
+      logger.info("Credit deduction condition met - processing payment", {
         userId: userId,
         creditAmount: creditUsedAmount,
         orderId: newOrder.id,
@@ -483,7 +483,7 @@ router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Respons
         // This ensures order completion even if there's a credit system issue
       }
     } else {
-      logger.info("No credits to deduct for this order", {
+      logger.info("No credit deduction required for this order", {
         orderDataCreditUsed: orderData.creditUsed,
         userId: userId,
         orderNumber: newOrder.orderNumber
