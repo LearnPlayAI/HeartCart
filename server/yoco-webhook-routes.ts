@@ -254,7 +254,8 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
     const selectedLockerAddress = cartData.lockerDetails?.address || cartData.selectedLockerAddress || null;
     const selectedLockerCode = cartData.lockerDetails?.code || cartData.selectedLockerCode || null;
     
-
+    // CRITICAL FIX: Extract credit usage information from cart data
+    const creditUsed = cartData.creditUsed || orderData.creditUsed || 0;
 
     // Create order with payment information included (camelCase naming convention)
     const order = {
@@ -288,6 +289,7 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
       transactionFeeAmount: fees.feeAmount,
       transactionFeePercentage: fees.feePercentage,
       paymentReceivedDate: new Date().toISOString(),
+      creditUsed: creditUsed, // Include credit usage in order
     };
 
     // Use the exact same method signature as EFT flow: createOrder(order, orderItems)
@@ -308,6 +310,45 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
       'order_created_after_payment',
       `Order created after successful card payment. Payment ID: ${payment.id}. Transaction fee: R${fees.feeAmount.toFixed(2)} (${fees.feePercentage}%)`
     );
+
+    // CRITICAL FIX: Deduct customer credits if credits were used in the order
+    if (creditUsed > 0) {
+      try {
+        await storage.useUserCredits(
+          customerId,
+          creditUsed,
+          `Credits used for Order #${newOrder.orderNumber}`,
+          newOrder.id
+        );
+        
+        console.log(`✅ Successfully deducted R${creditUsed} credits from customer ${customerId} for order ${newOrder.id}`);
+        
+        // Add additional status history entry for credit deduction
+        await storage.addOrderStatusHistory(
+          newOrder.id,
+          'confirmed',
+          'payment_received',
+          'system',
+          null,
+          'credits_deducted',
+          `R${creditUsed.toFixed(2)} credits deducted from customer balance for this order`
+        );
+        
+      } catch (creditError) {
+        console.error(`❌ Failed to deduct credits for order ${newOrder.id}:`, creditError);
+        
+        // Log the credit deduction failure but don't fail the entire order
+        await storage.addOrderStatusHistory(
+          newOrder.id,
+          'confirmed',
+          'payment_received',
+          'system',
+          null,
+          'credit_deduction_failed',
+          `Failed to deduct R${creditUsed.toFixed(2)} credits: ${creditError.message}`
+        );
+      }
+    }
 
 
 
