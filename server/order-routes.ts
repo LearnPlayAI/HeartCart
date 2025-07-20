@@ -433,11 +433,8 @@ router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Respons
     }
     
     // ONLY NOW deduct credits after successful order creation using transaction-based system
-    logger.info("🔍 CREDIT DEBUG: Checking credit deduction conditions", {
+    logger.info("Credit deduction check initiated", {
       orderDataCreditUsed: orderData.creditUsed,
-      creditUsedType: typeof orderData.creditUsed,
-      creditUsedGreaterThanZero: orderData.creditUsed > 0,
-      conditionResult: !!(orderData.creditUsed && orderData.creditUsed > 0),
       userId: userId,
       orderId: newOrder.id,
       orderNumber: newOrder.orderNumber
@@ -449,13 +446,11 @@ router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Respons
       : orderData.creditUsed;
 
     if (creditUsedAmount && creditUsedAmount > 0) {
-      logger.info("🔍 CREDIT DEBUG: Credit deduction condition MET, proceeding with useUserCredits", {
+      logger.info("Processing credit deduction for order", {
         userId: userId,
         creditAmount: creditUsedAmount,
-        originalCreditUsed: orderData.creditUsed,
         orderId: newOrder.id,
-        orderNumber: newOrder.orderNumber,
-        description: `Credit applied to order #${newOrder.orderNumber}`
+        orderNumber: newOrder.orderNumber
       });
 
       try {
@@ -467,37 +462,30 @@ router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Respons
           newOrder.id
         );
         
-        logger.info("✅ CREDIT DEBUG: Credit successfully deducted after order creation", {
+        logger.info("Credit successfully deducted after order creation", {
           userId: userId,
           orderId: newOrder.id,
           orderNumber: newOrder.orderNumber,
           creditUsed: creditUsedAmount,
-          creditTransactionId: creditResult.id,
-          creditResult: creditResult
+          creditTransactionId: creditResult.id
         });
       } catch (creditError) {
-        logger.error("❌ CREDIT DEBUG: Credit deduction failed after order creation", {
+        logger.error("Credit deduction failed after order creation", {
           error: creditError,
           errorMessage: creditError.message,
-          errorStack: creditError.stack,
           userId: userId,
           orderId: newOrder.id,
           orderNumber: newOrder.orderNumber,
-          requestedCredit: creditUsedAmount,
-          requestedCreditType: typeof orderData.creditUsed,
-          originalCreditUsed: orderData.creditUsed
+          requestedCredit: creditUsedAmount
         });
         
         // Note: Order was already created successfully, credit deduction failure is logged but doesn't fail the order
         // This ensures order completion even if there's a credit system issue
       }
     } else {
-      logger.info("🔍 CREDIT DEBUG: Credit deduction condition NOT MET", {
+      logger.info("No credits to deduct for this order", {
         orderDataCreditUsed: orderData.creditUsed,
-        creditUsedExists: !!orderData.creditUsed,
-        creditUsedGreaterThanZero: orderData.creditUsed > 0,
         userId: userId,
-        orderId: newOrder.id,
         orderNumber: newOrder.orderNumber
       });
     }
