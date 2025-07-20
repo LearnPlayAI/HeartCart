@@ -538,12 +538,6 @@ export default function CustomerCreditsPage() {
                             customerEmail={customer.email}
                             availableCredit={parseFloat(customer.availableCreditAmount)}
                           />
-                          <CreditReminderModal
-                            customerId={customer.userId}
-                            customerName={customer.fullName || customer.username}
-                            customerEmail={customer.email}
-                            availableCredit={parseFloat(customer.availableCreditAmount)}
-                          />
                         </div>
                       </TableCell>
                     </TableRow>
