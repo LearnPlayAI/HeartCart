@@ -133,6 +133,7 @@ import {
 } from "drizzle-orm";
 import { objectStore, STORAGE_FOLDERS } from "./object-store";
 import { logger } from "./logger";
+import { unifiedEmailService } from "./unified-email-service";
 
 export interface IStorage {
   // User operations
@@ -12876,6 +12877,40 @@ export class DatabaseStorage implements IStorage {
           newAvailableBalance: availableCreditAmount,
           transactionId: transaction.id
         });
+
+        // Send credit notification email to customer
+        try {
+          const user = await this.getUser(userId);
+          if (user && user.email) {
+            const customerName = user.fullName || user.username || 'Customer';
+            await unifiedEmailService.sendCreditNotificationEmail(
+              user.email,
+              customerName,
+              amount,
+              description
+            );
+            logger.info('Credit notification email sent', {
+              userId,
+              email: user.email,
+              amount,
+              description
+            });
+          } else {
+            logger.warn('Unable to send credit notification email - user or email not found', {
+              userId,
+              userFound: !!user,
+              emailFound: user?.email ? true : false
+            });
+          }
+        } catch (emailError) {
+          // Log email error but don't fail the credit transaction
+          logger.error('Failed to send credit notification email', {
+            error: emailError,
+            userId,
+            amount,
+            description
+          });
+        }
 
         return transaction;
       });
