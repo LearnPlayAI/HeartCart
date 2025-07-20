@@ -268,7 +268,9 @@ export class InvoiceGenerator {
     
     doc.setFont('helvetica', 'bold');
     doc.text('Total:', totalsX, yPosition);
-    doc.text(`R${data.totalAmount.toFixed(2)}`, totalsX + 30, yPosition);
+    // Calculate final total after credit deduction
+    const finalTotal = data.totalAmount - (data.creditUsed || 0);
+    doc.text(`R${finalTotal.toFixed(2)}`, totalsX + 30, yPosition);
 
     yPosition += 20;
 
@@ -657,9 +659,14 @@ export class InvoiceGenerator {
                     <td class="label">VAT No: ${data.vatRegistrationNumber}</td>
                     <td class="amount"></td>
                 </tr>` : ''}
+                ${data.creditUsed && data.creditUsed > 0 ? `
+                <tr>
+                    <td class="label">Store Credit Used:</td>
+                    <td class="amount">-${formatCurrency(data.creditUsed)}</td>
+                </tr>` : ''}
                 <tr>
                     <td class="label">TOTAL:</td>
-                    <td class="amount">${formatCurrency(data.totalAmount)}</td>
+                    <td class="amount">${formatCurrency(data.totalAmount - (data.creditUsed || 0))}</td>
                 </tr>
             </table>
         </div>

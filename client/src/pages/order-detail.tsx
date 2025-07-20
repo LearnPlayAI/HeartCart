@@ -98,6 +98,7 @@ interface OrderType {
   paymentStatus: string;
   subtotalAmount: number;
   totalAmount: number;
+  creditUsed?: number;
   customerNotes: string | null;
   adminNotes: string | null;
   trackingNumber: string | null;
@@ -893,10 +894,16 @@ ${order.customerName}`;
                     <span>{formatCurrency(order.vatAmount)}</span>
                   </div>
                 )}
+                {order.creditUsed && order.creditUsed > 0 && (
+                  <div className="flex justify-between text-green-600">
+                    <span>Credit Used</span>
+                    <span>-{formatCurrency(order.creditUsed)}</span>
+                  </div>
+                )}
                 <Separator />
                 <div className="flex justify-between font-semibold text-lg">
                   <span>Total</span>
-                  <span className="text-[#FF69B4]">{formatCurrency(order.totalAmount)}</span>
+                  <span className="text-[#FF69B4]">{formatCurrency(order.totalAmount - (order.creditUsed || 0))}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Method</span>
