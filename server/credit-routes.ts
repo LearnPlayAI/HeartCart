@@ -365,4 +365,86 @@ router.get("/admin/transactions", isAuthenticated, asyncHandler(async (req, res)
   }
 }));
 
+// Admin route: Send credit reminder email to customer
+router.post("/admin/send-reminder", isAuthenticated, asyncHandler(async (req, res) => {
+  if (req.user?.role !== 'admin') {
+    return res.status(403).json({
+      success: false,
+      error: "Admin access required"
+    });
+  }
+
+  const sendReminderSchema = z.object({
+    userId: z.number().positive()
+  });
+
+  try {
+    const { userId } = sendReminderSchema.parse(req.body);
+
+    // Get user details and credit balance
+    const user = await storage.getUser(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: "User not found"
+      });
+    }
+
+    if (!user.email) {
+      return res.status(400).json({
+        success: false,
+        error: "User does not have an email address"
+      });
+    }
+
+    const creditBalance = await storage.getUserCreditBalance(userId);
+    const availableCredit = parseFloat(creditBalance.availableCreditAmount || '0');
+
+    if (availableCredit <= 0) {
+      return res.status(400).json({
+        success: false,
+        error: "User has no available credit to remind about"
+      });
+    }
+
+    // Import email service (inline to avoid circular dependency)
+    const { unifiedEmailService } = await import('./unified-email-service');
+    
+    const customerName = user.fullName || user.username || 'Customer';
+    
+    // Send reminder email
+    const emailResult = await unifiedEmailService.sendCreditReminderEmail(
+      user.email,
+      customerName,
+      availableCredit
+    );
+
+    if (!emailResult.success) {
+      return res.status(500).json({
+        success: false,
+        error: `Failed to send reminder email: ${emailResult.error}`
+      });
+    }
+
+    res.json({
+      success: true,
+      message: `Credit reminder email sent successfully to ${user.email}`,
+      data: {
+        userId,
+        email: user.email,
+        customerName,
+        availableCredit,
+        emailSent: true
+      }
+    });
+
+  } catch (error) {
+    console.error("Error sending credit reminder email:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to send credit reminder email"
+    });
+  }
+}));
+
 export default router;

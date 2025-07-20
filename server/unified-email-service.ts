@@ -739,6 +739,181 @@ export class UnifiedEmailService {
     }
   }
 
+  async sendCreditReminderEmail(email: string, customerName: string, availableCredit: number): Promise<{ success: boolean; error?: string }> {
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Don't Forget Your Store Credit - TeeMeYou</title>
+        <style>
+          @media (max-width: 600px) {
+            .container { width: 95% !important; margin: 10px auto !important; }
+            .header { padding: 20px !important; }
+            .content { padding: 25px !important; }
+            .credit-amount { font-size: 32px !important; }
+          }
+        </style>
+      </head>
+      <body style="margin: 0; padding: 0; background: linear-gradient(135deg, ${TEEMEYOU_COLORS.LIGHT_GRAY} 0%, ${TEEMEYOU_COLORS.WHITE} 100%); font-family: 'Segoe UI', Arial, sans-serif;">
+        <div class="container" style="max-width: 600px; margin: 20px auto; background: ${TEEMEYOU_COLORS.WHITE}; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 32px rgba(255, 105, 180, 0.2);">
+          
+          <!-- Header -->
+          <div class="header" style="background: linear-gradient(135deg, ${TEEMEYOU_COLORS.HOT_PINK} 0%, ${TEEMEYOU_COLORS.DARK_PINK} 100%); padding: 40px; text-align: center; position: relative;">
+            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 6px; background: linear-gradient(90deg, ${TEEMEYOU_COLORS.HOT_PINK} 0%, ${TEEMEYOU_COLORS.ACCENT_PINK} 50%, ${TEEMEYOU_COLORS.DARK_PINK} 100%);"></div>
+            <div style="display: inline-block; background: ${TEEMEYOU_COLORS.WHITE}; padding: 12px; border-radius: 50%; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);">
+              <span style="font-size: 28px; color: ${TEEMEYOU_COLORS.HOT_PINK};">💰</span>
+            </div>
+            <h1 style="color: ${TEEMEYOU_COLORS.WHITE}; margin: 0; font-size: 36px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3); letter-spacing: 1px;">TeeMeYou</h1>
+            <p style="color: ${TEEMEYOU_COLORS.WHITE}; margin: 8px 0 0 0; font-size: 16px; opacity: 0.9;">You Have Store Credit Waiting!</p>
+          </div>
+          
+          <!-- Main Content -->
+          <div class="content" style="padding: 40px; background: ${TEEMEYOU_COLORS.WHITE};">
+            <div style="text-align: center; margin-bottom: 30px;">
+              <div style="display: inline-block; background: linear-gradient(135deg, ${TEEMEYOU_COLORS.SUCCESS} 0%, ${TEEMEYOU_COLORS.HOT_PINK} 100%); padding: 12px; border-radius: 50%; margin-bottom: 15px;">
+                <span style="font-size: 32px; color: ${TEEMEYOU_COLORS.WHITE};">🎁</span>
+              </div>
+              <h2 style="color: ${TEEMEYOU_COLORS.DARK_PINK}; margin: 0; font-size: 28px; font-weight: 600;">Don't Forget Your Store Credit!</h2>
+            </div>
+            
+            <p style="font-size: 16px; line-height: 1.6; color: ${TEEMEYOU_COLORS.DARK_GRAY}; margin-bottom: 30px; text-align: center;">
+              Hi ${customerName}, you have store credit waiting to be used! Why not treat yourself to something special from our amazing collection?
+            </p>
+            
+            <!-- Credit Amount Display -->
+            <div style="background: linear-gradient(135deg, ${TEEMEYOU_COLORS.LIGHT_PINK} 0%, ${TEEMEYOU_COLORS.WHITE} 100%); border: 2px solid ${TEEMEYOU_COLORS.HOT_PINK}; padding: 30px; border-radius: 12px; text-align: center; margin: 30px 0;">
+              <p style="margin: 0 0 10px 0; font-size: 16px; color: ${TEEMEYOU_COLORS.DARK_GRAY}; font-weight: 500;">Your Available Store Credit</p>
+              <p class="credit-amount" style="margin: 0; font-size: 48px; font-weight: 800; color: ${TEEMEYOU_COLORS.HOT_PINK}; text-shadow: 0 2px 4px rgba(255, 105, 180, 0.3);">
+                R${availableCredit.toFixed(2)}
+              </p>
+              <p style="margin: 10px 0 0 0; font-size: 14px; color: ${TEEMEYOU_COLORS.DARK_GRAY}; font-style: italic;">
+                Ready to use at checkout
+              </p>
+            </div>
+            
+            <!-- Shop Now Button -->
+            <div style="text-align: center; margin: 40px 0;">
+              <a href="https://teemeyou.shop" 
+                 style="background: linear-gradient(135deg, ${TEEMEYOU_COLORS.HOT_PINK} 0%, ${TEEMEYOU_COLORS.DARK_PINK} 100%); 
+                        color: ${TEEMEYOU_COLORS.WHITE}; 
+                        padding: 16px 32px; 
+                        text-decoration: none; 
+                        border-radius: 8px; 
+                        font-weight: 600; 
+                        font-size: 16px; 
+                        display: inline-block;
+                        box-shadow: 0 4px 12px rgba(255, 105, 180, 0.4);
+                        transition: all 0.3s ease;
+                        text-transform: uppercase;
+                        letter-spacing: 0.5px;">
+                🛍️ Shop Now & Use Your Credit
+              </a>
+            </div>
+            
+            <!-- Features List -->
+            <div style="background: linear-gradient(135deg, ${TEEMEYOU_COLORS.LIGHT_PINK} 0%, ${TEEMEYOU_COLORS.WHITE} 100%); padding: 25px; border-radius: 8px; margin: 30px 0;">
+              <h3 style="color: ${TEEMEYOU_COLORS.DARK_PINK}; margin: 0 0 15px 0; font-size: 18px; font-weight: 600; text-align: center;">Why Shop with TeeMeYou?</h3>
+              <div style="text-align: left;">
+                <p style="margin: 8px 0; color: ${TEEMEYOU_COLORS.DARK_GRAY}; font-size: 14px; line-height: 1.4;">
+                  ✨ <strong>Premium Quality:</strong> High-quality t-shirts and apparel
+                </p>
+                <p style="margin: 8px 0; color: ${TEEMEYOU_COLORS.DARK_GRAY}; font-size: 14px; line-height: 1.4;">
+                  🚚 <strong>Fast Delivery:</strong> Quick shipping across South Africa
+                </p>
+                <p style="margin: 8px 0; color: ${TEEMEYOU_COLORS.DARK_GRAY}; font-size: 14px; line-height: 1.4;">
+                  💳 <strong>Easy Payment:</strong> Your credit applies automatically at checkout
+                </p>
+                <p style="margin: 8px 0; color: ${TEEMEYOU_COLORS.DARK_GRAY}; font-size: 14px; line-height: 1.4;">
+                  🎨 <strong>Latest Trends:</strong> Fresh designs and styles updated regularly
+                </p>
+              </div>
+            </div>
+            
+            <!-- Info Box -->
+            <div style="background: linear-gradient(135deg, ${TEEMEYOU_COLORS.LIGHT_PINK} 0%, ${TEEMEYOU_COLORS.HOT_PINK} 20%); padding: 20px; border-radius: 8px; margin: 30px 0; border-left: 4px solid ${TEEMEYOU_COLORS.DARK_PINK}; position: relative;">
+              <div style="position: absolute; top: -8px; left: 16px; background: ${TEEMEYOU_COLORS.DARK_PINK}; color: ${TEEMEYOU_COLORS.WHITE}; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">REMINDER</div>
+              <p style="margin: 0; font-weight: 600; color: ${TEEMEYOU_COLORS.BLACK}; font-size: 14px;">
+                💡 Your store credit never expires and will be automatically applied to your next purchase!
+              </p>
+            </div>
+          </div>
+          
+          <!-- Footer -->
+          <div style="background: ${TEEMEYOU_COLORS.DARK_GRAY}; padding: 25px; text-align: center;">
+            <div style="margin-bottom: 15px;">
+              <span style="display: inline-block; background: ${TEEMEYOU_COLORS.WHITE}; padding: 8px 12px; border-radius: 20px; margin: 0 5px; box-shadow: 0 2px 8px rgba(255, 105, 180, 0.2);">
+                <span style="font-size: 16px; color: ${TEEMEYOU_COLORS.HOT_PINK};">💰</span>
+              </span>
+            </div>
+            <p style="color: ${TEEMEYOU_COLORS.WHITE}; margin: 0; font-size: 14px; font-weight: 500;">
+              © 2024 TeeMeYou • South Africa's Premium Shopping Platform
+            </p>
+            <p style="color: ${TEEMEYOU_COLORS.LIGHT_GRAY}; margin: 8px 0 0 0; font-size: 12px;">
+              Questions? Reply to this email or visit our website for support.
+            </p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const textContent = `
+      Don't Forget Your Store Credit - TeeMeYou
+      
+      Hi ${customerName},
+      
+      You have R${availableCredit.toFixed(2)} in store credit waiting to be used!
+      
+      Why not treat yourself to something special from our amazing collection?
+      
+      Your store credit never expires and will be automatically applied to your next purchase.
+      
+      Shop now at: https://teemeyou.shop
+      
+      Best regards,
+      The TeeMeYou Team
+    `;
+
+    try {
+      const result = await this.sendMailerSendEmail(
+        email,
+        '🇿🇦 Don\'t Forget Your TeeMeYou Store Credit!',
+        htmlContent,
+        textContent
+      );
+
+      // Log the email attempt
+      await db.insert(emailLogs).values({
+        recipientEmail: email,
+        emailType: 'credit_reminder',
+        subject: '🇿🇦 Don\'t Forget Your TeeMeYou Store Credit!',
+        deliveryStatus: result.success ? 'sent' : 'failed',
+        errorMessage: result.error || null,
+        mailerSendId: result.messageId || null
+      });
+
+      return result;
+    } catch (error: any) {
+      console.error('❌ Error sending credit reminder email:', error);
+      
+      // Log the failed attempt
+      await db.insert(emailLogs).values({
+        recipientEmail: email,
+        emailType: 'credit_reminder',
+        subject: '🇿🇦 Don\'t Forget Your TeeMeYou Store Credit!',
+        deliveryStatus: 'failed',
+        errorMessage: error.message || 'Unknown error'
+      });
+
+      return {
+        success: false,
+        error: error.message || 'Failed to send credit reminder email'
+      };
+    }
+  }
+
   async cleanupExpiredTokens(): Promise<void> {
     const now = new Date();
     await db.delete(mailTokens)

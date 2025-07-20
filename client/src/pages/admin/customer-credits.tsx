@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
-import { CreditCard, Search, Plus, Eye, DollarSign, Users, Activity, TrendingUp } from "lucide-react";
+import { CreditCard, Search, Plus, Eye, DollarSign, Users, Activity, TrendingUp, Mail } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -295,6 +295,117 @@ function CustomerTransactionsModal({ customerId, customerName }: { customerId: n
   );
 }
 
+// Credit Reminder Modal Component
+function CreditReminderModal({ customerId, customerName, customerEmail, availableCredit }: { 
+  customerId: number; 
+  customerName: string; 
+  customerEmail: string; 
+  availableCredit: number; 
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const sendReminderMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("/api/credits/admin/send-reminder", {
+        method: "POST",
+        body: JSON.stringify({ userId: customerId }),
+        headers: { "Content-Type": "application/json" }
+      });
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Reminder Email Sent",
+        description: `Credit reminder email sent successfully to ${customerEmail}`,
+      });
+      setIsOpen(false);
+      // Refresh any relevant queries
+      queryClient.invalidateQueries({ queryKey: ["/api/credits/admin/customers"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Email Failed",
+        description: error.error || "Failed to send reminder email",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSendReminder = () => {
+    setIsLoading(true);
+    sendReminderMutation.mutate();
+    setIsLoading(false);
+  };
+
+  // Don't show reminder button if customer has no available credit
+  if (availableCredit <= 0) {
+    return null;
+  }
+
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm">
+          <Mail className="h-3 w-3 mr-1" />
+          Remind
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Send Credit Reminder Email</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="bg-pink-50 p-4 rounded-lg border border-pink-200">
+            <div className="flex items-center space-x-2 mb-2">
+              <Mail className="h-5 w-5 text-pink-600" />
+              <h3 className="font-medium text-pink-900">Email Details</h3>
+            </div>
+            <div className="space-y-2 text-sm">
+              <p><strong>Customer:</strong> {customerName}</p>
+              <p><strong>Email:</strong> {customerEmail}</p>
+              <p><strong>Available Credit:</strong> <span className="text-pink-600 font-semibold">R{availableCredit.toFixed(2)}</span></p>
+            </div>
+          </div>
+          
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h4 className="font-medium text-gray-900 mb-2">Email Content Preview:</h4>
+            <p className="text-sm text-gray-600">
+              The customer will receive a beautifully styled email reminding them of their available store credit 
+              and encouraging them to shop on the website. The email includes their credit balance and a call-to-action 
+              button to visit the store.
+            </p>
+          </div>
+
+          <div className="flex justify-end space-x-2 pt-4">
+            <Button variant="outline" onClick={() => setIsOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSendReminder} 
+              disabled={isLoading || sendReminderMutation.isPending}
+              className="bg-pink-600 hover:bg-pink-700"
+            >
+              {isLoading || sendReminderMutation.isPending ? (
+                <>
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-2"></div>
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Mail className="h-3 w-3 mr-2" />
+                  Send Reminder Email
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // Main Customer Credits Page Component
 export default function CustomerCreditsPage() {
   const [search, setSearch] = useState("");
@@ -420,6 +531,18 @@ export default function CustomerCreditsPage() {
                           <CustomerTransactionsModal
                             customerId={customer.userId}
                             customerName={customer.fullName || customer.username}
+                          />
+                          <CreditReminderModal
+                            customerId={customer.userId}
+                            customerName={customer.fullName || customer.username}
+                            customerEmail={customer.email}
+                            availableCredit={parseFloat(customer.availableCreditAmount)}
+                          />
+                          <CreditReminderModal
+                            customerId={customer.userId}
+                            customerName={customer.fullName || customer.username}
+                            customerEmail={customer.email}
+                            availableCredit={parseFloat(customer.availableCreditAmount)}
                           />
                         </div>
                       </TableCell>
