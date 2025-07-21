@@ -73,7 +73,7 @@ const MobileAppInstallButton: React.FC = () => {
         <ol className="text-sm text-gray-600 space-y-2">
           <li>1. Tap the <strong>menu</strong> (3 dots) in your browser</li>
           <li>2. Look for <strong>"Add to Home Screen"</strong> or <strong>"Install App"</strong></li>
-          <li>3. Tap to install the TEE ME YOU app</li>
+          <li>3. Tap to install the HeartCart app</li>
         </ol>
       </CardContent>
     </Card>
@@ -88,11 +88,11 @@ const MobileAppInstallButton: React.FC = () => {
               <div className="flex items-center space-x-3">
                 <img 
                   src="/site_files/CompanyLogo.jpg" 
-                  alt="TEE ME YOU"
+                  alt="HeartCart"
                   className="w-12 h-12 rounded-lg shadow-md"
                 />
                 <div>
-                  <h3 className="font-bold text-gray-900">Install TEE ME YOU App</h3>
+                  <h3 className="font-bold text-gray-900">Install HeartCart App</h3>
                   <p className="text-sm text-gray-600">Get the full mobile experience</p>
                 </div>
               </div>

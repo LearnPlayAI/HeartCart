@@ -325,7 +325,7 @@ class YocoService {
   /**
    * Register webhook with YoCo (for development setup)
    */
-  async registerWebhook(webhookUrl: string, name: string = 'teemeyou-webhook'): Promise<any> {
+  async registerWebhook(webhookUrl: string, name: string = 'heartcart-webhook'): Promise<any> {
     if (!this.secretKey) {
       throw new Error('YoCo secret key not configured');
     }

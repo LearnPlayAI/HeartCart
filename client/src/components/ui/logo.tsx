@@ -10,7 +10,7 @@ const Logo: React.FC<LogoProps> = ({ className = 'h-12 w-auto' }) => {
     <Link href="/" className="flex items-center">
       <img 
         src="/site_files/CompanyLogo.jpg" 
-        alt="TEE ME YOU Logo" 
+        alt="HeartCart Logo" 
         className={className} 
       />
     </Link>

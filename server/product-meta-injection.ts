@@ -198,7 +198,7 @@ function generateProductHtml(product: ProductMetaData, displayPrice: number): st
 </head>
 <body>
     <div class="container">
-        <div class="logo">TEE ME YOU</div>
+        <div class="logo">HeartCart</div>
         <div class="product-name">${escapeHtml(product.name)}</div>
         <div class="price">R${displayPrice.toLocaleString()}</div>
         <p>South Africa's trusted online marketplace for quality products with fast delivery.</p>

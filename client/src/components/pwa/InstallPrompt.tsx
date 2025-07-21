@@ -25,11 +25,11 @@ const InstallPrompt: React.FC = () => {
             <div className="flex items-center space-x-3">
               <img 
                 src="/site_files/CompanyLogo.jpg" 
-                alt="TEE ME YOU"
+                alt="HeartCart"
                 className="w-10 h-10 rounded-lg"
               />
               <div>
-                <h3 className="font-bold text-gray-900">Install TEE ME YOU App</h3>
+                <h3 className="font-bold text-gray-900">Install HeartCart App</h3>
                 <p className="text-sm text-gray-600">Get the full mobile experience</p>
               </div>
             </div>
