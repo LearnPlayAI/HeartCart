@@ -3955,6 +3955,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       body: z.object({
         firstName: z.string().optional(),
         lastName: z.string().optional(),
+        email: z.string().email().optional(),
         phone: z.string().optional(),
         addressLine1: z.string().optional(),
         addressLine2: z.string().optional(),
@@ -3974,6 +3975,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (profileData.firstName || profileData.lastName) {
           updateData.fullName = `${profileData.firstName || ''} ${profileData.lastName || ''}`.trim();
         }
+        if (profileData.email) updateData.email = profileData.email;
         if (profileData.phone) updateData.phoneNumber = profileData.phone;
         if (profileData.addressLine1) updateData.address = profileData.addressLine1;
         if (profileData.city) updateData.city = profileData.city;

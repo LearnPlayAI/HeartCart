@@ -131,6 +131,15 @@ HeartCart is a comprehensive e-commerce platform built as a dropshipping solutio
 ## Changelog
 ```
 Changelog:
+- July 21, 2025. CHECKOUT PROFILE UPDATE BUG FIXED - COMPLETE USER INFORMATION PERSISTENCE:
+  * RESOLVED: Fixed critical issue where customer information changes during checkout were not being saved to user profile
+  * ROOT CAUSE: Profile update endpoint was missing email field validation and checkout wasn't sending email updates
+  * FIXED: Added email field to server-side profile update endpoint validation schema with proper mapping
+  * ENHANCED: Updated checkout process to include email address in profile update call
+  * COMPREHENSIVE UPDATE: All checkout form changes now properly save: firstName, lastName, email, phone, and shipping address
+  * User profile now correctly updates when customers modify information during checkout process
+  * Next checkout visits will display the updated information from previous transactions
+  * Complete field mapping: firstName/lastName → fullName, phone → phoneNumber, addressLine1 → address
 - July 21, 2025. INVOICE COMPANY INFORMATION UPDATE - COMPREHENSIVE ADDRESS AND LEGAL ENTITY FORMATTING:
   * UPDATED COMPANY NAME: Changed from "TEE ME YOU (pty) Ltd." to "TEE ME YOU (Pty.) LTD trading as Heart Cart" throughout invoice generation
   * COMPREHENSIVE ADDRESS UPDATE: Updated invoice address from just "South Africa" to complete 6-line format:
