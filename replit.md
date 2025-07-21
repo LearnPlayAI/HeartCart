@@ -131,6 +131,14 @@ HeartCart is a comprehensive e-commerce platform built as a dropshipping solutio
 ## Changelog
 ```
 Changelog:
+- July 21, 2025. COMPLETE INVOICE FORMATTING UPDATE FOR PRIVACY AND BRANDING:
+  * Updated company branding on invoices from "HeartCart (Pty) Ltd." back to "TEE ME YOU (pty) Ltd." as requested
+  * Changed tagline from "Your Style, Your Story" to "For the Love of Shopping" for consistent brand messaging
+  * PRIVACY FIX: Removed home street address (11 Ebbehout Street, Sharonlea, Randburg, Gauteng, 2194) from all invoices for security
+  * Removed "VAT (0%): Not VAT registered" text as requested for cleaner invoice appearance
+  * Updated both PDF (jsPDF) and HTML invoice generation methods with consistent formatting changes
+  * Invoice now shows only "South Africa" and registration number for company location details
+  * All invoice generation fully operational with updated branding and improved privacy protection
 - July 21, 2025. CRITICAL YOCO WEBHOOK ORDER CREATION BUG COMPLETELY FIXED:
   * RESOLVED: Fixed all TypeScript compilation errors in yoco-webhook-routes.ts preventing order creation after successful card payments
   * ROOT CAUSE: Missing logger import, type mismatches, and improper error handling were causing silent webhook failures

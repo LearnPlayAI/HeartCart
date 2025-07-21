@@ -140,11 +140,11 @@ export class InvoiceGenerator {
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(24);
     doc.setFont('helvetica', 'bold');
-    doc.text('HeartCart', margin, 20);
+    doc.text('TEE ME YOU', margin, 20);
     
     doc.setFontSize(12);
     doc.setFont('helvetica', 'normal');
-    doc.text('Your Style, Your Story', margin, 28);
+    doc.text('For the Love of Shopping', margin, 28);
 
     // Reset text color to black
     doc.setTextColor(0, 0, 0);
@@ -161,11 +161,9 @@ export class InvoiceGenerator {
     doc.setFont('helvetica', 'normal');
     
     // Left column - Company details
-    doc.text('HeartCart (Pty) Ltd', margin, yPosition);
+    doc.text('TEE ME YOU (pty) Ltd.', margin, yPosition);
     doc.text('Registration: 2025/499123/07', margin, yPosition + 5);
-    doc.text('11 Ebbehout Street, Sharonlea', margin, yPosition + 10);
-    doc.text('Randburg, Gauteng, 2194', margin, yPosition + 15);
-    doc.text('South Africa', margin, yPosition + 20);
+    doc.text('South Africa', margin, yPosition + 10);
 
     // Right column - Invoice details
     const rightColumn = margin + (contentWidth / 2);
@@ -175,7 +173,7 @@ export class InvoiceGenerator {
     doc.text(`Email: ${data.customerEmail}`, rightColumn, yPosition + 15);
     doc.text(`Phone: ${data.customerPhone}`, rightColumn, yPosition + 20);
 
-    yPosition += 35;
+    yPosition += 25;
 
     // PUDO Locker Collection (No physical address delivery)
     doc.setFont('helvetica', 'bold');
@@ -239,9 +237,9 @@ export class InvoiceGenerator {
     doc.text('Shipping:', totalsX, yPosition);
     doc.text(`R${data.shippingCost.toFixed(2)}`, totalsX + 30, yPosition);
     
-    // VAT breakdown
-    yPosition += 7;
+    // VAT breakdown - removed as per user request
     if (data.vatRegistered && data.vatAmount > 0) {
+      yPosition += 7;
       doc.text(`VAT (${data.vatRate}%):`, totalsX, yPosition);
       doc.text(`R${data.vatAmount.toFixed(2)}`, totalsX + 30, yPosition);
       yPosition += 7;
@@ -250,9 +248,6 @@ export class InvoiceGenerator {
       doc.setFontSize(8);
       doc.text(`VAT No: ${data.vatRegistrationNumber}`, totalsX, yPosition);
       doc.setFontSize(10);
-      yPosition += 3;
-    } else {
-      doc.text('VAT (0%): Not VAT registered', totalsX, yPosition);
       yPosition += 3;
     }
     
@@ -574,11 +569,10 @@ export class InvoiceGenerator {
         <div class="header">
             <div class="header-content">
                 <div class="company-info">
-                    <h1>HeartCart</h1>
-                    <div class="company-tagline">Premium E-Commerce Solutions</div>
+                    <h1>TEE ME YOU</h1>
+                    <div class="company-tagline">For the Love of Shopping</div>
                     <div class="company-details">
-                        11 Ebbehout Street, Sharonlea<br>
-                        Randburg, Gauteng, South Africa, 2194<br>
+                        South Africa<br>
                         Registration: 2025/499123/07
                     </div>
                 </div>
