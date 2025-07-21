@@ -137,6 +137,18 @@ Changelog:
   * FIXED: Updated profile.tsx logout function to use correct apiRequest(method, url, data) pattern alignment with comprehensive JSON response handling fixes
   * Profile update mutation was already correct, issue was specifically in logout function preventing proper profile functionality
   * Profile update system now fully operational - users can successfully update their personal information, shipping addresses, and account details
+- July 21, 2025. COMPREHENSIVE EMAIL SYSTEM VERIFICATION AND FINAL BUG FIXES COMPLETED:
+  * COMPLETE EMAIL TEMPLATE TESTING: Successfully sent all 6 email templates to admin@heartcart.shop with full HeartCart branding verification
+  * Email templates tested: account verification, password reset, payment confirmation, order status updates, order confirmation, and sample invoice
+  * All emails sent from sales@heartcart.shop with proper HeartCart pink gradient styling and domain references
+  * PROFILE UPDATE BUG RESOLVED: Fixed profile update functionality failing with "rbernmediateix-value port is not a function" error
+  * ROOT CAUSE: Profile page logout function was using incorrect apiRequest() pattern mixing old fetch() with new apiRequest() helper
+  * FIXED: Updated profile.tsx logout function to use proper apiRequest('POST', '/api/auth/logout') format
+  * ADDITIONAL BUG INSTANCES FIXED: Corrected 2 more instances in supplier-orders.tsx (validateUrlMutation, generateCreditMutation) using same apiRequest pattern
+  * SAMPLE INVOICE GENERATED: Comprehensive invoice email sent demonstrating store credit usage (-R50), PUDO locker details, and complete HeartCart branding
+  * Sample invoice shows HTC-001-20250721 order format, TEE ME YOU (pty) Ltd. company info, and heartcart.shop domain throughout
+  * ALL SYSTEM COMPONENTS VERIFIED: Profile updates, supplier orders, email templates, invoice generation, and domain conversion fully operational
+  * MailerSend API fully functional with heartcart.shop domain - email system ready for production use
 - July 21, 2025. PASSWORD RESET EMAIL BUG FIX - API REQUEST PATTERN CORRECTION:
   * RESOLVED: Fixed "500: Failed to send password reset email" error caused by incorrect apiRequest() usage pattern
   * ROOT CAUSE: Password reset mutations in auth-page.tsx were mixing apiRequest() and fetch() patterns as described in docs/json/jsonfixes.md
