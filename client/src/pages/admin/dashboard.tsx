@@ -261,7 +261,6 @@ function FinancialStats() {
                       <div className="space-y-2">
                         {financialData.orderDetails
                           .sort((a, b) => b.totalRevenue - a.totalRevenue)
-                          .slice(0, 20)
                           .map((order) => (
                             <div key={order.orderId} className="flex justify-between items-center py-1 px-2 bg-gray-50 rounded text-xs">
                               <div>
@@ -273,9 +272,9 @@ function FinancialStats() {
                               </div>
                             </div>
                           ))}
-                        {financialData.orderDetails.length > 20 && (
+                        {financialData.orderDetails.length === 0 && (
                           <div className="text-xs text-muted-foreground text-center py-2">
-                            Showing top 20 orders by revenue
+                            No orders found for the selected filters
                           </div>
                         )}
                       </div>
@@ -351,7 +350,6 @@ function FinancialStats() {
                     <div className="mt-3 max-h-48 overflow-y-auto">
                       <div className="space-y-2">
                         {financialData.orderDetails
-                          .slice(0, 20)
                           .map((order) => (
                             <div key={order.orderId} className="flex justify-between items-center py-1 px-2 bg-gray-50 rounded text-xs">
                               <div>
@@ -365,9 +363,9 @@ function FinancialStats() {
                               </div>
                             </div>
                           ))}
-                        {financialData.orderDetails.length > 20 && (
+                        {financialData.orderDetails.length === 0 && (
                           <div className="text-xs text-muted-foreground text-center py-2">
-                            Showing top 20 orders by profit
+                            No orders found for the selected filters
                           </div>
                         )}
                       </div>
