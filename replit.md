@@ -131,6 +131,18 @@ HeartCart is a comprehensive e-commerce platform built as a dropshipping solutio
 ## Changelog
 ```
 Changelog:
+- July 21, 2025. INVOICE COMPANY INFORMATION UPDATE - COMPREHENSIVE ADDRESS AND LEGAL ENTITY FORMATTING:
+  * UPDATED COMPANY NAME: Changed from "TEE ME YOU (pty) Ltd." to "TEE ME YOU (Pty.) LTD trading as Heart Cart" throughout invoice generation
+  * COMPREHENSIVE ADDRESS UPDATE: Updated invoice address from just "South Africa" to complete 6-line format:
+    - Ebbehout Street, Sharonlea
+    - Randburg, Johannesburg  
+    - Gauteng
+    - South Africa
+  * INVOICE LAYOUT OPTIMIZATION: Adjusted font sizes (24pt→18pt) and spacing (yPosition +25→+35) to accommodate longer company name and full address
+  * Updated both PDF header branding and invoice company details section with consistent formatting
+  * Maintained all existing invoice functionality: store credits, PUDO collection, VAT calculations, payment details
+  * Test invoice generated successfully confirming all updates work correctly (HTC-002-20250721)
+  * Invoice system now shows proper legal entity format with trading name and complete business address for professional appearance
 - July 21, 2025. PROFILE UPDATE BUG FIX - API REQUEST PATTERN CORRECTION:
   * RESOLVED: Fixed profile update functionality failing with "rbernmediateix-value port is not a function" error caused by incorrect apiRequest() usage pattern
   * ROOT CAUSE: Profile page logout function was using incorrect apiRequest('/api/auth/logout', { method: 'POST' }) pattern instead of proper apiRequest('POST', '/api/auth/logout')

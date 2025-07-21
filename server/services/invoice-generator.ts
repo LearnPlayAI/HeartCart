@@ -138,9 +138,9 @@ export class InvoiceGenerator {
 
     // Company logo/name in white
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(24);
+    doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
-    doc.text('TEE ME YOU', margin, 20);
+    doc.text('TEE ME YOU (Pty.) LTD trading as Heart Cart', margin, 20);
     
     doc.setFontSize(12);
     doc.setFont('helvetica', 'normal');
@@ -161,9 +161,12 @@ export class InvoiceGenerator {
     doc.setFont('helvetica', 'normal');
     
     // Left column - Company details
-    doc.text('TEE ME YOU (pty) Ltd.', margin, yPosition);
+    doc.text('TEE ME YOU (Pty.) LTD trading as Heart Cart', margin, yPosition);
     doc.text('Registration: 2025/499123/07', margin, yPosition + 5);
-    doc.text('South Africa', margin, yPosition + 10);
+    doc.text('Ebbehout Street, Sharonlea', margin, yPosition + 10);
+    doc.text('Randburg, Johannesburg', margin, yPosition + 15);
+    doc.text('Gauteng', margin, yPosition + 20);
+    doc.text('South Africa', margin, yPosition + 25);
 
     // Right column - Invoice details
     const rightColumn = margin + (contentWidth / 2);
@@ -173,7 +176,7 @@ export class InvoiceGenerator {
     doc.text(`Email: ${data.customerEmail}`, rightColumn, yPosition + 15);
     doc.text(`Phone: ${data.customerPhone}`, rightColumn, yPosition + 20);
 
-    yPosition += 25;
+    yPosition += 35; // Increased to accommodate the longer company address
 
     // PUDO Locker Collection (No physical address delivery)
     doc.setFont('helvetica', 'bold');
