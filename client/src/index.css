@@ -24,7 +24,7 @@
   --ring: 20 14.3% 4.1%;
   --radius: 0.5rem;
   
-  /* Custom colors for TEE ME YOU */
+  /* Custom colors for HeartCart */
   --hotpink: 331, 100%, 71%;
   --lightpink: 350, 100%, 88%;
   --darkpink: 328, 100%, 54%;
@@ -74,7 +74,7 @@
   }
 }
 
-/* Custom classes for TEE ME YOU */
+/* Custom classes for HeartCart */
 @layer components {
   .product-card {
     @apply transition-all duration-300 ease-in-out;
