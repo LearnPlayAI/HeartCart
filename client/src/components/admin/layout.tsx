@@ -108,8 +108,12 @@ export function AdminLayout({ children }: AdminLayoutProps) {
               </Link>
             )}
             {isCollapsed && (
-              <Link href="/" className="text-lg font-bold text-white mx-auto">
-                T
+              <Link href="/" className="flex items-center justify-center mx-auto">
+                <img 
+                  src="/site_files/CompanyLogo.jpg" 
+                  alt="HeartCart Logo" 
+                  className="h-8 w-8 rounded object-cover"
+                />
               </Link>
             )}
             <Button

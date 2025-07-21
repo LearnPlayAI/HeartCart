@@ -131,6 +131,11 @@ HeartCart is a comprehensive e-commerce platform built as a dropshipping solutio
 ## Changelog
 ```
 Changelog:
+- July 21, 2025. ADMIN SIDEBAR COLLAPSED STATE LOGO UPDATE:
+  * FIXED: Replaced letter "T" with HeartCart company logo in collapsed admin sidebar state
+  * Enhanced collapsed sidebar branding by showing 8x8 rounded company logo image instead of text
+  * Improved admin user experience with consistent HeartCart branding throughout admin interface
+  * Logo displays correctly when sidebar is minimized while maintaining full "HeartCart" text when expanded
 - July 21, 2025. COMPLETE TRANSACTIONAL DATA CLEANUP FOR ADMIN@HEARTCART.SHOP:
   * COMPLETE DELETION: Removed ALL transactional data for admin@heartcart.shop user (ID: 8)
   * ORDERS REMOVED: Deleted 2 orders (HTC-83-20250721, HTC-84-20250721) with all related data
