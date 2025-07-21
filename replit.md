@@ -131,6 +131,21 @@ HeartCart is a comprehensive e-commerce platform built as a dropshipping solutio
 ## Changelog
 ```
 Changelog:
+- July 21, 2025. COMPLETE TRANSACTIONAL DATA CLEANUP FOR ADMIN AND TEST USER:
+  * Systematically deleted ALL order and credit related data for admin@heartcart.shop (ID: 8) and jan.coetz33@gmail.com (ID: 78)
+  * Removed transactional records: 1 order, 1 order item, 3 order status history entries, 1 supplier status record, 10 credit transactions
+  * Cleared user activity data: 1 user favorite, 133 product interactions for clean testing environment  
+  * Preserved core system data: user accounts, products, categories, suppliers maintained for continued functionality
+  * Database cleanup completed with proper foreign key constraint handling - all related records removed systematically
+  * Fresh testing environment ready with zero transactional data for these users while maintaining full product catalog
+- July 21, 2025. CRITICAL SUPPLIER ORDER UPDATE SYSTEM COMPLETELY FIXED:
+  * RESOLVED: Fixed TypeScript compilation error in supplier-order-routes-simple.ts line 295 preventing supplier order information updates
+  * ROOT CAUSE: sendError function was receiving ZodIssue[] array instead of proper string error message format
+  * FIXED: Updated error handling to convert validation.error.errors to readable string format with proper error message concatenation
+  * Backend API endpoint /api/admin/supplier-orders/order/${orderId}/update-group now fully operational without TypeScript errors
+  * All supplier order fields save correctly: supplier order number, order date, and admin notes through "Save Supplier Order Info" button
+  * Database schema properly supports all required fields (supplierOrderNumber, supplierOrderDate, adminNotes) with correct data persistence
+  * Admin order detail pages (/admin/orders/81) now update supplier information successfully without red error messages
 - July 21, 2025. PAYMENT SUCCESS PAGE "VIEW YOUR ORDER" BUTTON FIX:
   * CRITICAL FIX: Resolved TypeScript compilation errors preventing "View Your Order" button from displaying on payment success page
   * Added proper Order interface typing to eliminate all type mismatches and compilation issues
