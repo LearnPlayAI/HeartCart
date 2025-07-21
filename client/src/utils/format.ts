@@ -1,5 +1,5 @@
 /**
- * Formatting Utility Functions for TeeMeYou
+ * Formatting Utility Functions for HeartCart
  * 
  * This module provides utility functions for formatting values like prices,
  * dates, and other display-oriented text transformations.

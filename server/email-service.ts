@@ -36,7 +36,7 @@ class EmailService {
 
   private async initializeTransporter() {
     try {
-      // SMTP configuration for TeeMeYou using smtp.ionos.com:587
+      // SMTP configuration for HeartCart using smtp.ionos.com:587
       const config: EmailConfig = {
         host: process.env.SMTP_HOST || 'smtp.ionos.com',
         port: parseInt(process.env.SMTP_PORT || '587'),
@@ -82,7 +82,7 @@ class EmailService {
       const emailText = this.generateAbandonedCartText(data);
 
       const mailOptions = {
-        from: process.env.SMTP_FROM || 'noreply@teemeyou.shop',
+        from: process.env.SMTP_FROM || 'noreply@heartcart.shop',
         to: data.customerEmail,
         subject: data.discountCode 
           ? `Don't miss out! Complete your order and save ${data.discountPercentage}%`
@@ -130,13 +130,13 @@ class EmailService {
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Complete Your Purchase - TeeMeYou</title>
+        <title>Complete Your Purchase - HeartCart</title>
       </head>
       <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f9fafb;">
         <div style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
           <!-- Header -->
           <div style="background: linear-gradient(135deg, #ec4899 0%, #be185d 100%); padding: 30px 20px; text-align: center;">
-            <h1 style="color: white; margin: 0; font-size: 24px;">TeeMeYou</h1>
+            <h1 style="color: white; margin: 0; font-size: 24px;">HeartCart</h1>
             <p style="color: #fce7f3; margin: 10px 0 0 0; font-size: 16px;">Don't let your favorites slip away!</p>
           </div>
 
@@ -191,7 +191,7 @@ class EmailService {
           <!-- Footer -->
           <div style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
             <p style="margin: 0; color: #6b7280; font-size: 12px;">
-              © 2024 TeeMeYou. All rights reserved.<br>
+              © 2024 HeartCart. All rights reserved.<br>
               Making fashion accessible for everyone.
             </p>
           </div>
@@ -230,9 +230,9 @@ Complete your purchase: ${data.recoveryLink}
 This link will expire in 48 hours.
 
 Thanks,
-The TeeMeYou Team
+The HeartCart Team
 
-© 2024 TeeMeYou. All rights reserved.
+© 2024 HeartCart. All rights reserved.
 Making fashion accessible for everyone.
     `.trim();
   }
@@ -248,9 +248,9 @@ Making fashion accessible for everyone.
 
     try {
       const mailOptions = {
-        from: process.env.SMTP_FROM || 'noreply@teemeyou.shop',
+        from: process.env.SMTP_FROM || 'noreply@heartcart.shop',
         to: orderData.customerEmail,
-        subject: `Order Confirmation #${orderData.orderNumber} - TeeMeYou`,
+        subject: `Order Confirmation #${orderData.orderNumber} - HeartCart`,
         html: this.generateOrderConfirmationHtml(orderData),
         text: this.generateOrderConfirmationText(orderData)
       };

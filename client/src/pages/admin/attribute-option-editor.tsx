@@ -367,7 +367,7 @@ function AttributeOptionEditorPage() {
       subtitle={`Manage attribute options for ${attribute?.displayName}`}
     >
       <Helmet>
-        <title>Attribute Options | TeeMeYou Admin</title>
+        <title>Attribute Options | HeartCart Admin</title>
       </Helmet>
 
       <div className="max-w-6xl mx-auto">

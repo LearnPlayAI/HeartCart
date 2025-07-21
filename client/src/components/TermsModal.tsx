@@ -34,7 +34,7 @@ export function TermsModal({ open, onAccept, onCancel }: TermsModalProps) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-lg">
             <Shield className="h-5 w-5 text-[#ff69b4]" />
-            TeeMeYou Terms & Conditions
+            HeartCart Terms & Conditions
           </DialogTitle>
           <DialogDescription>
             Please read through our complete terms and conditions before creating your account.
@@ -54,7 +54,7 @@ export function TermsModal({ open, onAccept, onCancel }: TermsModalProps) {
               </p>
               <h3 className="font-semibold text-base mb-2">1. Introduction</h3>
               <p>
-                TeeMeYou.shop is an online retail store providing great products at discounted pricing. These Terms and Conditions govern your use 
+                HeartCart.shop is an online retail store providing great products at discounted pricing. These Terms and Conditions govern your use 
                 of our website and services. By accessing or using our services, you agree to be bound by these Terms and comply with the 
                 South African Consumer Protection Act, 2008.
               </p>
@@ -65,8 +65,8 @@ export function TermsModal({ open, onAccept, onCancel }: TermsModalProps) {
               <h3 className="font-semibold text-base mb-2">2. Product Availability</h3>
               <div className="space-y-2">
                 <p>
-                  There are limited stock of all goods on offer. TeeMeYou will make all reasonable efforts to notify you when a product is no longer 
-                  available once ordered. In these cases, TeeMeYou will provide you with:
+                  There are limited stock of all goods on offer. HeartCart will make all reasonable efforts to notify you when a product is no longer 
+                  available once ordered. In these cases, HeartCart will provide you with:
                 </p>
                 <ul className="list-disc list-inside ml-4 space-y-1">
                   <li>Alternative product options</li>
@@ -93,7 +93,7 @@ export function TermsModal({ open, onAccept, onCancel }: TermsModalProps) {
                   All product prices as advertised on our website or as promoted in any customized promotional material, are subject to change without prior notice.
                 </p>
                 <p>
-                  All promotions and % discount offers are offered at the discretion of TeeMeYou and may be revoked or changed at any time.
+                  All promotions and % discount offers are offered at the discretion of HeartCart and may be revoked or changed at any time.
                 </p>
               </div>
             </section>
@@ -119,7 +119,7 @@ export function TermsModal({ open, onAccept, onCancel }: TermsModalProps) {
             <section>
               <h3 className="font-semibold text-base mb-2">5. Quality Checking of Electronic Products</h3>
               <p>
-                TeeMeYou quality checks all electronic products before they are sent out to customers. This is a basic quality check, making sure 
+                HeartCart quality checks all electronic products before they are sent out to customers. This is a basic quality check, making sure 
                 that the product turns on, charges, has basic function, and has no noticeable damage.
               </p>
             </section>
@@ -137,12 +137,12 @@ export function TermsModal({ open, onAccept, onCancel }: TermsModalProps) {
                 <p className="mt-3"><strong>Upon receiving your order:</strong></p>
                 <ol className="list-decimal list-inside ml-4 space-y-1">
                   <li>Please make sure you received what you ordered and check that everything is working as it should</li>
-                  <li>If a product supplied is the wrong product or if the product is received damaged, contact us at <span className="text-[#ff69b4] font-medium">sales@teemeyou.shop</span></li>
+                  <li>If a product supplied is the wrong product or if the product is received damaged, contact us at <span className="text-[#ff69b4] font-medium">sales@heartcart.shop</span></li>
                   <li>For any returns, please email the details of the product, including pictures where applicable, and reference your order number as found on the My Orders page</li>
                 </ol>
                 
                 <p className="mt-3">
-                  All products returned to TeeMeYou must be returned unused, with all relevant parts, and in the original packaging. 
+                  All products returned to HeartCart must be returned unused, with all relevant parts, and in the original packaging. 
                   After we receive the wrong/damaged product back, we will inspect and determine the way forward.
                 </p>
                 
@@ -151,7 +151,7 @@ export function TermsModal({ open, onAccept, onCancel }: TermsModalProps) {
                 </p>
                 
                 <p>
-                  TeeMeYou is a third party reseller of goods and cannot be directly held accountable for any injuries or damages a product may cause 
+                  HeartCart is a third party reseller of goods and cannot be directly held accountable for any injuries or damages a product may cause 
                   due to product malfunctions or through wrong/misuse on the customer's side.
                 </p>
               </div>
@@ -161,7 +161,7 @@ export function TermsModal({ open, onAccept, onCancel }: TermsModalProps) {
             <section>
               <h3 className="font-semibold text-base mb-2">7. Pick-up and Shipping Information</h3>
               <div className="space-y-2">
-                <p>TeeMeYou offers PUDO locker delivery throughout South Africa. Remember to select the right shipping option at checkout.</p>
+                <p>HeartCart offers PUDO locker delivery throughout South Africa. Remember to select the right shipping option at checkout.</p>
                 
                 <p><strong>Important shipping notes:</strong></p>
                 <ul className="list-disc list-inside ml-4 space-y-1">
@@ -207,11 +207,11 @@ export function TermsModal({ open, onAccept, onCancel }: TermsModalProps) {
                   We reserve the right to refuse orders, cancel any sale, and terminate accounts at our discretion.
                 </p>
                 <p>
-                  This website is governed by the laws of South Africa and TeeMeYou chooses as its domicilium citandi et executandi for all purposes 
+                  This website is governed by the laws of South Africa and HeartCart chooses as its domicilium citandi et executandi for all purposes 
                   under this agreement, whether in respect of court process, notice, or other documents or communication of whatsoever nature.
                 </p>
                 <p>
-                  TeeMeYou may, in its sole discretion, change this agreement or any part thereof at any time without notice.
+                  HeartCart may, in its sole discretion, change this agreement or any part thereof at any time without notice.
                 </p>
               </div>
             </section>
@@ -222,10 +222,10 @@ export function TermsModal({ open, onAccept, onCancel }: TermsModalProps) {
               <div className="space-y-1">
                 <p>For questions about these Terms & Conditions or any issues:</p>
                 <p className="ml-4">
-                  <strong>Email:</strong> <span className="text-[#ff69b4] font-medium">sales@teemeyou.shop</span>
+                  <strong>Email:</strong> <span className="text-[#ff69b4] font-medium">sales@heartcart.shop</span>
                 </p>
                 <p className="ml-4">
-                  <strong>Website:</strong> <span className="text-[#ff69b4] font-medium">www.teemeyou.shop</span>
+                  <strong>Website:</strong> <span className="text-[#ff69b4] font-medium">www.heartcart.shop</span>
                 </p>
               </div>
               <p className="mt-2 text-xs text-muted-foreground">

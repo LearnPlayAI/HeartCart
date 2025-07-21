@@ -1177,20 +1177,20 @@ router.delete("/users/:id", isAuthenticated, asyncHandler(async (req: Request, r
 // Helper function to get default values for system settings
 function getDefaultSettingValue(key: string): string {
   const defaults: Record<string, string> = {
-    'website_share_message': `🚀 Check out TeeMeYou - South Africa's premier online shopping destination!
+    'website_share_message': `🚀 Check out HeartCart - South Africa's premier online shopping destination!
 
 🛒 Discover amazing products at unbeatable prices
 📦 Free delivery via PUDO lockers nationwide  
 💳 Secure EFT payments
 ⭐ Quality guaranteed
 
-Shop now: https://teemeyou.shop
+Shop now: https://heartcart.shop
 
 Join thousands of happy customers across South Africa!
 
-#TeeMeYou #OnlineShopping #SouthAfrica #QualityProducts`,
+#HeartCart #OnlineShopping #SouthAfrica #QualityProducts`,
 
-    'sales_rep_message': `🎯 Join the TeeMeYou Sales Representative Program!
+    'sales_rep_message': `🎯 Join the HeartCart Sales Representative Program!
 
 💰 Earn 5% commission on every sale
 🏆 Be part of South Africa's fastest-growing e-commerce platform
@@ -1198,11 +1198,11 @@ Join thousands of happy customers across South Africa!
 🎯 Easy registration process
 
 Ready to start earning? Register using your unique rep code:
-https://teemeyou.shop/auth?tab=register&repCode={REP_CODE}
+https://heartcart.shop/auth?tab=register&repCode={REP_CODE}
 
-Questions? Contact us at sales@teemeyou.shop
+Questions? Contact us at sales@heartcart.shop
 
-#TeeMeYou #SalesRep #EarnMoney #SouthAfrica`,
+#HeartCart #SalesRep #EarnMoney #SouthAfrica`,
 
     'product_sharing_message': `🛍️ JUST ARRIVED at Tee Me You!
 
@@ -1211,7 +1211,7 @@ Questions? Contact us at sales@teemeyou.shop
 💰 Price: R[PRICE]
 📦 Free delivery available via PUDO lockers
 
-✨ Why shop with TeeMeYou?
+✨ Why shop with HeartCart?
 • Quality products at great prices
 • Fast delivery across South Africa
 • Secure EFT payments
@@ -1219,9 +1219,9 @@ Questions? Contact us at sales@teemeyou.shop
 
 🛒 Shop now: [PRODUCT_URL]
 
-📱 More products: https://teemeyou.shop
+📱 More products: https://heartcart.shop
 
-#TeeMeYou #OnlineShopping #SouthAfrica #QualityProducts`
+#HeartCart #OnlineShopping #SouthAfrica #QualityProducts`
   };
 
   return defaults[key] || `Default value for ${key}`;

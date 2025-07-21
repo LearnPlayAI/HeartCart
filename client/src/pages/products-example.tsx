@@ -85,8 +85,8 @@ const ProductsExample = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <Helmet>
-        <title>Products - TeeMeYou</title>
-        <meta name="description" content="Browse our wide range of products at TeeMeYou. Find the best deals on fashion, electronics, and more." />
+        <title>Products - HeartCart</title>
+        <meta name="description" content="Browse our wide range of products at HeartCart. Find the best deals on fashion, electronics, and more." />
       </Helmet>
       
       <div className="mb-8">

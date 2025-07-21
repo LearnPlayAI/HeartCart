@@ -374,7 +374,7 @@ export default function AuthPage() {
         {/* Auth Forms Section */}
         <div className="flex flex-col justify-center">
           <div className="mb-6">
-            <h1 className="text-2xl font-bold">Welcome to TeeMeYou.shop</h1>
+            <h1 className="text-2xl font-bold">Welcome to HeartCart.shop</h1>
             <p className="text-muted-foreground">
               Sign in to your account or create a new one to start shopping.
             </p>
@@ -762,7 +762,7 @@ export default function AuthPage() {
         <div className="hidden rounded-lg bg-gradient-to-r from-pink-500 to-purple-500 p-8 md:flex md:flex-col md:justify-center">
           <div className="text-center text-white">
             <ShoppingBag className="mx-auto mb-4 h-16 w-16" />
-            <h2 className="mb-2 text-3xl font-bold">TeeMeYou
+            <h2 className="mb-2 text-3xl font-bold">HeartCart
 </h2>
             <h3 className="mb-6 text-xl">Your One-Stop Shop for Everything</h3>
             <div className="space-y-4">
@@ -772,7 +772,7 @@ export default function AuthPage() {
               <p className="text-lg">✓ Get Exclusive Deals and Discounts</p>
             </div>
             <Separator className="my-6 bg-white/20" />
-            <p className="text-sm">Join thousands of satisfied customers shopping on TeeMeYou today!</p>
+            <p className="text-sm">Join thousands of satisfied customers shopping on HeartCart today!</p>
           </div>
         </div>
       </div>
@@ -921,7 +921,7 @@ export default function AuthPage() {
               <div className="text-sm">
                 <p className="font-medium">Registration Successful!</p>
                 <p className="text-muted-foreground">
-                  Welcome to TeeMeYou, {verificationEmailData?.username}! Please check your email to verify your account.
+                  Welcome to HeartCart, {verificationEmailData?.username}! Please check your email to verify your account.
                 </p>
               </div>
             </div>
@@ -930,11 +930,11 @@ export default function AuthPage() {
               <ol className="list-decimal list-inside space-y-1 ml-2">
                 <li>Check your email inbox for a verification link</li>
                 <li>Click the verification link in the email</li>
-                <li>Return to TeeMeYou to start shopping</li>
+                <li>Return to HeartCart to start shopping</li>
               </ol>
             </div>
             <div className="text-xs text-muted-foreground">
-              Didn't receive the email? Check your spam folder or contact sales@teemeyou.shop for help.
+              Didn't receive the email? Check your spam folder or contact sales@heartcart.shop for help.
             </div>
           </div>
           <DialogFooter className="flex gap-2">

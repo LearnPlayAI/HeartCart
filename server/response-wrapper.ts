@@ -1,5 +1,5 @@
 /**
- * Response Wrapper Middleware for TeeMeYou
+ * Response Wrapper Middleware for HeartCart
  * 
  * This module provides a middleware to consistently wrap API responses in our standard format.
  * It ensures that all HTTP responses follow the same structure, making the API more predictable.

@@ -100,8 +100,8 @@ export async function injectProductMetaTags(req: Request, res: Response, next: N
 }
 
 function generateProductHtml(product: ProductMetaData, displayPrice: number): string {
-  const description = product.description || `${product.name} - R${displayPrice.toLocaleString()} | Shop on TeeMeYou - South Africa's trusted online marketplace for quality products with fast delivery.`;
-  const imageUrl = product.imageUrl ? `https://teemeyou.shop${product.imageUrl}` : `https://teemeyou.shop/api/files/default-product-image.jpg`;
+  const description = product.description || `${product.name} - R${displayPrice.toLocaleString()} | Shop on HeartCart - South Africa's trusted online marketplace for quality products with fast delivery.`;
+  const imageUrl = product.imageUrl ? `https://heartcart.shop${product.imageUrl}` : `https://heartcart.shop/api/files/default-product-image.jpg`;
   
   return `<!DOCTYPE html>
 <html lang="en">
@@ -113,14 +113,14 @@ function generateProductHtml(product: ProductMetaData, displayPrice: number): st
     <meta property="og:type" content="product" />
     <meta property="og:title" content="${escapeHtml(product.name)} - R${displayPrice.toLocaleString()}" />
     <meta property="og:description" content="${escapeHtml(description)}" />
-    <meta property="og:url" content="https://teemeyou.shop/product/id/${product.id}" />
+    <meta property="og:url" content="https://heartcart.shop/product/id/${product.id}" />
     <meta property="og:image" content="${imageUrl}" />
     <meta property="og:image:secure_url" content="${imageUrl}" />
     <meta property="og:image:type" content="image/jpeg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="${escapeHtml(product.name)}" />
-    <meta property="og:site_name" content="TeeMeYou" />
+    <meta property="og:site_name" content="HeartCart" />
     <meta property="og:locale" content="en_ZA" />
     
     <!-- Product-specific Open Graph -->
@@ -128,8 +128,8 @@ function generateProductHtml(product: ProductMetaData, displayPrice: number): st
     <meta property="product:price:currency" content="ZAR" />
     <meta property="product:availability" content="in stock" />
     <meta property="product:condition" content="new" />
-    <meta property="product:brand" content="TeeMeYou" />
-    <meta property="product:retailer" content="TeeMeYou" />
+    <meta property="product:brand" content="HeartCart" />
+    <meta property="product:retailer" content="HeartCart" />
     
     <!-- Twitter Card Meta Tags -->
     <meta name="twitter:card" content="summary_large_image" />
@@ -139,7 +139,7 @@ function generateProductHtml(product: ProductMetaData, displayPrice: number): st
     <meta name="twitter:image:alt" content="${escapeHtml(product.name)}" />
     
     <!-- Page Title and Description -->
-    <title>${escapeHtml(product.name)} - R${displayPrice.toLocaleString()} | TeeMeYou</title>
+    <title>${escapeHtml(product.name)} - R${displayPrice.toLocaleString()} | HeartCart</title>
     <meta name="description" content="${escapeHtml(description)}" />
     
     <!-- Basic Branding -->
@@ -202,13 +202,13 @@ function generateProductHtml(product: ProductMetaData, displayPrice: number): st
         <div class="product-name">${escapeHtml(product.name)}</div>
         <div class="price">R${displayPrice.toLocaleString()}</div>
         <p>South Africa's trusted online marketplace for quality products with fast delivery.</p>
-        <a href="https://teemeyou.shop/product/id/${product.id}" class="button">View Product</a>
+        <a href="https://heartcart.shop/product/id/${product.id}" class="button">View Product</a>
     </div>
     
     <script>
         // Redirect to main app after a short delay for better user experience
         setTimeout(() => {
-            window.location.href = 'https://teemeyou.shop/product/id/${product.id}';
+            window.location.href = 'https://heartcart.shop/product/id/${product.id}';
         }, 1000);
     </script>
 </body>

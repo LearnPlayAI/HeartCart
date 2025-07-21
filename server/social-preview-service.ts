@@ -53,7 +53,7 @@ async function getProductSocialData(productId: number): Promise<ProductSocialDat
  * Generate HTML with Open Graph meta tags for social sharing
  */
 function generateProductSocialHTML(product: ProductSocialData): string {
-  const baseUrl = 'https://teemeyou.shop';
+  const baseUrl = 'https://heartcart.shop';
   const productUrl = `${baseUrl}/product/id/${product.id}`;
   
   // Use sale price if available, otherwise regular price
@@ -73,8 +73,8 @@ function generateProductSocialHTML(product: ProductSocialData): string {
     }
   }
   
-  // Create optimized meta description with TeeMeYou branding
-  const metaDescription = `${product.name} - R${displayPrice.toLocaleString()} | Shop on TeeMeYou - South Africa's trusted online marketplace for quality products with fast delivery.`;
+  // Create optimized meta description with HeartCart branding
+  const metaDescription = `${product.name} - R${displayPrice.toLocaleString()} | Shop on HeartCart - South Africa's trusted online marketplace for quality products with fast delivery.`;
   
   // Truncate description to Facebook's 300 character limit
   const truncatedDescription = metaDescription.length > 300 
@@ -94,7 +94,7 @@ function generateProductSocialHTML(product: ProductSocialData): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <!-- Basic Meta Tags -->
-  <title>${product.name} - R${displayPrice.toLocaleString()} | TeeMeYou</title>
+  <title>${product.name} - R${displayPrice.toLocaleString()} | HeartCart</title>
   <meta name="description" content="${truncatedDescription}">
   
   <!-- Open Graph Meta Tags for Facebook -->
@@ -108,7 +108,7 @@ function generateProductSocialHTML(product: ProductSocialData): string {
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="${product.name}">
-  <meta property="og:site_name" content="TeeMeYou">
+  <meta property="og:site_name" content="HeartCart">
   <meta property="og:locale" content="en_ZA">
   <meta property="fb:app_id" content="your-facebook-app-id">
   
@@ -117,8 +117,8 @@ function generateProductSocialHTML(product: ProductSocialData): string {
   <meta property="product:price:currency" content="ZAR">
   <meta property="product:availability" content="in stock">
   <meta property="product:condition" content="new">
-  <meta property="product:brand" content="${product.brand || 'TeeMeYou'}">
-  <meta property="product:retailer" content="TeeMeYou">
+  <meta property="product:brand" content="${product.brand || 'HeartCart'}">
+  <meta property="product:retailer" content="HeartCart">
   
   <!-- Additional Facebook-specific tags -->
   <meta property="og:updated_time" content="${new Date().toISOString()}">
@@ -158,10 +158,10 @@ function generateProductSocialHTML(product: ProductSocialData): string {
       <div style="margin: 15px 0; padding: 10px; background: #f8f9fa; border-radius: 6px;">
         <strong style="color: #E91E63;">Condition:</strong> New<br>
         <strong style="color: #E91E63;">Delivery:</strong> Fast shipping across South Africa<br>
-        <strong style="color: #E91E63;">Store:</strong> TeeMeYou - Trusted Online Marketplace
+        <strong style="color: #E91E63;">Store:</strong> HeartCart - Trusted Online Marketplace
       </div>
       <a href="${productUrl}" style="display: inline-block; background: linear-gradient(135deg, #FF69B4, #E91E63); color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 20px; font-weight: bold;">
-        🛍️ Shop Now on TeeMeYou
+        🛍️ Shop Now on HeartCart
       </a>
     </div>
   </div>
@@ -235,7 +235,7 @@ export async function handleProductSocialImage(req: Request, res: Response): Pro
     }
     
     // Otherwise, construct the full URL and redirect
-    const fullImageUrl = `https://teemeyou.shop/api/files/${imageUrl.replace(/^\/api\/files\//, '')}`;
+    const fullImageUrl = `https://heartcart.shop/api/files/${imageUrl.replace(/^\/api\/files\//, '')}`;
     res.redirect(fullImageUrl);
     
   } catch (error) {

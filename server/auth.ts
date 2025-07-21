@@ -163,7 +163,7 @@ export function setupAuth(app: Express): void {
           // Check if user account is active
           if (!user.isActive) {
             logger.info('Failed login attempt: inactive account', { email, userId: user.id });
-            return done(null, false, { message: "Your account has been deactivated. Please email sales@teemeyou.shop to request account activation." });
+            return done(null, false, { message: "Your account has been deactivated. Please email sales@heartcart.shop to request account activation." });
           }
 
           // Verify the password against the stored hash

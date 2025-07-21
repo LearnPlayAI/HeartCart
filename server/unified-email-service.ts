@@ -5,7 +5,7 @@ import { users, mailTokens, emailLogs } from '@shared/schema';
 import { eq, and, lt, desc } from 'drizzle-orm';
 import { SASTTimezone, sastAddHours, isExpiredSAST, formatSASTLog } from './timezone-utils';
 
-// TeeMeYou hot pink styling and company branding
+// HeartCart hot pink styling and company branding
 const TEEMEYOU_COLORS = {
   HOT_PINK: '#FF69B4',
   DARK_PINK: '#E91E63',
@@ -42,7 +42,7 @@ export class UnifiedEmailService {
         apiKey: apiKey,
       });
 
-      this.fromSender = new Sender("sales@teemeyou.shop", "TeeMeYou");
+      this.fromSender = new Sender("sales@heartcart.shop", "HeartCart");
 
       this.isInitialized = true;
       // Only log in development to reduce production noise
@@ -167,7 +167,7 @@ export class UnifiedEmailService {
   }
 
   async sendPasswordResetEmail(email: string, token: string, userName?: string): Promise<{ success: boolean; error?: string }> {
-    const resetUrl = `https://teemeyou.shop/reset-password?token=${token}`;
+    const resetUrl = `https://heartcart.shop/reset-password?token=${token}`;
     
     const htmlContent = `
       <!DOCTYPE html>
@@ -175,7 +175,7 @@ export class UnifiedEmailService {
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Reset Your Password - TeeMeYou</title>
+        <title>Reset Your Password - HeartCart</title>
         <style>
           @media (max-width: 600px) {
             .container { width: 95% !important; margin: 10px auto !important; }
@@ -194,7 +194,7 @@ export class UnifiedEmailService {
             <div style="display: inline-block; background: ${TEEMEYOU_COLORS.WHITE}; padding: 12px; border-radius: 50%; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);">
               <span style="font-size: 28px; color: ${TEEMEYOU_COLORS.HOT_PINK};">🛍️</span>
             </div>
-            <h1 style="color: ${TEEMEYOU_COLORS.WHITE}; margin: 0; font-size: 36px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3); letter-spacing: 1px;">TeeMeYou</h1>
+            <h1 style="color: ${TEEMEYOU_COLORS.WHITE}; margin: 0; font-size: 36px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3); letter-spacing: 1px;">HeartCart</h1>
             <p style="color: ${TEEMEYOU_COLORS.WHITE}; margin: 8px 0 0 0; font-size: 16px; opacity: 0.9;">Password Reset Request</p>
           </div>
           
@@ -208,7 +208,7 @@ export class UnifiedEmailService {
             </div>
             
             <p style="font-size: 16px; line-height: 1.6; color: ${TEEMEYOU_COLORS.DARK_GRAY}; margin-bottom: 30px; text-align: center;">
-              Hi ${userName || 'User'}, we received a request to reset your TeeMeYou account password. If you made this request, click the button below to set a new password.
+              Hi ${userName || 'User'}, we received a request to reset your HeartCart account password. If you made this request, click the button below to set a new password.
             </p>
             
             <!-- CTA Button -->
@@ -257,7 +257,7 @@ export class UnifiedEmailService {
               </span>
             </div>
             <p style="color: ${TEEMEYOU_COLORS.WHITE}; margin: 0; font-size: 14px; font-weight: 500;">
-              © 2024 TeeMeYou • South Africa's Premium Shopping Platform
+              © 2024 HeartCart • South Africa's Premium Shopping Platform
             </p>
             <p style="color: ${TEEMEYOU_COLORS.LIGHT_GRAY}; margin: 8px 0 0 0; font-size: 12px;">
               If you didn't request this password reset, you can safely ignore this email.
@@ -269,11 +269,11 @@ export class UnifiedEmailService {
     `;
 
     const textContent = `
-      Reset Your TeeMeYou Password
+      Reset Your HeartCart Password
       
       Hi ${userName || 'User'},
       
-      We received a request to reset your TeeMeYou account password. If you made this request, click the link below to set a new password:
+      We received a request to reset your HeartCart account password. If you made this request, click the link below to set a new password:
       
       ${resetUrl}
       
@@ -282,13 +282,13 @@ export class UnifiedEmailService {
       If you didn't request this password reset, you can safely ignore this email.
       
       Best regards,
-      The TeeMeYou Team
+      The HeartCart Team
     `;
 
     try {
       const result = await this.sendMailerSendEmail(
         email,
-        '🇿🇦 Reset Your TeeMeYou Password',
+        '🇿🇦 Reset Your HeartCart Password',
         htmlContent,
         textContent
       );
@@ -297,7 +297,7 @@ export class UnifiedEmailService {
       await db.insert(emailLogs).values({
         recipientEmail: email,
         emailType: 'password_reset',
-        subject: '🇿🇦 Reset Your TeeMeYou Password',
+        subject: '🇿🇦 Reset Your HeartCart Password',
         deliveryStatus: result.success ? 'sent' : 'failed',
         errorMessage: result.error || null,
         mailerSendId: result.messageId || null
@@ -311,7 +311,7 @@ export class UnifiedEmailService {
       await db.insert(emailLogs).values({
         recipientEmail: email,
         emailType: 'password_reset',
-        subject: '🇿🇦 Reset Your TeeMeYou Password',
+        subject: '🇿🇦 Reset Your HeartCart Password',
         deliveryStatus: 'failed',
         errorMessage: error.message || 'Unknown error'
       });
@@ -458,7 +458,7 @@ export class UnifiedEmailService {
       const { token } = await this.createVerificationToken(userId, email);
       
       // Create verification URL
-      const verificationUrl = `https://teemeyou.shop/verify-email?token=${token}`;
+      const verificationUrl = `https://heartcart.shop/verify-email?token=${token}`;
 
       const htmlContent = `
       <!DOCTYPE html>
@@ -466,7 +466,7 @@ export class UnifiedEmailService {
       <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Verify Your Account - TeeMeYou</title>
+        <title>Verify Your Account - HeartCart</title>
       </head>
       <body style="margin: 0; padding: 0; background: linear-gradient(135deg, ${TEEMEYOU_COLORS.LIGHT_GRAY} 0%, ${TEEMEYOU_COLORS.WHITE} 100%); font-family: 'Segoe UI', Arial, sans-serif;">
         <div class="container" style="max-width: 600px; margin: 20px auto; background: ${TEEMEYOU_COLORS.WHITE}; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 32px rgba(255, 105, 180, 0.2);">
@@ -477,8 +477,8 @@ export class UnifiedEmailService {
             <div style="display: inline-block; background: ${TEEMEYOU_COLORS.WHITE}; padding: 12px; border-radius: 50%; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);">
               <span style="font-size: 28px; color: ${TEEMEYOU_COLORS.HOT_PINK};">🛍️</span>
             </div>
-            <h1 style="color: ${TEEMEYOU_COLORS.WHITE}; margin: 0; font-size: 36px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3); letter-spacing: 1px;">TeeMeYou</h1>
-            <p style="color: ${TEEMEYOU_COLORS.WHITE}; margin: 8px 0 0 0; font-size: 16px; opacity: 0.9;">Welcome to TeeMeYou!</p>
+            <h1 style="color: ${TEEMEYOU_COLORS.WHITE}; margin: 0; font-size: 36px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3); letter-spacing: 1px;">HeartCart</h1>
+            <p style="color: ${TEEMEYOU_COLORS.WHITE}; margin: 8px 0 0 0; font-size: 16px; opacity: 0.9;">Welcome to HeartCart!</p>
           </div>
           
           <!-- Main Content -->
@@ -491,7 +491,7 @@ export class UnifiedEmailService {
             </div>
             
             <p style="font-size: 16px; line-height: 1.6; color: ${TEEMEYOU_COLORS.DARK_GRAY}; margin-bottom: 30px; text-align: center;">
-              Hi ${userName || 'User'}, welcome to TeeMeYou - South Africa's premium shopping platform! Please verify your email address to activate your account and start shopping.
+              Hi ${userName || 'User'}, welcome to HeartCart - South Africa's premium shopping platform! Please verify your email address to activate your account and start shopping.
             </p>
             
             <!-- CTA Button -->
@@ -540,7 +540,7 @@ export class UnifiedEmailService {
               </span>
             </div>
             <p style="color: ${TEEMEYOU_COLORS.WHITE}; margin: 0; font-size: 14px; font-weight: 500;">
-              © 2024 TeeMeYou • South Africa's Premium Shopping Platform
+              © 2024 HeartCart • South Africa's Premium Shopping Platform
             </p>
             <p style="color: ${TEEMEYOU_COLORS.LIGHT_GRAY}; margin: 8px 0 0 0; font-size: 12px;">
               If you didn't create this account, you can safely ignore this email.
@@ -552,11 +552,11 @@ export class UnifiedEmailService {
     `;
 
     const textContent = `
-      Welcome to TeeMeYou!
+      Welcome to HeartCart!
       
       Hi ${userName || 'User'},
       
-      Welcome to TeeMeYou - South Africa's premium t-shirt marketplace! Please verify your email address to activate your account and start shopping.
+      Welcome to HeartCart - South Africa's premium shopping marketplace! Please verify your email address to activate your account and start shopping.
       
       Click here to verify: ${verificationUrl}
       
@@ -565,11 +565,11 @@ export class UnifiedEmailService {
       If you didn't create this account, you can safely ignore this email.
       
       Best regards,
-      The TeeMeYou Team
+      The HeartCart Team
     `;
 
       console.log(`📧 Sending verification email to ${email}`);
-      return await this.sendMailerSendEmail(email, "Verify Your TeeMeYou Account", htmlContent, textContent);
+      return await this.sendMailerSendEmail(email, "Verify Your HeartCart Account", htmlContent, textContent);
     } catch (error: any) {
       console.error('❌ Error sending verification email:', error);
       return { success: false, error: error.message };
@@ -583,7 +583,7 @@ export class UnifiedEmailService {
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Account Credit Added - TeeMeYou</title>
+        <title>Account Credit Added - HeartCart</title>
         <style>
           @media (max-width: 600px) {
             .container { width: 95% !important; margin: 10px auto !important; }
@@ -602,7 +602,7 @@ export class UnifiedEmailService {
             <div style="display: inline-block; background: ${TEEMEYOU_COLORS.WHITE}; padding: 12px; border-radius: 50%; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);">
               <span style="font-size: 28px; color: ${TEEMEYOU_COLORS.HOT_PINK};">🛍️</span>
             </div>
-            <h1 style="color: ${TEEMEYOU_COLORS.WHITE}; margin: 0; font-size: 36px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3); letter-spacing: 1px;">TeeMeYou</h1>
+            <h1 style="color: ${TEEMEYOU_COLORS.WHITE}; margin: 0; font-size: 36px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3); letter-spacing: 1px;">HeartCart</h1>
             <p style="color: ${TEEMEYOU_COLORS.WHITE}; margin: 8px 0 0 0; font-size: 16px; opacity: 0.9;">Account Credit Added</p>
           </div>
           
@@ -616,7 +616,7 @@ export class UnifiedEmailService {
             </div>
             
             <p style="font-size: 16px; line-height: 1.6; color: ${TEEMEYOU_COLORS.DARK_GRAY}; margin-bottom: 30px; text-align: center;">
-              Hi ${customerName}, great news! We've added credit to your TeeMeYou account. You can use this credit on your next purchase or save it for later.
+              Hi ${customerName}, great news! We've added credit to your HeartCart account. You can use this credit on your next purchase or save it for later.
             </p>
             
             <!-- Credit Amount Display -->
@@ -639,7 +639,7 @@ export class UnifiedEmailService {
             
             <!-- Shop Now Button -->
             <div style="text-align: center; margin: 40px 0;">
-              <a href="https://teemeyou.shop" 
+              <a href="https://heartcart.shop" 
                  style="background: linear-gradient(135deg, ${TEEMEYOU_COLORS.HOT_PINK} 0%, ${TEEMEYOU_COLORS.DARK_PINK} 100%); 
                         color: ${TEEMEYOU_COLORS.WHITE}; 
                         padding: 16px 32px; 
@@ -673,7 +673,7 @@ export class UnifiedEmailService {
               </span>
             </div>
             <p style="color: ${TEEMEYOU_COLORS.WHITE}; margin: 0; font-size: 14px; font-weight: 500;">
-              © 2024 TeeMeYou • South Africa's Premium Shopping Platform
+              © 2024 HeartCart • South Africa's Premium Shopping Platform
             </p>
             <p style="color: ${TEEMEYOU_COLORS.LIGHT_GRAY}; margin: 8px 0 0 0; font-size: 12px;">
               Thank you for shopping with us! Happy shopping!
@@ -685,26 +685,26 @@ export class UnifiedEmailService {
     `;
 
     const textContent = `
-      Account Credit Added - TeeMeYou
+      Account Credit Added - HeartCart
       
       Hi ${customerName},
       
-      Great news! We've added R${creditAmount.toFixed(2)} credit to your TeeMeYou account.
+      Great news! We've added R${creditAmount.toFixed(2)} credit to your HeartCart account.
       
       ${adminNote ? `Details: ${adminNote}` : ''}
       
       You can use this credit on your next purchase or save it for later. Your credit will be automatically applied at checkout.
       
-      Visit teemeyou.shop to start shopping with your credit!
+      Visit heartcart.shop to start shopping with your credit!
       
       Best regards,
-      The TeeMeYou Team
+      The HeartCart Team
     `;
 
     try {
       const result = await this.sendMailerSendEmail(
         email,
-        '🇿🇦 Credit Added to Your TeeMeYou Account',
+        '🇿🇦 Credit Added to Your HeartCart Account',
         htmlContent,
         textContent
       );
@@ -713,7 +713,7 @@ export class UnifiedEmailService {
       await db.insert(emailLogs).values({
         recipientEmail: email,
         emailType: 'credit_notification',
-        subject: '🇿🇦 Credit Added to Your TeeMeYou Account',
+        subject: '🇿🇦 Credit Added to Your HeartCart Account',
         deliveryStatus: result.success ? 'sent' : 'failed',
         errorMessage: result.error || null,
         mailerSendId: result.messageId || null
@@ -727,7 +727,7 @@ export class UnifiedEmailService {
       await db.insert(emailLogs).values({
         recipientEmail: email,
         emailType: 'credit_notification',
-        subject: '🇿🇦 Credit Added to Your TeeMeYou Account',
+        subject: '🇿🇦 Credit Added to Your HeartCart Account',
         deliveryStatus: 'failed',
         errorMessage: error.message || 'Unknown error'
       });
@@ -746,7 +746,7 @@ export class UnifiedEmailService {
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Don't Forget Your Store Credit - TeeMeYou</title>
+        <title>Don't Forget Your Store Credit - HeartCart</title>
         <style>
           @media (max-width: 600px) {
             .container { width: 95% !important; margin: 10px auto !important; }
@@ -765,7 +765,7 @@ export class UnifiedEmailService {
             <div style="display: inline-block; background: ${TEEMEYOU_COLORS.WHITE}; padding: 12px; border-radius: 50%; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);">
               <span style="font-size: 28px; color: ${TEEMEYOU_COLORS.HOT_PINK};">💰</span>
             </div>
-            <h1 style="color: ${TEEMEYOU_COLORS.WHITE}; margin: 0; font-size: 36px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3); letter-spacing: 1px;">TeeMeYou</h1>
+            <h1 style="color: ${TEEMEYOU_COLORS.WHITE}; margin: 0; font-size: 36px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3); letter-spacing: 1px;">HeartCart</h1>
             <p style="color: ${TEEMEYOU_COLORS.WHITE}; margin: 8px 0 0 0; font-size: 16px; opacity: 0.9;">You Have Store Credit Waiting!</p>
           </div>
           
@@ -795,7 +795,7 @@ export class UnifiedEmailService {
             
             <!-- Shop Now Button -->
             <div style="text-align: center; margin: 40px 0;">
-              <a href="https://teemeyou.shop" 
+              <a href="https://heartcart.shop" 
                  style="background: linear-gradient(135deg, ${TEEMEYOU_COLORS.HOT_PINK} 0%, ${TEEMEYOU_COLORS.DARK_PINK} 100%); 
                         color: ${TEEMEYOU_COLORS.WHITE}; 
                         padding: 16px 32px; 
@@ -814,7 +814,7 @@ export class UnifiedEmailService {
             
             <!-- Features List -->
             <div style="background: linear-gradient(135deg, ${TEEMEYOU_COLORS.LIGHT_PINK} 0%, ${TEEMEYOU_COLORS.WHITE} 100%); padding: 25px; border-radius: 8px; margin: 30px 0;">
-              <h3 style="color: ${TEEMEYOU_COLORS.DARK_PINK}; margin: 0 0 15px 0; font-size: 18px; font-weight: 600; text-align: center;">Why Shop with TeeMeYou?</h3>
+              <h3 style="color: ${TEEMEYOU_COLORS.DARK_PINK}; margin: 0 0 15px 0; font-size: 18px; font-weight: 600; text-align: center;">Why Shop with HeartCart?</h3>
               <div style="text-align: left;">
                 <p style="margin: 8px 0; color: ${TEEMEYOU_COLORS.DARK_GRAY}; font-size: 14px; line-height: 1.4;">
                   ✨ <strong>Premium Quality:</strong> High-quality t-shirts and apparel
@@ -848,7 +848,7 @@ export class UnifiedEmailService {
               </span>
             </div>
             <p style="color: ${TEEMEYOU_COLORS.WHITE}; margin: 0; font-size: 14px; font-weight: 500;">
-              © 2024 TeeMeYou • South Africa's Premium Shopping Platform
+              © 2024 HeartCart • South Africa's Premium Shopping Platform
             </p>
             <p style="color: ${TEEMEYOU_COLORS.LIGHT_GRAY}; margin: 8px 0 0 0; font-size: 12px;">
               Questions? Reply to this email or visit our website for support.
@@ -860,7 +860,7 @@ export class UnifiedEmailService {
     `;
 
     const textContent = `
-      Don't Forget Your Store Credit - TeeMeYou
+      Don't Forget Your Store Credit - HeartCart
       
       Hi ${customerName},
       
@@ -870,16 +870,16 @@ export class UnifiedEmailService {
       
       Your store credit never expires and will be automatically applied to your next purchase.
       
-      Shop now at: https://teemeyou.shop
+      Shop now at: https://heartcart.shop
       
       Best regards,
-      The TeeMeYou Team
+      The HeartCart Team
     `;
 
     try {
       const result = await this.sendMailerSendEmail(
         email,
-        '🇿🇦 Don\'t Forget Your TeeMeYou Store Credit!',
+        '🇿🇦 Don\'t Forget Your HeartCart Store Credit!',
         htmlContent,
         textContent
       );
@@ -888,7 +888,7 @@ export class UnifiedEmailService {
       await db.insert(emailLogs).values({
         recipientEmail: email,
         emailType: 'credit_reminder',
-        subject: '🇿🇦 Don\'t Forget Your TeeMeYou Store Credit!',
+        subject: '🇿🇦 Don\'t Forget Your HeartCart Store Credit!',
         deliveryStatus: result.success ? 'sent' : 'failed',
         errorMessage: result.error || null,
         mailerSendId: result.messageId || null
@@ -902,7 +902,7 @@ export class UnifiedEmailService {
       await db.insert(emailLogs).values({
         recipientEmail: email,
         emailType: 'credit_reminder',
-        subject: '🇿🇦 Don\'t Forget Your TeeMeYou Store Credit!',
+        subject: '🇿🇦 Don\'t Forget Your HeartCart Store Credit!',
         deliveryStatus: 'failed',
         errorMessage: error.message || 'Unknown error'
       });

@@ -1,5 +1,5 @@
 /**
- * Shared Validation Schemas for TeeMeYou API
+ * Shared Validation Schemas for HeartCart API
  * 
  * This module contains reusable Zod validation schemas that are shared
  * between client and server for consistent validation rules.

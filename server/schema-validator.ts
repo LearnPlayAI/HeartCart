@@ -1,5 +1,5 @@
 /**
- * Schema Validation Utility for TeeMeYou
+ * Schema Validation Utility for HeartCart
  * 
  * This file provides standardized validation functions for database operations
  * to ensure data integrity and consistent error handling.

@@ -1,6 +1,6 @@
 /**
  * Unified MailerSend Email Service
- * Handles all email communications for TeeMeYou platform
+ * Handles all email communications for HeartCart platform
  */
 
 import { MailerSend, EmailParams, Sender, Recipient, Attachment } from "mailersend";
@@ -59,9 +59,9 @@ interface PaymentData {
 class MailerSendService {
   private mailerSend: MailerSend | null = null;
   private isConfigured = false;
-  private fromEmail = "sales@teemeyou.shop";
-  private fromName = "TeeMeYou";
-  private baseUrl = "https://teemeyou.shop";
+  private fromEmail = "sales@heartcart.shop";
+  private fromName = "HeartCart";
+  private baseUrl = "https://heartcart.shop";
 
   constructor() {
     this.initializeMailerSend();
@@ -326,7 +326,7 @@ class MailerSendService {
 
   // Template generation methods
   private generateAccountVerificationTemplate(displayName: string, verificationUrl: string): EmailTemplate {
-    const subject = "Verify Your TeeMeYou Account";
+    const subject = "Verify Your HeartCart Account";
     
     const html = `
       <!DOCTYPE html>
@@ -345,11 +345,11 @@ class MailerSendService {
       </head>
       <body>
         <div class="header">
-          <h1>Welcome to TeeMeYou!</h1>
+          <h1>Welcome to HeartCart!</h1>
         </div>
         <div class="content">
           <p>Hi ${displayName},</p>
-          <p>Thank you for creating an account with TeeMeYou! To complete your registration and start shopping, please verify your email address by clicking the button below:</p>
+          <p>Thank you for creating an account with HeartCart! To complete your registration and start shopping, please verify your email address by clicking the button below:</p>
           <p style="text-align: center;">
             <a href="${verificationUrl}" class="button">Verify My Account</a>
           </p>
@@ -357,10 +357,10 @@ class MailerSendService {
           <p style="word-break: break-all; color: #007bff;">${verificationUrl}</p>
           <p>This verification link will expire in 24 hours for security purposes.</p>
           <p>If you didn't create this account, please ignore this email.</p>
-          <p>Happy shopping!<br>The TeeMeYou Team</p>
+          <p>Happy shopping!<br>The HeartCart Team</p>
         </div>
         <div class="footer">
-          <p>&copy; 2025 TeeMeYou. All rights reserved.</p>
+          <p>&copy; 2025 HeartCart. All rights reserved.</p>
           <p>Visit us at <a href="${this.baseUrl}">${this.baseUrl}</a></p>
         </div>
       </body>
@@ -368,11 +368,11 @@ class MailerSendService {
     `;
 
     const text = `
-      Welcome to TeeMeYou!
+      Welcome to HeartCart!
       
       Hi ${displayName},
       
-      Thank you for creating an account with TeeMeYou! To complete your registration and start shopping, please verify your email address by visiting this link:
+      Thank you for creating an account with HeartCart! To complete your registration and start shopping, please verify your email address by visiting this link:
       
       ${verificationUrl}
       
@@ -381,9 +381,9 @@ class MailerSendService {
       If you didn't create this account, please ignore this email.
       
       Happy shopping!
-      The TeeMeYou Team
+      The HeartCart Team
       
-      © 2025 TeeMeYou. All rights reserved.
+      © 2025 HeartCart. All rights reserved.
       Visit us at ${this.baseUrl}
     `;
 
@@ -391,7 +391,7 @@ class MailerSendService {
   }
 
   private generatePasswordResetTemplate(displayName: string, resetUrl: string): EmailTemplate {
-    const subject = "Reset Your TeeMeYou Password";
+    const subject = "Reset Your HeartCart Password";
     
     const html = `
       <!DOCTYPE html>
@@ -415,7 +415,7 @@ class MailerSendService {
         </div>
         <div class="content">
           <p>Hi ${displayName},</p>
-          <p>We received a request to reset your TeeMeYou account password. Click the button below to create a new password:</p>
+          <p>We received a request to reset your HeartCart account password. Click the button below to create a new password:</p>
           <p style="text-align: center;">
             <a href="${resetUrl}" class="button">Reset My Password</a>
           </p>
@@ -425,10 +425,10 @@ class MailerSendService {
             <strong>Security Notice:</strong> This password reset link will expire in 1 hour for your security. If you didn't request this password reset, please ignore this email and your password will remain unchanged.
           </div>
           <p>Need help? Contact our support team at ${this.fromEmail}</p>
-          <p>Best regards,<br>The TeeMeYou Team</p>
+          <p>Best regards,<br>The HeartCart Team</p>
         </div>
         <div class="footer">
-          <p>&copy; 2025 TeeMeYou. All rights reserved.</p>
+          <p>&copy; 2025 HeartCart. All rights reserved.</p>
           <p>Visit us at <a href="${this.baseUrl}">${this.baseUrl}</a></p>
         </div>
       </body>
@@ -440,7 +440,7 @@ class MailerSendService {
       
       Hi ${displayName},
       
-      We received a request to reset your TeeMeYou account password. Visit this link to create a new password:
+      We received a request to reset your HeartCart account password. Visit this link to create a new password:
       
       ${resetUrl}
       
@@ -449,9 +449,9 @@ class MailerSendService {
       Need help? Contact our support team at ${this.fromEmail}
       
       Best regards,
-      The TeeMeYou Team
+      The HeartCart Team
       
-      © 2025 TeeMeYou. All rights reserved.
+      © 2025 HeartCart. All rights reserved.
       Visit us at ${this.baseUrl}
     `;
 
@@ -499,11 +499,11 @@ class MailerSendService {
           <p style="text-align: center;">
             <a href="${this.baseUrl}/orders/${orderData.id}" class="button">Track Your Order</a>
           </p>
-          <p>Thank you for choosing TeeMeYou!</p>
-          <p>Best regards,<br>The TeeMeYou Team</p>
+          <p>Thank you for choosing HeartCart!</p>
+          <p>Best regards,<br>The HeartCart Team</p>
         </div>
         <div class="footer">
-          <p>&copy; 2025 TeeMeYou. All rights reserved.</p>
+          <p>&copy; 2025 HeartCart. All rights reserved.</p>
           <p>Visit us at <a href="${this.baseUrl}">${this.baseUrl}</a></p>
         </div>
       </body>
@@ -528,12 +528,12 @@ class MailerSendService {
       
       Track your order: ${this.baseUrl}/orders/${orderData.id}
       
-      Thank you for choosing TeeMeYou!
+      Thank you for choosing HeartCart!
       
       Best regards,
-      The TeeMeYou Team
+      The HeartCart Team
       
-      © 2025 TeeMeYou. All rights reserved.
+      © 2025 HeartCart. All rights reserved.
       Visit us at ${this.baseUrl}
     `;
 
@@ -597,11 +597,11 @@ class MailerSendService {
           <p style="text-align: center;">
             <a href="${this.baseUrl}/orders/${orderData.id}" class="button">View Order Details</a>
           </p>
-          <p>Thank you for choosing TeeMeYou!</p>
-          <p>Best regards,<br>The TeeMeYou Team</p>
+          <p>Thank you for choosing HeartCart!</p>
+          <p>Best regards,<br>The HeartCart Team</p>
         </div>
         <div class="footer">
-          <p>&copy; 2025 TeeMeYou. All rights reserved.</p>
+          <p>&copy; 2025 HeartCart. All rights reserved.</p>
           <p>Visit us at <a href="${this.baseUrl}">${this.baseUrl}</a></p>
         </div>
       </body>
@@ -631,12 +631,12 @@ class MailerSendService {
       
       View order details: ${this.baseUrl}/orders/${orderData.id}
       
-      Thank you for choosing TeeMeYou!
+      Thank you for choosing HeartCart!
       
       Best regards,
-      The TeeMeYou Team
+      The HeartCart Team
       
-      © 2025 TeeMeYou. All rights reserved.
+      © 2025 HeartCart. All rights reserved.
       Visit us at ${this.baseUrl}
     `;
 
@@ -725,10 +725,10 @@ class MailerSendService {
           </table>
 
           <p>Thank you for your business!</p>
-          <p>Best regards,<br>The TeeMeYou Team</p>
+          <p>Best regards,<br>The HeartCart Team</p>
         </div>
         <div class="footer">
-          <p>&copy; 2025 TeeMeYou. All rights reserved.</p>
+          <p>&copy; 2025 HeartCart. All rights reserved.</p>
           <p>Visit us at <a href="${this.baseUrl}">${this.baseUrl}</a></p>
         </div>
       </body>
@@ -759,9 +759,9 @@ class MailerSendService {
       Thank you for your business!
       
       Best regards,
-      The TeeMeYou Team
+      The HeartCart Team
       
-      © 2025 TeeMeYou. All rights reserved.
+      © 2025 HeartCart. All rights reserved.
       Visit us at ${this.baseUrl}
     `;
 

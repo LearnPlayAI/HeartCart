@@ -1,5 +1,5 @@
 /**
- * String Utility Functions for TeeMeYou
+ * String Utility Functions for HeartCart
  * 
  * This module provides utility functions for string manipulation, 
  * particularly focused on generating slugs, SKUs, and other product-related identifiers.

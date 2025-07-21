@@ -76,7 +76,7 @@ export function SalesRepMessageCard({ className = '' }: SalesRepMessageCardProps
   };
 
   const handleReset = () => {
-    const defaultMessage = `🎉 JOIN THE TeeMeYou SALES TEAM! 🎉
+    const defaultMessage = `🎉 JOIN THE HeartCart SALES TEAM! 🎉
 
 💎 Become a Sales Representative and start earning TODAY! 💎
 
@@ -94,7 +94,7 @@ export function SalesRepMessageCard({ className = '' }: SalesRepMessageCardProps
 
 💡 How It Works:
 1️⃣ Share your unique link with friends & family
-2️⃣ They shop quality products on TeeMeYou 
+2️⃣ They shop quality products on HeartCart 
 3️⃣ You earn commission on every purchase! 💸
 
 🎯 Perfect For:
@@ -104,13 +104,13 @@ export function SalesRepMessageCard({ className = '' }: SalesRepMessageCardProps
 🏠 Stay-at-home parents
 
 🚀 START EARNING NOW:
-👆 Register here: https://teemeyou.shop/auth?tab=register&repCode={REP_CODE}
+👆 Register here: https://heartcart.shop/auth?tab=register&repCode={REP_CODE}
 
 💬 Questions? We're here to help!
-📧 sales@teemeyou.shop
-🌐 https://teemeyou.shop
+📧 sales@heartcart.shop
+🌐 https://heartcart.shop
 
-#TeeMeYou #SalesRep #EarnMoney #SouthAfrica #WorkFromHome 🇿🇦`;
+#HeartCart #SalesRep #EarnMoney #SouthAfrica #WorkFromHome 🇿🇦`;
     
     setMessage(defaultMessage);
     setHasUnsavedChanges(true);

@@ -1,8 +1,8 @@
-// Service Worker for TEE ME YOU PWA with Auto-Update Support
+// Service Worker for HeartCart PWA with Auto-Update Support
 
 // Generate version based on timestamp - this ensures cache busting on each deployment
 const APP_VERSION = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`; // Auto-generated version
-const CACHE_NAME = `teemeyou-cache-${APP_VERSION}`;
+const CACHE_NAME = `heartcart-cache-${APP_VERSION}`;
 const RUNTIME = `runtime-${APP_VERSION}`;
 const VERSION_KEY = 'app-version';
 

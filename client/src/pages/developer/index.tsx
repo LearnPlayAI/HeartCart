@@ -129,13 +129,13 @@ function DeveloperDashboard() {
   return (
     <DeveloperLayout 
       title="Developer Dashboard" 
-      subtitle="Comprehensive testing and diagnostic tools for the TeeMeYou platform"
+      subtitle="Comprehensive testing and diagnostic tools for the HeartCart platform"
     >
       <div className="mb-8">
         <div className="p-6 bg-gradient-to-r from-green-50 to-green-100 border border-green-200 rounded-md">
           <h2 className="text-xl font-semibold mb-2 text-green-800">Welcome to the Developer Dashboard</h2>
           <p className="text-green-700 mb-4">
-            This dashboard provides tools for testing, debugging, and validating all aspects of the TeeMeYou e-commerce platform. 
+            This dashboard provides tools for testing, debugging, and validating all aspects of the HeartCart e-commerce platform. 
             Select a testing module below to get started.
           </p>
           <div className="flex items-center gap-4">

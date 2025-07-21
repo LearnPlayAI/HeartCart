@@ -828,7 +828,7 @@ const OrderDetail: React.FC = () => {
                           <button
                             onClick={() => {
                               const subject = `Payment Proof - Order ${order.orderNumber}`;
-                              const body = `Dear TeeMeYou Team,
+                              const body = `Dear HeartCart Team,
 
 Please find attached the proof of payment for my order.
 
@@ -845,11 +845,11 @@ Thank you for your assistance.
 Best regards,
 ${order.customerName}`;
                               
-                              const mailtoLink = `mailto:sales@teemeyou.shop?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                              const mailtoLink = `mailto:sales@heartcart.shop?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
                               window.open(mailtoLink, '_blank');
                             }}
                             className="font-mono text-sm font-medium text-blue-900 bg-blue-100 px-2 py-1 rounded hover:bg-blue-200 transition-colors cursor-pointer"
-                          >sales@teemeyou.shop</button>
+                          >sales@heartcart.shop</button>
                           <p className="text-xs text-blue-700 mt-2">
                             Click the email address above to open your email client with pre-filled order details. Attach your proof of payment and send.
                           </p>
@@ -1023,7 +1023,7 @@ ${order.customerName}`;
                 <Button 
                   variant="outline" 
                   className="w-full"
-                  onClick={() => window.open('mailto:sales@teemeyou.shop?subject=Order%20Support&body=Order%20Number:%20' + order.orderNumber, '_blank')}
+                  onClick={() => window.open('mailto:sales@heartcart.shop?subject=Order%20Support&body=Order%20Number:%20' + order.orderNumber, '_blank')}
                 >
                   <Mail className="h-4 w-4 mr-2" />
                   Contact Support

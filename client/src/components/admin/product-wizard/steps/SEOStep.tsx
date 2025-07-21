@@ -60,9 +60,9 @@ export const SEOStep: React.FC<SEOStepProps> = ({
       const productId = draft.originalProductId || draft.id;
       
       // Use the production domain
-      const baseUrl = 'https://www.teemeyou.shop';
+      const baseUrl = 'https://www.heartcart.shop';
       
-      // Create the canonical URL in the format https://www.teemeyou.shop/product/id/{productId}
+      // Create the canonical URL in the format https://www.heartcart.shop/product/id/{productId}
       if (productId) {
         setProductUrl(`${baseUrl}/product/id/${productId}`);
       }

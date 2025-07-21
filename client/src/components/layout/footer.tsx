@@ -116,7 +116,7 @@ const Footer = () => {
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 uppercase tracking-wide">Email</p>
-                  <p className="text-sm text-gray-700 font-medium">sales@teemeyou.shop</p>
+                  <p className="text-sm text-gray-700 font-medium">sales@heartcart.shop</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
@@ -146,7 +146,7 @@ const Footer = () => {
         {/* Bottom Footer */}
         <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0 pt-4">
           <div className="text-sm text-gray-600 font-medium">
-            © {currentYear} TeeMeYou. All rights reserved.
+            © {currentYear} HeartCart. All rights reserved.
           </div>
           <div className="flex flex-wrap gap-6 text-sm">
             <Link href="/privacy-policy" className="text-gray-600 hover:text-[#FF69B4] transition-colors font-medium relative group">

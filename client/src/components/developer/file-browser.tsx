@@ -241,7 +241,7 @@ const FileBrowser: React.FC = () => {
   // Add default bucket if none available
   if (buckets.length === 0) {
     console.warn('No buckets available, adding default bucket');
-    buckets.push('TeeMeYouStorage');
+    buckets.push('HeartCartStorage');
   }
   
   // Root folders

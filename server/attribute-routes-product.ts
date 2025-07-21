@@ -1,5 +1,5 @@
 /**
- * Product Attribute API Routes for TeeMeYou
+ * Product Attribute API Routes for HeartCart
  * 
  * This module provides API endpoints for managing product-specific attributes
  * and attribute values assigned to products.

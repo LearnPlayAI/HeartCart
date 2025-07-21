@@ -200,7 +200,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 💰 *Price: R[PRICE]*
 
-🛍️ Shop on TeeMeYou - South Africa's trusted online marketplace
+🛍️ Shop on HeartCart - South Africa's trusted online marketplace
 🚚 Fast delivery across SA
 💳 Secure payment options
 ⭐ Quality guaranteed
@@ -4194,7 +4194,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           throw new NotFoundError(`Product with ID ${productId} not found`, "product");
         }
         
-        // Verify product availability - TeeMeYou doesn't track stock levels, but in future:
+        // Verify product availability - HeartCart doesn't track stock levels, but in future:
         // This block could check if the requested quantity exceeds available stock
         // For now, log the request for potential future implementation
         logger.debug(`Checking availability for product addition to cart`, {
@@ -4328,7 +4328,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           throw new BadRequestError(`Cannot update quantity for inactive product "${product.name}"`);
         }
         
-        // Verify stock availability - TeeMeYou doesn't track stock levels, but log for future implementation
+        // Verify stock availability - HeartCart doesn't track stock levels, but log for future implementation
         logger.debug(`Checking availability for cart item update`, {
           cartItemId,
           userId: user.id,

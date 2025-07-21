@@ -87,7 +87,7 @@ const CreditHistory = () => {
         </Button>
         <div>
           <h1 className="text-2xl font-bold">Credit History</h1>
-          <p className="text-muted-foreground">Track your TeeMeYou store credits and transactions</p>
+          <p className="text-muted-foreground">Track your HeartCart store credits and transactions</p>
         </div>
       </div>
 

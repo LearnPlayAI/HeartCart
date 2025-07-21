@@ -9883,7 +9883,7 @@ export class DatabaseStorage implements IStorage {
         metaKeywords: draft.metaKeywords,
         canonicalUrl:
           draft.canonicalUrl ||
-          `https://www.teemeyou.shop/product/id/${draft.originalProductId || "new"}`,
+          `https://www.heartcart.shop/product/id/${draft.originalProductId || "new"}`,
 
         // Product status flags
         isActive: draft.isActive !== undefined ? draft.isActive : true,

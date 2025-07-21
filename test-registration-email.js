@@ -13,7 +13,7 @@ async function testRegistrationEmailFlow() {
     // Test 1: Direct email service functionality
     console.log('\n1. Testing direct email service...');
     const testUserId = 999;
-    const testEmail = 'test@teemeyou.shop';
+    const testEmail = 'test@heartcart.shop';
     const testUsername = 'TestUser';
 
     const emailResult = await unifiedEmailService.sendVerificationEmail(testUserId, testEmail, testUsername);

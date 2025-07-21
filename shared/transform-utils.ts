@@ -1,5 +1,5 @@
 /**
- * Shared data transformation utility functions for the TeeMeYou application
+ * Shared data transformation utility functions for the HeartCart application
  * Common patterns for transforming data between formats and structures
  */
 

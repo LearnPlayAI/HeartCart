@@ -140,7 +140,7 @@ router.get('/validate-reset-token/:token', asyncHandler(async (req: Request, res
 // Test endpoint for debugging
 router.get('/test-email', asyncHandler(async (req: Request, res: Response) => {
   try {
-    const testEmail = 'admin@teemeyou.shop';
+    const testEmail = 'admin@heartcart.shop';
     
     // Find user
     const user = await db.select()

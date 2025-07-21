@@ -32,10 +32,10 @@ export default function ShareProductDialog({
   const displayPrice = salePrice || productPrice;
   
   // Generate product URLs - always use production domain for sharing
-  const productUrl = `https://teemeyou.shop/product/id/${productId}`;
+  const productUrl = `https://heartcart.shop/product/id/${productId}`;
   
   // For WhatsApp sharing, use social preview URL to ensure rich card display
-  const socialPreviewUrl = `https://teemeyou.shop/api/social-preview/product/${productId}`;
+  const socialPreviewUrl = `https://heartcart.shop/api/social-preview/product/${productId}`;
   
   // Fetch dynamic product sharing template from public settings (available to all users)
   const { data: sharingTemplate, isLoading: templateLoading, error: templateError } = useQuery({
@@ -50,7 +50,7 @@ export default function ShareProductDialog({
 💰 *Price: R${displayPrice.toLocaleString()}*
 ${salePrice && productPrice !== salePrice ? `~~R${productPrice.toLocaleString()}~~ *SAVE R${(productPrice - salePrice).toLocaleString()}!*` : ''}
 
-🛍️ Shop on TeeMeYou - South Africa's trusted online marketplace
+🛍️ Shop on HeartCart - South Africa's trusted online marketplace
 🚚 Fast delivery across SA
 💳 Secure payment options
 ⭐ Quality guaranteed
@@ -89,7 +89,7 @@ ${salePrice && productPrice !== salePrice ? `~~R${productPrice.toLocaleString()}
   shareText = shareText.replace(/\[PRODUCT_URL\]/g, productUrl);
 
   const shareData = {
-    title: `${productTitle} - R${displayPrice.toLocaleString()} | TeeMeYou`,
+    title: `${productTitle} - R${displayPrice.toLocaleString()} | HeartCart`,
     text: shareText,
     url: productUrl,
   };
@@ -157,11 +157,11 @@ ${salePrice && productPrice !== salePrice ? `~~R${productPrice.toLocaleString()}
   };
 
   const handleEmailShare = () => {
-    const subject = encodeURIComponent(`Check out this ${productTitle} on TeeMeYou`);
+    const subject = encodeURIComponent(`Check out this ${productTitle} on HeartCart`);
     // Use dynamic template with additional product URL for email format
     const emailBody = `Hi,
 
-I found this interesting product on TeeMeYou that you might like:
+I found this interesting product on HeartCart that you might like:
 
 ${shareText}
 

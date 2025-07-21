@@ -1,5 +1,5 @@
 /**
- * Shared validation utility functions for the TeeMeYou application
+ * Shared validation utility functions for the HeartCart application
  * Common validation patterns for form data and user input
  */
 

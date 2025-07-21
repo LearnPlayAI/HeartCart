@@ -238,7 +238,7 @@ export default function UserCartDetailPage() {
                     <Button 
                       variant="outline" 
                       className="w-full"
-                      onClick={() => window.open(`https://wa.me/${userData?.phoneNumber?.replace(/\D/g, '')}?text=Hi ${userData?.fullName || userData?.username}! We noticed you have some items in your TeeMeYou cart. Would you like help completing your order?`, '_blank')}
+                      onClick={() => window.open(`https://wa.me/${userData?.phoneNumber?.replace(/\D/g, '')}?text=Hi ${userData?.fullName || userData?.username}! We noticed you have some items in your HeartCart cart. Would you like help completing your order?`, '_blank')}
                     >
                       <Phone className="h-4 w-4 mr-2" />
                       WhatsApp

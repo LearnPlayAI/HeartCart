@@ -1,5 +1,5 @@
 /**
- * Shared date utility functions for the TeeMeYou application
+ * Shared date utility functions for the HeartCart application
  * All date functions standardized to SAST (South African Standard Time, UTC+2)
  */
 

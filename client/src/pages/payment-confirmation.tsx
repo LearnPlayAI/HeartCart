@@ -352,7 +352,7 @@ export default function PaymentConfirmation() {
                 <ol className="text-sm text-blue-800 space-y-1">
                   <li>1. Transfer the exact amount: <strong>R{orderData.total.toFixed(2)}</strong></li>
                   <li>2. Use the reference number: <strong>{referenceNumber}</strong></li>
-                  <li>3. Send proof of payment to: <strong>sales@teemeyou.shop</strong></li>
+                  <li>3. Send proof of payment to: <strong>sales@heartcart.shop</strong></li>
                   <li>4. Click "I've Made Payment" below to create your order</li>
                 </ol>
               </div>

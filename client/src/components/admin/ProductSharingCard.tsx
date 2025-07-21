@@ -94,11 +94,11 @@ export function ProductSharingCard({ className = '' }: ProductSharingCardProps) 
 
 👆 GET YOURS NOW: [PRODUCT_URL]
 
-🛍️ Browse more amazing products: https://teemeyou.shop
+🛍️ Browse more amazing products: https://heartcart.shop
 
 💬 Questions? DM us anytime!
 
-#TeeMeYou #DealsOfTheDay #SouthAfricaShopping #QualityProducts #PUDO #OnlineStore #SouthAfrica 🇿🇦
+#HeartCart #DealsOfTheDay #SouthAfricaShopping #QualityProducts #PUDO #OnlineStore #SouthAfrica 🇿🇦
 
 Tag a friend who needs this! 👇`;
     

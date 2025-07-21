@@ -140,7 +140,7 @@ export class InvoiceGenerator {
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(24);
     doc.setFont('helvetica', 'bold');
-    doc.text('TeeMeYou', margin, 20);
+    doc.text('HeartCart', margin, 20);
     
     doc.setFontSize(12);
     doc.setFont('helvetica', 'normal');
@@ -161,7 +161,7 @@ export class InvoiceGenerator {
     doc.setFont('helvetica', 'normal');
     
     // Left column - Company details
-    doc.text('TeeMeYou (Pty) Ltd', margin, yPosition);
+    doc.text('HeartCart (Pty) Ltd', margin, yPosition);
     doc.text('Registration: 2025/499123/07', margin, yPosition + 5);
     doc.text('11 Ebbehout Street, Sharonlea', margin, yPosition + 10);
     doc.text('Randburg, Gauteng, 2194', margin, yPosition + 15);
@@ -284,7 +284,7 @@ export class InvoiceGenerator {
     doc.setFontSize(8);
     doc.setTextColor(128, 128, 128);
     doc.text('Thank you for your business!', margin, yPosition);
-    doc.text('For support, contact us at sales@teemeyou.shop', margin, yPosition + 5);
+    doc.text('For support, contact us at sales@heartcart.shop', margin, yPosition + 5);
   }
 
   private generateInvoiceHTML(data: InvoiceData): string {
@@ -675,7 +675,7 @@ export class InvoiceGenerator {
         <div class="footer">
             <h4>Thank You for Your Business!</h4>
             <p>This invoice confirms payment received for your order.</p>
-            <p>For support inquiries, contact us at sales@teemeyou.shop</p>
+            <p>For support inquiries, contact us at sales@heartcart.shop</p>
             
             <div class="legal-notice">
                 <h5>Important Notice</h5>

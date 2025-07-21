@@ -746,7 +746,7 @@ export const PublishedProducts: React.FC = () => {
                             const regularPrice = typeof product.price === 'string' ? parseFloat(product.price) : (product.price || 0);
                             const salePrice = product.salePrice ? (typeof product.salePrice === 'string' ? parseFloat(product.salePrice) : product.salePrice) : null;
                             
-                            // TMY profit margin should be based on sale price vs cost price (actual profit TeeMeYou makes)
+                            // TMY profit margin should be based on sale price vs cost price (actual profit HeartCart makes)
                             const effectivePrice = salePrice || regularPrice;
                             const tmyMarkup = costPrice > 0 && effectivePrice > 0 ? ((effectivePrice - costPrice) / costPrice * 100) : 0;
                             const customerDiscount = salePrice && regularPrice > 0 && salePrice < regularPrice ? ((regularPrice - salePrice) / regularPrice * 100) : 0;

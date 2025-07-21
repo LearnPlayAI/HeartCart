@@ -17,7 +17,7 @@ function generateCanonicalUrl(slug: string | null, productId?: number): string {
   if (!productId) return '';
   
   // Use the production domain for canonical URLs
-  const baseUrl = 'https://teemeyou.shop';
+  const baseUrl = 'https://heartcart.shop';
   
   return `${baseUrl}/product/id/${productId}`;
 }

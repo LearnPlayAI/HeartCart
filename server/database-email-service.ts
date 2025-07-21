@@ -153,7 +153,7 @@ export class DatabaseEmailService {
       baseUrl: 'https://api.mailersend.com/v1'
     });
 
-    this.sender = new Sender('sales@teemeyou.shop', 'TeeMeYou Support');
+    this.sender = new Sender('sales@heartcart.shop', 'HeartCart Support');
     // Only log in development to reduce production noise
     if (process.env.NODE_ENV !== 'production') {
       logger.info('DatabaseEmailService initialized with MailerSend');
@@ -218,31 +218,31 @@ export class DatabaseEmailService {
       await storage.createMailToken(tokenData);
 
       // Create verification URL
-      const verificationUrl = `https://teemeyou.shop/verify-email?token=${token}`;
+      const verificationUrl = `https://heartcart.shop/verify-email?token=${token}`;
 
       // Email content
       const emailParams = new EmailParams()
         .setFrom(this.sender)
         .setTo([new Recipient(email, username)])
-        .setSubject('Verify Your TeeMeYou Account')
+        .setSubject('Verify Your HeartCart Account')
         .setHtml(`
           <!DOCTYPE html>
           <html>
           <head>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Verify Your Account - TeeMeYou</title>
+            <title>Verify Your Account - HeartCart</title>
           </head>
           <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
             <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-              <h1 style="color: white; margin: 0; font-size: 28px;">Welcome to TeeMeYou!</h1>
+              <h1 style="color: white; margin: 0; font-size: 28px;">Welcome to HeartCart!</h1>
             </div>
             
             <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e9ecef;">
               <h2 style="color: #495057; margin-top: 0;">Hello ${username}!</h2>
               
               <p style="font-size: 16px; margin-bottom: 25px;">
-                Thank you for joining TeeMeYou! Please verify your email address to activate your account and start shopping.
+                Thank you for joining HeartCart! Please verify your email address to activate your account and start shopping.
               </p>
               
               <div style="text-align: center; margin: 30px 0;">
@@ -265,36 +265,36 @@ export class DatabaseEmailService {
               </p>
               
               <p style="color: #6c757d; font-size: 14px;">
-                If you didn't create an account with TeeMeYou, please ignore this email.
+                If you didn't create an account with HeartCart, please ignore this email.
               </p>
               
               <hr style="border: none; border-top: 1px solid #dee2e6; margin: 30px 0;">
               
               <p style="color: #6c757d; font-size: 12px; text-align: center; margin-bottom: 0;">
                 Best regards,<br>
-                The TeeMeYou Team<br>
-                <a href="https://teemeyou.shop" style="color: #667eea;">teemeyou.shop</a>
+                The HeartCart Team<br>
+                <a href="https://heartcart.shop" style="color: #667eea;">heartcart.shop</a>
               </p>
             </div>
           </body>
           </html>
         `)
         .setText(`
-          Welcome to TeeMeYou!
+          Welcome to HeartCart!
           
           Hello ${username}!
           
-          Thank you for joining TeeMeYou! Please verify your email address to activate your account.
+          Thank you for joining HeartCart! Please verify your email address to activate your account.
           
           Click here to verify: ${verificationUrl}
           
           This verification link will expire in 1 hour for security reasons.
           
-          If you didn't create an account with TeeMeYou, please ignore this email.
+          If you didn't create an account with HeartCart, please ignore this email.
           
           Best regards,
-          The TeeMeYou Team
-          https://teemeyou.shop
+          The HeartCart Team
+          https://heartcart.shop
         `);
 
       // Send email
@@ -305,7 +305,7 @@ export class DatabaseEmailService {
         userId,
         recipientEmail: email,
         emailType: 'verification',
-        subject: 'Verify Your TeeMeYou Account',
+        subject: 'Verify Your HeartCart Account',
         deliveryStatus: response.statusCode === 202 ? 'sent' : 'failed',
         mailerSendId: response.body?.message_id || null,
         errorMessage: response.statusCode !== 202 ? `HTTP ${response.statusCode}` : null,
@@ -356,20 +356,20 @@ export class DatabaseEmailService {
       await storage.createMailToken(tokenData);
 
       // Create reset URL
-      const resetUrl = `https://teemeyou.shop/reset-password?token=${token}`;
+      const resetUrl = `https://heartcart.shop/reset-password?token=${token}`;
 
       // Email content
       const emailParams = new EmailParams()
         .setFrom(this.sender)
         .setTo([new Recipient(email, username)])
-        .setSubject('Reset Your TeeMeYou Password')
+        .setSubject('Reset Your HeartCart Password')
         .setHtml(`
           <!DOCTYPE html>
           <html>
           <head>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Reset Your Password - TeeMeYou</title>
+            <title>Reset Your Password - HeartCart</title>
           </head>
           <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
             <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
@@ -380,7 +380,7 @@ export class DatabaseEmailService {
               <h2 style="color: #495057; margin-top: 0;">Hello ${username}!</h2>
               
               <p style="font-size: 16px; margin-bottom: 25px;">
-                We received a request to reset the password for your TeeMeYou account. Click the button below to create a new password.
+                We received a request to reset the password for your HeartCart account. Click the button below to create a new password.
               </p>
               
               <div style="text-align: center; margin: 30px 0;">
@@ -410,19 +410,19 @@ export class DatabaseEmailService {
               
               <p style="color: #6c757d; font-size: 12px; text-align: center; margin-bottom: 0;">
                 Best regards,<br>
-                The TeeMeYou Team<br>
-                <a href="https://teemeyou.shop" style="color: #667eea;">teemeyou.shop</a>
+                The HeartCart Team<br>
+                <a href="https://heartcart.shop" style="color: #667eea;">heartcart.shop</a>
               </p>
             </div>
           </body>
           </html>
         `)
         .setText(`
-          Password Reset - TeeMeYou
+          Password Reset - HeartCart
           
           Hello ${username}!
           
-          We received a request to reset the password for your TeeMeYou account.
+          We received a request to reset the password for your HeartCart account.
           
           Click here to reset your password: ${resetUrl}
           
@@ -431,8 +431,8 @@ export class DatabaseEmailService {
           If you didn't request a password reset, please ignore this email.
           
           Best regards,
-          The TeeMeYou Team
-          https://teemeyou.shop
+          The HeartCart Team
+          https://heartcart.shop
         `);
 
       // Send email with detailed debugging and timeout protection
@@ -449,7 +449,7 @@ export class DatabaseEmailService {
       logger.debug('Email parameters prepared', {
         from: this.sender.email,
         to: email,
-        subject: 'Reset Your TeeMeYou Password',
+        subject: 'Reset Your HeartCart Password',
         hasHtml: true,
         hasText: true
       });
@@ -530,7 +530,7 @@ export class DatabaseEmailService {
             userId,
             recipientEmail: email,
             emailType: 'password_reset',
-            subject: 'Reset Your TeeMeYou Password',
+            subject: 'Reset Your HeartCart Password',
             deliveryStatus: 'sent',
             mailerSendId: response.body?.message_id || null,
             errorMessage: null,
@@ -558,7 +558,7 @@ export class DatabaseEmailService {
           userId,
           recipientEmail: email,
           emailType: 'password_reset',
-          subject: 'Reset Your TeeMeYou Password',
+          subject: 'Reset Your HeartCart Password',
           deliveryStatus: 'failed',
           mailerSendId: null,
           errorMessage,
@@ -624,7 +624,7 @@ export class DatabaseEmailService {
           <head>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Payment Confirmed - TeeMeYou</title>
+            <title>Payment Confirmed - HeartCart</title>
           </head>
           <body style="margin: 0; padding: 0; background: linear-gradient(135deg, #F3F4F6 0%, #FFFFFF 100%); font-family: 'Segoe UI', Arial, sans-serif;">
             <div class="container" style="max-width: 600px; margin: 20px auto; background: #FFFFFF; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 32px rgba(255, 105, 180, 0.2);">
@@ -635,7 +635,7 @@ export class DatabaseEmailService {
                 <div style="display: inline-block; background: #FFFFFF; padding: 12px; border-radius: 50%; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);">
                   <span style="font-size: 28px; color: #FF69B4;">💳</span>
                 </div>
-                <h1 style="color: #FFFFFF; margin: 0; font-size: 36px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3); letter-spacing: 1px;">TeeMeYou</h1>
+                <h1 style="color: #FFFFFF; margin: 0; font-size: 36px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3); letter-spacing: 1px;">HeartCart</h1>
                 <p style="color: #FFFFFF; margin: 8px 0 0 0; font-size: 18px; opacity: 0.9;">Payment Confirmed!</p>
               </div>
             
@@ -716,7 +716,7 @@ export class DatabaseEmailService {
               </div>
               
               <div style="text-align: center; margin: 30px 0;">
-                <a href="https://teemeyou.shop/order/${data.orderId}" 
+                <a href="https://heartcart.shop/order/${data.orderId}" 
                    style="background: linear-gradient(135deg, #FF69B4 0%, #E91E63 100%); 
                           color: white; 
                           padding: 16px 32px; 
@@ -742,11 +742,11 @@ export class DatabaseEmailService {
                   </span>
                 </div>
                 <p style="color: #FFFFFF; margin: 0; font-size: 14px; font-weight: 500;">
-                  © 2024 TeeMeYou • South Africa's Premium Shopping Platform
+                  © 2024 HeartCart • South Africa's Premium Shopping Platform
                 </p>
                 <p style="color: #CBD5E0; margin: 8px 0 0 0; font-size: 12px;">
-                  <a href="https://teemeyou.shop" style="color: #FF69B4; text-decoration: none;">teemeyou.shop</a> | 
-                  <a href="mailto:sales@teemeyou.shop" style="color: #FF69B4; text-decoration: none;">sales@teemeyou.shop</a>
+                  <a href="https://heartcart.shop" style="color: #FF69B4; text-decoration: none;">heartcart.shop</a> | 
+                  <a href="mailto:sales@heartcart.shop" style="color: #FF69B4; text-decoration: none;">sales@heartcart.shop</a>
                 </p>
               </div>
             </div>
@@ -825,7 +825,7 @@ export class DatabaseEmailService {
           <head>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Order Update - TeeMeYou</title>
+            <title>Order Update - HeartCart</title>
           </head>
           <body style="margin: 0; padding: 0; background: linear-gradient(135deg, #F3F4F6 0%, #FFFFFF 100%); font-family: 'Segoe UI', Arial, sans-serif;">
             <div class="container" style="max-width: 600px; margin: 20px auto; background: #FFFFFF; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 32px rgba(255, 105, 180, 0.2);">
@@ -836,7 +836,7 @@ export class DatabaseEmailService {
                 <div style="display: inline-block; background: #FFFFFF; padding: 12px; border-radius: 50%; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);">
                   <span style="font-size: 28px; color: #FF69B4;">📦</span>
                 </div>
-                <h1 style="color: #FFFFFF; margin: 0; font-size: 36px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3); letter-spacing: 1px;">TeeMeYou</h1>
+                <h1 style="color: #FFFFFF; margin: 0; font-size: 36px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3); letter-spacing: 1px;">HeartCart</h1>
                 <p style="color: #FFFFFF; margin: 8px 0 0 0; font-size: 18px; opacity: 0.9;">Order Update</p>
               </div>
             
@@ -951,7 +951,7 @@ export class DatabaseEmailService {
               ` : ''}
               
               <div style="text-align: center; margin: 30px 0;">
-                <a href="https://teemeyou.shop/order/${data.orderId}" 
+                <a href="https://heartcart.shop/order/${data.orderId}" 
                    style="background: linear-gradient(135deg, #FF69B4 0%, #E91E63 100%); 
                           color: white; 
                           padding: 16px 32px; 
@@ -977,11 +977,11 @@ export class DatabaseEmailService {
                   </span>
                 </div>
                 <p style="color: #FFFFFF; margin: 0; font-size: 14px; font-weight: 500;">
-                  © 2024 TeeMeYou • South Africa's Premium Shopping Platform
+                  © 2024 HeartCart • South Africa's Premium Shopping Platform
                 </p>
                 <p style="color: #CBD5E0; margin: 8px 0 0 0; font-size: 12px;">
-                  <a href="https://teemeyou.shop" style="color: #FF69B4; text-decoration: none;">teemeyou.shop</a> | 
-                  <a href="mailto:sales@teemeyou.shop" style="color: #FF69B4; text-decoration: none;">sales@teemeyou.shop</a>
+                  <a href="https://heartcart.shop" style="color: #FF69B4; text-decoration: none;">heartcart.shop</a> | 
+                  <a href="mailto:sales@heartcart.shop" style="color: #FF69B4; text-decoration: none;">sales@heartcart.shop</a>
                 </p>
               </div>
             </div>
@@ -1090,7 +1090,7 @@ export class DatabaseEmailService {
           <head>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Order Confirmation - TeeMeYou</title>
+            <title>Order Confirmation - HeartCart</title>
           </head>
           <body style="margin: 0; padding: 0; background: linear-gradient(135deg, #F3F4F6 0%, #FFFFFF 100%); font-family: 'Segoe UI', Arial, sans-serif;">
             <div class="container" style="max-width: 600px; margin: 20px auto; background: #FFFFFF; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 32px rgba(255, 105, 180, 0.2);">
@@ -1101,7 +1101,7 @@ export class DatabaseEmailService {
                 <div style="display: inline-block; background: #FFFFFF; padding: 12px; border-radius: 50%; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);">
                   <span style="font-size: 28px; color: #FF69B4;">🛍️</span>
                 </div>
-                <h1 style="color: #FFFFFF; margin: 0; font-size: 36px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3); letter-spacing: 1px;">TeeMeYou</h1>
+                <h1 style="color: #FFFFFF; margin: 0; font-size: 36px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3); letter-spacing: 1px;">HeartCart</h1>
                 <p style="color: #FFFFFF; margin: 8px 0 0 0; font-size: 18px; opacity: 0.9;">Order Confirmed!</p>
               </div>
             
@@ -1201,7 +1201,7 @@ export class DatabaseEmailService {
               `}
               
               <div style="text-align: center; margin: 30px 0;">
-                <a href="https://teemeyou.shop/order/${data.orderId}" 
+                <a href="https://heartcart.shop/order/${data.orderId}" 
                    style="background: linear-gradient(135deg, #FF69B4 0%, #E91E63 100%); 
                           color: white; 
                           padding: 16px 32px; 
@@ -1240,11 +1240,11 @@ export class DatabaseEmailService {
                   </span>
                 </div>
                 <p style="color: #FFFFFF; margin: 0; font-size: 14px; font-weight: 500;">
-                  © 2024 TeeMeYou • South Africa's Premium Shopping Platform
+                  © 2024 HeartCart • South Africa's Premium Shopping Platform
                 </p>
                 <p style="color: #CBD5E0; margin: 8px 0 0 0; font-size: 12px;">
-                  <a href="https://teemeyou.shop" style="color: #FF69B4; text-decoration: none;">teemeyou.shop</a> | 
-                  <a href="mailto:sales@teemeyou.shop" style="color: #FF69B4; text-decoration: none;">sales@teemeyou.shop</a>
+                  <a href="https://heartcart.shop" style="color: #FF69B4; text-decoration: none;">heartcart.shop</a> | 
+                  <a href="mailto:sales@heartcart.shop" style="color: #FF69B4; text-decoration: none;">sales@heartcart.shop</a>
                 </p>
               </div>
             </div>
@@ -1283,11 +1283,11 @@ export class DatabaseEmailService {
             'We\'ll process your order once payment is confirmed.'
           }
           
-          Track your order: https://teemeyou.shop/order/${data.orderId}
+          Track your order: https://heartcart.shop/order/${data.orderId}
           
           Best regards,
-          The TeeMeYou Team
-          https://teemeyou.shop
+          The HeartCart Team
+          https://heartcart.shop
         `);
 
       // Send email
@@ -1337,7 +1337,7 @@ export class DatabaseEmailService {
           <head>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Invoice - TeeMeYou</title>
+            <title>Invoice - HeartCart</title>
           </head>
           <body style="margin: 0; padding: 0; background: linear-gradient(135deg, #F3F4F6 0%, #FFFFFF 100%); font-family: 'Segoe UI', Arial, sans-serif;">
             <div class="container" style="max-width: 600px; margin: 20px auto; background: #FFFFFF; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 32px rgba(255, 105, 180, 0.2);">
@@ -1348,7 +1348,7 @@ export class DatabaseEmailService {
                 <div style="display: inline-block; background: #FFFFFF; padding: 12px; border-radius: 50%; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);">
                   <span style="font-size: 28px; color: #FF69B4;">📄</span>
                 </div>
-                <h1 style="color: #FFFFFF; margin: 0; font-size: 36px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3); letter-spacing: 1px;">TeeMeYou</h1>
+                <h1 style="color: #FFFFFF; margin: 0; font-size: 36px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3); letter-spacing: 1px;">HeartCart</h1>
                 <p style="color: #FFFFFF; margin: 8px 0 0 0; font-size: 18px; opacity: 0.9;">Invoice Ready</p>
               </div>
             
@@ -1411,11 +1411,11 @@ export class DatabaseEmailService {
                   </span>
                 </div>
                 <p style="color: #FFFFFF; margin: 0; font-size: 14px; font-weight: 500;">
-                  © 2024 TeeMeYou • South Africa's Premium Shopping Platform
+                  © 2024 HeartCart • South Africa's Premium Shopping Platform
                 </p>
                 <p style="color: #CBD5E0; margin: 8px 0 0 0; font-size: 12px;">
-                  <a href="https://teemeyou.shop" style="color: #FF69B4; text-decoration: none;">teemeyou.shop</a> | 
-                  <a href="mailto:sales@teemeyou.shop" style="color: #FF69B4; text-decoration: none;">sales@teemeyou.shop</a>
+                  <a href="https://heartcart.shop" style="color: #FF69B4; text-decoration: none;">heartcart.shop</a> | 
+                  <a href="mailto:sales@heartcart.shop" style="color: #FF69B4; text-decoration: none;">sales@heartcart.shop</a>
                 </p>
               </div>
             </div>
@@ -1641,7 +1641,7 @@ export class DatabaseEmailService {
           <head>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Order Confirmed & Payment Received - TeeMeYou</title>
+            <title>Order Confirmed & Payment Received - HeartCart</title>
           </head>
           <body style="margin: 0; padding: 0; background: linear-gradient(135deg, #F3F4F6 0%, #FFFFFF 100%); font-family: 'Segoe UI', Arial, sans-serif;">
             <div class="container" style="max-width: 600px; margin: 20px auto; background: #FFFFFF; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 32px rgba(255, 105, 180, 0.2);">
@@ -1652,7 +1652,7 @@ export class DatabaseEmailService {
                 <div style="display: inline-block; background: #FFFFFF; padding: 12px; border-radius: 50%; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);">
                   <span style="font-size: 28px; color: #FF69B4;">✅</span>
                 </div>
-                <h1 style="color: #FFFFFF; margin: 0; font-size: 36px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3); letter-spacing: 1px;">TeeMeYou</h1>
+                <h1 style="color: #FFFFFF; margin: 0; font-size: 36px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3); letter-spacing: 1px;">HeartCart</h1>
                 <p style="color: #FFFFFF; margin: 8px 0 0 0; font-size: 18px; opacity: 0.9;">Order Confirmed & Payment Received!</p>
               </div>
             
@@ -1755,7 +1755,7 @@ export class DatabaseEmailService {
                 </div>
                 
                 <div style="text-align: center; margin: 30px 0;">
-                  <a href="https://teemeyou.shop/order/${data.orderId}" 
+                  <a href="https://heartcart.shop/order/${data.orderId}" 
                      style="background: linear-gradient(135deg, #FF69B4 0%, #E91E63 100%); 
                             color: white; 
                             padding: 16px 32px; 
@@ -1781,11 +1781,11 @@ export class DatabaseEmailService {
                     </span>
                   </div>
                   <p style="color: #FFFFFF; margin: 0; font-size: 14px; font-weight: 500;">
-                    © 2024 TeeMeYou • South Africa's Premium Shopping Platform
+                    © 2024 HeartCart • South Africa's Premium Shopping Platform
                   </p>
                   <p style="color: #CBD5E0; margin: 8px 0 0 0; font-size: 12px;">
-                    <a href="https://teemeyou.shop" style="color: #FF69B4; text-decoration: none;">teemeyou.shop</a> | 
-                    <a href="mailto:sales@teemeyou.shop" style="color: #FF69B4; text-decoration: none;">sales@teemeyou.shop</a> | 
+                    <a href="https://heartcart.shop" style="color: #FF69B4; text-decoration: none;">heartcart.shop</a> | 
+                    <a href="mailto:sales@heartcart.shop" style="color: #FF69B4; text-decoration: none;">sales@heartcart.shop</a> | 
                     <a href="tel:+27712063084" style="color: #FF69B4; text-decoration: none;">+27 71 206 3084</a>
                   </p>
                 </div>
@@ -1915,7 +1915,7 @@ export class DatabaseEmailService {
           <head>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Complete Your Purchase - TeeMeYou</title>
+            <title>Complete Your Purchase - HeartCart</title>
           </head>
           <body style="margin: 0; padding: 0; background: linear-gradient(135deg, #F3F4F6 0%, #FFFFFF 100%); font-family: 'Segoe UI', Arial, sans-serif;">
             <div class="container" style="max-width: 600px; margin: 20px auto; background: #FFFFFF; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 32px rgba(255, 105, 180, 0.2);">
@@ -1926,7 +1926,7 @@ export class DatabaseEmailService {
                 <div style="display: inline-block; background: #FFFFFF; padding: 12px; border-radius: 50%; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);">
                   <span style="font-size: 28px; color: #FF69B4;">🛒</span>
                 </div>
-                <h1 style="color: #FFFFFF; margin: 0; font-size: 36px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3); letter-spacing: 1px;">TeeMeYou</h1>
+                <h1 style="color: #FFFFFF; margin: 0; font-size: 36px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3); letter-spacing: 1px;">HeartCart</h1>
                 <p style="color: #FFFFFF; margin: 8px 0 0 0; font-size: 18px; opacity: 0.9;">Your Cart is Calling!</p>
               </div>
             
@@ -1990,7 +1990,7 @@ export class DatabaseEmailService {
               </div>
               
               <div style="text-align: center; margin: 30px 0;">
-                <a href="https://teemeyou.shop/checkout" 
+                <a href="https://heartcart.shop/checkout" 
                    style="background: linear-gradient(135deg, #FF69B4 0%, #E91E63 100%); 
                           color: white; 
                           padding: 18px 36px; 
@@ -2006,7 +2006,7 @@ export class DatabaseEmailService {
                   🛒 Complete Purchase
                 </a>
                 <br>
-                <a href="https://teemeyou.shop/products" 
+                <a href="https://heartcart.shop/products" 
                    style="background: transparent; 
                           color: #FF69B4; 
                           padding: 12px 24px; 
@@ -2024,7 +2024,7 @@ export class DatabaseEmailService {
               <div style="background: linear-gradient(135deg, #FFF0F6 0%, #FFE4E1 100%); padding: 20px; border-left: 4px solid #FF69B4; border-radius: 8px; margin: 25px 0;">
                 <h4 style="margin: 0 0 15px 0; color: #E91E63; display: flex; align-items: center;">
                   <span style="font-size: 18px; margin-right: 8px;">💎</span>
-                  Why choose TeeMeYou?
+                  Why choose HeartCart?
                 </h4>
                 <ul style="margin: 0; padding-left: 20px; color: #4A5568; line-height: 1.8;">
                   <li style="margin-bottom: 8px;">✓ Premium quality products</li>
@@ -2043,15 +2043,15 @@ export class DatabaseEmailService {
                   </span>
                 </div>
                 <p style="color: #FFFFFF; margin: 0; font-size: 14px; font-weight: 500;">
-                  © 2024 TeeMeYou • South Africa's Premium Shopping Platform
+                  © 2024 HeartCart • South Africa's Premium Shopping Platform
                 </p>
                 <p style="color: #CBD5E0; margin: 8px 0 0 0; font-size: 12px;">
-                  <a href="https://teemeyou.shop" style="color: #FF69B4; text-decoration: none;">teemeyou.shop</a> | 
-                  <a href="mailto:sales@teemeyou.shop" style="color: #FF69B4; text-decoration: none;">sales@teemeyou.shop</a>
+                  <a href="https://heartcart.shop" style="color: #FF69B4; text-decoration: none;">heartcart.shop</a> | 
+                  <a href="mailto:sales@heartcart.shop" style="color: #FF69B4; text-decoration: none;">sales@heartcart.shop</a>
                 </p>
                 <p style="color: #9CA3AF; margin: 12px 0 0 0; font-size: 11px;">
                   This email was sent because you have items in your cart. 
-                  <a href="https://teemeyou.shop/cart" style="color: #FF69B4; text-decoration: none;">View Cart</a>
+                  <a href="https://heartcart.shop/cart" style="color: #FF69B4; text-decoration: none;">View Cart</a>
                 </p>
               </div>
             </div>
@@ -2059,7 +2059,7 @@ export class DatabaseEmailService {
           </html>
         `)
         .setText(`
-          Your Cart is Waiting - TeeMeYou
+          Your Cart is Waiting - HeartCart
           
           Hi ${data.customerName}!
           
@@ -2075,12 +2075,12 @@ export class DatabaseEmailService {
           
           Total with shipping: R ${(data.totalCartValue + 85).toFixed(2)} (includes R85 shipping cost)
           
-          Complete your purchase: https://teemeyou.shop/checkout
-          Continue shopping: https://teemeyou.shop/products
+          Complete your purchase: https://heartcart.shop/checkout
+          Continue shopping: https://heartcart.shop/products
           
           Best regards,
-          The TeeMeYou Team
-          https://teemeyou.shop
+          The HeartCart Team
+          https://heartcart.shop
         `);
 
       // Send email

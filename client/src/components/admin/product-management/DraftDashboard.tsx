@@ -781,7 +781,7 @@ export const DraftDashboard: React.FC = () => {
                             const regularPrice = typeof draft.regularPrice === 'string' ? parseFloat(draft.regularPrice) : (draft.regularPrice || 0);
                             const salePrice = draft.salePrice ? (typeof draft.salePrice === 'string' ? parseFloat(draft.salePrice) : draft.salePrice) : null;
                             
-                            // TMY profit margin should be based on sale price vs cost price (actual profit TeeMeYou makes)
+                            // TMY profit margin should be based on sale price vs cost price (actual profit HeartCart makes)
                             const effectivePrice = salePrice || regularPrice;
                             const tmyMarkup = costPrice > 0 && effectivePrice > 0 ? ((effectivePrice - costPrice) / costPrice * 100) : 0;
                             const customerDiscount = salePrice && regularPrice > 0 && salePrice < regularPrice ? ((regularPrice - salePrice) / regularPrice * 100) : 0;

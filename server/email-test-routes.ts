@@ -12,10 +12,10 @@ import { logger } from "./logger";
 const router = express.Router();
 
 /**
- * Send test emails for all scenarios to admin@teemeyou.shop
+ * Send test emails for all scenarios to admin@heartcart.shop
  */
 router.post("/send-test-emails", asyncHandler(async (req: Request, res: Response) => {
-  const testEmail = "admin@teemeyou.shop";
+  const testEmail = "admin@heartcart.shop";
   const results = [];
 
   try {
@@ -187,8 +187,8 @@ router.get("/status", asyncHandler(async (req: Request, res: Response) => {
   
   return sendSuccess(res, {
     emailServiceReady: isReady,
-    fromEmail: "sales@teemeyou.shop",
-    baseUrl: "https://teemeyou.shop"
+    fromEmail: "sales@heartcart.shop",
+    baseUrl: "https://heartcart.shop"
   }, isReady ? "Email service is ready" : "Email service not configured");
 }));
 

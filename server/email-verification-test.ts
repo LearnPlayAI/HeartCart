@@ -147,7 +147,7 @@ export class EmailSystemVerifier {
           component: 'MailerSend Configuration',
           status: 'PASS',
           message: 'MailerSend API key properly configured',
-          details: { keyFormat: 'Valid', domain: 'sales@teemeyou.shop' }
+          details: { keyFormat: 'Valid', domain: 'sales@heartcart.shop' }
         });
       } else {
         this.results.push({

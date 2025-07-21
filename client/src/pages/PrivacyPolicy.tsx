@@ -16,7 +16,7 @@ const PrivacyPolicy = () => {
             </h1>
           </div>
           <p className="text-gray-600 text-lg max-w-2xl mx-auto">
-            Your privacy is important to us. This policy explains how TeeMeYou collects, uses, and protects your personal information in compliance with South African law.
+            Your privacy is important to us. This policy explains how HeartCart collects, uses, and protects your personal information in compliance with South African law.
           </p>
           <Badge variant="outline" className="mt-4 border-[#FF69B4] text-[#FF69B4]">
             POPIA Compliant • Last Updated: July 3, 2025
@@ -34,12 +34,12 @@ const PrivacyPolicy = () => {
             </CardHeader>
             <CardContent className="pt-6 space-y-4">
               <p className="text-gray-700 leading-relaxed">
-                TeeMeYou (Registration No. 2025/499123/07) respects your privacy and is committed to protecting your personal information in accordance with the Protection of Personal Information Act (POPIA) and other applicable South African privacy laws.
+                HeartCart (Registration No. 2025/499123/07) respects your privacy and is committed to protecting your personal information in accordance with the Protection of Personal Information Act (POPIA) and other applicable South African privacy laws.
               </p>
               <div className="bg-pink-50 p-4 rounded-lg border-l-4 border-[#FF69B4]">
                 <p className="text-gray-700 font-medium">
-                  <strong>Data Protection Officer:</strong> TeeMeYou Privacy Team<br />
-                  <strong>Contact:</strong> sales@teemeyou.shop<br />
+                  <strong>Data Protection Officer:</strong> HeartCart Privacy Team<br />
+                  <strong>Contact:</strong> sales@heartcart.shop<br />
                   <strong>Phone:</strong> +27 71 2063084
                 </p>
               </div>
@@ -410,10 +410,10 @@ const PrivacyPolicy = () => {
                 <div>
                   <h4 className="font-semibold text-gray-900 mb-3">Contact Our Privacy Team</h4>
                   <div className="space-y-2 text-gray-700">
-                    <p><strong>Email:</strong> sales@teemeyou.shop</p>
+                    <p><strong>Email:</strong> sales@heartcart.shop</p>
                     <p><strong>Phone:</strong> +27712063084</p>
                     <p><strong>Address:</strong><br />
-                    TeeMeYou Privacy Department<br />
+                    HeartCart Privacy Department<br />
                     Johannesburg, South Africa</p>
                   </div>
                 </div>

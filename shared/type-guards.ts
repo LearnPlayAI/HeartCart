@@ -1,5 +1,5 @@
 /**
- * TypeScript Type Guards for TeeMeYou
+ * TypeScript Type Guards for HeartCart
  * 
  * This file contains type guard functions that help with runtime type checking
  * and type narrowing to improve type safety throughout the application.

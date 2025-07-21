@@ -1,5 +1,5 @@
 /**
- * Centralized Error Handling Module for TeeMeYou API
+ * Centralized Error Handling Module for HeartCart API
  * 
  * This module provides standardized error handling for all API endpoints, 
  * including consistent error response formats, proper logging, and 

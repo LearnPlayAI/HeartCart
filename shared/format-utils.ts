@@ -1,5 +1,5 @@
 /**
- * Shared formatting utility functions for the TeeMeYou application
+ * Shared formatting utility functions for the HeartCart application
  * Standardized string and number formatting utilities
  */
 

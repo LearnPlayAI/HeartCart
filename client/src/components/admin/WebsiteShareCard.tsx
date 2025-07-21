@@ -24,7 +24,7 @@ import {
 
 /**
  * Website Share Card Component
- * Allows admins to share the TeeMeYou website with friends and family via WhatsApp
+ * Allows admins to share the HeartCart website with friends and family via WhatsApp
  * Uses systemSettings for persistent storage
  */
 export function WebsiteShareCard() {
@@ -35,9 +35,9 @@ export function WebsiteShareCard() {
   const queryClient = useQueryClient();
 
   // Default website sharing message
-  const defaultMessage = `🛍️ Welcome to Tee Me You 🛍️
+  const defaultMessage = `🛍️ Welcome to HeartCart 🛍️
 
-Hi Family and Friends! We are excited to invite you to join our new online store - https://teemeyou.shop 
+Hi Family and Friends! We are excited to invite you to join our new online store - https://heartcart.shop 
 
 ✨ What we offer:
 • Quality products at great prices
@@ -45,15 +45,15 @@ Hi Family and Friends! We are excited to invite you to join our new online store
 • EFT payment option (Credit Card Payments using PayFast Coming Soon!)
 • Become a Rep and get up to 10% of the profits people signed up with your RepCode generate.
 
-🔗 Register here: https://teemeyou.shop
+🔗 Register here: https://heartcart.shop
 🆘 Found an issue? Please let us know:
 📱 WhatsApp: +27712063084
-📧 Email: sales@teemeyou.shop
+📧 Email: sales@heartcart.shop
 
 Please feel free to forward this to your trusted friends and not to strangers before we completed the implementation of the Credit/Debit Card Payment System.
 
 Thank you for supporting our growing business! 🙏
-[TeeMeYou Logo]`;
+[HeartCart Logo]`;
 
   // Fetch message from systemSettings
   const { data: settingResponse, isLoading: isLoadingSetting } = useQuery({
@@ -144,7 +144,7 @@ Thank you for supporting our growing business! 🙏
     
     toast({
       title: "WhatsApp opened",
-      description: "Share the message with your friends and family to help grow TeeMeYou!",
+      description: "Share the message with your friends and family to help grow HeartCart!",
     });
   };
 
@@ -168,7 +168,7 @@ Thank you for supporting our growing business! 🙏
   };
 
   const handleOpenWebsite = () => {
-    window.open('https://teemeyou.shop', '_blank');
+    window.open('https://heartcart.shop', '_blank');
   };
 
   return (
@@ -185,7 +185,7 @@ Thank you for supporting our growing business! 🙏
                 <Badge className="bg-pink-500 text-white text-xs">BETA</Badge>
               </CardTitle>
               <CardDescription className="text-pink-600">
-                Share TeeMeYou with your network and grow our business together
+                Share HeartCart with your network and grow our business together
               </CardDescription>
             </div>
           </div>
@@ -291,7 +291,7 @@ Thank you for supporting our growing business! 🙏
                 </h4>
                 <p className="text-blue-700 text-sm">
                   Your friends and family will be part of our beta testing group. 
-                  They can help us improve TeeMeYou by reporting any issues they encounter.
+                  They can help us improve HeartCart by reporting any issues they encounter.
                 </p>
                 <div className="flex items-center gap-4 mt-3 text-sm text-blue-600">
                   <div className="flex items-center gap-1">
@@ -300,7 +300,7 @@ Thank you for supporting our growing business! 🙏
                   </div>
                   <div className="flex items-center gap-1">
                     <span>📧</span>
-                    <span>sales@teemeyou.shop</span>
+                    <span>sales@heartcart.shop</span>
                   </div>
                 </div>
               </div>
@@ -319,7 +319,7 @@ Thank you for supporting our growing business! 🙏
               className="text-pink-600 hover:text-pink-700 hover:bg-pink-50"
             >
               <ExternalLink className="h-4 w-4 mr-1" />
-              teemeyou.shop
+              heartcart.shop
             </Button>
           </div>
         </div>

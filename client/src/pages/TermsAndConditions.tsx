@@ -35,7 +35,7 @@ const TermsAndConditions = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-gray-700 leading-relaxed">
-                <strong>https://teemeyou.shop</strong> is an online retail store providing great products at discounted pricing. 
+                <strong>https://heartcart.shop</strong> is an online retail store providing great products at discounted pricing. 
                 These Terms and Conditions govern your use of our website and services. By accessing or using our services, 
                 you agree to be bound by these Terms and comply with the South African Consumer Protection Act, 2008.
               </p>
@@ -181,7 +181,7 @@ const TermsAndConditions = () => {
                 <p className="text-blue-800 font-medium">Upon receiving your order:</p>
                 <ol className="text-blue-700 mt-2 space-y-1 list-decimal ml-4">
                   <li>Please make sure you received what you ordered and check that everything is working as it should</li>
-                  <li>If a product supplied is the wrong product or if the product is received damaged, contact us at <strong>sales@teemeyou.shop</strong></li>
+                  <li>If a product supplied is the wrong product or if the product is received damaged, contact us at <strong>sales@heartcart.shop</strong></li>
                   <li>For any returns, please email the details of the product, including pictures where applicable, and reference your order number as found on the My Orders page</li>
                 </ol>
               </div>
@@ -324,11 +324,11 @@ const TermsAndConditions = () => {
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
                   <Mail className="h-5 w-5 text-[#FF69B4]" />
-                  <span className="text-gray-700">Email: <strong>sales@teemeyou.shop</strong></span>
+                  <span className="text-gray-700">Email: <strong>sales@heartcart.shop</strong></span>
                 </div>
                 <div className="flex items-center gap-3">
                   <MapPin className="h-5 w-5 text-[#FF69B4]" />
-                  <span className="text-gray-700">Website: <strong>https://teemeyou.shop</strong></span>
+                  <span className="text-gray-700">Website: <strong>https://heartcart.shop</strong></span>
                 </div>
               </div>
             </CardContent>

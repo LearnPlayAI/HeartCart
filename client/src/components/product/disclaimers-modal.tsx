@@ -52,7 +52,7 @@ export default function DisclaimersModal({
               <div className="pt-2 border-t border-gray-100 space-y-2">
                 <p>• Products with a purchase price less than R500, has a 5 day warranty</p>
                 <p>• Products with a purchase price of R500 or more, has a 15 day warranty</p>
-                <p>• In cases where products need to be returned, please email us with your return request to sales@teemeyou.shop. Include your order number in the mail Title and a detailed description of the issue in the mail body.</p>
+                <p>• In cases where products need to be returned, please email us with your return request to sales@heartcart.shop. Include your order number in the mail Title and a detailed description of the issue in the mail body.</p>
               </div>
             </CollapsibleContent>
           </Collapsible>

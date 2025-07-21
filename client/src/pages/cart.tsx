@@ -66,7 +66,7 @@ export default function CartPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <Helmet>
-        <title>Shopping Cart - TeeMeYou</title>
+        <title>Shopping Cart - HeartCart</title>
         <meta name="description" content="Review your cart items and proceed to checkout with secure payment options" />
       </Helmet>
 

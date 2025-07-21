@@ -10,8 +10,8 @@ const mailerSend = new MailerSend({
   apiKey: process.env.MAILERSEND_API_KEY,
 });
 
-const senderEmail = 'sales@teemeyou.shop';
-const recipientEmail = 'admin@teemeyou.shop';
+const senderEmail = 'sales@heartcart.shop';
+const recipientEmail = 'admin@heartcart.shop';
 
 // Sample data for testing
 const testData = {
@@ -51,17 +51,17 @@ const testData = {
 
 // Email template functions
 function createAccountVerificationEmail(user, token) {
-  const verificationUrl = `https://teemeyou.shop/verify-email?token=${token}`;
+  const verificationUrl = `https://heartcart.shop/verify-email?token=${token}`;
   
   return {
-    subject: 'Welcome to TeeMeYou - Verify Your Email',
+    subject: 'Welcome to HeartCart - Verify Your Email',
     html: `
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome to TeeMeYou</title>
+    <title>Welcome to HeartCart</title>
     <style>
         body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
         .container { max-width: 600px; margin: 0 auto; padding: 20px; }
@@ -77,12 +77,12 @@ function createAccountVerificationEmail(user, token) {
 <body>
     <div class="container">
         <div class="header">
-            <div class="logo">TeeMeYou</div>
-            <h1>Welcome to TeeMeYou! 🎉</h1>
+            <div class="logo">HeartCart</div>
+            <h1>Welcome to HeartCart! 🎉</h1>
         </div>
         <div class="content">
             <p>Hi there,</p>
-            <p>Thank you for joining TeeMeYou! We're excited to have you as part of our community.</p>
+            <p>Thank you for joining HeartCart! We're excited to have you as part of our community.</p>
             <p>To complete your account setup and start shopping, please verify your email address by clicking the button below:</p>
             
             <center>
@@ -101,36 +101,36 @@ function createAccountVerificationEmail(user, token) {
             <p>If you didn't create this account, please ignore this email.</p>
             
             <p>Welcome aboard!<br>
-            The TeeMeYou Team</p>
+            The HeartCart Team</p>
         </div>
         <div class="footer">
-            <p>TeeMeYou | Johannesburg, South Africa | <a href="https://teemeyou.shop">teemeyou.shop</a></p>
-            <p>Questions? Reply to this email or contact us at sales@teemeyou.shop</p>
+            <p>HeartCart | Johannesburg, South Africa | <a href="https://heartcart.shop">heartcart.shop</a></p>
+            <p>Questions? Reply to this email or contact us at sales@heartcart.shop</p>
         </div>
     </div>
 </body>
 </html>`,
-    text: `Welcome to TeeMeYou!
+    text: `Welcome to HeartCart!
 
 Hi there,
 
-Thank you for joining TeeMeYou! Please verify your email address by visiting:
+Thank you for joining HeartCart! Please verify your email address by visiting:
 ${verificationUrl}
 
 This link expires in 24 hours.
 
 Welcome aboard!
-The TeeMeYou Team
+The HeartCart Team
 
-TeeMeYou | https://teemeyou.shop | sales@teemeyou.shop`
+HeartCart | https://heartcart.shop | sales@heartcart.shop`
   };
 }
 
 function createPasswordResetEmail(user, token) {
-  const resetUrl = `https://teemeyou.shop/reset-password?token=${token}`;
+  const resetUrl = `https://heartcart.shop/reset-password?token=${token}`;
   
   return {
-    subject: 'Reset Your TeeMeYou Password',
+    subject: 'Reset Your HeartCart Password',
     html: `
 <!DOCTYPE html>
 <html>
@@ -152,12 +152,12 @@ function createPasswordResetEmail(user, token) {
 <body>
     <div class="container">
         <div class="header">
-            <div class="logo">TeeMeYou</div>
+            <div class="logo">HeartCart</div>
             <h1>Reset Your Password</h1>
         </div>
         <div class="content">
             <p>Hi there,</p>
-            <p>We received a request to reset your password for your TeeMeYou account.</p>
+            <p>We received a request to reset your password for your HeartCart account.</p>
             <p>Click the button below to create a new password:</p>
             
             <center>
@@ -170,19 +170,19 @@ function createPasswordResetEmail(user, token) {
             
             <p>If you didn't request this password reset, please ignore this email. Your account remains secure.</p>
             
-            <p>For security tips and account protection, visit our <a href="https://teemeyou.shop/help">Help Center</a>.</p>
+            <p>For security tips and account protection, visit our <a href="https://heartcart.shop/help">Help Center</a>.</p>
             
             <p>Stay safe,<br>
-            The TeeMeYou Team</p>
+            The HeartCart Team</p>
         </div>
         <div class="footer">
-            <p>TeeMeYou | Johannesburg, South Africa | <a href="https://teemeyou.shop">teemeyou.shop</a></p>
-            <p>Questions? Reply to this email or contact us at sales@teemeyou.shop</p>
+            <p>HeartCart | Johannesburg, South Africa | <a href="https://heartcart.shop">heartcart.shop</a></p>
+            <p>Questions? Reply to this email or contact us at sales@heartcart.shop</p>
         </div>
     </div>
 </body>
 </html>`,
-    text: `Reset Your TeeMeYou Password
+    text: `Reset Your HeartCart Password
 
 Hi there,
 
@@ -194,9 +194,9 @@ This link expires in 1 hour.
 If you didn't request this, please ignore this email.
 
 Stay safe,
-The TeeMeYou Team
+The HeartCart Team
 
-TeeMeYou | https://teemeyou.shop | sales@teemeyou.shop`
+HeartCart | https://heartcart.shop | sales@heartcart.shop`
   };
 }
 
@@ -227,7 +227,7 @@ function createPaymentConfirmationEmail(order) {
 <body>
     <div class="container">
         <div class="header">
-            <div class="logo">TeeMeYou</div>
+            <div class="logo">HeartCart</div>
             <h1>Payment Received! 💳</h1>
         </div>
         <div class="content">
@@ -245,7 +245,7 @@ function createPaymentConfirmationEmail(order) {
             <p>Your order is now being prepared for shipping. You'll receive another email with tracking details once your items are dispatched.</p>
             
             <center>
-                <a href="https://teemeyou.shop/orders/${order.orderNumber}" class="button">View Order Details</a>
+                <a href="https://heartcart.shop/orders/${order.orderNumber}" class="button">View Order Details</a>
             </center>
             
             <p><strong>What happens next?</strong></p>
@@ -255,10 +255,10 @@ function createPaymentConfirmationEmail(order) {
                 <li>You'll receive tracking information via email and SMS</li>
             </ul>
             
-            <p>Thank you for choosing TeeMeYou!</p>
+            <p>Thank you for choosing HeartCart!</p>
             
             <p>Best regards,<br>
-            The TeeMeYou Team</p>
+            The HeartCart Team</p>
         </div>
         <div class="footer">
             <p>TeeMeYou | Johannesburg, South Africa | <a href="https://teemeyou.shop">teemeyou.shop</a></p>
@@ -280,12 +280,12 @@ Payment Details:
 
 Your order is being prepared for shipping. You'll receive tracking details soon.
 
-Thank you for choosing TeeMeYou!
+Thank you for choosing HeartCart!
 
 Best regards,
-The TeeMeYou Team
+The HeartCart Team
 
-TeeMeYou | https://teemeyou.shop | sales@teemeyou.shop`
+HeartCart | https://heartcart.shop | sales@heartcart.shop`
   };
 }
 
@@ -315,7 +315,7 @@ function createOrderStatusEmail(order) {
 <body>
     <div class="container">
         <div class="header">
-            <div class="logo">TeeMeYou</div>
+            <div class="logo">HeartCart</div>
             <h1>Your Order Has Been Shipped! 📦</h1>
         </div>
         <div class="content">
@@ -334,7 +334,7 @@ function createOrderStatusEmail(order) {
             <p>You'll receive an SMS with your unique pickup code once your package arrives at the locker.</p>
             
             <center>
-                <a href="https://teemeyou.shop/track/${order.trackingNumber}" class="button">Track Your Package</a>
+                <a href="https://heartcart.shop/track/${order.trackingNumber}" class="button">Track Your Package</a>
             </center>
             
             <p><strong>PUDO Locker Instructions:</strong></p>
@@ -345,14 +345,14 @@ function createOrderStatusEmail(order) {
                 <li>Collect your package</li>
             </ul>
             
-            <p>Thank you for shopping with TeeMeYou!</p>
+            <p>Thank you for shopping with HeartCart!</p>
             
             <p>Best regards,<br>
-            The TeeMeYou Team</p>
+            The HeartCart Team</p>
         </div>
         <div class="footer">
-            <p>TeeMeYou | Johannesburg, South Africa | <a href="https://teemeyou.shop">teemeyou.shop</a></p>
-            <p>Questions? Reply to this email or contact us at sales@teemeyou.shop</p>
+            <p>HeartCart | Johannesburg, South Africa | <a href="https://heartcart.shop">heartcart.shop</a></p>
+            <p>Questions? Reply to this email or contact us at sales@heartcart.shop</p>
         </div>
     </div>
 </body>
@@ -372,14 +372,14 @@ Shipping Details:
 
 You'll receive an SMS with your pickup code when it arrives.
 
-Track your package: https://teemeyou.shop/track/${order.trackingNumber}
+Track your package: https://heartcart.shop/track/${order.trackingNumber}
 
-Thank you for shopping with TeeMeYou!
+Thank you for shopping with HeartCart!
 
 Best regards,
-The TeeMeYou Team
+The HeartCart Team
 
-TeeMeYou | https://teemeyou.shop | sales@teemeyou.shop`
+HeartCart | https://heartcart.shop | sales@heartcart.shop`
   };
 }
 

@@ -671,7 +671,7 @@ function GlobalAttributesPage() {
   return (
     <AdminLayout title="Global Attributes" subtitle="Manage global attributes in the centralized attribute system">
       <Helmet>
-        <title>Global Attributes | TeeMeYou Admin</title>
+        <title>Global Attributes | HeartCart Admin</title>
       </Helmet>
 
       <div className="w-full">

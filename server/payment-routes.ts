@@ -121,9 +121,9 @@ router.post('/card/checkout', isAuthenticated, asyncHandler(async (req: Request,
     const checkoutData = {
       amount: amountInCents,
       currency: 'ZAR',
-      cancelUrl: `${process.env.FRONTEND_URL || 'https://teemeyou.shop'}/payment-failed?checkoutId=${tempCheckoutId}`,
-      successUrl: `${process.env.FRONTEND_URL || 'https://teemeyou.shop'}/payment-success?checkoutId=${tempCheckoutId}`,
-      failureUrl: `${process.env.FRONTEND_URL || 'https://teemeyou.shop'}/payment-failed?checkoutId=${tempCheckoutId}`,
+      cancelUrl: `${process.env.FRONTEND_URL || 'https://heartcart.shop'}/payment-failed?checkoutId=${tempCheckoutId}`,
+      successUrl: `${process.env.FRONTEND_URL || 'https://heartcart.shop'}/payment-success?checkoutId=${tempCheckoutId}`,
+      failureUrl: `${process.env.FRONTEND_URL || 'https://heartcart.shop'}/payment-failed?checkoutId=${tempCheckoutId}`,
       externalId: tempCheckoutId, // YoCo compliance: external reference for reconciliation
       metadata: {
         checkoutId: tempCheckoutId, // YoCo compliance: proper checkout reference

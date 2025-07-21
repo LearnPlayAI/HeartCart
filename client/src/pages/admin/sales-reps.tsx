@@ -69,16 +69,16 @@ export default function SalesRepsPage() {
 
   // Generate registration URL for a rep
   const generateRegistrationUrl = (repCode: string) => {
-    const baseUrl = 'https://teemeyou.shop';
+    const baseUrl = 'https://heartcart.shop';
     return `${baseUrl}/auth?tab=register&repCode=${encodeURIComponent(repCode)}`;
   };
 
   // Share registration URL via WhatsApp
   const shareToWhatsApp = (rep: SalesRep) => {
     const registrationUrl = generateRegistrationUrl(rep.repCode);
-    const message = `🎯 Join TeeMeYou with my sales rep code!
+    const message = `🎯 Join HeartCart with my sales rep code!
     
-👋 Hi! I'm ${rep.firstName} ${rep.lastName}, your TeeMeYou sales representative.
+👋 Hi! I'm ${rep.firstName} ${rep.lastName}, your HeartCart sales representative.
 
 📝 Use this special link to register and I'll be your dedicated contact:
 ${registrationUrl}

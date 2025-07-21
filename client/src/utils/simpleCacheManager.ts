@@ -1,5 +1,5 @@
 /**
- * Simple Cache Manager - Manual cache clearing for TeeMeYou.shop
+ * Simple Cache Manager - Manual cache clearing for HeartCart.shop
  * Removes automatic version checking and provides manual cache clearing functionality
  */
 

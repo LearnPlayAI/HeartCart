@@ -27,7 +27,7 @@ export default function AISettingsPage() {
   return (
     <AdminLayout>
       <Helmet>
-        <title>AI Settings | TeeMeYou Admin</title>
+        <title>AI Settings | HeartCart Admin</title>
       </Helmet>
       
       <div className="flex justify-between items-center mb-6">

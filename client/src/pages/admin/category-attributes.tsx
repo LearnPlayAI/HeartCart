@@ -753,7 +753,7 @@ function CategoryAttributesPage() {
   return (
     <>
       <Helmet>
-        <title>Category Attributes | TeeMeYou Admin</title>
+        <title>Category Attributes | HeartCart Admin</title>
       </Helmet>
 
       <div className="container mx-auto py-8">

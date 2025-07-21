@@ -3,7 +3,7 @@ import { products, categories, type Product, type Category } from '../shared/sch
 import { eq, and, desc } from 'drizzle-orm';
 
 /**
- * SEO Service for TeeMeYou.shop
+ * SEO Service for HeartCart.shop
  * Handles sitemap generation, SEO metadata, and search engine optimization
  */
 
@@ -20,7 +20,7 @@ export interface SitemapUrl {
 }
 
 class SEOService {
-  private readonly baseUrl = 'https://teemeyou.shop';
+  private readonly baseUrl = 'https://heartcart.shop';
 
   /**
    * Generate main sitemap index
@@ -250,7 +250,7 @@ Disallow: /profile/
 Disallow: /my-orders/
 Disallow: /developer/
 
-# TeeMeYou.shop - South African E-commerce Marketplace
+# HeartCart.shop - South African E-commerce Marketplace
 # Specializing in quality products with PUDO delivery
 `;
   }
@@ -278,7 +278,7 @@ Disallow: /developer/
       "sku": product.sku || (product.id || 0).toString(),
       "brand": {
         "@type": "Brand",
-        "name": product.brand || "TeeMeYou"
+        "name": product.brand || "HeartCart"
       },
       "category": category?.name || "General",
       "offers": {
@@ -291,7 +291,7 @@ Disallow: /developer/
         "availability": (product.stock || 0) > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
         "seller": {
           "@type": "Organization",
-          "name": "TeeMeYou.shop",
+          "name": "HeartCart.shop",
           "url": baseUrl
         },
         "shippingDetails": {

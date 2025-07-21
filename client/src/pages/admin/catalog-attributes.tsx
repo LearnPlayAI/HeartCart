@@ -597,7 +597,7 @@ function CatalogAttributesPage() {
   return (
     <>
       <Helmet>
-        <title>Catalog Attributes | TeeMeYou Admin</title>
+        <title>Catalog Attributes | HeartCart Admin</title>
       </Helmet>
 
       <div className="container mx-auto py-8">

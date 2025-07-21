@@ -1,5 +1,5 @@
 /**
- * Request Validation Middleware for TeeMeYou API
+ * Request Validation Middleware for HeartCart API
  * 
  * This module provides standardized request validation for all API endpoints,
  * using Zod schemas to ensure consistent validation across the application.

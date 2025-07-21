@@ -231,7 +231,7 @@ function AttributeEditorPage() {
       subtitle={isNewAttribute ? "Add a new global attribute to your store" : `Editing attribute: ${attribute?.displayName || ""}`}
     >
       <Helmet>
-        <title>{isNewAttribute ? "Create New Attribute" : "Edit Attribute"} | TeeMeYou Admin</title>
+        <title>{isNewAttribute ? "Create New Attribute" : "Edit Attribute"} | HeartCart Admin</title>
       </Helmet>
 
       <div className="max-w-4xl mx-auto">

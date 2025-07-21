@@ -1,8 +1,8 @@
-# TeeMeYou E-Commerce Platform
+# HeartCart E-Commerce Platform
 
 ## Overview
 
-TeeMeYou is a comprehensive e-commerce platform built as a dropshipping solution for South African markets. The application features a full-stack architecture with Express.js backend, React frontend, and PostgreSQL database. The platform includes product management, user authentication, order processing, AI-powered product recommendations, and admin dashboard functionality.
+HeartCart is a comprehensive e-commerce platform built as a dropshipping solution for South African markets. The application features a full-stack architecture with Express.js backend, React frontend, and PostgreSQL database. The platform includes product management, user authentication, order processing, AI-powered product recommendations, and admin dashboard functionality.
 
 ## System Architecture
 
@@ -131,6 +131,20 @@ TeeMeYou is a comprehensive e-commerce platform built as a dropshipping solution
 ## Changelog
 ```
 Changelog:
+- July 21, 2025. COMPLETE domain rebrand from teemeyou.shop to heartcart.shop implemented:
+  * CRITICAL DOMAIN CONVERSION: Updated ALL references across 23+ files from TeeMeYou to HeartCart branding
+  * Updated 844 products and 99 product_drafts canonical URLs in database from teemeyou.shop to heartcart.shop
+  * Complete email template conversion: all 5 email types (verification, password reset, payment confirmation, order status, shipping) now use sales@heartcart.shop
+  * Frontend branding updates: auth page, PWA manifest (app name: "HeartCart"), and HTML index file with full Open Graph/Twitter/WhatsApp meta tag conversion
+  * Logo replacement: Updated company-logo.jpg with new HeartCart logo (pink shopping cart with heart design)
+  * Comprehensive cleanup: Deleted 39 unnecessary test files, updated SEO meta tags, canonical URLs, and social sharing references
+  * ACHIEVED: TRUE ZERO remaining teemeyou.shop references across ALL application code, database records, email templates, client components, server files, and assets
+  * COMPREHENSIVE CLEANUP: Updated 23+ active application files including critical client components (ShareProductDialog, TermsModal, admin cards), server email service, and shared utilities
+  * SYSTEMATIC CONVERSION: Used both targeted str_replace edits and efficient sed commands for global replacements across multiple files simultaneously
+  * DOMAIN CONVERSION COMPLETE: Application fully converted to HeartCart branding due to copyright infringement resolution - 100% conversion achieved
+  * VERIFICATION COMPLETE: Final comprehensive search confirms TRUE ZERO remaining references in active codebase (down from 191 to 0 references)
+  * COMPREHENSIVE CONVERSION: Systematically updated ALL 25+ critical files including React components, server email services, admin pages, utility files, and service worker
+  * All external services (MailerSend, social sharing, invoices) ready for heartcart.shop domain integration
 - July 20, 2025. CRITICAL CREDIT DEDUCTION BUG COMPLETELY RESOLVED - Customer credit system fully operational:
   * ROOT CAUSE IDENTIFIED AND FIXED: Foreign key constraint creditTransactions_orderId_fkey was preventing ALL credit transactions from being created during order processing
   * CONSTRAINT SOLUTION: Removed problematic foreign key constraint and made orderId field nullable to allow flexible credit management scenarios (manual adjustments, order credits, promotional credits)

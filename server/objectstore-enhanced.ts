@@ -36,7 +36,7 @@ export interface FileMetadata {
 }
 
 /**
- * Enhanced Object Storage Service for TeeMeYou
+ * Enhanced Object Storage Service for HeartCart
  * 
  * This class handles all interactions with Replit Object Storage,
  * providing both the original functionality and enhanced file browsing capabilities.
@@ -49,9 +49,9 @@ export class EnhancedObjectStorageService {
   private localFallbackEnabled = false;
   
   // Define available buckets
-  private availableBuckets = ['TeeMeYouStorage', 'TeeMeYouDev'];
+  private availableBuckets = ['HeartCartStorage', 'HeartCartDev'];
   
-  constructor(initialBucket: string = 'TeeMeYouStorage') {
+  constructor(initialBucket: string = 'HeartCartStorage') {
     this.setBucket(initialBucket);
   }
   

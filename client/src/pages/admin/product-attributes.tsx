@@ -823,7 +823,7 @@ function ProductAttributesPage() {
   return (
     <>
       <Helmet>
-        <title>Product Attributes | TeeMeYou Admin</title>
+        <title>Product Attributes | HeartCart Admin</title>
       </Helmet>
 
       <div className="container mx-auto py-8">

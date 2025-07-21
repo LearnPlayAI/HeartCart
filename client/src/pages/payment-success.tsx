@@ -165,8 +165,8 @@ export default function PaymentSuccessPage() {
             <div className="space-y-1 text-sm">
               <p>
                 <span className="font-medium">Email:</span>{' '}
-                <a href="mailto:sales@teemeyou.shop" className="text-pink-600 hover:underline">
-                  sales@teemeyou.shop
+                <a href="mailto:sales@heartcart.shop" className="text-pink-600 hover:underline">
+                  sales@heartcart.shop
                 </a>
               </p>
               <p>

@@ -1,5 +1,5 @@
 /**
- * Logger Module for TeeMeYou
+ * Logger Module for HeartCart
  * 
  * Provides standardized logging functionality across the application.
  * Designed to be configurable for different environments and easily extendable.

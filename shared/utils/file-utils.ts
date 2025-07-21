@@ -1,5 +1,5 @@
 /**
- * File Utilities for TeeMeYou
+ * File Utilities for HeartCart
  * 
  * This module provides utility functions for handling files,
  * including sanitizing filenames and validating file types.

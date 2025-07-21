@@ -32,7 +32,7 @@ export default function VerifyEmail() {
 
         if (response.ok && data.success) {
           setStatus('success');
-          setMessage('Your email has been verified successfully! You can now access all features of your TeeMeYou account.');
+          setMessage('Your email has been verified successfully! You can now access all features of your HeartCart account.');
         } else {
           setStatus('error');
           setMessage(data.error || 'Email verification failed. The link may have expired or already been used.');
@@ -92,7 +92,7 @@ export default function VerifyEmail() {
           </CardTitle>
           <CardDescription className="text-base">
             {status === 'loading' && 'Please wait while we verify your email address...'}
-            {status === 'success' && 'Welcome to TeeMeYou! Your account is now fully activated.'}
+            {status === 'success' && 'Welcome to HeartCart! Your account is now fully activated.'}
             {status === 'error' && 'There was a problem verifying your email address.'}
           </CardDescription>
         </CardHeader>
@@ -143,7 +143,7 @@ export default function VerifyEmail() {
                     Go to Home
                   </Button>
                   <div className="text-xs text-gray-500 text-center mt-2">
-                    Need help? Contact us at sales@teemeyou.shop
+                    Need help? Contact us at sales@heartcart.shop
                   </div>
                 </>
               )}

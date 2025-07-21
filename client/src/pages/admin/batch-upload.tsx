@@ -818,7 +818,7 @@ export default function BatchUploadPage() {
   return (
     <AdminLayout>
       <Helmet>
-        <title>Mass Product Upload | TeeMeYou Admin</title>
+        <title>Mass Product Upload | HeartCart Admin</title>
         <meta name="description" content="Manage batch uploads for mass product import" />
       </Helmet>
       

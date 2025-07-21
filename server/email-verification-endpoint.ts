@@ -93,7 +93,7 @@ router.get('/full-test', asyncHandler(async (req: Request, res: Response) => {
         name: 'MailerSend API Key',
         status: 'PASS',
         message: 'MailerSend API key properly configured',
-        details: { domain: 'sales@teemeyou.shop', format: 'valid' },
+        details: { domain: 'sales@heartcart.shop', format: 'valid' },
         timestamp: new Date().toISOString()
       });
     } else {
@@ -337,8 +337,8 @@ router.get('/health', asyncHandler(async (req: Request, res: Response) => {
 router.get('/config', asyncHandler(async (req: Request, res: Response) => {
   try {
     const config = {
-      fromEmail: 'sales@teemeyou.shop',
-      domain: 'https://teemeyou.shop',
+      fromEmail: 'sales@heartcart.shop',
+      domain: 'https://heartcart.shop',
       apiKeyConfigured: !!process.env.MAILERSEND_API_KEY,
       storageType: 'PostgreSQL Database',
       tokenSecurity: 'SHA-256 Hashed',
