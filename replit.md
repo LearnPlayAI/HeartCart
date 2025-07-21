@@ -131,6 +131,12 @@ HeartCart is a comprehensive e-commerce platform built as a dropshipping solutio
 ## Changelog
 ```
 Changelog:
+- July 21, 2025. DESKTOP HEADER BRANDING ENHANCEMENT - ADDED HEARTCART.SHOP HOT PINK TEXT:
+  * ADDED: Hot pink "heartcart.shop" branding text to desktop header next to logo
+  * GRADIENT STYLING: Uses signature hot pink gradient (#FF69B4 to #FF1493) with text-transparent and bg-clip-text effects
+  * RESPONSIVE DESIGN: Text only displays on desktop (md:inline-block) to maintain clean mobile layout
+  * PROFESSIONAL BRANDING: Bold, prominent text reinforces domain name and brand identity
+  * Positioned strategically in top navigation bar for maximum visibility and brand recognition
 - July 21, 2025. EMAIL SECURITY UPDATE - PREVENTED EMAIL CHANGES DURING CHECKOUT:
   * SECURITY ENHANCEMENT: Removed ability for users to change email addresses during checkout process
   * EMAIL FIELD READ-ONLY: Email address field now displays as read-only with grayed-out appearance (bg-gray-50)

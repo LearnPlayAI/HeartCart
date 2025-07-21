@@ -74,6 +74,10 @@ const Header = () => {
           {/* Logo */}
           <div className="flex items-center">
             <Logo />
+            {/* Desktop heartcart.shop branding text */}
+            <span className="hidden md:inline-block ml-3 text-xl font-bold bg-gradient-to-r from-[#FF69B4] to-[#FF1493] bg-clip-text text-transparent">
+              heartcart.shop
+            </span>
           </div>
           
           {/* Search bar - desktop */}
