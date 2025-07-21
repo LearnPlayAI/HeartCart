@@ -292,7 +292,7 @@ router.post('/order/:orderId/update-group', isAuthenticated, isAdmin, asyncHandl
   }).safeParse(req.body);
 
   if (!validation.success) {
-    return sendError(res, 'Invalid input data', 400, validation.error.errors);
+    return sendError(res, `Invalid input data: ${validation.error.errors.map(e => e.message).join(', ')}`, 400);
   }
 
   try {
