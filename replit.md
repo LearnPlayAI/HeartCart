@@ -147,6 +147,11 @@ Changelog:
   * VERIFICATION COMPLETE: Final comprehensive search confirms TRUE ZERO remaining references in active codebase (down from 191 to 0 references)
   * COMPREHENSIVE CONVERSION: Systematically updated ALL 25+ critical files including React components, server email services, admin pages, utility files, and service worker
   * All external services (MailerSend, social sharing, invoices) ready for heartcart.shop domain integration
+  * FINAL CLEANUP COMPLETE: Updated remaining 6 files including Facebook meta tags, Yoco webhook configuration, and utility script headers
+  * Social sharing meta tags updated: Facebook publisher links now point to https://facebook.com/heartcart
+  * Yoco webhook system configured for heartcart.shop domain with updated webhook naming
+  * Development utility scripts updated to HeartCart branding (schema validation, type verification, timezone migration tools)
+  * New MailerSend API key integrated for heartcart.shop domain - all email services ready for production use
 - July 20, 2025. CRITICAL CREDIT DEDUCTION BUG COMPLETELY RESOLVED - Customer credit system fully operational:
   * ROOT CAUSE IDENTIFIED AND FIXED: Foreign key constraint creditTransactions_orderId_fkey was preventing ALL credit transactions from being created during order processing
   * CONSTRAINT SOLUTION: Removed problematic foreign key constraint and made orderId field nullable to allow flexible credit management scenarios (manual adjustments, order credits, promotional credits)

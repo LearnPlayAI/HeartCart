@@ -1,5 +1,5 @@
 /**
- * Type Verification Script for TeeMeYou
+ * Type Verification Script for HeartCart
  * 
  * This script performs a static analysis of the codebase to verify type consistency
  * across the application. It checks for:
@@ -169,7 +169,7 @@ function findNonExhaustiveSwitch(filePath: string): string[] {
  * Main execution function
  */
 function main(): void {
-  console.log(chalk.blue('TeeMeYou Type Verification Tool'));
+  console.log(chalk.blue('HeartCart Type Verification Tool'));
   console.log(chalk.blue('================================'));
   
   // Find all TypeScript files

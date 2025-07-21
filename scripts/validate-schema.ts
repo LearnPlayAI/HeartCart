@@ -1,5 +1,5 @@
 /**
- * Schema Validation Tool for TeeMeYou
+ * Schema Validation Tool for HeartCart
  * 
  * This script performs comprehensive validation of the database schema
  * to ensure it follows best practices and standards.
@@ -290,7 +290,7 @@ async function validateSchemaConsistency(db: any) {
 
 // Main execution function
 async function main() {
-  console.log(chalk.blue('TeeMeYou Schema Validation Tool'));
+  console.log(chalk.blue('HeartCart Schema Validation Tool'));
   console.log(chalk.blue('=============================='));
   
   try {

@@ -1,5 +1,5 @@
 /**
- * Timezone Migration Script for TeeMeYou
+ * Timezone Migration Script for HeartCart
  * 
  * This script updates all timestamp columns in the database to use the SAST timezone.
  * It should be run once during the migration to standardized timestamps.

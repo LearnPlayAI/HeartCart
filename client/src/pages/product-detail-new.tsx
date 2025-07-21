@@ -583,7 +583,7 @@ const ProductDetailView = ({
         
         {/* Additional Facebook-specific tags */}
         <meta property="og:updated_time" content={new Date().toISOString()} />
-        <meta property="article:publisher" content="https://facebook.com/teemeyou" />
+        <meta property="article:publisher" content="https://facebook.com/heartcart" />
       </Helmet>
       
       <div className="container mx-auto px-4 py-6">

@@ -122,7 +122,7 @@ function generateProductSocialHTML(product: ProductSocialData): string {
   
   <!-- Additional Facebook-specific tags -->
   <meta property="og:updated_time" content="${new Date().toISOString()}">
-  <meta property="article:publisher" content="https://facebook.com/teemeyou">
+  <meta property="article:publisher" content="https://facebook.com/heartcart">
   
   <!-- Twitter Card Meta Tags -->
   <meta name="twitter:card" content="summary_large_image">

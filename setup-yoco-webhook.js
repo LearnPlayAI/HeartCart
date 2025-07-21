@@ -4,7 +4,7 @@
  */
 
 const YOCO_TEST_SECRET_KEY = process.env.YOCO_TEST_SECRET_KEY;
-const WEBHOOK_URL = 'https://teemeyou.shop/api/webhooks/yoco';
+const WEBHOOK_URL = 'https://heartcart.shop/api/webhooks/yoco';
 
 async function registerYocoWebhook() {
   if (!YOCO_TEST_SECRET_KEY) {
@@ -23,7 +23,7 @@ async function registerYocoWebhook() {
         'Authorization': `Bearer ${YOCO_TEST_SECRET_KEY}`,
       },
       body: JSON.stringify({
-        name: 'teemeyou-webhook',
+        name: 'heartcart-webhook',
         url: WEBHOOK_URL
       }),
     });
