@@ -131,6 +131,13 @@ HeartCart is a comprehensive e-commerce platform built as a dropshipping solutio
 ## Changelog
 ```
 Changelog:
+- July 21, 2025. COMPLETE TRANSACTIONAL DATA CLEANUP FOR ADMIN@HEARTCART.SHOP:
+  * COMPLETE DELETION: Removed ALL transactional data for admin@heartcart.shop user (ID: 8)
+  * ORDERS REMOVED: Deleted 2 orders (HTC-83-20250721, HTC-84-20250721) with all related data
+  * COMPREHENSIVE CLEANUP: Removed 2 order items, 7 order status history records, 1 order item supplier status
+  * ADDITIONAL DATA: Removed 2 credit transactions, 4 email logs, 3 product interactions
+  * USER ACCOUNT PRESERVED: Admin account remains intact for continued system testing and management
+  * CLEAN SLATE: System ready for fresh testing with zero transactional history for admin user
 - July 21, 2025. DESKTOP HEADER BRANDING ENHANCEMENT - ADDED HEARTCART.SHOP HOT PINK TEXT:
   * ADDED: Hot pink "heartcart.shop" branding text to desktop header next to logo
   * GRADIENT STYLING: Uses signature hot pink gradient (#FF69B4 to #FF1493) with text-transparent and bg-clip-text effects
