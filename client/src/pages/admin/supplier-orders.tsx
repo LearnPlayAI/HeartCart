@@ -168,7 +168,7 @@ const SupplierOrders = () => {
 
   const validateUrlMutation = useMutation({
     mutationFn: (orderId: number) => 
-      apiRequest(`/api/admin/supplier-orders/${orderId}/validate-url`, { method: 'POST' }),
+      apiRequest('POST', `/api/admin/supplier-orders/${orderId}/validate-url`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/supplier-orders'] });
       
@@ -244,7 +244,7 @@ const SupplierOrders = () => {
 
   const generateCreditMutation = useMutation({
     mutationFn: (orderId: number) =>
-      apiRequest(`/api/admin/supplier-orders/${orderId}/generate-credit`, { method: 'POST' }),
+      apiRequest('POST', `/api/admin/supplier-orders/${orderId}/generate-credit`),
     onSuccess: () => {
       // Invalidate supplier orders to update hasCreditGenerated status
       queryClient.invalidateQueries({ queryKey: ['/api/admin/supplier-orders'] });

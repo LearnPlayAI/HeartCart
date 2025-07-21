@@ -253,7 +253,7 @@ const ProfilePage: React.FC = () => {
   // Handle logout
   const handleLogout = async () => {
     try {
-      await apiRequest('/api/auth/logout', { method: 'POST' });
+      await apiRequest('POST', '/api/auth/logout');
       
       navigate('/');
     } catch (error) {

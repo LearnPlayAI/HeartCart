@@ -131,6 +131,12 @@ HeartCart is a comprehensive e-commerce platform built as a dropshipping solutio
 ## Changelog
 ```
 Changelog:
+- July 21, 2025. PROFILE UPDATE BUG FIX - API REQUEST PATTERN CORRECTION:
+  * RESOLVED: Fixed profile update functionality failing with "rbernmediateix-value port is not a function" error caused by incorrect apiRequest() usage pattern
+  * ROOT CAUSE: Profile page logout function was using incorrect apiRequest('/api/auth/logout', { method: 'POST' }) pattern instead of proper apiRequest('POST', '/api/auth/logout')
+  * FIXED: Updated profile.tsx logout function to use correct apiRequest(method, url, data) pattern alignment with comprehensive JSON response handling fixes
+  * Profile update mutation was already correct, issue was specifically in logout function preventing proper profile functionality
+  * Profile update system now fully operational - users can successfully update their personal information, shipping addresses, and account details
 - July 21, 2025. PASSWORD RESET EMAIL BUG FIX - API REQUEST PATTERN CORRECTION:
   * RESOLVED: Fixed "500: Failed to send password reset email" error caused by incorrect apiRequest() usage pattern
   * ROOT CAUSE: Password reset mutations in auth-page.tsx were mixing apiRequest() and fetch() patterns as described in docs/json/jsonfixes.md
