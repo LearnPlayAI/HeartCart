@@ -10,6 +10,7 @@ import { databaseEmailService } from './database-email-service.js';
 import { db } from './db';
 import { products, users } from '../shared/schema.js';
 import { eq } from 'drizzle-orm';
+import { logger } from './logger';
 
 const router = Router();
 
@@ -18,6 +19,8 @@ const router = Router();
  * Processes payment success/failure notifications from YoCo
  */
 router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
+  console.log('🎯 WEBHOOK: Yoco webhook received:', req.body?.type || 'unknown event');
+  
   try {
     const rawBody = JSON.stringify(req.body);
     const signature = req.headers['webhook-signature'] as string;
@@ -38,10 +41,13 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
     }
 
     const event: YocoPaymentEvent = req.body;
+    
+    console.log('✅ WEBHOOK: Signature validated, processing event:', event.type);
 
     // Handle different YoCo webhook event types as per documentation requirements
     switch (event.type) {
       case 'payment.succeeded':
+        console.log('💳 WEBHOOK: Processing successful payment for checkout:', event.payload?.metadata?.checkoutId);
         // Continue processing successful payment
         break;
       
@@ -69,6 +75,9 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
         });
     }
 
+    // Import storage after validation
+    const { storage } = await import('./storage.js');
+
     const payment = event.payload;
     const checkoutId = payment.metadata.checkoutId;
     const tempCheckoutId = payment.metadata.tempCheckoutId;
@@ -76,7 +85,14 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
     const customerEmail = payment.metadata.customerEmail;
     const customerFullName = payment.metadata.customerFullName; // Extract customer's full name from metadata
     const customerPhone = payment.metadata.customerPhone; // CRITICAL FIX: Extract customer phone from metadata
-    const cartDataStr = payment.metadata.cartData;
+    const cartDataStr = payment.metadata.cartData || '';
+    
+    console.log('📋 WEBHOOK: Extracted payment metadata:', {
+      checkoutId,
+      customerId,
+      customerEmail,
+      hasCartData: !!cartDataStr
+    });
 
 
 
@@ -125,9 +141,6 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
     if (!finalCustomerFullName || finalCustomerFullName.trim() === '') {
       return res.status(400).json({ error: 'Customer name missing from payment data' });
     }
-
-    // CRITICAL FIX: Import storage once for entire webhook processing
-    const { storage } = await import('./storage.js');
 
     // Check if order already exists for this checkout (prevent duplicates)
     try {
@@ -295,10 +308,26 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
     // Use the exact same method signature as EFT flow: createOrder(order, orderItems)
 
     try {
+      console.log('🚀 WEBHOOK: Attempting to create order with data:', {
+        orderNumber: order.orderNumber,
+        customerEmail: order.customerEmail,
+        totalAmount: order.totalAmount,
+        orderItemsCount: orderItems.length,
+        paymentId: payment.id
+      });
+      
       const newOrder = await storage.createOrder(order, orderItems);
+      
+      console.log('✅ WEBHOOK: Order created successfully:', {
+        orderId: newOrder.id,
+        orderNumber: newOrder.orderNumber,
+        status: newOrder.status,
+        paymentStatus: newOrder.paymentStatus
+      });
 
       // Verify order items were actually created in database
       const verifyOrderItems = await storage.getOrderItems(newOrder.id);
+      console.log('✅ WEBHOOK: Order items verified:', verifyOrderItems.length, 'items created');
 
     // Create order status history entry for the newly created order
     await storage.addOrderStatusHistory(
@@ -334,7 +363,7 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
           `R${creditUsed.toFixed(2)} credits deducted from customer balance for this order`
         );
         
-      } catch (creditError) {
+      } catch (creditError: any) {
         console.error(`❌ Failed to deduct credits for order ${newOrder.id}:`, creditError);
         
         // Log the credit deduction failure but don't fail the entire order
@@ -345,7 +374,7 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
           'system',
           null,
           'credit_deduction_failed',
-          `Failed to deduct R${creditUsed.toFixed(2)} credits: ${creditError.message}`
+          `Failed to deduct R${creditUsed.toFixed(2)} credits: ${creditError?.message || 'Unknown error'}`
         );
       }
     }
@@ -407,9 +436,9 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
             shippingAddress: fullOrder.shippingAddress, // Legacy field, not used on invoice
             shippingCity: fullOrder.shippingCity, // Legacy field, not used on invoice
             shippingPostalCode: fullOrder.shippingPostalCode, // Legacy field, not used on invoice
-            selectedLockerName: fullOrder.selectedLockerName, // PUDO locker name for invoice
-            selectedLockerAddress: fullOrder.selectedLockerAddress, // PUDO locker address for invoice
-            selectedLockerCode: fullOrder.selectedLockerCode, // PUDO locker code for invoice
+            selectedLockerName: fullOrder.selectedLockerName || undefined, // PUDO locker name for invoice
+            selectedLockerAddress: fullOrder.selectedLockerAddress || undefined, // PUDO locker address for invoice
+            selectedLockerCode: fullOrder.selectedLockerCode || undefined, // PUDO locker code for invoice
             orderItems: fullOrder.orderItems.map(item => ({
               productName: item.productName,
               quantity: item.quantity,
@@ -482,7 +511,7 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
             shippingPostalCode: orderWithDetails.shippingPostalCode,
             vatAmount: orderWithDetails.vatAmount || 0,
             vatRate: orderWithDetails.vatRate || 0,
-            vatRegistered: orderWithDetails.vatRegistered || false,
+            vatRegistered: false, // Default value since field doesn't exist on order
             vatRegistrationNumber: orderWithDetails.vatRegistrationNumber || '',
             invoicePath: invoicePath // Include the generated invoice path for attachment
           };
@@ -523,10 +552,16 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
       res.status(200).json(webhookResponse);
 
     } catch (orderCreationError) {
+      console.error('❌ WEBHOOK: Order creation failed:', orderCreationError);
       logger.error('Order creation failed in YoCo webhook', { 
         error: orderCreationError,
         checkoutId,
-        customerEmail
+        customerEmail,
+        orderData: {
+          orderNumber: order.orderNumber,
+          customerEmail: order.customerEmail,
+          totalAmount: order.totalAmount
+        }
       });
       return res.status(500).json({ error: 'Failed to create order from payment' });
     }
