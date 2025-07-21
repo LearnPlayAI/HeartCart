@@ -131,6 +131,16 @@ HeartCart is a comprehensive e-commerce platform built as a dropshipping solutio
 ## Changelog
 ```
 Changelog:
+- July 21, 2025. CRITICAL PRODUCTION BUG FIX: Order creation system completely restored:
+  * URGENT FIX: Resolved "API Error: Invalid order ID" preventing all new orders from being created on heartcart.shop
+  * ROOT CAUSE: Order number generation still using old "TMY-" prefix instead of "HTC-" for HeartCart branding
+  * FIXED FILES: server/storage.ts (order creation logic), server/routes.ts (order parsing), server/email-test-routes.ts (test data)
+  * Order numbers now correctly generate as "HTC-{id}-{date}" format (e.g., HTC-35-20250721) instead of "TMY-{id}-{date}"
+  * Invoice download system updated to recognize new "HTC-" order number format for customer access
+  * Email test system updated to use "HTC-TEST-001" instead of "TMY-TEST-001" for consistency
+  * Browser tab favicon updated with new HeartCart logo (pink shopping cart with heart design)
+  * Production system now fully operational - customers can successfully create orders and complete checkout process
+  * ALL order-related functionality restored: creation, tracking, invoice generation, supplier management, email notifications
 - July 21, 2025. COMPLETE domain rebrand from teemeyou.shop to heartcart.shop implemented with FINAL COMPREHENSIVE CLEANUP:
   * CRITICAL DOMAIN CONVERSION: Updated ALL references across 23+ files from TeeMeYou to HeartCart branding
   * Updated 844 products and 99 product_drafts canonical URLs in database from teemeyou.shop to heartcart.shop

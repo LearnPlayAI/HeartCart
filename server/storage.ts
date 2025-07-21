@@ -3534,7 +3534,7 @@ export class DatabaseStorage implements IStorage {
   ): Promise<Order> {
     try {
       // Generate a temporary order number for initial insert
-      const tempOrderNumber = `TMY-TEMP-${Date.now()}`;
+      const tempOrderNumber = `HTC-TEMP-${Date.now()}`;
       
       // Create the order with temporary order number
       const orderWithTempNumber = {
@@ -3548,7 +3548,7 @@ export class DatabaseStorage implements IStorage {
 
       // Generate the final order number using the actual OrderID and date
       const orderDate = new Date().toISOString().split('T')[0].replace(/-/g, ''); // YYYYMMDD format
-      const finalOrderNumber = `TMY-${newOrder.id}-${orderDate}`;
+      const finalOrderNumber = `HTC-${newOrder.id}-${orderDate}`;
 
       // Update the order with the final order number
       const [updatedOrder] = await db
@@ -13416,7 +13416,7 @@ export class DatabaseStorage implements IStorage {
         return mappedResults.filter(item => {
           // Search across all relevant fields with case-insensitive partial matching
           const searchableFields = [
-            item.customerOrder.orderNumber,           // Order number (e.g., TMY-35-20250627)
+            item.customerOrder.orderNumber,           // Order number (e.g., HTC-35-20250627)
             item.customerOrder.customerName,          // Customer name
             item.productName,                         // Product name
             item.product.name,                        // Product name (alternative)

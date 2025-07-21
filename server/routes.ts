@@ -7693,8 +7693,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const orderNumber = req.params.orderNumber;
         const userId = req.user!.id;
 
-        // Extract order ID from order number format (TMY-{id}-{date})
-        const orderIdMatch = orderNumber.match(/^TMY-(\d+)-/);
+        // Extract order ID from order number format (HTC-{id}-{date})
+        const orderIdMatch = orderNumber.match(/^HTC-(\d+)-/);
         if (!orderIdMatch) {
           return sendError(res, "Invalid order number format", 400);
         }

@@ -50,7 +50,7 @@ router.post("/send-test-emails", asyncHandler(async (req: Request, res: Response
     const paymentResult = await unifiedEmailService.sendPaymentReceivedEmail(
       {
         id: 1001,
-        orderNumber: "TMY-TEST-001",
+        orderNumber: "HTC-TEST-001",
         status: "paid",
         customerName: "Test Customer",
         customerEmail: testEmail,
@@ -75,7 +75,7 @@ router.post("/send-test-emails", asyncHandler(async (req: Request, res: Response
         ]
       },
       {
-        orderNumber: "TMY-TEST-001",
+        orderNumber: "HTC-TEST-001",
         amount: 384.99,
         paymentMethod: "eft",
         transactionReference: "TEST-TXN-12345",
@@ -89,7 +89,7 @@ router.post("/send-test-emails", asyncHandler(async (req: Request, res: Response
     const statusUpdateResult = await unifiedEmailService.sendOrderStatusUpdateEmail(
       {
         id: 1001,
-        orderNumber: "TMY-TEST-001",
+        orderNumber: "HTC-TEST-001",
         status: "shipped",
         customerName: "Test Customer",
         customerEmail: testEmail,
@@ -123,7 +123,7 @@ router.post("/send-test-emails", asyncHandler(async (req: Request, res: Response
     const invoiceResult = await unifiedEmailService.sendInvoiceEmail(
       {
         id: 1001,
-        orderNumber: "TMY-TEST-001",
+        orderNumber: "HTC-TEST-001",
         status: "delivered",
         customerName: "Test Customer",
         customerEmail: testEmail,
