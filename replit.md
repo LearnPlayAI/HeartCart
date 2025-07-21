@@ -131,6 +131,14 @@ HeartCart is a comprehensive e-commerce platform built as a dropshipping solutio
 ## Changelog
 ```
 Changelog:
+- July 21, 2025. PAYMENT SUCCESS PAGE "VIEW YOUR ORDER" BUTTON FIX:
+  * CRITICAL FIX: Resolved TypeScript compilation errors preventing "View Your Order" button from displaying on payment success page
+  * Added proper Order interface typing to eliminate all type mismatches and compilation issues
+  * Enhanced button visibility with prominent hot pink background (bg-pink-600) and white text for better user experience
+  * Implemented optional chaining for safe property access preventing runtime errors when order data is loading
+  * Button now reliably appears after successful card payments and directs users to their order details page
+  * Added fallback navigation using orderId to ensure button works even during order data loading states
+  * Payment success page fully functional with prominent, visible "View Your Order" button as requested
 - July 21, 2025. COMPLETE INVOICE FORMATTING UPDATE FOR PRIVACY AND BRANDING:
   * Updated company branding on invoices from "HeartCart (Pty) Ltd." back to "TEE ME YOU (pty) Ltd." as requested
   * Changed tagline from "Your Style, Your Story" to "For the Love of Shopping" for consistent brand messaging

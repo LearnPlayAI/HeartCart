@@ -10,6 +10,15 @@ import { Button } from '@/components/ui/button';
 import { CheckCircle, ArrowLeft, Eye, Download } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 
+interface Order {
+  id: number;
+  orderNumber: string;
+  totalAmount: number;
+  paymentMethod: string;
+  status: string;
+  invoicePath?: string;
+}
+
 export default function PaymentSuccessPage() {
   const [location] = useLocation();
   const searchParams = new URLSearchParams(window.location.search);
@@ -18,7 +27,7 @@ export default function PaymentSuccessPage() {
 
   // CRITICAL: For card payments, we now have checkoutId, not orderId initially
   // Need to fetch order by checkout ID since order is created after payment
-  const { data: order, isLoading } = useQuery({
+  const { data: order, isLoading } = useQuery<Order>({
     queryKey: orderId ? ['/api/orders', orderId] : ['/api/orders/by-checkout', checkoutId],
     enabled: !!(orderId || checkoutId),
   });
@@ -67,16 +76,16 @@ export default function PaymentSuccessPage() {
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-green-700">Order Number:</span>
-                    <span className="font-medium text-green-900">{order.orderNumber}</span>
+                    <span className="font-medium text-green-900">{order?.orderNumber}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-green-700">Total Paid:</span>
-                    <span className="font-medium text-green-900">R {order.totalAmount?.toFixed(2)}</span>
+                    <span className="font-medium text-green-900">R {order?.totalAmount?.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-green-700">Payment Method:</span>
                     <span className="font-medium text-green-900 capitalize">
-                      {order.paymentMethod === 'card' ? 'Credit/Debit Card' : order.paymentMethod}
+                      {order?.paymentMethod === 'card' ? 'Credit/Debit Card' : order?.paymentMethod}
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -91,7 +100,7 @@ export default function PaymentSuccessPage() {
                     <span className="text-green-700">Order Status:</span>
                     <span className="font-medium text-green-900 capitalize">
                       <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
-                        {order.status}
+                        {order?.status}
                       </span>
                     </span>
                   </div>
@@ -124,16 +133,16 @@ export default function PaymentSuccessPage() {
                 <h3 className="font-semibold text-gray-900">Quick Actions</h3>
                 
                 <div className="grid gap-3">
-                  <Button asChild className="w-full" size="lg">
-                    <Link href={`/order/${order.orderNumber}`}>
+                  <Button asChild className="w-full bg-pink-600 hover:bg-pink-700 text-white" size="lg">
+                    <Link href={`/order/${order?.orderNumber || orderId}`}>
                       <Eye className="w-4 h-4 mr-2" />
-                      View Order Details
+                      View Your Order
                     </Link>
                   </Button>
                   
-                  {order.invoicePath && (
+                  {order?.invoicePath && (
                     <Button asChild variant="outline" className="w-full">
-                      <a href={`/api/orders/${order.id}/invoice`} target="_blank" rel="noopener noreferrer">
+                      <a href={`/api/orders/${order?.id}/invoice`} target="_blank" rel="noopener noreferrer">
                         <Download className="w-4 h-4 mr-2" />
                         Download Invoice
                       </a>
