@@ -46,7 +46,7 @@ const FloatingInstallButton: React.FC = () => {
     <div className="fixed bottom-4 left-4 right-4 z-50 md:hidden">
       <div className="bg-white rounded-lg shadow-2xl border-2 border-[#FF1493]/30 p-4 max-w-sm mx-auto">
         <div className="flex items-center justify-between mb-3">
-          <h4 className="font-semibold text-[#FF1493] text-sm">Install TEE ME YOU</h4>
+          <h4 className="font-semibold text-[#FF1493] text-sm">Install HeartCart</h4>
           <Button
             variant="ghost"
             size="sm"

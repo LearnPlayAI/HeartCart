@@ -185,8 +185,8 @@ const ProfileSettingsPage: React.FC = () => {
   return (
     <>
       <Helmet>
-        <title>Profile Settings - TEE ME YOU</title>
-        <meta name="description" content="Manage your profile settings and personal information at TEE ME YOU." />
+        <title>Profile Settings - HeartCart</title>
+        <meta name="description" content="Manage your profile settings and personal information at HeartCart." />
       </Helmet>
       
       <div className="container mx-auto px-4 py-6 max-w-4xl">

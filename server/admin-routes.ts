@@ -1204,7 +1204,7 @@ Questions? Contact us at sales@heartcart.shop
 
 #HeartCart #SalesRep #EarnMoney #SouthAfrica`,
 
-    'product_sharing_message': `🛍️ JUST ARRIVED at Tee Me You!
+    'product_sharing_message': `🛍️ JUST ARRIVED at HeartCart!
 
 [PRODUCT_NAME]
 

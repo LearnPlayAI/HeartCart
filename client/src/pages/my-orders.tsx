@@ -340,8 +340,8 @@ const MyOrdersPage: React.FC = () => {
   return (
     <>
       <Helmet>
-        <title>My Orders - TEE ME YOU</title>
-        <meta name="description" content="View and track your order history at TEE ME YOU." />
+        <title>My Orders - HeartCart</title>
+        <meta name="description" content="View and track your order history at HeartCart." />
       </Helmet>
       
       <div className="container mx-auto px-4 py-6 max-w-6xl">

@@ -261,8 +261,8 @@ function createPaymentConfirmationEmail(order) {
             The HeartCart Team</p>
         </div>
         <div class="footer">
-            <p>TeeMeYou | Johannesburg, South Africa | <a href="https://teemeyou.shop">teemeyou.shop</a></p>
-            <p>Questions? Reply to this email or contact us at sales@teemeyou.shop</p>
+            <p>HeartCart | Johannesburg, South Africa | <a href="https://heartcart.shop">heartcart.shop</a></p>
+            <p>Questions? Reply to this email or contact us at sales@heartcart.shop</p>
         </div>
     </div>
 </body>
@@ -385,7 +385,7 @@ HeartCart | https://heartcart.shop | sales@heartcart.shop`
 
 function createInvoiceEmail(order) {
   return {
-    subject: `Your TeeMeYou Invoice - ${order.orderNumber}`,
+    subject: `Your HeartCart Invoice - ${order.orderNumber}`,
     html: `
 <!DOCTYPE html>
 <html>
@@ -413,8 +413,8 @@ function createInvoiceEmail(order) {
 <body>
     <div class="container">
         <div class="header">
-            <div class="logo">TeeMeYou</div>
-            <h1>Your TeeMeYou Invoice 📄</h1>
+            <div class="logo">HeartCart</div>
+            <h1>Your HeartCart Invoice 📄</h1>
         </div>
         <div class="content">
             <p>Hi ${order.customerName},</p>
@@ -438,36 +438,36 @@ function createInvoiceEmail(order) {
             </div>
             
             <div class="attachment">
-                <strong>📎 Invoice Attached:</strong> TeeMeYou-Invoice-${order.orderNumber}.pdf
+                <strong>📎 Invoice Attached:</strong> HeartCart-Invoice-${order.orderNumber}.pdf
             </div>
             
             <p>This invoice serves as your proof of purchase and can be used for returns, exchanges, or warranty claims.</p>
             
             <center>
-                <a href="https://teemeyou.shop/orders/${order.orderNumber}" class="button">View Full Order</a>
+                <a href="https://heartcart.shop/orders/${order.orderNumber}" class="button">View Full Order</a>
             </center>
             
             <p><strong>Need help?</strong></p>
             <ul>
                 <li>Returns & Exchanges: Available within 30 days</li>
                 <li>Warranty Support: 12 months manufacturer warranty</li>
-                <li>Customer Service: sales@teemeyou.shop</li>
+                <li>Customer Service: sales@heartcart.shop</li>
             </ul>
             
-            <p>Thank you for choosing TeeMeYou!</p>
+            <p>Thank you for choosing HeartCart!</p>
             
             <p>Best regards,<br>
-            The TeeMeYou Team</p>
+            The HeartCart Team</p>
         </div>
         <div class="footer">
-            <p>TeeMeYou | Johannesburg, South Africa | <a href="https://teemeyou.shop">teemeyou.shop</a></p>
-            <p>Questions? Reply to this email or contact us at sales@teemeyou.shop</p>
+            <p>HeartCart | Johannesburg, South Africa | <a href="https://heartcart.shop">heartcart.shop</a></p>
+            <p>Questions? Reply to this email or contact us at sales@heartcart.shop</p>
             <p>Keep this email for your records. Invoice PDF attached.</p>
         </div>
     </div>
 </body>
 </html>`,
-    text: `Your TeeMeYou Invoice - ${order.orderNumber}
+    text: `Your HeartCart Invoice - ${order.orderNumber}
 
 Hi ${order.customerName},
 
@@ -478,18 +478,18 @@ ${order.orderItems.map(item => `- ${item.productName} (${item.quantity}x) = R ${
 - Shipping: R ${order.shippingCost.toFixed(2)}
 Total: R ${order.totalAmount}
 
-Invoice PDF: TeeMeYou-Invoice-${order.orderNumber}.pdf
+Invoice PDF: HeartCart-Invoice-${order.orderNumber}.pdf
 
 This serves as proof of purchase for returns and warranty claims.
 
-View order: https://teemeyou.shop/orders/${order.orderNumber}
+View order: https://heartcart.shop/orders/${order.orderNumber}
 
-Thank you for choosing TeeMeYou!
+Thank you for choosing HeartCart!
 
 Best regards,
-The TeeMeYou Team
+The HeartCart Team
 
-TeeMeYou | https://teemeyou.shop | sales@teemeyou.shop`
+HeartCart | https://heartcart.shop | sales@heartcart.shop`
   };
 }
 
@@ -497,7 +497,7 @@ TeeMeYou | https://teemeyou.shop | sales@teemeyou.shop`
 async function sendTestEmail(emailData, type) {
   try {
     const emailParams = new EmailParams()
-      .setFrom(new Sender(senderEmail, 'TeeMeYou'))
+      .setFrom(new Sender(senderEmail, 'HeartCart'))
       .setTo([new Recipient(recipientEmail, 'Admin')])
       .setSubject(emailData.subject)
       .setHtml(emailData.html)
@@ -529,7 +529,7 @@ async function sendTestEmail(emailData, type) {
 
 // Main test function
 async function testAllEmails() {
-  console.log('🚀 Testing all 5 TeeMeYou email scenarios...\n');
+  console.log('🚀 Testing all 5 HeartCart email scenarios...\n');
   
   if (!process.env.MAILERSEND_API_KEY) {
     console.log('❌ MAILERSEND_API_KEY environment variable not found');

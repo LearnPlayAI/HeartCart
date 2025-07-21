@@ -2,25 +2,25 @@
 
 /**
  * Send Credit Invoice System Status Email
- * Sends an email to admin@teemeyou.shop about the credit invoice implementation
+ * Sends an email to admin@heartcart.shop about the credit invoice implementation
  */
 
 import http from 'http';
 import { databaseEmailService } from './server/database-email-service.js';
 
-console.log('📧 Sending credit invoice system status email to admin@teemeyou.shop...\n');
+console.log('📧 Sending credit invoice system status email to admin@heartcart.shop...\n');
 
 // Direct email sending function
 async function sendStatusEmail() {
   try {
     // Create email data for the status update
     const emailData = {
-      to: 'admin@teemeyou.shop',
+      to: 'admin@heartcart.shop',
       subject: 'Credit Invoice System - Implementation Complete ✅',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="background: linear-gradient(135deg, #FF69B4, #E91E63); color: white; padding: 20px; border-radius: 10px; text-align: center;">
-            <h1 style="margin: 0;">TeeMeYou Credit Invoice System</h1>
+            <h1 style="margin: 0;">HeartCart Credit Invoice System</h1>
             <p style="margin: 10px 0 0 0;">Implementation Complete</p>
           </div>
           
@@ -73,7 +73,7 @@ async function sendStatusEmail() {
           </div>
           
           <div style="text-align: center; padding: 20px; color: #666;">
-            <p>Best regards,<br>TeeMeYou Development Team</p>
+            <p>Best regards,<br>HeartCart Development Team</p>
             <p style="font-size: 12px; color: #999;">This email was generated automatically by the credit invoice testing system.</p>
           </div>
         </div>
@@ -107,14 +107,14 @@ TECHNICAL UPDATES:
 The system is now fully operational and will automatically include credit usage information on all generated invoices when customers use store credits for purchases.
 
 Best regards,
-TeeMeYou Development Team
+HeartCart Development Team
       `
     };
 
     // Send the email using the database email service
     await databaseEmailService.sendEmail(emailData);
     
-    console.log('✅ Email sent successfully to admin@teemeyou.shop');
+    console.log('✅ Email sent successfully to admin@heartcart.shop');
     console.log('📧 Email includes complete implementation details');
     console.log('🎯 Credit invoice system is now fully operational');
     
@@ -130,7 +130,7 @@ TeeMeYou Development Team
 sendStatusEmail().then((success) => {
   if (success) {
     console.log('\n✅ Credit invoice system email sent successfully');
-    console.log('📧 Check admin@teemeyou.shop for implementation details');
+    console.log('📧 Check admin@heartcart.shop for implementation details');
   } else {
     console.log('\n❌ Email sending failed');
   }

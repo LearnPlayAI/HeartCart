@@ -464,8 +464,8 @@ const OrderDetail: React.FC = () => {
   return (
     <>
       <Helmet>
-        <title>Order #{order.orderNumber} - TEE ME YOU</title>
-        <meta name="description" content={`View details for order #${order.orderNumber} at TEE ME YOU.`} />
+        <title>Order #{order.orderNumber} - HeartCart</title>
+        <meta name="description" content={`View details for order #${order.orderNumber} at HeartCart.`} />
       </Helmet>
       <div className="container mx-auto px-4 py-6 max-w-5xl">
         {/* Header */}
@@ -755,11 +755,11 @@ const OrderDetail: React.FC = () => {
                       <div>
                         <label className="text-sm font-medium text-gray-600">Account Name</label>
                         <div className="flex items-center justify-between">
-                          <p className="font-semibold">Tee Me You</p>
+                          <p className="font-semibold">HeartCart</p>
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => copyToClipboard('Tee Me You', 'Account name')}
+                            onClick={() => copyToClipboard('HeartCart', 'Account name')}
                           >
                             <Copy className="h-3 w-3" />
                           </Button>

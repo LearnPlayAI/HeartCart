@@ -445,8 +445,8 @@ const ProductDetailContent = ({
   return (
     <>
       <Helmet>
-        <title>{product.name} - TEE ME YOU</title>
-        <meta name="description" content={product.description || `Buy ${product.name} from local South African suppliers at TEE ME YOU.`} />
+        <title>{product.name} - HeartCart</title>
+        <meta name="description" content={product.description || `Buy ${product.name} from local South African suppliers at HeartCart.`} />
       </Helmet>
       
       <div className="container mx-auto px-4 py-6">

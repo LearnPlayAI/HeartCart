@@ -268,7 +268,7 @@ const CategoryPage = () => {
   return (
     <>
       <Helmet>
-        <title>{category?.name || 'Category'} - TEE ME YOU</title>
+        <title>{category?.name || 'Category'} - HeartCart</title>
         <meta name="description" content={`Shop ${category?.name || 'our products'} from local South African suppliers at unbeatable prices.`} />
       </Helmet>
       

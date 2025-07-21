@@ -6,7 +6,7 @@ import { eq, and, lt, desc } from 'drizzle-orm';
 import { SASTTimezone, sastAddHours, isExpiredSAST, formatSASTLog } from './timezone-utils';
 
 // HeartCart hot pink styling and company branding
-const TEEMEYOU_COLORS = {
+const HEARTCART_COLORS = {
   HOT_PINK: '#FF69B4',
   DARK_PINK: '#E91E63',
   LIGHT_PINK: '#FFB6C1',
@@ -185,37 +185,37 @@ export class UnifiedEmailService {
           }
         </style>
       </head>
-      <body style="margin: 0; padding: 0; background: linear-gradient(135deg, ${TEEMEYOU_COLORS.LIGHT_GRAY} 0%, ${TEEMEYOU_COLORS.WHITE} 100%); font-family: 'Segoe UI', Arial, sans-serif;">
-        <div class="container" style="max-width: 600px; margin: 20px auto; background: ${TEEMEYOU_COLORS.WHITE}; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 32px rgba(255, 105, 180, 0.2);">
+      <body style="margin: 0; padding: 0; background: linear-gradient(135deg, ${HEARTCART_COLORS.LIGHT_GRAY} 0%, ${HEARTCART_COLORS.WHITE} 100%); font-family: 'Segoe UI', Arial, sans-serif;">
+        <div class="container" style="max-width: 600px; margin: 20px auto; background: ${HEARTCART_COLORS.WHITE}; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 32px rgba(255, 105, 180, 0.2);">
           
           <!-- Header -->
-          <div class="header" style="background: linear-gradient(135deg, ${TEEMEYOU_COLORS.HOT_PINK} 0%, ${TEEMEYOU_COLORS.DARK_PINK} 100%); padding: 40px; text-align: center; position: relative;">
-            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 6px; background: linear-gradient(90deg, ${TEEMEYOU_COLORS.HOT_PINK} 0%, ${TEEMEYOU_COLORS.ACCENT_PINK} 50%, ${TEEMEYOU_COLORS.DARK_PINK} 100%);"></div>
-            <div style="display: inline-block; background: ${TEEMEYOU_COLORS.WHITE}; padding: 12px; border-radius: 50%; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);">
-              <span style="font-size: 28px; color: ${TEEMEYOU_COLORS.HOT_PINK};">🛍️</span>
+          <div class="header" style="background: linear-gradient(135deg, ${HEARTCART_COLORS.HOT_PINK} 0%, ${HEARTCART_COLORS.DARK_PINK} 100%); padding: 40px; text-align: center; position: relative;">
+            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 6px; background: linear-gradient(90deg, ${HEARTCART_COLORS.HOT_PINK} 0%, ${HEARTCART_COLORS.ACCENT_PINK} 50%, ${HEARTCART_COLORS.DARK_PINK} 100%);"></div>
+            <div style="display: inline-block; background: ${HEARTCART_COLORS.WHITE}; padding: 12px; border-radius: 50%; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);">
+              <span style="font-size: 28px; color: ${HEARTCART_COLORS.HOT_PINK};">🛍️</span>
             </div>
-            <h1 style="color: ${TEEMEYOU_COLORS.WHITE}; margin: 0; font-size: 36px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3); letter-spacing: 1px;">HeartCart</h1>
-            <p style="color: ${TEEMEYOU_COLORS.WHITE}; margin: 8px 0 0 0; font-size: 16px; opacity: 0.9;">Password Reset Request</p>
+            <h1 style="color: ${HEARTCART_COLORS.WHITE}; margin: 0; font-size: 36px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3); letter-spacing: 1px;">HeartCart</h1>
+            <p style="color: ${HEARTCART_COLORS.WHITE}; margin: 8px 0 0 0; font-size: 16px; opacity: 0.9;">Password Reset Request</p>
           </div>
           
           <!-- Main Content -->
-          <div class="content" style="padding: 40px; background: ${TEEMEYOU_COLORS.WHITE};">
+          <div class="content" style="padding: 40px; background: ${HEARTCART_COLORS.WHITE};">
             <div style="text-align: center; margin-bottom: 30px;">
-              <div style="display: inline-block; background: linear-gradient(135deg, ${TEEMEYOU_COLORS.HOT_PINK} 0%, ${TEEMEYOU_COLORS.ACCENT_PINK} 100%); padding: 12px; border-radius: 50%; margin-bottom: 15px;">
-                <span style="font-size: 32px; color: ${TEEMEYOU_COLORS.WHITE};">🔑</span>
+              <div style="display: inline-block; background: linear-gradient(135deg, ${HEARTCART_COLORS.HOT_PINK} 0%, ${HEARTCART_COLORS.ACCENT_PINK} 100%); padding: 12px; border-radius: 50%; margin-bottom: 15px;">
+                <span style="font-size: 32px; color: ${HEARTCART_COLORS.WHITE};">🔑</span>
               </div>
-              <h2 style="color: ${TEEMEYOU_COLORS.DARK_PINK}; margin: 0; font-size: 28px; font-weight: 600;">Reset Your Password</h2>
+              <h2 style="color: ${HEARTCART_COLORS.DARK_PINK}; margin: 0; font-size: 28px; font-weight: 600;">Reset Your Password</h2>
             </div>
             
-            <p style="font-size: 16px; line-height: 1.6; color: ${TEEMEYOU_COLORS.DARK_GRAY}; margin-bottom: 30px; text-align: center;">
+            <p style="font-size: 16px; line-height: 1.6; color: ${HEARTCART_COLORS.DARK_GRAY}; margin-bottom: 30px; text-align: center;">
               Hi ${userName || 'User'}, we received a request to reset your HeartCart account password. If you made this request, click the button below to set a new password.
             </p>
             
             <!-- CTA Button -->
             <div style="text-align: center; margin: 40px 0;">
               <a href="${resetUrl}" class="button"
-                 style="background: linear-gradient(135deg, ${TEEMEYOU_COLORS.HOT_PINK} 0%, ${TEEMEYOU_COLORS.DARK_PINK} 100%); 
-                        color: ${TEEMEYOU_COLORS.WHITE}; 
+                 style="background: linear-gradient(135deg, ${HEARTCART_COLORS.HOT_PINK} 0%, ${HEARTCART_COLORS.DARK_PINK} 100%); 
+                        color: ${HEARTCART_COLORS.WHITE}; 
                         padding: 16px 32px; 
                         text-decoration: none; 
                         border-radius: 8px; 
@@ -231,35 +231,35 @@ export class UnifiedEmailService {
             </div>
             
             <!-- Security Notice -->
-            <div style="background: linear-gradient(135deg, ${TEEMEYOU_COLORS.LIGHT_PINK} 0%, ${TEEMEYOU_COLORS.HOT_PINK} 20%); padding: 20px; border-radius: 8px; margin: 30px 0; border-left: 4px solid ${TEEMEYOU_COLORS.DARK_PINK}; position: relative;">
-              <div style="position: absolute; top: -8px; left: 16px; background: ${TEEMEYOU_COLORS.DARK_PINK}; color: ${TEEMEYOU_COLORS.WHITE}; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">SECURITY</div>
-              <p style="margin: 0; font-weight: 600; color: ${TEEMEYOU_COLORS.BLACK}; font-size: 14px;">
+            <div style="background: linear-gradient(135deg, ${HEARTCART_COLORS.LIGHT_PINK} 0%, ${HEARTCART_COLORS.HOT_PINK} 20%); padding: 20px; border-radius: 8px; margin: 30px 0; border-left: 4px solid ${HEARTCART_COLORS.DARK_PINK}; position: relative;">
+              <div style="position: absolute; top: -8px; left: 16px; background: ${HEARTCART_COLORS.DARK_PINK}; color: ${HEARTCART_COLORS.WHITE}; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">SECURITY</div>
+              <p style="margin: 0; font-weight: 600; color: ${HEARTCART_COLORS.BLACK}; font-size: 14px;">
                 🔒 This password reset link expires in 1 hour for your protection.
               </p>
             </div>
             
             <!-- Fallback Link -->
-            <div style="background: ${TEEMEYOU_COLORS.LIGHT_GRAY}; padding: 15px; border-radius: 6px; margin-top: 30px; text-align: center;">
-              <p style="margin: 0; font-size: 14px; color: ${TEEMEYOU_COLORS.DARK_GRAY};">
+            <div style="background: ${HEARTCART_COLORS.LIGHT_GRAY}; padding: 15px; border-radius: 6px; margin-top: 30px; text-align: center;">
+              <p style="margin: 0; font-size: 14px; color: ${HEARTCART_COLORS.DARK_GRAY};">
                 Button not working? Copy and paste this link:
               </p>
               <p style="margin: 5px 0 0 0;">
-                <a href="${resetUrl}" style="color: ${TEEMEYOU_COLORS.HOT_PINK}; word-break: break-all; font-size: 12px;">${resetUrl}</a>
+                <a href="${resetUrl}" style="color: ${HEARTCART_COLORS.HOT_PINK}; word-break: break-all; font-size: 12px;">${resetUrl}</a>
               </p>
             </div>
           </div>
           
           <!-- Footer -->
-          <div style="background: ${TEEMEYOU_COLORS.DARK_GRAY}; padding: 25px; text-align: center;">
+          <div style="background: ${HEARTCART_COLORS.DARK_GRAY}; padding: 25px; text-align: center;">
             <div style="margin-bottom: 15px;">
-              <span style="display: inline-block; background: ${TEEMEYOU_COLORS.WHITE}; padding: 8px 12px; border-radius: 20px; margin: 0 5px; box-shadow: 0 2px 8px rgba(255, 105, 180, 0.2);">
-                <span style="font-size: 16px; color: ${TEEMEYOU_COLORS.HOT_PINK};">🛍️</span>
+              <span style="display: inline-block; background: ${HEARTCART_COLORS.WHITE}; padding: 8px 12px; border-radius: 20px; margin: 0 5px; box-shadow: 0 2px 8px rgba(255, 105, 180, 0.2);">
+                <span style="font-size: 16px; color: ${HEARTCART_COLORS.HOT_PINK};">🛍️</span>
               </span>
             </div>
-            <p style="color: ${TEEMEYOU_COLORS.WHITE}; margin: 0; font-size: 14px; font-weight: 500;">
+            <p style="color: ${HEARTCART_COLORS.WHITE}; margin: 0; font-size: 14px; font-weight: 500;">
               © 2024 HeartCart • South Africa's Premium Shopping Platform
             </p>
-            <p style="color: ${TEEMEYOU_COLORS.LIGHT_GRAY}; margin: 8px 0 0 0; font-size: 12px;">
+            <p style="color: ${HEARTCART_COLORS.LIGHT_GRAY}; margin: 8px 0 0 0; font-size: 12px;">
               If you didn't request this password reset, you can safely ignore this email.
             </p>
           </div>
@@ -468,37 +468,37 @@ export class UnifiedEmailService {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Verify Your Account - HeartCart</title>
       </head>
-      <body style="margin: 0; padding: 0; background: linear-gradient(135deg, ${TEEMEYOU_COLORS.LIGHT_GRAY} 0%, ${TEEMEYOU_COLORS.WHITE} 100%); font-family: 'Segoe UI', Arial, sans-serif;">
-        <div class="container" style="max-width: 600px; margin: 20px auto; background: ${TEEMEYOU_COLORS.WHITE}; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 32px rgba(255, 105, 180, 0.2);">
+      <body style="margin: 0; padding: 0; background: linear-gradient(135deg, ${HEARTCART_COLORS.LIGHT_GRAY} 0%, ${HEARTCART_COLORS.WHITE} 100%); font-family: 'Segoe UI', Arial, sans-serif;">
+        <div class="container" style="max-width: 600px; margin: 20px auto; background: ${HEARTCART_COLORS.WHITE}; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 32px rgba(255, 105, 180, 0.2);">
           
           <!-- Header -->
-          <div class="header" style="background: linear-gradient(135deg, ${TEEMEYOU_COLORS.HOT_PINK} 0%, ${TEEMEYOU_COLORS.DARK_PINK} 100%); padding: 40px; text-align: center; position: relative;">
-            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 6px; background: linear-gradient(90deg, ${TEEMEYOU_COLORS.HOT_PINK} 0%, ${TEEMEYOU_COLORS.ACCENT_PINK} 50%, ${TEEMEYOU_COLORS.DARK_PINK} 100%);"></div>
-            <div style="display: inline-block; background: ${TEEMEYOU_COLORS.WHITE}; padding: 12px; border-radius: 50%; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);">
-              <span style="font-size: 28px; color: ${TEEMEYOU_COLORS.HOT_PINK};">🛍️</span>
+          <div class="header" style="background: linear-gradient(135deg, ${HEARTCART_COLORS.HOT_PINK} 0%, ${HEARTCART_COLORS.DARK_PINK} 100%); padding: 40px; text-align: center; position: relative;">
+            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 6px; background: linear-gradient(90deg, ${HEARTCART_COLORS.HOT_PINK} 0%, ${HEARTCART_COLORS.ACCENT_PINK} 50%, ${HEARTCART_COLORS.DARK_PINK} 100%);"></div>
+            <div style="display: inline-block; background: ${HEARTCART_COLORS.WHITE}; padding: 12px; border-radius: 50%; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);">
+              <span style="font-size: 28px; color: ${HEARTCART_COLORS.HOT_PINK};">🛍️</span>
             </div>
-            <h1 style="color: ${TEEMEYOU_COLORS.WHITE}; margin: 0; font-size: 36px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3); letter-spacing: 1px;">HeartCart</h1>
-            <p style="color: ${TEEMEYOU_COLORS.WHITE}; margin: 8px 0 0 0; font-size: 16px; opacity: 0.9;">Welcome to HeartCart!</p>
+            <h1 style="color: ${HEARTCART_COLORS.WHITE}; margin: 0; font-size: 36px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3); letter-spacing: 1px;">HeartCart</h1>
+            <p style="color: ${HEARTCART_COLORS.WHITE}; margin: 8px 0 0 0; font-size: 16px; opacity: 0.9;">Welcome to HeartCart!</p>
           </div>
           
           <!-- Main Content -->
-          <div class="content" style="padding: 40px; background: ${TEEMEYOU_COLORS.WHITE};">
+          <div class="content" style="padding: 40px; background: ${HEARTCART_COLORS.WHITE};">
             <div style="text-align: center; margin-bottom: 30px;">
-              <div style="display: inline-block; background: linear-gradient(135deg, ${TEEMEYOU_COLORS.HOT_PINK} 0%, ${TEEMEYOU_COLORS.ACCENT_PINK} 100%); padding: 12px; border-radius: 50%; margin-bottom: 15px;">
-                <span style="font-size: 32px; color: ${TEEMEYOU_COLORS.WHITE};">✉️</span>
+              <div style="display: inline-block; background: linear-gradient(135deg, ${HEARTCART_COLORS.HOT_PINK} 0%, ${HEARTCART_COLORS.ACCENT_PINK} 100%); padding: 12px; border-radius: 50%; margin-bottom: 15px;">
+                <span style="font-size: 32px; color: ${HEARTCART_COLORS.WHITE};">✉️</span>
               </div>
-              <h2 style="color: ${TEEMEYOU_COLORS.DARK_PINK}; margin: 0; font-size: 28px; font-weight: 600;">Verify Your Account</h2>
+              <h2 style="color: ${HEARTCART_COLORS.DARK_PINK}; margin: 0; font-size: 28px; font-weight: 600;">Verify Your Account</h2>
             </div>
             
-            <p style="font-size: 16px; line-height: 1.6; color: ${TEEMEYOU_COLORS.DARK_GRAY}; margin-bottom: 30px; text-align: center;">
+            <p style="font-size: 16px; line-height: 1.6; color: ${HEARTCART_COLORS.DARK_GRAY}; margin-bottom: 30px; text-align: center;">
               Hi ${userName || 'User'}, welcome to HeartCart - South Africa's premium shopping platform! Please verify your email address to activate your account and start shopping.
             </p>
             
             <!-- CTA Button -->
             <div style="text-align: center; margin: 40px 0;">
               <a href="${verificationUrl}" class="button"
-                 style="background: linear-gradient(135deg, ${TEEMEYOU_COLORS.HOT_PINK} 0%, ${TEEMEYOU_COLORS.DARK_PINK} 100%); 
-                        color: ${TEEMEYOU_COLORS.WHITE}; 
+                 style="background: linear-gradient(135deg, ${HEARTCART_COLORS.HOT_PINK} 0%, ${HEARTCART_COLORS.DARK_PINK} 100%); 
+                        color: ${HEARTCART_COLORS.WHITE}; 
                         padding: 16px 32px; 
                         text-decoration: none; 
                         border-radius: 8px; 
@@ -514,35 +514,35 @@ export class UnifiedEmailService {
             </div>
             
             <!-- Security Notice -->
-            <div style="background: linear-gradient(135deg, ${TEEMEYOU_COLORS.LIGHT_PINK} 0%, ${TEEMEYOU_COLORS.HOT_PINK} 20%); padding: 20px; border-radius: 8px; margin: 30px 0; border-left: 4px solid ${TEEMEYOU_COLORS.DARK_PINK}; position: relative;">
-              <div style="position: absolute; top: -8px; left: 16px; background: ${TEEMEYOU_COLORS.DARK_PINK}; color: ${TEEMEYOU_COLORS.WHITE}; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">SECURITY</div>
-              <p style="margin: 0; font-weight: 600; color: ${TEEMEYOU_COLORS.BLACK}; font-size: 14px;">
+            <div style="background: linear-gradient(135deg, ${HEARTCART_COLORS.LIGHT_PINK} 0%, ${HEARTCART_COLORS.HOT_PINK} 20%); padding: 20px; border-radius: 8px; margin: 30px 0; border-left: 4px solid ${HEARTCART_COLORS.DARK_PINK}; position: relative;">
+              <div style="position: absolute; top: -8px; left: 16px; background: ${HEARTCART_COLORS.DARK_PINK}; color: ${HEARTCART_COLORS.WHITE}; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">SECURITY</div>
+              <p style="margin: 0; font-weight: 600; color: ${HEARTCART_COLORS.BLACK}; font-size: 14px;">
                 🔒 This verification link expires in 1 hour for your protection.
               </p>
             </div>
             
             <!-- Fallback Link -->
-            <div style="background: ${TEEMEYOU_COLORS.LIGHT_GRAY}; padding: 15px; border-radius: 6px; margin-top: 30px; text-align: center;">
-              <p style="margin: 0; font-size: 14px; color: ${TEEMEYOU_COLORS.DARK_GRAY};">
+            <div style="background: ${HEARTCART_COLORS.LIGHT_GRAY}; padding: 15px; border-radius: 6px; margin-top: 30px; text-align: center;">
+              <p style="margin: 0; font-size: 14px; color: ${HEARTCART_COLORS.DARK_GRAY};">
                 Button not working? Copy and paste this link:
               </p>
               <p style="margin: 5px 0 0 0;">
-                <a href="${verificationUrl}" style="color: ${TEEMEYOU_COLORS.HOT_PINK}; word-break: break-all; font-size: 12px;">${verificationUrl}</a>
+                <a href="${verificationUrl}" style="color: ${HEARTCART_COLORS.HOT_PINK}; word-break: break-all; font-size: 12px;">${verificationUrl}</a>
               </p>
             </div>
           </div>
           
           <!-- Footer -->
-          <div style="background: ${TEEMEYOU_COLORS.DARK_GRAY}; padding: 25px; text-align: center;">
+          <div style="background: ${HEARTCART_COLORS.DARK_GRAY}; padding: 25px; text-align: center;">
             <div style="margin-bottom: 15px;">
-              <span style="display: inline-block; background: ${TEEMEYOU_COLORS.WHITE}; padding: 8px 12px; border-radius: 20px; margin: 0 5px; box-shadow: 0 2px 8px rgba(255, 105, 180, 0.2);">
-                <span style="font-size: 16px; color: ${TEEMEYOU_COLORS.HOT_PINK};">🛍️</span>
+              <span style="display: inline-block; background: ${HEARTCART_COLORS.WHITE}; padding: 8px 12px; border-radius: 20px; margin: 0 5px; box-shadow: 0 2px 8px rgba(255, 105, 180, 0.2);">
+                <span style="font-size: 16px; color: ${HEARTCART_COLORS.HOT_PINK};">🛍️</span>
               </span>
             </div>
-            <p style="color: ${TEEMEYOU_COLORS.WHITE}; margin: 0; font-size: 14px; font-weight: 500;">
+            <p style="color: ${HEARTCART_COLORS.WHITE}; margin: 0; font-size: 14px; font-weight: 500;">
               © 2024 HeartCart • South Africa's Premium Shopping Platform
             </p>
-            <p style="color: ${TEEMEYOU_COLORS.LIGHT_GRAY}; margin: 8px 0 0 0; font-size: 12px;">
+            <p style="color: ${HEARTCART_COLORS.LIGHT_GRAY}; margin: 8px 0 0 0; font-size: 12px;">
               If you didn't create this account, you can safely ignore this email.
             </p>
           </div>
@@ -593,45 +593,45 @@ export class UnifiedEmailService {
           }
         </style>
       </head>
-      <body style="margin: 0; padding: 0; background: linear-gradient(135deg, ${TEEMEYOU_COLORS.LIGHT_GRAY} 0%, ${TEEMEYOU_COLORS.WHITE} 100%); font-family: 'Segoe UI', Arial, sans-serif;">
-        <div class="container" style="max-width: 600px; margin: 20px auto; background: ${TEEMEYOU_COLORS.WHITE}; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 32px rgba(255, 105, 180, 0.2);">
+      <body style="margin: 0; padding: 0; background: linear-gradient(135deg, ${HEARTCART_COLORS.LIGHT_GRAY} 0%, ${HEARTCART_COLORS.WHITE} 100%); font-family: 'Segoe UI', Arial, sans-serif;">
+        <div class="container" style="max-width: 600px; margin: 20px auto; background: ${HEARTCART_COLORS.WHITE}; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 32px rgba(255, 105, 180, 0.2);">
           
           <!-- Header -->
-          <div class="header" style="background: linear-gradient(135deg, ${TEEMEYOU_COLORS.HOT_PINK} 0%, ${TEEMEYOU_COLORS.DARK_PINK} 100%); padding: 40px; text-align: center; position: relative;">
-            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 6px; background: linear-gradient(90deg, ${TEEMEYOU_COLORS.HOT_PINK} 0%, ${TEEMEYOU_COLORS.ACCENT_PINK} 50%, ${TEEMEYOU_COLORS.DARK_PINK} 100%);"></div>
-            <div style="display: inline-block; background: ${TEEMEYOU_COLORS.WHITE}; padding: 12px; border-radius: 50%; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);">
-              <span style="font-size: 28px; color: ${TEEMEYOU_COLORS.HOT_PINK};">🛍️</span>
+          <div class="header" style="background: linear-gradient(135deg, ${HEARTCART_COLORS.HOT_PINK} 0%, ${HEARTCART_COLORS.DARK_PINK} 100%); padding: 40px; text-align: center; position: relative;">
+            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 6px; background: linear-gradient(90deg, ${HEARTCART_COLORS.HOT_PINK} 0%, ${HEARTCART_COLORS.ACCENT_PINK} 50%, ${HEARTCART_COLORS.DARK_PINK} 100%);"></div>
+            <div style="display: inline-block; background: ${HEARTCART_COLORS.WHITE}; padding: 12px; border-radius: 50%; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);">
+              <span style="font-size: 28px; color: ${HEARTCART_COLORS.HOT_PINK};">🛍️</span>
             </div>
-            <h1 style="color: ${TEEMEYOU_COLORS.WHITE}; margin: 0; font-size: 36px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3); letter-spacing: 1px;">HeartCart</h1>
-            <p style="color: ${TEEMEYOU_COLORS.WHITE}; margin: 8px 0 0 0; font-size: 16px; opacity: 0.9;">Account Credit Added</p>
+            <h1 style="color: ${HEARTCART_COLORS.WHITE}; margin: 0; font-size: 36px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3); letter-spacing: 1px;">HeartCart</h1>
+            <p style="color: ${HEARTCART_COLORS.WHITE}; margin: 8px 0 0 0; font-size: 16px; opacity: 0.9;">Account Credit Added</p>
           </div>
           
           <!-- Main Content -->
-          <div class="content" style="padding: 40px; background: ${TEEMEYOU_COLORS.WHITE};">
+          <div class="content" style="padding: 40px; background: ${HEARTCART_COLORS.WHITE};">
             <div style="text-align: center; margin-bottom: 30px;">
-              <div style="display: inline-block; background: linear-gradient(135deg, ${TEEMEYOU_COLORS.SUCCESS} 0%, ${TEEMEYOU_COLORS.HOT_PINK} 100%); padding: 12px; border-radius: 50%; margin-bottom: 15px;">
-                <span style="font-size: 32px; color: ${TEEMEYOU_COLORS.WHITE};">💳</span>
+              <div style="display: inline-block; background: linear-gradient(135deg, ${HEARTCART_COLORS.SUCCESS} 0%, ${HEARTCART_COLORS.HOT_PINK} 100%); padding: 12px; border-radius: 50%; margin-bottom: 15px;">
+                <span style="font-size: 32px; color: ${HEARTCART_COLORS.WHITE};">💳</span>
               </div>
-              <h2 style="color: ${TEEMEYOU_COLORS.DARK_PINK}; margin: 0; font-size: 28px; font-weight: 600;">Credit Added to Your Account</h2>
+              <h2 style="color: ${HEARTCART_COLORS.DARK_PINK}; margin: 0; font-size: 28px; font-weight: 600;">Credit Added to Your Account</h2>
             </div>
             
-            <p style="font-size: 16px; line-height: 1.6; color: ${TEEMEYOU_COLORS.DARK_GRAY}; margin-bottom: 30px; text-align: center;">
+            <p style="font-size: 16px; line-height: 1.6; color: ${HEARTCART_COLORS.DARK_GRAY}; margin-bottom: 30px; text-align: center;">
               Hi ${customerName}, great news! We've added credit to your HeartCart account. You can use this credit on your next purchase or save it for later.
             </p>
             
             <!-- Credit Amount Display -->
-            <div style="background: linear-gradient(135deg, ${TEEMEYOU_COLORS.LIGHT_PINK} 0%, ${TEEMEYOU_COLORS.WHITE} 100%); border: 2px solid ${TEEMEYOU_COLORS.HOT_PINK}; padding: 30px; border-radius: 12px; text-align: center; margin: 30px 0;">
-              <p style="margin: 0 0 10px 0; font-size: 16px; color: ${TEEMEYOU_COLORS.DARK_GRAY}; font-weight: 500;">Credit Amount Added</p>
-              <p class="credit-amount" style="margin: 0; font-size: 48px; font-weight: 800; color: ${TEEMEYOU_COLORS.HOT_PINK}; text-shadow: 0 2px 4px rgba(255, 105, 180, 0.3);">
+            <div style="background: linear-gradient(135deg, ${HEARTCART_COLORS.LIGHT_PINK} 0%, ${HEARTCART_COLORS.WHITE} 100%); border: 2px solid ${HEARTCART_COLORS.HOT_PINK}; padding: 30px; border-radius: 12px; text-align: center; margin: 30px 0;">
+              <p style="margin: 0 0 10px 0; font-size: 16px; color: ${HEARTCART_COLORS.DARK_GRAY}; font-weight: 500;">Credit Amount Added</p>
+              <p class="credit-amount" style="margin: 0; font-size: 48px; font-weight: 800; color: ${HEARTCART_COLORS.HOT_PINK}; text-shadow: 0 2px 4px rgba(255, 105, 180, 0.3);">
                 R${creditAmount.toFixed(2)}
               </p>
             </div>
             
             ${adminNote ? `
             <!-- Admin Note -->
-            <div style="background: ${TEEMEYOU_COLORS.LIGHT_GRAY}; padding: 20px; border-radius: 8px; margin: 30px 0; border-left: 4px solid ${TEEMEYOU_COLORS.DARK_PINK}; position: relative;">
-              <div style="position: absolute; top: -8px; left: 16px; background: ${TEEMEYOU_COLORS.DARK_PINK}; color: ${TEEMEYOU_COLORS.WHITE}; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">NOTE</div>
-              <p style="margin: 0; color: ${TEEMEYOU_COLORS.DARK_GRAY}; font-size: 14px; line-height: 1.5;">
+            <div style="background: ${HEARTCART_COLORS.LIGHT_GRAY}; padding: 20px; border-radius: 8px; margin: 30px 0; border-left: 4px solid ${HEARTCART_COLORS.DARK_PINK}; position: relative;">
+              <div style="position: absolute; top: -8px; left: 16px; background: ${HEARTCART_COLORS.DARK_PINK}; color: ${HEARTCART_COLORS.WHITE}; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">NOTE</div>
+              <p style="margin: 0; color: ${HEARTCART_COLORS.DARK_GRAY}; font-size: 14px; line-height: 1.5;">
                 <strong>Details:</strong> ${adminNote}
               </p>
             </div>
@@ -640,8 +640,8 @@ export class UnifiedEmailService {
             <!-- Shop Now Button -->
             <div style="text-align: center; margin: 40px 0;">
               <a href="https://heartcart.shop" 
-                 style="background: linear-gradient(135deg, ${TEEMEYOU_COLORS.HOT_PINK} 0%, ${TEEMEYOU_COLORS.DARK_PINK} 100%); 
-                        color: ${TEEMEYOU_COLORS.WHITE}; 
+                 style="background: linear-gradient(135deg, ${HEARTCART_COLORS.HOT_PINK} 0%, ${HEARTCART_COLORS.DARK_PINK} 100%); 
+                        color: ${HEARTCART_COLORS.WHITE}; 
                         padding: 16px 32px; 
                         text-decoration: none; 
                         border-radius: 8px; 
@@ -657,25 +657,25 @@ export class UnifiedEmailService {
             </div>
             
             <!-- Info Box -->
-            <div style="background: linear-gradient(135deg, ${TEEMEYOU_COLORS.LIGHT_PINK} 0%, ${TEEMEYOU_COLORS.HOT_PINK} 20%); padding: 20px; border-radius: 8px; margin: 30px 0; border-left: 4px solid ${TEEMEYOU_COLORS.DARK_PINK}; position: relative;">
-              <div style="position: absolute; top: -8px; left: 16px; background: ${TEEMEYOU_COLORS.DARK_PINK}; color: ${TEEMEYOU_COLORS.WHITE}; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">HOW IT WORKS</div>
-              <p style="margin: 0; font-weight: 600; color: ${TEEMEYOU_COLORS.BLACK}; font-size: 14px;">
+            <div style="background: linear-gradient(135deg, ${HEARTCART_COLORS.LIGHT_PINK} 0%, ${HEARTCART_COLORS.HOT_PINK} 20%); padding: 20px; border-radius: 8px; margin: 30px 0; border-left: 4px solid ${HEARTCART_COLORS.DARK_PINK}; position: relative;">
+              <div style="position: absolute; top: -8px; left: 16px; background: ${HEARTCART_COLORS.DARK_PINK}; color: ${HEARTCART_COLORS.WHITE}; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">HOW IT WORKS</div>
+              <p style="margin: 0; font-weight: 600; color: ${HEARTCART_COLORS.BLACK}; font-size: 14px;">
                 💡 Your credit will be automatically applied at checkout. You can view your credit balance in your account dashboard.
               </p>
             </div>
           </div>
           
           <!-- Footer -->
-          <div style="background: ${TEEMEYOU_COLORS.DARK_GRAY}; padding: 25px; text-align: center;">
+          <div style="background: ${HEARTCART_COLORS.DARK_GRAY}; padding: 25px; text-align: center;">
             <div style="margin-bottom: 15px;">
-              <span style="display: inline-block; background: ${TEEMEYOU_COLORS.WHITE}; padding: 8px 12px; border-radius: 20px; margin: 0 5px; box-shadow: 0 2px 8px rgba(255, 105, 180, 0.2);">
-                <span style="font-size: 16px; color: ${TEEMEYOU_COLORS.HOT_PINK};">🛍️</span>
+              <span style="display: inline-block; background: ${HEARTCART_COLORS.WHITE}; padding: 8px 12px; border-radius: 20px; margin: 0 5px; box-shadow: 0 2px 8px rgba(255, 105, 180, 0.2);">
+                <span style="font-size: 16px; color: ${HEARTCART_COLORS.HOT_PINK};">🛍️</span>
               </span>
             </div>
-            <p style="color: ${TEEMEYOU_COLORS.WHITE}; margin: 0; font-size: 14px; font-weight: 500;">
+            <p style="color: ${HEARTCART_COLORS.WHITE}; margin: 0; font-size: 14px; font-weight: 500;">
               © 2024 HeartCart • South Africa's Premium Shopping Platform
             </p>
-            <p style="color: ${TEEMEYOU_COLORS.LIGHT_GRAY}; margin: 8px 0 0 0; font-size: 12px;">
+            <p style="color: ${HEARTCART_COLORS.LIGHT_GRAY}; margin: 8px 0 0 0; font-size: 12px;">
               Thank you for shopping with us! Happy shopping!
             </p>
           </div>
@@ -756,39 +756,39 @@ export class UnifiedEmailService {
           }
         </style>
       </head>
-      <body style="margin: 0; padding: 0; background: linear-gradient(135deg, ${TEEMEYOU_COLORS.LIGHT_GRAY} 0%, ${TEEMEYOU_COLORS.WHITE} 100%); font-family: 'Segoe UI', Arial, sans-serif;">
-        <div class="container" style="max-width: 600px; margin: 20px auto; background: ${TEEMEYOU_COLORS.WHITE}; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 32px rgba(255, 105, 180, 0.2);">
+      <body style="margin: 0; padding: 0; background: linear-gradient(135deg, ${HEARTCART_COLORS.LIGHT_GRAY} 0%, ${HEARTCART_COLORS.WHITE} 100%); font-family: 'Segoe UI', Arial, sans-serif;">
+        <div class="container" style="max-width: 600px; margin: 20px auto; background: ${HEARTCART_COLORS.WHITE}; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 32px rgba(255, 105, 180, 0.2);">
           
           <!-- Header -->
-          <div class="header" style="background: linear-gradient(135deg, ${TEEMEYOU_COLORS.HOT_PINK} 0%, ${TEEMEYOU_COLORS.DARK_PINK} 100%); padding: 40px; text-align: center; position: relative;">
-            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 6px; background: linear-gradient(90deg, ${TEEMEYOU_COLORS.HOT_PINK} 0%, ${TEEMEYOU_COLORS.ACCENT_PINK} 50%, ${TEEMEYOU_COLORS.DARK_PINK} 100%);"></div>
-            <div style="display: inline-block; background: ${TEEMEYOU_COLORS.WHITE}; padding: 12px; border-radius: 50%; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);">
-              <span style="font-size: 28px; color: ${TEEMEYOU_COLORS.HOT_PINK};">💰</span>
+          <div class="header" style="background: linear-gradient(135deg, ${HEARTCART_COLORS.HOT_PINK} 0%, ${HEARTCART_COLORS.DARK_PINK} 100%); padding: 40px; text-align: center; position: relative;">
+            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 6px; background: linear-gradient(90deg, ${HEARTCART_COLORS.HOT_PINK} 0%, ${HEARTCART_COLORS.ACCENT_PINK} 50%, ${HEARTCART_COLORS.DARK_PINK} 100%);"></div>
+            <div style="display: inline-block; background: ${HEARTCART_COLORS.WHITE}; padding: 12px; border-radius: 50%; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);">
+              <span style="font-size: 28px; color: ${HEARTCART_COLORS.HOT_PINK};">💰</span>
             </div>
-            <h1 style="color: ${TEEMEYOU_COLORS.WHITE}; margin: 0; font-size: 36px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3); letter-spacing: 1px;">HeartCart</h1>
-            <p style="color: ${TEEMEYOU_COLORS.WHITE}; margin: 8px 0 0 0; font-size: 16px; opacity: 0.9;">You Have Store Credit Waiting!</p>
+            <h1 style="color: ${HEARTCART_COLORS.WHITE}; margin: 0; font-size: 36px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3); letter-spacing: 1px;">HeartCart</h1>
+            <p style="color: ${HEARTCART_COLORS.WHITE}; margin: 8px 0 0 0; font-size: 16px; opacity: 0.9;">You Have Store Credit Waiting!</p>
           </div>
           
           <!-- Main Content -->
-          <div class="content" style="padding: 40px; background: ${TEEMEYOU_COLORS.WHITE};">
+          <div class="content" style="padding: 40px; background: ${HEARTCART_COLORS.WHITE};">
             <div style="text-align: center; margin-bottom: 30px;">
-              <div style="display: inline-block; background: linear-gradient(135deg, ${TEEMEYOU_COLORS.SUCCESS} 0%, ${TEEMEYOU_COLORS.HOT_PINK} 100%); padding: 12px; border-radius: 50%; margin-bottom: 15px;">
-                <span style="font-size: 32px; color: ${TEEMEYOU_COLORS.WHITE};">🎁</span>
+              <div style="display: inline-block; background: linear-gradient(135deg, ${HEARTCART_COLORS.SUCCESS} 0%, ${HEARTCART_COLORS.HOT_PINK} 100%); padding: 12px; border-radius: 50%; margin-bottom: 15px;">
+                <span style="font-size: 32px; color: ${HEARTCART_COLORS.WHITE};">🎁</span>
               </div>
-              <h2 style="color: ${TEEMEYOU_COLORS.DARK_PINK}; margin: 0; font-size: 28px; font-weight: 600;">Don't Forget Your Store Credit!</h2>
+              <h2 style="color: ${HEARTCART_COLORS.DARK_PINK}; margin: 0; font-size: 28px; font-weight: 600;">Don't Forget Your Store Credit!</h2>
             </div>
             
-            <p style="font-size: 16px; line-height: 1.6; color: ${TEEMEYOU_COLORS.DARK_GRAY}; margin-bottom: 30px; text-align: center;">
+            <p style="font-size: 16px; line-height: 1.6; color: ${HEARTCART_COLORS.DARK_GRAY}; margin-bottom: 30px; text-align: center;">
               Hi ${customerName}, you have store credit waiting to be used! Why not treat yourself to something special from our amazing collection?
             </p>
             
             <!-- Credit Amount Display -->
-            <div style="background: linear-gradient(135deg, ${TEEMEYOU_COLORS.LIGHT_PINK} 0%, ${TEEMEYOU_COLORS.WHITE} 100%); border: 2px solid ${TEEMEYOU_COLORS.HOT_PINK}; padding: 30px; border-radius: 12px; text-align: center; margin: 30px 0;">
-              <p style="margin: 0 0 10px 0; font-size: 16px; color: ${TEEMEYOU_COLORS.DARK_GRAY}; font-weight: 500;">Your Available Store Credit</p>
-              <p class="credit-amount" style="margin: 0; font-size: 48px; font-weight: 800; color: ${TEEMEYOU_COLORS.HOT_PINK}; text-shadow: 0 2px 4px rgba(255, 105, 180, 0.3);">
+            <div style="background: linear-gradient(135deg, ${HEARTCART_COLORS.LIGHT_PINK} 0%, ${HEARTCART_COLORS.WHITE} 100%); border: 2px solid ${HEARTCART_COLORS.HOT_PINK}; padding: 30px; border-radius: 12px; text-align: center; margin: 30px 0;">
+              <p style="margin: 0 0 10px 0; font-size: 16px; color: ${HEARTCART_COLORS.DARK_GRAY}; font-weight: 500;">Your Available Store Credit</p>
+              <p class="credit-amount" style="margin: 0; font-size: 48px; font-weight: 800; color: ${HEARTCART_COLORS.HOT_PINK}; text-shadow: 0 2px 4px rgba(255, 105, 180, 0.3);">
                 R${availableCredit.toFixed(2)}
               </p>
-              <p style="margin: 10px 0 0 0; font-size: 14px; color: ${TEEMEYOU_COLORS.DARK_GRAY}; font-style: italic;">
+              <p style="margin: 10px 0 0 0; font-size: 14px; color: ${HEARTCART_COLORS.DARK_GRAY}; font-style: italic;">
                 Ready to use at checkout
               </p>
             </div>
@@ -796,8 +796,8 @@ export class UnifiedEmailService {
             <!-- Shop Now Button -->
             <div style="text-align: center; margin: 40px 0;">
               <a href="https://heartcart.shop" 
-                 style="background: linear-gradient(135deg, ${TEEMEYOU_COLORS.HOT_PINK} 0%, ${TEEMEYOU_COLORS.DARK_PINK} 100%); 
-                        color: ${TEEMEYOU_COLORS.WHITE}; 
+                 style="background: linear-gradient(135deg, ${HEARTCART_COLORS.HOT_PINK} 0%, ${HEARTCART_COLORS.DARK_PINK} 100%); 
+                        color: ${HEARTCART_COLORS.WHITE}; 
                         padding: 16px 32px; 
                         text-decoration: none; 
                         border-radius: 8px; 
@@ -813,44 +813,44 @@ export class UnifiedEmailService {
             </div>
             
             <!-- Features List -->
-            <div style="background: linear-gradient(135deg, ${TEEMEYOU_COLORS.LIGHT_PINK} 0%, ${TEEMEYOU_COLORS.WHITE} 100%); padding: 25px; border-radius: 8px; margin: 30px 0;">
-              <h3 style="color: ${TEEMEYOU_COLORS.DARK_PINK}; margin: 0 0 15px 0; font-size: 18px; font-weight: 600; text-align: center;">Why Shop with HeartCart?</h3>
+            <div style="background: linear-gradient(135deg, ${HEARTCART_COLORS.LIGHT_PINK} 0%, ${HEARTCART_COLORS.WHITE} 100%); padding: 25px; border-radius: 8px; margin: 30px 0;">
+              <h3 style="color: ${HEARTCART_COLORS.DARK_PINK}; margin: 0 0 15px 0; font-size: 18px; font-weight: 600; text-align: center;">Why Shop with HeartCart?</h3>
               <div style="text-align: left;">
-                <p style="margin: 8px 0; color: ${TEEMEYOU_COLORS.DARK_GRAY}; font-size: 14px; line-height: 1.4;">
+                <p style="margin: 8px 0; color: ${HEARTCART_COLORS.DARK_GRAY}; font-size: 14px; line-height: 1.4;">
                   ✨ <strong>Premium Quality:</strong> High-quality t-shirts and apparel
                 </p>
-                <p style="margin: 8px 0; color: ${TEEMEYOU_COLORS.DARK_GRAY}; font-size: 14px; line-height: 1.4;">
+                <p style="margin: 8px 0; color: ${HEARTCART_COLORS.DARK_GRAY}; font-size: 14px; line-height: 1.4;">
                   🚚 <strong>Fast Delivery:</strong> Quick shipping across South Africa
                 </p>
-                <p style="margin: 8px 0; color: ${TEEMEYOU_COLORS.DARK_GRAY}; font-size: 14px; line-height: 1.4;">
+                <p style="margin: 8px 0; color: ${HEARTCART_COLORS.DARK_GRAY}; font-size: 14px; line-height: 1.4;">
                   💳 <strong>Easy Payment:</strong> Your credit applies automatically at checkout
                 </p>
-                <p style="margin: 8px 0; color: ${TEEMEYOU_COLORS.DARK_GRAY}; font-size: 14px; line-height: 1.4;">
+                <p style="margin: 8px 0; color: ${HEARTCART_COLORS.DARK_GRAY}; font-size: 14px; line-height: 1.4;">
                   🎨 <strong>Latest Trends:</strong> Fresh designs and styles updated regularly
                 </p>
               </div>
             </div>
             
             <!-- Info Box -->
-            <div style="background: linear-gradient(135deg, ${TEEMEYOU_COLORS.LIGHT_PINK} 0%, ${TEEMEYOU_COLORS.HOT_PINK} 20%); padding: 20px; border-radius: 8px; margin: 30px 0; border-left: 4px solid ${TEEMEYOU_COLORS.DARK_PINK}; position: relative;">
-              <div style="position: absolute; top: -8px; left: 16px; background: ${TEEMEYOU_COLORS.DARK_PINK}; color: ${TEEMEYOU_COLORS.WHITE}; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">REMINDER</div>
-              <p style="margin: 0; font-weight: 600; color: ${TEEMEYOU_COLORS.BLACK}; font-size: 14px;">
+            <div style="background: linear-gradient(135deg, ${HEARTCART_COLORS.LIGHT_PINK} 0%, ${HEARTCART_COLORS.HOT_PINK} 20%); padding: 20px; border-radius: 8px; margin: 30px 0; border-left: 4px solid ${HEARTCART_COLORS.DARK_PINK}; position: relative;">
+              <div style="position: absolute; top: -8px; left: 16px; background: ${HEARTCART_COLORS.DARK_PINK}; color: ${HEARTCART_COLORS.WHITE}; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">REMINDER</div>
+              <p style="margin: 0; font-weight: 600; color: ${HEARTCART_COLORS.BLACK}; font-size: 14px;">
                 💡 Your store credit never expires and will be automatically applied to your next purchase!
               </p>
             </div>
           </div>
           
           <!-- Footer -->
-          <div style="background: ${TEEMEYOU_COLORS.DARK_GRAY}; padding: 25px; text-align: center;">
+          <div style="background: ${HEARTCART_COLORS.DARK_GRAY}; padding: 25px; text-align: center;">
             <div style="margin-bottom: 15px;">
-              <span style="display: inline-block; background: ${TEEMEYOU_COLORS.WHITE}; padding: 8px 12px; border-radius: 20px; margin: 0 5px; box-shadow: 0 2px 8px rgba(255, 105, 180, 0.2);">
-                <span style="font-size: 16px; color: ${TEEMEYOU_COLORS.HOT_PINK};">💰</span>
+              <span style="display: inline-block; background: ${HEARTCART_COLORS.WHITE}; padding: 8px 12px; border-radius: 20px; margin: 0 5px; box-shadow: 0 2px 8px rgba(255, 105, 180, 0.2);">
+                <span style="font-size: 16px; color: ${HEARTCART_COLORS.HOT_PINK};">💰</span>
               </span>
             </div>
-            <p style="color: ${TEEMEYOU_COLORS.WHITE}; margin: 0; font-size: 14px; font-weight: 500;">
+            <p style="color: ${HEARTCART_COLORS.WHITE}; margin: 0; font-size: 14px; font-weight: 500;">
               © 2024 HeartCart • South Africa's Premium Shopping Platform
             </p>
-            <p style="color: ${TEEMEYOU_COLORS.LIGHT_GRAY}; margin: 8px 0 0 0; font-size: 12px;">
+            <p style="color: ${HEARTCART_COLORS.LIGHT_GRAY}; margin: 8px 0 0 0; font-size: 12px;">
               Questions? Reply to this email or visit our website for support.
             </p>
           </div>

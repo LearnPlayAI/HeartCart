@@ -81,7 +81,7 @@ const MobileInstallButton: React.FC<MobileInstallButtonProps> = ({
 
     if (isIOS && browser === 'safari') {
       return {
-        title: 'Install TEE ME YOU on iPhone/iPad',
+        title: 'Install HeartCart on iPhone/iPad',
         steps: [
           'Tap the Share button (□↗) at the bottom of the screen',
           'Scroll down and tap "Add to Home Screen"',
@@ -92,7 +92,7 @@ const MobileInstallButton: React.FC<MobileInstallButtonProps> = ({
       };
     } else if (isIOS) {
       return {
-        title: 'Install TEE ME YOU',
+        title: 'Install HeartCart',
         steps: [
           'Open this website in Safari browser',
           'Tap the Share button (□↗)',
@@ -103,7 +103,7 @@ const MobileInstallButton: React.FC<MobileInstallButtonProps> = ({
       };
     } else if (isAndroid && browser === 'chrome') {
       return {
-        title: 'Install TEE ME YOU on Android',
+        title: 'Install HeartCart on Android',
         steps: [
           'Tap the menu button (⋮) in the top right',
           'Select "Add to Home screen" or "Install app"',
@@ -114,7 +114,7 @@ const MobileInstallButton: React.FC<MobileInstallButtonProps> = ({
       };
     } else if (isAndroid) {
       return {
-        title: 'Install TEE ME YOU on Android',
+        title: 'Install HeartCart on Android',
         steps: [
           'Open this website in Chrome browser',
           'Tap the menu (⋮) and select "Add to Home screen"',
@@ -125,7 +125,7 @@ const MobileInstallButton: React.FC<MobileInstallButtonProps> = ({
       };
     } else {
       return {
-        title: 'Install TEE ME YOU App',
+        title: 'Install HeartCart App',
         steps: [
           'Look for an "Install" or "Add to Home Screen" option in your browser menu',
           'This is usually found in the browser\'s main menu (⋮ or ≡)',

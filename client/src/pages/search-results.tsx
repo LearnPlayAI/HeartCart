@@ -126,7 +126,7 @@ const SearchResults = () => {
   return (
     <>
       <Helmet>
-        <title>Search Results for "{query}" - TEE ME YOU</title>
+        <title>Search Results for "{query}" - HeartCart</title>
         <meta name="description" content={`Search results for "${query}". Find South African products at unbeatable prices.`} />
       </Helmet>
       

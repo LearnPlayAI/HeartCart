@@ -574,7 +574,7 @@ export class InvoiceGenerator {
         <div class="header">
             <div class="header-content">
                 <div class="company-info">
-                    <h1>Tee Me You</h1>
+                    <h1>HeartCart</h1>
                     <div class="company-tagline">Premium E-Commerce Solutions</div>
                     <div class="company-details">
                         11 Ebbehout Street, Sharonlea<br>

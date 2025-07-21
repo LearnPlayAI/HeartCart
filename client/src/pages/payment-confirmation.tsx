@@ -289,11 +289,11 @@ export default function PaymentConfirmation() {
               <div>
                 <label className="text-sm font-medium text-gray-600">Account Name</label>
                 <div className="flex items-center justify-between mt-1">
-                  <span className="font-mono text-lg">Tee Me You</span>
+                  <span className="font-mono text-lg">HeartCart</span>
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => copyToClipboard('Tee Me You', 'Account name')}
+                    onClick={() => copyToClipboard('HeartCart', 'Account name')}
                   >
                     <Copy className="w-4 h-4" />
                   </Button>

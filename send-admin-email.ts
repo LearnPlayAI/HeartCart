@@ -2,16 +2,16 @@ import { databaseEmailService } from './server/database-email-service.js';
 
 async function sendAdminEmail() {
   try {
-    console.log('📧 Sending credit invoice implementation email to admin@teemeyou.shop...');
+    console.log('📧 Sending credit invoice implementation email to admin@heartcart.shop...');
     
     const emailData = {
-      email: 'admin@teemeyou.shop',
+      email: 'admin@heartcart.shop',
       subject: 'Credit Invoice System - Implementation Complete ✅',
-      customerName: 'TeeMeYou Admin',
+      customerName: 'HeartCart Admin',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="background: linear-gradient(135deg, #FF69B4, #E91E63); color: white; padding: 20px; border-radius: 10px; text-align: center;">
-            <h1 style="margin: 0;">TeeMeYou Credit Invoice System</h1>
+            <h1 style="margin: 0;">HeartCart Credit Invoice System</h1>
             <p style="margin: 10px 0 0 0;">Implementation Complete</p>
           </div>
           
@@ -64,7 +64,7 @@ async function sendAdminEmail() {
           </div>
           
           <div style="text-align: center; padding: 20px; color: #666;">
-            <p>Best regards,<br>TeeMeYou Development Team</p>
+            <p>Best regards,<br>HeartCart Development Team</p>
             <p style="font-size: 12px; color: #999;">This email was generated automatically by the credit invoice testing system.</p>
           </div>
         </div>
@@ -98,13 +98,13 @@ TECHNICAL UPDATES:
 The system is now fully operational and will automatically include credit usage information on all generated invoices when customers use store credits for purchases.
 
 Best regards,
-TeeMeYou Development Team
+HeartCart Development Team
       `
     };
 
     await databaseEmailService.sendPaymentConfirmationEmail({
-      email: 'admin@teemeyou.shop',
-      customerName: 'TeeMeYou Admin',
+      email: 'admin@heartcart.shop',
+      customerName: 'HeartCart Admin',
       orderNumber: 'CREDIT-SYSTEM-IMPLEMENTATION',
       orderId: 999,
       amount: 533.99,
@@ -118,7 +118,7 @@ TeeMeYou Development Team
       vatRegistrationNumber: ''
     });
     
-    console.log('✅ Email sent successfully to admin@teemeyou.shop');
+    console.log('✅ Email sent successfully to admin@heartcart.shop');
     console.log('📧 Email includes complete implementation details');
     
   } catch (error) {

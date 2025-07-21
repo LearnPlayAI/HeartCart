@@ -903,7 +903,7 @@ const ProductListing = () => {
   return (
     <>
       <Helmet>
-        <title>Shop All Products - TEE ME YOU</title>
+        <title>Shop All Products - HeartCart</title>
         <meta 
           name="description" 
           content="Discover our wide range of products from local South African suppliers at unbeatable prices. Browse through our collections and find the perfect item for you."

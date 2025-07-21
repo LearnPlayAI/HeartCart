@@ -73,7 +73,7 @@ const ContextualInstallPrompts: React.FC<ContextualInstallPromptsProps> = ({
           <div className="flex items-center space-x-3">
             <img 
               src="/icon-192.png" 
-              alt="TEE ME YOU"
+              alt="HeartCart"
               className="w-8 h-8 rounded"
             />
             {content.icon}

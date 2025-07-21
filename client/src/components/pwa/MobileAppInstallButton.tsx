@@ -47,7 +47,7 @@ const MobileAppInstallButton: React.FC = () => {
         <ol className="text-sm text-gray-600 space-y-2">
           <li>1. Tap the <strong>Share</strong> button at the bottom of Safari</li>
           <li>2. Scroll down and tap <strong>"Add to Home Screen"</strong></li>
-          <li>3. Tap <strong>"Add"</strong> to install the TEE ME YOU app</li>
+          <li>3. Tap <strong>"Add"</strong> to install the HeartCart app</li>
         </ol>
       </CardContent>
     </Card>

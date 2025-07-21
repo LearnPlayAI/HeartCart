@@ -238,8 +238,8 @@ const ProfilePage: React.FC = () => {
   return (
     <>
       <Helmet>
-        <title>My Account - TEE ME YOU</title>
-        <meta name="description" content="Manage your account, view orders, and update your profile at TEE ME YOU." />
+        <title>My Account - HeartCart</title>
+        <meta name="description" content="Manage your account, view orders, and update your profile at HeartCart." />
       </Helmet>
       
       <div className="container mx-auto px-4 py-6">

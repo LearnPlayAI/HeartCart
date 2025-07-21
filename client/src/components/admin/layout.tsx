@@ -104,7 +104,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           <div className="flex items-center h-16 flex-shrink-0 px-4 bg-pink-600 justify-between">
             {!isCollapsed && (
               <Link href="/" className="text-xl font-bold text-white">
-                TEE ME YOU
+                HeartCart
               </Link>
             )}
             {isCollapsed && (
@@ -149,7 +149,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       {/* Mobile header with hamburger menu */}
       <div className="md:hidden bg-white border-b border-gray-200 px-4 py-2 flex items-center justify-between">
         <Link href="/" className="text-lg font-bold text-pink-600">
-          TEE ME YOU
+          HeartCart
         </Link>
         
         <Sheet open={open} onOpenChange={setOpen}>
@@ -167,7 +167,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           <SheetContent side="left" className="w-[85%] sm:w-[350px] p-0 h-full flex flex-col">
             <div className="flex items-center h-16 flex-shrink-0 px-4 bg-pink-600">
               <span className="text-xl font-bold text-white">
-                TEE ME YOU Admin
+                HeartCart Admin
               </span>
             </div>
             <div className="flex-1 overflow-y-auto pt-5 pb-4">

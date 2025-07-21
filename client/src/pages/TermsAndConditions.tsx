@@ -52,8 +52,8 @@ const TermsAndConditions = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-gray-700 leading-relaxed">
-                Tee Me You will make all reasonable efforts to notify you when a product is no longer available once ordered. 
-                In these cases, Tee Me You will provide you with:
+                HeartCart will make all reasonable efforts to notify you when a product is no longer available once ordered. 
+                In these cases, HeartCart will provide you with:
               </p>
               <ul className="space-y-2 ml-4">
                 <li className="flex items-start gap-2">
@@ -104,7 +104,7 @@ const TermsAndConditions = () => {
                 <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
                   <p className="text-orange-800 font-medium">Promotional Offers</p>
                   <p className="text-orange-700 mt-1">
-                    All promotions and % discount offers are offered at the discretion of Tee Me You and may be 
+                    All promotions and % discount offers are offered at the discretion of HeartCart and may be 
                     revoked or changed at any time.
                   </p>
                 </div>
@@ -189,7 +189,7 @@ const TermsAndConditions = () => {
               <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                 <p className="text-gray-800 font-medium">Return Requirements:</p>
                 <p className="text-gray-700 mt-1">
-                  All products returned to Tee Me You must be returned unused, with all relevant parts, 
+                  All products returned to HeartCart must be returned unused, with all relevant parts, 
                   and in the original packaging. After we receive the returned product, we will inspect it 
                   and determine the next steps.
                 </p>
@@ -199,7 +199,7 @@ const TermsAndConditions = () => {
                 <p className="text-yellow-800 font-medium">Important Disclaimer:</p>
                 <p className="text-yellow-700 mt-1">
                   Damaged product in this document refers to manufacturing faults only. Damages resulting 
-                  from accidental or customer negligence do not apply. Tee Me You is a third-party reseller 
+                  from accidental or customer negligence do not apply. HeartCart is a third-party reseller 
                   of goods and cannot be directly held accountable for any injuries or damages a product may 
                   cause due to product malfunctions or misuse by the customer.
                 </p>
@@ -217,7 +217,7 @@ const TermsAndConditions = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-gray-700 leading-relaxed">
-                Tee-Me-You offers PUDO locker delivery throughout South Africa. Please select the correct 
+                HeartCart offers PUDO locker delivery throughout South Africa. Please select the correct 
                 shipping option and use the View on Google Maps link to ensure you have chosen the nearest 
                 PUDO locker to your location at checkout.
               </p>
@@ -302,8 +302,8 @@ const TermsAndConditions = () => {
               <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                 <ul className="text-gray-700 space-y-2">
                   <li>• We reserve the right to refuse orders, cancel any sale, and terminate accounts at our discretion.</li>
-                  <li>• This website is governed by the laws of South Africa, and Tee Me You chooses as its domicilium citandi et executandi for all purposes under this agreement, whether in respect of court process, notice, or other documents or communication of whatsoever nature.</li>
-                  <li>• Tee Me You may, in its sole discretion, change this agreement or any part thereof at any time without notice.</li>
+                  <li>• This website is governed by the laws of South Africa, and HeartCart chooses as its domicilium citandi et executandi for all purposes under this agreement, whether in respect of court process, notice, or other documents or communication of whatsoever nature.</li>
+                  <li>• HeartCart may, in its sole discretion, change this agreement or any part thereof at any time without notice.</li>
                 </ul>
               </div>
             </CardContent>

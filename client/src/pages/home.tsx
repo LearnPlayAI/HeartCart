@@ -18,7 +18,7 @@ const Home = () => {
   return (
     <>
       <Helmet>
-        <title>TEE ME YOU - Shop South African Products</title>
+        <title>HeartCart - Shop South African Products</title>
         <meta name="description" content="Discover unique products from local South African suppliers at unbeatable prices. Shop now for exclusive deals!" />
       </Helmet>
       

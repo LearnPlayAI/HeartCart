@@ -181,7 +181,7 @@ self.addEventListener('push', event => {
   };
   
   event.waitUntil(
-    self.registration.showNotification('TEE ME YOU', options)
+    self.registration.showNotification('HeartCart', options)
   );
 });
 
