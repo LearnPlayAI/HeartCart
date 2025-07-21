@@ -1,21 +1,24 @@
-<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- Pink shopping cart with heart -->
-  <rect x="0" y="0" width="200" height="200" fill="white"/>
-  
-  <!-- Shopping cart body -->
-  <path d="M40 70H160C165 70 170 75 170 80V100C170 105 165 110 160 110H40C35 110 30 105 30 100V80C30 75 35 70 40 70Z" fill="#FF1493"/>
-  
-  <!-- Cart handle -->
-  <path d="M25 70H35V80H25C20 80 20 70 25 70Z" fill="#FF1493"/>
-  
-  <!-- Heart in cart -->
-  <path d="M100 85C95 80 85 80 85 90C85 100 100 105 100 105C100 105 115 100 115 90C115 80 105 80 100 85Z" fill="white"/>
-  
-  <!-- Cart wheels -->
-  <circle cx="55" cy="125" r="8" fill="#FF1493"/>
-  <circle cx="145" cy="125" r="8" fill="#FF1493"/>
-  
-  <!-- TEE ME YOU text -->
-  <text x="100" y="155" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#FF1493">TEE ME</text>
-  <text x="100" y="175" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#FF1493">YOU</text>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+      <defs>
+        <style>
+          .cart-color { fill: #FF1493; }
+          .heart-color { fill: #FF1493; }
+        </style>
+      </defs>
+      
+      <!-- Shopping Cart -->
+      <path class="cart-color" d="M20 40 L60 40 L120 200 L340 200 L380 100 L100 100 L80 40 Z" stroke="#FF1493" stroke-width="8" fill="none"/>
+      
+      <!-- Cart Base -->
+      <rect class="cart-color" x="120" y="200" width="220" height="40" rx="20"/>
+      
+      <!-- Cart Handle -->
+      <path class="cart-color" d="M20 40 C20 25, 35 25, 50 25 L80 25 C95 25, 95 40, 95 40" stroke="#FF1493" stroke-width="8" fill="none"/>
+      
+      <!-- Heart in Cart -->
+      <path class="heart-color" d="M200 130 C190 120, 175 120, 175 140 C175 120, 160 120, 150 130 C140 140, 150 160, 175 180 C200 160, 210 140, 200 130 Z"/>
+      
+      <!-- Cart Wheels -->
+      <circle class="cart-color" cx="160" cy="270" r="20"/>
+      <circle class="cart-color" cx="300" cy="270" r="20"/>
+    </svg>
