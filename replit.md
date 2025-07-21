@@ -131,13 +131,19 @@ HeartCart is a comprehensive e-commerce platform built as a dropshipping solutio
 ## Changelog
 ```
 Changelog:
-- July 21, 2025. COMPLETE TRANSACTIONAL DATA CLEANUP FOR ADMIN AND TEST USER:
-  * Systematically deleted ALL order and credit related data for admin@heartcart.shop (ID: 8) and jan.coetz33@gmail.com (ID: 78)
-  * Removed transactional records: 1 order, 1 order item, 3 order status history entries, 1 supplier status record, 10 credit transactions
-  * Cleared user activity data: 1 user favorite, 133 product interactions for clean testing environment  
-  * Preserved core system data: user accounts, products, categories, suppliers maintained for continued functionality
-  * Database cleanup completed with proper foreign key constraint handling - all related records removed systematically
-  * Fresh testing environment ready with zero transactional data for these users while maintaining full product catalog
+- July 21, 2025. PASSWORD RESET EMAIL BUG FIX - API REQUEST PATTERN CORRECTION:
+  * RESOLVED: Fixed "500: Failed to send password reset email" error caused by incorrect apiRequest() usage pattern
+  * ROOT CAUSE: Password reset mutations in auth-page.tsx were mixing apiRequest() and fetch() patterns as described in docs/json/jsonfixes.md
+  * FIXED: Updated forgotPasswordMutation, validateTokenMutation, and resetPasswordMutation to use correct apiRequest(method, url, data) pattern
+  * Changed from incorrect { method: 'POST', body: JSON.stringify(data) } to proper 'POST', '/api/auth/forgot-password', data format
+  * Password reset functionality now fully operational - users can successfully request and receive password reset emails
+  * This fix aligns with the comprehensive JSON response handling fixes documented in docs/json/jsonfixes.md
+- July 21, 2025. COMPLETE USER ACCOUNT DELETION FOR TEST USER:
+  * COMPLETE DELETION: Permanently removed user jan.coetz33@gmail.com (ID: 78) from system database
+  * Systematic cleanup process: deleted mailToken (1), customer credits record (R50 total/R0 available), and user account
+  * Foreign key constraint resolution: handled customerCredits table dependency before user account deletion
+  * User account completely removed from system - no traces remain in database
+  * Admin user account (admin@heartcart.shop) preserved with clean transactional data for continued system testing
 - July 21, 2025. CRITICAL SUPPLIER ORDER UPDATE SYSTEM COMPLETELY FIXED:
   * RESOLVED: Fixed TypeScript compilation error in supplier-order-routes-simple.ts line 295 preventing supplier order information updates
   * ROOT CAUSE: sendError function was receiving ZodIssue[] array instead of proper string error message format

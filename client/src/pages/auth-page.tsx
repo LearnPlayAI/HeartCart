@@ -172,31 +172,21 @@ export default function AuthPage() {
   // Forgot password mutation
   const forgotPasswordMutation = useMutation({
     mutationFn: async (data: ForgotPasswordFormData) => {
-      return await apiRequest('/api/auth/forgot-password', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      });
+      return await apiRequest('POST', '/api/auth/forgot-password', data);
     },
   });
 
   // Token validation mutation
   const validateTokenMutation = useMutation({
     mutationFn: async (token: string) => {
-      const response = await apiRequest(`/api/auth/validate-reset-token/${token}`, {
-        method: 'GET',
-      });
-      return response;
+      return await apiRequest('GET', `/api/auth/validate-reset-token/${token}`);
     },
   });
 
   // Reset password mutation
   const resetPasswordMutation = useMutation({
     mutationFn: async (data: { token: string; password: string }) => {
-      const response = await apiRequest('/api/auth/reset-password', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      });
-      return response;
+      return await apiRequest('POST', '/api/auth/reset-password', data);
     },
   });
 
