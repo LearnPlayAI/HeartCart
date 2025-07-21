@@ -131,12 +131,18 @@ HeartCart is a comprehensive e-commerce platform built as a dropshipping solutio
 ## Changelog
 ```
 Changelog:
+- July 21, 2025. EMAIL SECURITY UPDATE - PREVENTED EMAIL CHANGES DURING CHECKOUT:
+  * SECURITY ENHANCEMENT: Removed ability for users to change email addresses during checkout process
+  * EMAIL FIELD READ-ONLY: Email address field now displays as read-only with grayed-out appearance (bg-gray-50)
+  * SERVER PROTECTION: Removed email field from profile update endpoint validation to prevent backend updates
+  * CHECKOUT PROTECTION: Removed email from checkout profile update call ensuring email addresses remain unchanged
+  * Email addresses can only be changed through dedicated profile management or admin intervention
+  * Prevents accidental or unauthorized email address changes during order placement
 - July 21, 2025. CHECKOUT PROFILE UPDATE BUG FIXED - COMPLETE USER INFORMATION PERSISTENCE:
   * RESOLVED: Fixed critical issue where customer information changes during checkout were not being saved to user profile
-  * ROOT CAUSE: Profile update endpoint was missing email field validation and checkout wasn't sending email updates
-  * FIXED: Added email field to server-side profile update endpoint validation schema with proper mapping
-  * ENHANCED: Updated checkout process to include email address in profile update call
-  * COMPREHENSIVE UPDATE: All checkout form changes now properly save: firstName, lastName, email, phone, and shipping address
+  * ROOT CAUSE: Profile update endpoint was missing proper field validation and field mapping issues
+  * ENHANCED: Updated checkout process to save firstName, lastName, phone, and shipping address changes
+  * COMPREHENSIVE UPDATE: All checkout form changes now properly save: firstName, lastName, phone, and shipping address
   * User profile now correctly updates when customers modify information during checkout process
   * Next checkout visits will display the updated information from previous transactions
   * Complete field mapping: firstName/lastName → fullName, phone → phoneNumber, addressLine1 → address

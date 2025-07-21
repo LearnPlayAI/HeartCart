@@ -477,12 +477,11 @@ export default function CheckoutPage() {
         setSavePreferredTrigger(false);
       }
 
-      // Always save updated customer information for logged-in users
+      // Always save updated customer information for logged-in users (except email)
       if (user) {
         await updateProfileMutation.mutateAsync({
           firstName: data.firstName,
           lastName: data.lastName,
-          email: data.email,
           phone: data.phone,
           addressLine1: data.addressLine1,
           addressLine2: data.addressLine2,
