@@ -152,6 +152,9 @@ Changelog:
   * Yoco webhook system configured for heartcart.shop domain with updated webhook naming
   * Development utility scripts updated to HeartCart branding (schema validation, type verification, timezone migration tools)
   * New MailerSend API key integrated for heartcart.shop domain - all email services ready for production use
+  * ADMIN UI BRANDING COMPLETE: Fixed admin sidemenu header text from "TEE ME YOU Admin" to "HeartCart Admin"
+  * PWA BRANDING COMPLETE: Updated all PWA install prompts and app references from "TEE ME YOU" to "HeartCart"
+  * FINAL BRANDING VERIFICATION: Zero remaining "TEE ME YOU" references in active application code
 - July 20, 2025. CRITICAL CREDIT DEDUCTION BUG COMPLETELY RESOLVED - Customer credit system fully operational:
   * ROOT CAUSE IDENTIFIED AND FIXED: Foreign key constraint creditTransactions_orderId_fkey was preventing ALL credit transactions from being created during order processing
   * CONSTRAINT SOLUTION: Removed problematic foreign key constraint and made orderId field nullable to allow flexible credit management scenarios (manual adjustments, order credits, promotional credits)

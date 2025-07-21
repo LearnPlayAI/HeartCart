@@ -25,7 +25,7 @@ export function IOSInstallPrompt({ onDismiss, className = '' }: IOSInstallPrompt
     {
       icon: <Smartphone className="w-6 h-6 text-purple-500" />,
       title: "Enjoy the App",
-      description: "Find TEE ME YOU on your home screen and tap to open as an app"
+      description: "Find HeartCart on your home screen and tap to open as an app"
     }
   ];
 
@@ -38,7 +38,7 @@ export function IOSInstallPrompt({ onDismiss, className = '' }: IOSInstallPrompt
               <Smartphone className="w-4 h-4 text-white" />
             </div>
             <div>
-              <h3 className="font-semibold text-gray-900">Install TEE ME YOU App</h3>
+              <h3 className="font-semibold text-gray-900">Install HeartCart App</h3>
               <p className="text-sm text-gray-600">Get the full mobile app experience</p>
             </div>
           </div>

@@ -17,7 +17,7 @@ const InstallBanner = () => {
       <div className="flex items-center">
         <Logo className="h-12 w-12 rounded-xl mr-3" />
         <div>
-          <h3 className="font-bold text-gray-800">TEE ME YOU App</h3>
+          <h3 className="font-bold text-gray-800">HeartCart App</h3>
           <p className="text-sm text-gray-600">Install our app for a better experience</p>
         </div>
       </div>

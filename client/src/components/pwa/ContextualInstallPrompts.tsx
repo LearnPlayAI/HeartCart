@@ -57,7 +57,7 @@ const ContextualInstallPrompts: React.FC<ContextualInstallPromptsProps> = ({
       default:
         return {
           icon: <Download className="h-5 w-5 text-pink-500" />,
-          title: 'Get the TEE ME YOU App',
+          title: 'Get the HeartCart App',
           description: 'Faster loading, offline access, push notifications',
           buttonText: 'Install'
         };

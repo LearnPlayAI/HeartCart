@@ -174,7 +174,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       <aside className="hidden md:flex md:w-64 md:flex-col">
         <div className="flex flex-col flex-grow pt-5 overflow-y-auto border-r border-gray-200 bg-white">
           <div className="px-4 pb-4">
-            <h1 className="text-xl font-bold">TEE ME YOU Admin</h1>
+            <h1 className="text-xl font-bold">HeartCart Admin</h1>
           </div>
           <Separator />
           <ScrollArea className="flex-1">
