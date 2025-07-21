@@ -7754,6 +7754,14 @@ export class DatabaseStorage implements IStorage {
       packagingCosts: number;
       customerCreditsUsed: number;
     };
+    orderDetails: Array<{
+      orderId: number;
+      orderNumber: string;
+      orderDate: string;
+      totalRevenue: number;
+      totalCosts: number;
+      profit: number;
+    }>;
   }> {
     try {
       // Build where conditions based on filters
@@ -7777,6 +7785,8 @@ export class DatabaseStorage implements IStorage {
       let query = db
         .select({
           orderId: orders.id,
+          orderNumber: orders.orderNumber,
+          orderDate: orders.createdAt,
           totalAmount: orders.totalAmount,
           transactionFeeAmount: orders.transactionFeeAmount,
           actualShippingCost: orders.actualShippingCost,
@@ -7820,6 +7830,8 @@ export class DatabaseStorage implements IStorage {
 
       // Process the results to calculate totals
       const orderTotals = new Map<number, {
+        orderNumber: string;
+        orderDate: string;
         totalAmount: number;
         transactionFeeAmount: number;
         creditUsed: number;
@@ -7833,6 +7845,8 @@ export class DatabaseStorage implements IStorage {
         
         if (!orderTotals.has(orderId)) {
           orderTotals.set(orderId, {
+            orderNumber: row.orderNumber,
+            orderDate: row.orderDate,
             totalAmount: row.totalAmount,
             transactionFeeAmount: row.transactionFeeAmount || 0,
             creditUsed: parseFloat(row.creditUsed?.toString() || '0'),
@@ -7885,6 +7899,28 @@ export class DatabaseStorage implements IStorage {
       const totalCosts = totalProductCosts + totalPaymentProcessingFees + totalPaidCommissions + totalShippingCosts + totalPackagingCosts + totalCustomerCreditsUsed;
       const totalProfit = totalRevenue - totalCosts + totalShippingProfits;
 
+      // Create order details array for frontend display
+      const orderDetails = Array.from(orderTotals.entries()).map(([orderId, orderData]) => {
+        const orderProductCosts = orderData.productCosts;
+        const orderPaymentFees = orderData.transactionFeeAmount;
+        const orderShippingCost = orderData.actualShippingCost;
+        const orderPackagingCost = PACKAGING_COST_PER_ORDER;
+        const orderCreditsUsed = orderData.creditUsed;
+        const orderShippingProfit = SHIPPING_REVENUE_PER_ORDER - orderShippingCost;
+        
+        const orderTotalCosts = orderProductCosts + orderPaymentFees + orderShippingCost + orderPackagingCost + orderCreditsUsed;
+        const orderProfit = orderData.totalAmount - orderTotalCosts + orderShippingProfit;
+        
+        return {
+          orderId,
+          orderNumber: orderData.orderNumber,
+          orderDate: orderData.orderDate,
+          totalRevenue: orderData.totalAmount,
+          totalCosts: orderTotalCosts,
+          profit: orderProfit,
+        };
+      }).sort((a, b) => b.profit - a.profit); // Sort by highest profit first
+
       logger.info("Financial summary calculated", {
         orderCount,
         orderStatus,
@@ -7919,6 +7955,7 @@ export class DatabaseStorage implements IStorage {
           packagingCosts: totalPackagingCosts,
           customerCreditsUsed: totalCustomerCreditsUsed,
         },
+        orderDetails,
       };
     } catch (error) {
       logger.error("Error calculating financial summary", { 
@@ -7944,6 +7981,7 @@ export class DatabaseStorage implements IStorage {
           packagingCosts: 0,
           customerCreditsUsed: 0,
         },
+        orderDetails: [],
       };
     }
   }

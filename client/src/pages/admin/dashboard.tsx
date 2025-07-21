@@ -27,7 +27,9 @@ import {
   Calendar,
   Edit,
   CalendarDays,
-  Filter
+  Filter,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { useDateFormat } from "@/hooks/use-date-format";
@@ -93,6 +95,10 @@ function FinancialStats() {
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
   const [orderStatus, setOrderStatus] = useState<'all' | 'delivered'>('delivered');
+  
+  // State for collapsible sections
+  const [showRevenueDetails, setShowRevenueDetails] = useState<boolean>(false);
+  const [showProfitDetails, setShowProfitDetails] = useState<boolean>(false);
 
   // Build query parameters
   const queryParams = useMemo(() => {
@@ -236,6 +242,47 @@ function FinancialStats() {
               <p className="text-xs text-muted-foreground">
                 {orderStatus === 'delivered' ? 'From delivered orders' : 'From all orders'}
               </p>
+              {financialData.orderDetails && financialData.orderDetails.length > 0 && (
+                <div className="mt-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowRevenueDetails(!showRevenueDetails)}
+                    className="w-full text-xs"
+                  >
+                    {showRevenueDetails ? (
+                      <>Hide Order Details <ChevronUp className="ml-1 h-3 w-3" /></>
+                    ) : (
+                      <>Show Order Details <ChevronDown className="ml-1 h-3 w-3" /></>
+                    )}
+                  </Button>
+                  {showRevenueDetails && (
+                    <div className="mt-3 max-h-48 overflow-y-auto">
+                      <div className="space-y-2">
+                        {financialData.orderDetails
+                          .sort((a, b) => b.totalRevenue - a.totalRevenue)
+                          .slice(0, 20)
+                          .map((order) => (
+                            <div key={order.orderId} className="flex justify-between items-center py-1 px-2 bg-gray-50 rounded text-xs">
+                              <div>
+                                <div className="font-medium">{order.orderNumber}</div>
+                                <div className="text-gray-500">{new Date(order.orderDate).toLocaleDateString()}</div>
+                              </div>
+                              <div className="font-medium text-green-600">
+                                {formatCurrency(order.totalRevenue)}
+                              </div>
+                            </div>
+                          ))}
+                        {financialData.orderDetails.length > 20 && (
+                          <div className="text-xs text-muted-foreground text-center py-2">
+                            Showing top 20 orders by revenue
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
           <Card>
@@ -286,6 +333,48 @@ function FinancialStats() {
               <p className="text-xs text-muted-foreground">
                 Revenue minus costs {financialData.breakdown.shippingProfits > 0 ? '+ shipping profits' : ''}
               </p>
+              {financialData.orderDetails && financialData.orderDetails.length > 0 && (
+                <div className="mt-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowProfitDetails(!showProfitDetails)}
+                    className="w-full text-xs"
+                  >
+                    {showProfitDetails ? (
+                      <>Hide Order Details <ChevronUp className="ml-1 h-3 w-3" /></>
+                    ) : (
+                      <>Show Order Details <ChevronDown className="ml-1 h-3 w-3" /></>
+                    )}
+                  </Button>
+                  {showProfitDetails && (
+                    <div className="mt-3 max-h-48 overflow-y-auto">
+                      <div className="space-y-2">
+                        {financialData.orderDetails
+                          .slice(0, 20)
+                          .map((order) => (
+                            <div key={order.orderId} className="flex justify-between items-center py-1 px-2 bg-gray-50 rounded text-xs">
+                              <div>
+                                <div className="font-medium">{order.orderNumber}</div>
+                                <div className="text-gray-500">{new Date(order.orderDate).toLocaleDateString()}</div>
+                              </div>
+                              <div className={`font-medium ${
+                                order.profit >= 0 ? 'text-green-600' : 'text-red-600'
+                              }`}>
+                                {formatCurrency(order.profit)}
+                              </div>
+                            </div>
+                          ))}
+                        {financialData.orderDetails.length > 20 && (
+                          <div className="text-xs text-muted-foreground text-center py-2">
+                            Showing top 20 orders by profit
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
