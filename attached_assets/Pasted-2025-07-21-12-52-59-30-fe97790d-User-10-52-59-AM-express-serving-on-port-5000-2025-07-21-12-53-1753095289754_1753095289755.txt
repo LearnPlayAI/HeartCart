@@ -1,0 +1,76 @@
+2025-07-21 12:52:59.30
+fe97790d
+User
+10:52:59 AM [express] serving on port 5000
+2025-07-21 12:53:46.90
+fe97790d
+User
+📧 Sending email to jan.coetz33@gmail.com with subject: 🇿🇦 Credit Added to Your HeartCart Account
+2025-07-21 12:53:47.37
+fe97790d
+User
+❌ MailerSend email error: { error: undefined, code: undefined, name: undefined }
+2025-07-21 12:53:47.44
+fe97790d
+User
+🔑 Creating verification token for user 94: f8fd066c2742a220...
+2025-07-21 12:53:47.44
+fe97790d
+User
+🔑 Creating verification token - SAST expires: 2025-07-21T15:53:47.448+02:00 (SAST), UTC stored: 2025-07-21T11:53:47.448Z
+2025-07-21 12:53:47.48
+fe97790d
+User
+✅ Verification token successfully stored in database
+2025-07-21 12:53:47.48
+fe97790d
+User
+📧 Sending verification email to jan.coetz33@gmail.com
+2025-07-21 12:53:47.48
+fe97790d
+User
+📧 Sending email to jan.coetz33@gmail.com with subject: Verify Your HeartCart Account
+2025-07-21 12:53:47.68
+fe97790d
+User
+❌ MailerSend email error: { error: undefined, code: undefined, name: undefined }
+2025-07-21 12:53:47.68
+fe97790d
+User
+{"timestamp":"2025-07-21T12:53:47.000Z","level":"ERROR","message":"Failed to send email verification","context":{"error":"Unknown error","userId":94}}
+2025-07-21 12:54:01.89
+fe97790d
+User
+🔄 Processing password reset request for: jan.coetz33@gmail.com
+2025-07-21 12:54:01.93
+fe97790d
+User
+✅ User found: Jan Coetzee GM (ID: 94)
+2025-07-21 12:54:01.93
+fe97790d
+User
+🔑 Creating password reset token - SAST expires: 2025-07-21T15:54:01.935+02:00 (SAST), UTC stored: 2025-07-21T11:54:01.935Z
+2025-07-21 12:54:01.97
+fe97790d
+User
+🔑 Password reset token created for user: 94
+2025-07-21 12:54:01.97
+fe97790d
+User
+📧 Sending email to jan.coetz33@gmail.com with subject: 🇿🇦 Reset Your HeartCart Password
+2025-07-21 12:54:02.42
+fe97790d
+User
+❌ MailerSend email error: { error: undefined, code: undefined, name: undefined }
+2025-07-21 12:54:02.46
+fe97790d
+User
+❌ Failed to send password reset email to: jan.coetz33@gmail.com Unknown error
+2025-07-21 12:54:02.46
+fe97790d
+User
+{"timestamp":"2025-07-21T12:54:02.000Z","level":"ERROR","message":"API Error: Failed to send password reset email","context":{"statusCode":500}}
+2025-07-21 12:54:02.46
+fe97790d
+User
+{"timestamp":"2025-07-21T12:54:02.000Z","level":"WARN","message":"API WARN: POST /api/auth/forgot-password 500 in 729ms","context":{"statusCode":500,"method":"POST","path":"/api/auth/forgot-password"}}
