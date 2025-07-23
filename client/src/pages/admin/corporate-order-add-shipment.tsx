@@ -97,7 +97,7 @@ export default function CorporateOrderAddShipmentPage() {
   const items = orderData?.items || [];
 
   // Group items by employee
-  const itemsByEmployee = items.reduce((acc: { [key: string]: CorporateOrderItem[] }, item: CorporateOrderItem) => {
+  const itemsByEmployee = items.reduce((acc: { [key: string]: CorporateOrderItem[] }, item) => {
     const key = `${item.employeeName}-${item.employeeEmail}`;
     if (!acc[key]) acc[key] = [];
     acc[key].push(item);
@@ -333,10 +333,9 @@ export default function CorporateOrderAddShipmentPage() {
               {Object.keys(itemsByEmployee).length > 0 ? (
                 <div className="space-y-6">
                   {Object.entries(itemsByEmployee).map(([employeeKey, employeeItems]) => {
-                    const typedEmployeeItems = employeeItems as CorporateOrderItem[];
-                    const employee = typedEmployeeItems[0];
-                    const allEmployeeItemsSelected = typedEmployeeItems.every((item: CorporateOrderItem) => selectedItems.has(item.id));
-                    const someEmployeeItemsSelected = typedEmployeeItems.some((item: CorporateOrderItem) => selectedItems.has(item.id));
+                    const employee = employeeItems[0];
+                    const allEmployeeItemsSelected = employeeItems.every(item => selectedItems.has(item.id));
+                    const someEmployeeItemsSelected = employeeItems.some(item => selectedItems.has(item.id));
                     
                     return (
                       <div key={employeeKey} className="border rounded-lg p-4 space-y-3">
@@ -346,10 +345,10 @@ export default function CorporateOrderAddShipmentPage() {
                             <Checkbox
                               checked={allEmployeeItemsSelected}
                               ref={(el) => {
-                                if (el) (el as any).indeterminate = someEmployeeItemsSelected && !allEmployeeItemsSelected;
+                                if (el) el.indeterminate = someEmployeeItemsSelected && !allEmployeeItemsSelected;
                               }}
                               onCheckedChange={(checked) => 
-                                handleEmployeeSelection(typedEmployeeItems, checked as boolean)
+                                handleEmployeeSelection(employeeItems, checked as boolean)
                               }
                             />
                             <div>
@@ -365,16 +364,16 @@ export default function CorporateOrderAddShipmentPage() {
                             </div>
                           </div>
                           <div className="text-right">
-                            <p className="text-sm text-gray-600">{typedEmployeeItems.length} item(s)</p>
+                            <p className="text-sm text-gray-600">{employeeItems.length} item(s)</p>
                             <p className="font-medium">
-                              {formatCurrency(typedEmployeeItems.reduce((total: number, item: CorporateOrderItem) => total + parseFloat(item.totalPrice), 0))}
+                              {formatCurrency(employeeItems.reduce((total, item) => total + parseFloat(item.totalPrice), 0))}
                             </p>
                           </div>
                         </div>
 
                         {/* Employee Items */}
                         <div className="ml-6 space-y-2">
-                          {typedEmployeeItems.map((item: CorporateOrderItem) => (
+                          {employeeItems.map((item) => (
                             <div key={item.id} className="flex items-center gap-3 p-2 bg-gray-50 rounded">
                               <Checkbox
                                 checked={selectedItems.has(item.id)}

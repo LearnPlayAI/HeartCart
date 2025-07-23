@@ -15861,31 +15861,6 @@ export class DatabaseStorage implements IStorage {
       throw error;
     }
   }
-
-  async generateCorporateOrderNumber(): Promise<string> {
-    try {
-      // Get current date in YYYYMMDD format
-      const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-      
-      // Get count of orders created today
-      const startOfDay = new Date().toISOString().slice(0, 10) + 'T00:00:00.000Z';
-      const endOfDay = new Date().toISOString().slice(0, 10) + 'T23:59:59.999Z';
-      
-      const todaysOrders = await db.query.corporateOrders.findMany({
-        where: and(
-          gte(corporateOrders.createdAt, startOfDay),
-          lte(corporateOrders.createdAt, endOfDay)
-        ),
-      });
-      
-      const sequenceNumber = (todaysOrders.length + 1).toString().padStart(3, '0');
-      
-      return `CORP-${date}-${sequenceNumber}`;
-    } catch (error) {
-      logger.error('Error generating corporate order number', { error });
-      throw error;
-    }
-  }
 }
 
 export const storage = new DatabaseStorage();
