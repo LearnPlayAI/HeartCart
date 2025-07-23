@@ -2,7 +2,7 @@ import AdminLayout from "@/components/admin/layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Edit, Plus, Package, Truck, Building2, DollarSign, Calendar, User, Mail, Phone, Send, Trash2, AlertCircle } from "lucide-react";
+import { ArrowLeft, Edit, Plus, Package, Truck, Building2, DollarSign, Calendar, User, Mail, Phone, Send, Trash2, AlertCircle, CheckCircle, Circle, Clock, Ban } from "lucide-react";
 import { useLocation, useParams } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -24,7 +24,73 @@ export default function CorporateOrderDetailPage() {
 
   const order = orderData?.order;
 
-  // Send payment options email mutation
+  // Send item preview email mutation (Step 3)
+  const sendItemPreviewMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', `/api/admin/corporate-orders/${orderId}/send-item-preview`);
+      return response;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Item preview email sent successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/corporate-orders/${orderId}`] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to send item preview email",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mark employee details received mutation (Step 4)
+  const markEmployeeDetailsReceivedMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', `/api/admin/corporate-orders/${orderId}/mark-employee-details-received`);
+      return response;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Employee details marked as received",
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/corporate-orders/${orderId}`] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to mark employee details received",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mark supplier order placed mutation (Step 10)
+  const markSupplierOrderPlacedMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', `/api/admin/corporate-orders/${orderId}/mark-supplier-order-placed`);
+      return response;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Supplier order marked as placed",
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/corporate-orders/${orderId}`] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to mark supplier order placed",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Send payment options email mutation (Step 6)
   const sendPaymentOptionsMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest('POST', `/api/admin/corporate-orders/${orderId}/send-payment-options`);
@@ -33,14 +99,14 @@ export default function CorporateOrderDetailPage() {
     onSuccess: () => {
       toast({
         title: "Success",
-        description: "Payment options email sent successfully",
+        description: "Invoice with payment options sent successfully",
       });
       queryClient.invalidateQueries({ queryKey: [`/api/admin/corporate-orders/${orderId}`] });
     },
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error?.message || "Failed to send payment options email",
+        description: error?.message || "Failed to send invoice email",
         variant: "destructive",
       });
     },
@@ -160,7 +226,46 @@ export default function CorporateOrderDetailPage() {
               <Edit className="h-4 w-4 mr-2" />
               Edit Order
             </Button>
-            {order.paymentStatus === 'pending' && (
+            {!order.itemPreviewSent && order.items && order.items.length > 0 && (
+              <Button 
+                className="bg-orange-600 hover:bg-orange-700"
+                onClick={() => sendItemPreviewMutation.mutate()}
+                disabled={sendItemPreviewMutation.isPending}
+              >
+                {sendItemPreviewMutation.isPending ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Sending Preview...
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-4 w-4 mr-2" />
+                    Send Item Preview (Step 3)
+                  </>
+                )}
+              </Button>
+            )}
+            {order.itemPreviewSent && !order.employeeDetailsReceived && (
+              <Button 
+                className="bg-blue-600 hover:bg-blue-700"
+                onClick={() => markEmployeeDetailsReceivedMutation.mutate()}
+                disabled={markEmployeeDetailsReceivedMutation.isPending}
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Mark Employee Details Received (Step 4)
+              </Button>
+            )}
+            {order.paymentStatus === 'paid' && !order.supplierOrderPlaced && (
+              <Button 
+                className="bg-purple-600 hover:bg-purple-700"
+                onClick={() => markSupplierOrderPlacedMutation.mutate()}
+                disabled={markSupplierOrderPlacedMutation.isPending}
+              >
+                <Package className="h-4 w-4 mr-2" />
+                Mark Supplier Order Placed (Step 10)
+              </Button>
+            )}
+            {order.itemPreviewSent && order.employeeDetailsReceived && order.paymentStatus === 'pending' && (
               <Button 
                 className="bg-green-600 hover:bg-green-700"
                 onClick={() => sendPaymentOptionsMutation.mutate()}
@@ -169,12 +274,12 @@ export default function CorporateOrderDetailPage() {
                 {sendPaymentOptionsMutation.isPending ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Sending...
+                    Sending Invoice...
                   </>
                 ) : (
                   <>
                     <Send className="h-4 w-4 mr-2" />
-                    Send Payment Options
+                    Send Invoice (Step 6)
                   </>
                 )}
               </Button>
@@ -186,15 +291,55 @@ export default function CorporateOrderDetailPage() {
               <Plus className="h-4 w-4 mr-2" />
               Add Item
             </Button>
-            <Button 
-              className="bg-blue-600 hover:bg-blue-700"
-              onClick={() => setLocation(`/admin/corporate-orders/${orderId}/add-shipment`)}
-            >
-              <Truck className="h-4 w-4 mr-2" />
-              Create Shipment
-            </Button>
+            {order.supplierOrderPlaced && (
+              <Button 
+                className="bg-blue-600 hover:bg-blue-700"
+                onClick={() => setLocation(`/admin/corporate-orders/${orderId}/add-shipment`)}
+              >
+                <Truck className="h-4 w-4 mr-2" />
+                Create Employee Shipments (Step 11-13)
+              </Button>
+            )}
           </div>
         </div>
+
+        {/* Workflow Status */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5" />
+              13-Step Workflow Progress
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className={`p-4 rounded-lg ${order.itemPreviewSent ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'} border`}>
+                <div className="flex items-center gap-2">
+                  {order.itemPreviewSent ? <CheckCircle className="h-5 w-5 text-green-600" /> : <Circle className="h-5 w-5 text-gray-400" />}
+                  <span className={order.itemPreviewSent ? 'text-green-800 font-medium' : 'text-gray-600'}>
+                    Item Preview Sent
+                  </span>
+                </div>
+              </div>
+              <div className={`p-4 rounded-lg ${order.employeeDetailsReceived ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'} border`}>
+                <div className="flex items-center gap-2">
+                  {order.employeeDetailsReceived ? <CheckCircle className="h-5 w-5 text-green-600" /> : <Circle className="h-5 w-5 text-gray-400" />}
+                  <span className={order.employeeDetailsReceived ? 'text-green-800 font-medium' : 'text-gray-600'}>
+                    Employee Details Received
+                  </span>
+                </div>
+              </div>
+              <div className={`p-4 rounded-lg ${order.supplierOrderPlaced ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'} border`}>
+                <div className="flex items-center gap-2">
+                  {order.supplierOrderPlaced ? <CheckCircle className="h-5 w-5 text-green-600" /> : <Circle className="h-5 w-5 text-gray-400" />}
+                  <span className={order.supplierOrderPlaced ? 'text-green-800 font-medium' : 'text-gray-600'}>
+                    Supplier Order Placed
+                  </span>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Order Overview */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

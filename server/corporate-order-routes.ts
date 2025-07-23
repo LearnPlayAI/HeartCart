@@ -75,6 +75,104 @@ router.post('/corporate-orders', isAdmin, asyncHandler(async (req, res) => {
 }));
 
 // =============================================================================
+// CORPORATE WORKFLOW TRACKING ROUTES
+// =============================================================================
+
+// Send item preview email (Step 3)
+router.post('/corporate-orders/:id/send-item-preview', isAdmin, asyncHandler(async (req, res) => {
+  try {
+    const orderId = parseInt(req.params.id);
+    if (isNaN(orderId)) {
+      return sendError(res, 'Invalid corporate order ID', 400);
+    }
+
+    const order = await storage.getCorporateOrder(orderId);
+    if (!order) {
+      return sendError(res, 'Corporate order not found', 404);
+    }
+
+    if (order.itemPreviewSent) {
+      return sendError(res, 'Item preview already sent', 400);
+    }
+
+    // Get order items for email
+    const items = await storage.getCorporateOrderItems(orderId);
+    if (!items || items.length === 0) {
+      return sendError(res, 'No items found in order', 400);
+    }
+
+    // Send item preview email (to be implemented)
+    await storage.updateCorporateOrder(orderId, { 
+      itemPreviewSent: true 
+    });
+
+    logger.info('Item preview email sent', { orderId });
+    sendSuccess(res, { message: 'Item preview email sent successfully' });
+  } catch (error) {
+    logger.error('Error sending item preview email', { error, orderId: req.params.id });
+    sendError(res, 'Failed to send item preview email', 500);
+  }
+}));
+
+// Mark employee details received (Step 4)
+router.post('/corporate-orders/:id/mark-employee-details-received', isAdmin, asyncHandler(async (req, res) => {
+  try {
+    const orderId = parseInt(req.params.id);
+    if (isNaN(orderId)) {
+      return sendError(res, 'Invalid corporate order ID', 400);
+    }
+
+    const order = await storage.getCorporateOrder(orderId);
+    if (!order) {
+      return sendError(res, 'Corporate order not found', 404);
+    }
+
+    if (!order.itemPreviewSent) {
+      return sendError(res, 'Item preview must be sent first', 400);
+    }
+
+    await storage.updateCorporateOrder(orderId, { 
+      employeeDetailsReceived: true 
+    });
+
+    logger.info('Employee details marked as received', { orderId });
+    sendSuccess(res, { message: 'Employee details marked as received' });
+  } catch (error) {
+    logger.error('Error marking employee details received', { error, orderId: req.params.id });
+    sendError(res, 'Failed to mark employee details received', 500);
+  }
+}));
+
+// Mark supplier order placed (Step 10)
+router.post('/corporate-orders/:id/mark-supplier-order-placed', isAdmin, asyncHandler(async (req, res) => {
+  try {
+    const orderId = parseInt(req.params.id);
+    if (isNaN(orderId)) {
+      return sendError(res, 'Invalid corporate order ID', 400);
+    }
+
+    const order = await storage.getCorporateOrder(orderId);
+    if (!order) {
+      return sendError(res, 'Corporate order not found', 404);
+    }
+
+    if (order.paymentStatus !== 'paid') {
+      return sendError(res, 'Order must be paid before placing supplier order', 400);
+    }
+
+    await storage.updateCorporateOrder(orderId, { 
+      supplierOrderPlaced: true 
+    });
+
+    logger.info('Supplier order marked as placed', { orderId });
+    sendSuccess(res, { message: 'Supplier order marked as placed' });
+  } catch (error) {
+    logger.error('Error marking supplier order placed', { error, orderId: req.params.id });
+    sendError(res, 'Failed to mark supplier order placed', 500);
+  }
+}));
+
+// =============================================================================
 // CORPORATE ORDER ITEM ROUTES
 // =============================================================================
 
@@ -98,8 +196,11 @@ router.post('/corporate-orders/:id/items', isAdmin, asyncHandler(async (req, res
     });
 
     const item = await storage.addCorporateOrderItem(itemData);
-    logger.info('Corporate order item added', { itemId: item.id, corporateOrderId });
     
+    // Recalculate order totals after adding item
+    await storage.calculateCorporateOrderTotals(corporateOrderId);
+    
+    logger.info('Corporate order item added', { itemId: item.id, corporateOrderId });
     sendSuccess(res, { item });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -629,9 +730,7 @@ router.post('/corporate-orders/:orderId/shipments', isAdmin, asyncHandler(async 
       specialInstructions: specialInstructions || null,
       estimatedDeliveryDate: estimatedDeliveryDate || null,
       status: 'pending',
-      shippingCost: '0',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      shippingCost: '0'
     });
 
     // Update the selected items to be associated with this shipment

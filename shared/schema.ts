@@ -1497,6 +1497,10 @@ export const corporateOrders = pgTable("corporateOrders", {
   invoiceGenerated: boolean("invoiceGenerated").notNull().default(false),
   invoicePath: text("invoicePath"), // Path to generated invoice PDF
   adminNotes: text("adminNotes"), // Admin notes
+  // Workflow tracking fields for 13-step process
+  itemPreviewSent: boolean("itemPreviewSent").notNull().default(false), // Step 3: Item preview email sent
+  employeeDetailsReceived: boolean("employeeDetailsReceived").notNull().default(false), // Step 4: Employee details received via email
+  supplierOrderPlaced: boolean("supplierOrderPlaced").notNull().default(false), // Step 10: Order placed with supplier
   createdByAdminId: integer("createdByAdminId").notNull().references(() => users.id),
   createdAt: text("createdAt").default(String(new Date().toISOString())).notNull(),
   updatedAt: text("updatedAt").default(String(new Date().toISOString())).notNull(),
@@ -1519,8 +1523,8 @@ export const corporateOrderItems = pgTable("corporateOrderItems", {
   quantity: integer("quantity").notNull(),
   unitPrice: text("unitPrice").notNull(),
   totalPrice: text("totalPrice").notNull(),
-  employeeName: text("employeeName").notNull(),
-  employeeEmail: text("employeeEmail").notNull(),
+  employeeName: text("employeeName"), // Optional initially, filled after customer provides employee details
+  employeeEmail: text("employeeEmail"), // Optional initially, filled after customer provides employee details
   employeePhone: text("employeePhone"),
   employeeAddress: text("employeeAddress"),
   size: text("size"),
@@ -1610,11 +1614,21 @@ export const insertCorporateOrderSchema = createInsertSchema(corporateOrders).om
   paymentMethod: z.enum(["eft", "card"]).nullable().optional(),
   yocoCheckoutId: z.string().nullable().optional(),
   yocoPaymentId: z.string().nullable().optional(),
+  // Workflow tracking fields
+  itemPreviewSent: z.boolean().default(false),
+  employeeDetailsReceived: z.boolean().default(false),
+  supplierOrderPlaced: z.boolean().default(false),
 });
 
 export const insertCorporateOrderItemSchema = createInsertSchema(corporateOrderItems).omit({
   id: true,
   createdAt: true,
+}).extend({
+  // Make employee fields optional for initial item creation
+  employeeName: z.string().optional(),
+  employeeEmail: z.string().email().optional(),
+  employeePhone: z.string().optional(),
+  employeeAddress: z.string().optional(),
 });
 
 export const insertCorporateShipmentSchema = createInsertSchema(corporateShipments).omit({

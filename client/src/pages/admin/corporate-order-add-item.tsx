@@ -51,6 +51,7 @@ export default function CorporateOrderAddItemPage() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [itemData, setItemData] = useState<Partial<CorporateOrderItem>>({
     quantity: 1,
+    // Employee details optional initially - will be added after customer provides details via email
     employeeName: "",
     employeeEmail: "",
     employeePhone: "",
@@ -122,14 +123,8 @@ export default function CorporateOrderAddItemPage() {
       return;
     }
 
-    if (!itemData.employeeName || !itemData.employeeEmail) {
-      toast({
-        title: "Error",
-        description: "Employee name and email are required",
-        variant: "destructive",
-      });
-      return;
-    }
+    // Employee details are optional initially - will be added after customer provides details via email
+    // No validation required for employee fields during initial item creation
 
     addItemMutation.mutate(itemData as CorporateOrderItem);
   };

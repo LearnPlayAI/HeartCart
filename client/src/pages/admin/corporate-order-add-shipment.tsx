@@ -20,10 +20,10 @@ interface CorporateOrderItem {
   quantity: number;
   unitPrice: string;
   totalPrice: string;
-  employeeName: string;
-  employeeEmail: string;
-  employeePhone: string;
-  employeeAddress: string;
+  employeeName?: string;
+  employeeEmail?: string;
+  employeePhone?: string;
+  employeeAddress?: string;
   size?: string;
   color?: string;
   packageId?: string;
@@ -35,6 +35,7 @@ interface CorporateOrder {
   companyName: string;
   paymentStatus: string;
   status: string;
+  supplierOrderPlaced: boolean;
   items: CorporateOrderItem[];
 }
 
@@ -93,11 +94,14 @@ export default function CorporateOrderAddShipmentPage() {
     },
   });
 
-  const order = orderData?.order;
+  const order = orderData?.order as CorporateOrder;
   const items = orderData?.items || [];
 
-  // Group items by employee
-  const itemsByEmployee = items.reduce((acc: { [key: string]: CorporateOrderItem[] }, item) => {
+  // Filter items that haven't been assigned to shipments yet
+  const availableItems = order?.items?.filter((item: CorporateOrderItem) => !item.packageId) || [];
+  
+  // Group available items by employee
+  const itemsByEmployee = availableItems.reduce((acc: { [key: string]: CorporateOrderItem[] }, item: CorporateOrderItem) => {
     const key = `${item.employeeName}-${item.employeeEmail}`;
     if (!acc[key]) acc[key] = [];
     acc[key].push(item);
