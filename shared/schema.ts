@@ -1490,6 +1490,7 @@ export const corporateOrders = pgTable("corporateOrders", {
   status: text("status").notNull().default("pending"), // pending, invoice_sent, paid, processing, completed, cancelled
   paymentStatus: text("paymentStatus").notNull().default("pending"), // pending, paid, failed
   paymentMethod: text("paymentMethod"), // eft, card
+  employeeDetailsSubmitted: text("employeeDetailsSubmitted"), // JSON string of employee details
   totalItemsValue: text("totalItemsValue").notNull().default("0"),
   totalPackagingCosts: text("totalPackagingCosts").notNull().default("0"),
   totalShippingCosts: text("totalShippingCosts").notNull().default("0"),
@@ -1603,13 +1604,6 @@ export const insertCorporateOrderSchema = createInsertSchema(corporateOrders).om
   id: true,
   createdAt: true,
   updatedAt: true,
-  orderNumber: true, // Generated automatically
-}).extend({
-  status: z.enum(["pending", "invoice_sent", "paid", "processing", "completed", "cancelled"]).default("pending"),
-  paymentStatus: z.enum(["pending", "paid", "failed"]).default("pending"),
-  paymentMethod: z.enum(["eft", "card"]).nullable().optional(),
-  yocoCheckoutId: z.string().nullable().optional(),
-  yocoPaymentId: z.string().nullable().optional(),
 });
 
 export const insertCorporateOrderItemSchema = createInsertSchema(corporateOrderItems).omit({
@@ -1621,16 +1615,11 @@ export const insertCorporateShipmentSchema = createInsertSchema(corporateShipmen
   id: true,
   createdAt: true,
   updatedAt: true,
-}).extend({
-  packageContents: z.array(z.record(z.any())).default([]),
-  shipmentStatus: z.enum(["pending", "shipped", "delivered", "cancelled"]).default("pending"),
 });
 
 export const insertCorporateInvoiceLineItemSchema = createInsertSchema(corporateInvoiceLineItems).omit({
   id: true,
   createdAt: true,
-}).extend({
-  lineItemType: z.enum(["packaging", "shipping", "manual", "item"]),
 });
 
 // Credit system types
@@ -1643,7 +1632,7 @@ export type InsertCreditTransaction = z.infer<typeof insertCreditTransactionSche
 export type OrderItemSupplierStatus = typeof orderItemSupplierStatus.$inferSelect;
 export type InsertOrderItemSupplierStatus = z.infer<typeof insertOrderItemSupplierStatusSchema>;
 
-// Corporate Order System types
+// Corporate Order System type exports
 export type CorporateOrder = typeof corporateOrders.$inferSelect;
 export type InsertCorporateOrder = z.infer<typeof insertCorporateOrderSchema>;
 
