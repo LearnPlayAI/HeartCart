@@ -52,18 +52,19 @@ import { CorporateOrderForm } from "./CorporateOrderForm";
 interface CorporateOrder {
   id: number;
   orderNumber: string;
-  corporateCompanyName: string;
-  corporateContactName: string;
-  corporateContactEmail: string;
-  corporateContactPhone: string | null;
+  companyName: string;
+  companyAddress: string | null;
+  contactPerson: string;
+  contactEmail: string;
+  contactPhone: string | null;
   status: string;
   paymentStatus: string;
   paymentMethod: string | null;
-  itemsValue: string;
-  packagingCosts: string;
-  shippingCosts: string;
-  totalAmount: string;
-  notes: string | null;
+  totalItemsValue: string;
+  totalPackagingCosts: string;
+  totalShippingCosts: string;
+  totalInvoiceAmount: string;
+  adminNotes: string | null;
   expectedDeliveryDate: string | null;
   actualDeliveryDate: string | null;
   createdAt: string;
@@ -252,7 +253,7 @@ export function CorporateOrderDetailPage() {
           </Button>
           <div>
             <h1 className="text-3xl font-bold text-pink-600">{order.orderNumber}</h1>
-            <p className="text-muted-foreground">{order.corporateCompanyName}</p>
+            <p className="text-muted-foreground">{order.companyName}</p>
           </div>
         </div>
 
@@ -349,7 +350,7 @@ export function CorporateOrderDetailPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-pink-600">
-              {formatCurrency(parseFloat(order.totalAmount))}
+              {formatCurrency(parseFloat(order.totalInvoiceAmount))}
             </div>
             <p className="text-sm text-muted-foreground">
               {order.paymentMethod && `via ${order.paymentMethod}`}
@@ -382,20 +383,20 @@ export function CorporateOrderDetailPage() {
               <CardContent className="space-y-4">
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Company Name</Label>
-                  <p className="font-medium">{order.corporateCompanyName}</p>
+                  <p className="font-medium">{order.companyName}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Contact Person</Label>
-                  <p className="font-medium">{order.corporateContactName}</p>
+                  <p className="font-medium">{order.contactPerson}</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <Mail className="h-4 w-4 text-muted-foreground" />
-                  <p>{order.corporateContactEmail}</p>
+                  <p>{order.contactEmail}</p>
                 </div>
-                {order.corporateContactPhone && (
+                {order.contactPhone && (
                   <div className="flex items-center gap-2">
                     <Phone className="h-4 w-4 text-muted-foreground" />
-                    <p>{order.corporateContactPhone}</p>
+                    <p>{order.contactPhone}</p>
                   </div>
                 )}
               </CardContent>
@@ -412,20 +413,20 @@ export function CorporateOrderDetailPage() {
               <CardContent className="space-y-4">
                 <div className="flex justify-between">
                   <span>Items Value:</span>
-                  <span className="font-medium">{formatCurrency(parseFloat(order.itemsValue))}</span>
+                  <span className="font-medium">{formatCurrency(parseFloat(order.totalItemsValue))}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Packaging Costs:</span>
-                  <span className="font-medium">{formatCurrency(parseFloat(order.packagingCosts))}</span>
+                  <span className="font-medium">{formatCurrency(parseFloat(order.totalPackagingCosts))}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Shipping Costs:</span>
-                  <span className="font-medium">{formatCurrency(parseFloat(order.shippingCosts))}</span>
+                  <span className="font-medium">{formatCurrency(parseFloat(order.totalShippingCosts))}</span>
                 </div>
                 <hr />
                 <div className="flex justify-between text-lg font-bold">
                   <span>Total Amount:</span>
-                  <span className="text-pink-600">{formatCurrency(parseFloat(order.totalAmount))}</span>
+                  <span className="text-pink-600">{formatCurrency(parseFloat(order.totalInvoiceAmount))}</span>
                 </div>
               </CardContent>
             </Card>

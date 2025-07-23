@@ -14,18 +14,19 @@ import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const corporateOrderSchema = z.object({
-  corporateCompanyName: z.string().min(1, "Company name is required"),
-  corporateContactName: z.string().min(1, "Contact name is required"),
-  corporateContactEmail: z.string().email("Valid email is required"),
-  corporateContactPhone: z.string().optional(),
+  companyName: z.string().min(1, "Company name is required"),
+  companyAddress: z.string().optional(),
+  contactPerson: z.string().min(1, "Contact name is required"),
+  contactEmail: z.string().email("Valid email is required"),
+  contactPhone: z.string().optional(),
+  orderDescription: z.string().optional(),
   status: z.string().min(1, "Status is required"),
   paymentStatus: z.string().min(1, "Payment status is required"),
   paymentMethod: z.string().optional(),
-  itemsValue: z.string().min(1, "Items value is required"),
-  packagingCosts: z.string().min(1, "Packaging costs are required"),
-  shippingCosts: z.string().min(1, "Shipping costs are required"),
-  notes: z.string().optional(),
-  expectedDeliveryDate: z.string().optional(),
+  totalItemsValue: z.string().min(1, "Items value is required"),
+  totalPackagingCosts: z.string().min(1, "Packaging costs are required"),
+  totalShippingCosts: z.string().min(1, "Shipping costs are required"),
+  adminNotes: z.string().optional(),
 });
 
 type CorporateOrderFormData = z.infer<typeof corporateOrderSchema>;
@@ -33,20 +34,22 @@ type CorporateOrderFormData = z.infer<typeof corporateOrderSchema>;
 interface CorporateOrder {
   id: number;
   orderNumber: string;
-  corporateCompanyName: string;
-  corporateContactName: string;
-  corporateContactEmail: string;
-  corporateContactPhone: string | null;
+  companyName: string;
+  companyAddress: string | null;
+  contactPerson: string;
+  contactEmail: string;
+  contactPhone: string | null;
+  orderDescription: string | null;
   status: string;
   paymentStatus: string;
   paymentMethod: string | null;
-  itemsValue: string;
-  packagingCosts: string;
-  shippingCosts: string;
-  totalAmount: string;
-  notes: string | null;
-  expectedDeliveryDate: string | null;
-  actualDeliveryDate: string | null;
+  totalItemsValue: string;
+  totalPackagingCosts: string;
+  totalShippingCosts: string;
+  totalInvoiceAmount: string;
+  invoiceGenerated: boolean;
+  invoicePath: string | null;
+  adminNotes: string | null;
   createdAt: string;
   updatedAt: string;
   createdByAdminId: number;
@@ -64,18 +67,19 @@ export function CorporateOrderForm({ order, onSuccess }: CorporateOrderFormProps
   const form = useForm<CorporateOrderFormData>({
     resolver: zodResolver(corporateOrderSchema),
     defaultValues: {
-      corporateCompanyName: order?.corporateCompanyName || "",
-      corporateContactName: order?.corporateContactName || "",
-      corporateContactEmail: order?.corporateContactEmail || "",
-      corporateContactPhone: order?.corporateContactPhone || "",
+      companyName: order?.companyName || "",
+      companyAddress: order?.companyAddress || "",
+      contactPerson: order?.contactPerson || "",
+      contactEmail: order?.contactEmail || "",
+      contactPhone: order?.contactPhone || "",
+      orderDescription: order?.orderDescription || "",
       status: order?.status || "pending",
       paymentStatus: order?.paymentStatus || "pending",
       paymentMethod: order?.paymentMethod || "",
-      itemsValue: order?.itemsValue || "0.00",
-      packagingCosts: order?.packagingCosts || "20.00",
-      shippingCosts: order?.shippingCosts || "85.00",
-      notes: order?.notes || "",
-      expectedDeliveryDate: order?.expectedDeliveryDate || "",
+      totalItemsValue: order?.totalItemsValue || "0.00",
+      totalPackagingCosts: order?.totalPackagingCosts || "20.00",
+      totalShippingCosts: order?.totalShippingCosts || "85.00",
+      adminNotes: order?.adminNotes || "",
     },
   });
 
@@ -84,10 +88,10 @@ export function CorporateOrderForm({ order, onSuccess }: CorporateOrderFormProps
     mutationFn: (data: CorporateOrderFormData) => {
       const payload = {
         ...data,
-        totalAmount: (
-          parseFloat(data.itemsValue) + 
-          parseFloat(data.packagingCosts) + 
-          parseFloat(data.shippingCosts)
+        totalInvoiceAmount: (
+          parseFloat(data.totalItemsValue) + 
+          parseFloat(data.totalPackagingCosts) + 
+          parseFloat(data.totalShippingCosts)
         ).toFixed(2)
       };
 
@@ -145,9 +149,9 @@ export function CorporateOrderForm({ order, onSuccess }: CorporateOrderFormProps
   ];
 
   const calculateTotal = () => {
-    const itemsValue = parseFloat(form.watch("itemsValue") || "0");
-    const packagingCosts = parseFloat(form.watch("packagingCosts") || "0");
-    const shippingCosts = parseFloat(form.watch("shippingCosts") || "0");
+    const itemsValue = parseFloat(form.watch("totalItemsValue") || "0");
+    const packagingCosts = parseFloat(form.watch("totalPackagingCosts") || "0");
+    const shippingCosts = parseFloat(form.watch("totalShippingCosts") || "0");
     return itemsValue + packagingCosts + shippingCosts;
   };
 
@@ -162,29 +166,29 @@ export function CorporateOrderForm({ order, onSuccess }: CorporateOrderFormProps
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="corporateCompanyName">Company Name *</Label>
+                <Label htmlFor="companyName">Company Name *</Label>
                 <Input
-                  id="corporateCompanyName"
-                  {...form.register("corporateCompanyName")}
+                  id="companyName"
+                  {...form.register("companyName")}
                   placeholder="Enter company name"
                 />
-                {form.formState.errors.corporateCompanyName && (
+                {form.formState.errors.companyName && (
                   <p className="text-sm text-red-600">
-                    {form.formState.errors.corporateCompanyName.message}
+                    {form.formState.errors.companyName.message}
                   </p>
                 )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="corporateContactName">Contact Name *</Label>
+                <Label htmlFor="contactPerson">Contact Name *</Label>
                 <Input
-                  id="corporateContactName"
-                  {...form.register("corporateContactName")}
+                  id="contactPerson"
+                  {...form.register("contactPerson")}
                   placeholder="Enter contact person's name"
                 />
-                {form.formState.errors.corporateContactName && (
+                {form.formState.errors.contactPerson && (
                   <p className="text-sm text-red-600">
-                    {form.formState.errors.corporateContactName.message}
+                    {form.formState.errors.contactPerson.message}
                   </p>
                 )}
               </div>
@@ -192,26 +196,49 @@ export function CorporateOrderForm({ order, onSuccess }: CorporateOrderFormProps
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="corporateContactEmail">Contact Email *</Label>
+                <Label htmlFor="contactEmail">Contact Email *</Label>
                 <Input
-                  id="corporateContactEmail"
+                  id="contactEmail"
                   type="email"
-                  {...form.register("corporateContactEmail")}
+                  {...form.register("contactEmail")}
                   placeholder="contact@company.com"
                 />
-                {form.formState.errors.corporateContactEmail && (
+                {form.formState.errors.contactEmail && (
                   <p className="text-sm text-red-600">
-                    {form.formState.errors.corporateContactEmail.message}
+                    {form.formState.errors.contactEmail.message}
                   </p>
                 )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="corporateContactPhone">Contact Phone</Label>
+                <Label htmlFor="contactPhone">Contact Phone</Label>
                 <Input
-                  id="corporateContactPhone"
-                  {...form.register("corporateContactPhone")}
+                  id="contactPhone"
+                  {...form.register("contactPhone")}
                   placeholder="+27 XX XXX XXXX"
+                />
+              </div>
+            </div>
+
+            {/* Company Address and Order Description */}
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="companyAddress">Company Address</Label>
+                <Textarea
+                  id="companyAddress"
+                  {...form.register("companyAddress")}
+                  placeholder="Enter company address..."
+                  rows={3}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="orderDescription">Order Description</Label>
+                <Textarea
+                  id="orderDescription"
+                  {...form.register("orderDescription")}
+                  placeholder="Describe the order requirements..."
+                  rows={3}
                 />
               </div>
             </div>
@@ -305,52 +332,52 @@ export function CorporateOrderForm({ order, onSuccess }: CorporateOrderFormProps
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="itemsValue">Items Value (R) *</Label>
+                <Label htmlFor="totalItemsValue">Items Value (R) *</Label>
                 <Input
-                  id="itemsValue"
+                  id="totalItemsValue"
                   type="number"
                   step="0.01"
                   min="0"
-                  {...form.register("itemsValue")}
+                  {...form.register("totalItemsValue")}
                   placeholder="0.00"
                 />
-                {form.formState.errors.itemsValue && (
+                {form.formState.errors.totalItemsValue && (
                   <p className="text-sm text-red-600">
-                    {form.formState.errors.itemsValue.message}
+                    {form.formState.errors.totalItemsValue.message}
                   </p>
                 )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="packagingCosts">Packaging Costs (R) *</Label>
+                <Label htmlFor="totalPackagingCosts">Packaging Costs (R) *</Label>
                 <Input
-                  id="packagingCosts"
+                  id="totalPackagingCosts"
                   type="number"
                   step="0.01"
                   min="0"
-                  {...form.register("packagingCosts")}
+                  {...form.register("totalPackagingCosts")}
                   placeholder="20.00"
                 />
-                {form.formState.errors.packagingCosts && (
+                {form.formState.errors.totalPackagingCosts && (
                   <p className="text-sm text-red-600">
-                    {form.formState.errors.packagingCosts.message}
+                    {form.formState.errors.totalPackagingCosts.message}
                   </p>
                 )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="shippingCosts">Shipping Costs (R) *</Label>
+                <Label htmlFor="totalShippingCosts">Shipping Costs (R) *</Label>
                 <Input
-                  id="shippingCosts"
+                  id="totalShippingCosts"
                   type="number"
                   step="0.01"
                   min="0"
-                  {...form.register("shippingCosts")}
+                  {...form.register("totalShippingCosts")}
                   placeholder="85.00"
                 />
-                {form.formState.errors.shippingCosts && (
+                {form.formState.errors.totalShippingCosts && (
                   <p className="text-sm text-red-600">
-                    {form.formState.errors.shippingCosts.message}
+                    {form.formState.errors.totalShippingCosts.message}
                   </p>
                 )}
               </div>
@@ -377,19 +404,10 @@ export function CorporateOrderForm({ order, onSuccess }: CorporateOrderFormProps
         <CardContent>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="expectedDeliveryDate">Expected Delivery Date</Label>
-              <Input
-                id="expectedDeliveryDate"
-                type="date"
-                {...form.register("expectedDeliveryDate")}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="notes">Notes</Label>
+              <Label htmlFor="adminNotes">Admin Notes</Label>
               <Textarea
-                id="notes"
-                {...form.register("notes")}
+                id="adminNotes"
+                {...form.register("adminNotes")}
                 placeholder="Add any additional notes about this order..."
                 rows={4}
               />

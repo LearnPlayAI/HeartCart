@@ -75,7 +75,7 @@ export default function EditCorporateOrderPage() {
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-pink-600">Edit Corporate Order</h1>
             <p className="text-muted-foreground">
-              Editing {order.orderNumber} - {order.corporateCompanyName}
+              Editing {order.orderNumber} - {order.companyName}
             </p>
           </div>
         </div>

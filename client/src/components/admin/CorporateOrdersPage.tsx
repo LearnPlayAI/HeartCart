@@ -34,20 +34,22 @@ import { formatCurrency } from "@/lib/utils";
 interface CorporateOrder {
   id: number;
   orderNumber: string;
-  corporateCompanyName: string;
-  corporateContactName: string;
-  corporateContactEmail: string;
-  corporateContactPhone: string | null;
+  companyName: string;
+  companyAddress: string | null;
+  contactPerson: string;
+  contactEmail: string;
+  contactPhone: string | null;
+  orderDescription: string | null;
   status: string;
   paymentStatus: string;
   paymentMethod: string | null;
-  itemsValue: string;
-  packagingCosts: string;
-  shippingCosts: string;
-  totalAmount: string;
-  notes: string | null;
-  expectedDeliveryDate: string | null;
-  actualDeliveryDate: string | null;
+  totalItemsValue: string;
+  totalPackagingCosts: string;
+  totalShippingCosts: string;
+  totalInvoiceAmount: string;
+  invoiceGenerated: boolean;
+  invoicePath: string | null;
+  adminNotes: string | null;
   createdAt: string;
   updatedAt: string;
   createdByAdminId: number;
@@ -72,9 +74,9 @@ export function CorporateOrdersPage() {
   // Filter orders based on search term
   const filteredOrders = orders.filter((order: CorporateOrder) =>
     order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    order.corporateCompanyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    order.corporateContactName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    order.corporateContactEmail.toLowerCase().includes(searchTerm.toLowerCase())
+    order.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    order.contactPerson.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    order.contactEmail.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // Delete corporate order mutation
@@ -194,7 +196,7 @@ export function CorporateOrdersPage() {
                     {order.orderNumber}
                   </CardTitle>
                   <CardDescription className="font-medium">
-                    {order.corporateCompanyName}
+                    {order.companyName}
                   </CardDescription>
                 </div>
                 <div className="flex gap-2">
@@ -213,14 +215,14 @@ export function CorporateOrdersPage() {
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm">
                   <Building2 className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">{order.corporateContactName}</span>
+                  <span className="font-medium">{order.contactPerson}</span>
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  {order.corporateContactEmail}
+                  {order.contactEmail}
                 </div>
-                {order.corporateContactPhone && (
+                {order.contactPhone && (
                   <div className="text-sm text-muted-foreground">
-                    {order.corporateContactPhone}
+                    {order.contactPhone}
                   </div>
                 )}
               </div>
@@ -229,12 +231,12 @@ export function CorporateOrdersPage() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Items Value:</span>
-                  <span className="font-medium">{formatCurrency(parseFloat(order.itemsValue))}</span>
+                  <span className="font-medium">{formatCurrency(parseFloat(order.totalItemsValue))}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Total Amount:</span>
                   <span className="font-bold text-lg text-pink-600">
-                    {formatCurrency(parseFloat(order.totalAmount))}
+                    {formatCurrency(parseFloat(order.totalInvoiceAmount))}
                   </span>
                 </div>
               </div>

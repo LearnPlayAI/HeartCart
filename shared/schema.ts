@@ -1481,24 +1481,25 @@ export const systemSettings = pgTable("systemSettings", {
 export const corporateOrders = pgTable("corporateOrders", {
   id: serial("id").primaryKey(),
   orderNumber: text("orderNumber").notNull().unique(),
-  corporateCompanyName: text("corporateCompanyName").notNull(),
-  corporateContactName: text("corporateContactName").notNull(),
-  corporateContactEmail: text("corporateContactEmail").notNull(),
-  corporateContactPhone: text("corporateContactPhone"),
+  companyName: text("companyName").notNull(),
+  companyAddress: text("companyAddress"),
+  contactPerson: text("contactPerson").notNull(),
+  contactEmail: text("contactEmail").notNull(),
+  contactPhone: text("contactPhone"),
+  orderDescription: text("orderDescription"),
   status: text("status").notNull().default("pending"), // pending, invoice_sent, paid, processing, completed, cancelled
-  totalItemsValue: decimal("totalItemsValue", { precision: 10, scale: 2 }).notNull().default("0"),
-  totalPackagingCosts: decimal("totalPackagingCosts", { precision: 10, scale: 2 }).notNull().default("0"),
-  totalShippingCosts: decimal("totalShippingCosts", { precision: 10, scale: 2 }).notNull().default("0"),
-  totalInvoiceAmount: decimal("totalInvoiceAmount", { precision: 10, scale: 2 }).notNull().default("0"),
   paymentStatus: text("paymentStatus").notNull().default("pending"), // pending, paid, failed
   paymentMethod: text("paymentMethod"), // eft, card
+  totalItemsValue: text("totalItemsValue").notNull().default("0"),
+  totalPackagingCosts: text("totalPackagingCosts").notNull().default("0"),
+  totalShippingCosts: text("totalShippingCosts").notNull().default("0"),
+  totalInvoiceAmount: text("totalInvoiceAmount").notNull().default("0"),
+  invoiceGenerated: boolean("invoiceGenerated").notNull().default(false),
   invoicePath: text("invoicePath"), // Path to generated invoice PDF
-  yocoCheckoutId: text("yocoCheckoutId"), // Yoco checkout session ID
-  yocoPaymentId: text("yocoPaymentId"), // Yoco payment ID after successful payment
-  notes: text("notes"), // Admin notes
+  adminNotes: text("adminNotes"), // Admin notes
+  createdByAdminId: integer("createdByAdminId").notNull().references(() => users.id),
   createdAt: text("createdAt").default(String(new Date().toISOString())).notNull(),
   updatedAt: text("updatedAt").default(String(new Date().toISOString())).notNull(),
-  createdByAdminId: integer("createdByAdminId").notNull().references(() => users.id),
 }, (table) => {
   return {
     orderNumberIdx: index("corporateOrders_orderNumber_idx").on(table.orderNumber),
@@ -1515,10 +1516,16 @@ export const corporateOrderItems = pgTable("corporateOrderItems", {
   productId: integer("productId").notNull().references(() => products.id),
   productName: text("productName").notNull(),
   productSku: text("productSku"),
-  productImageUrl: text("productImageUrl"),
   quantity: integer("quantity").notNull(),
-  unitPrice: decimal("unitPrice", { precision: 10, scale: 2 }).notNull(),
-  totalPrice: decimal("totalPrice", { precision: 10, scale: 2 }).notNull(),
+  unitPrice: text("unitPrice").notNull(),
+  totalPrice: text("totalPrice").notNull(),
+  employeeName: text("employeeName").notNull(),
+  employeeEmail: text("employeeEmail").notNull(),
+  employeePhone: text("employeePhone"),
+  size: text("size"),
+  color: text("color"),
+  attributeSelections: json("attributeSelections"),
+  packageId: text("packageId"),
   createdAt: text("createdAt").default(String(new Date().toISOString())).notNull(),
 }, (table) => {
   return {
@@ -1531,21 +1538,24 @@ export const corporateOrderItems = pgTable("corporateOrderItems", {
 export const corporateShipments = pgTable("corporateShipments", {
   id: serial("id").primaryKey(),
   corporateOrderId: integer("corporateOrderId").notNull().references(() => corporateOrders.id, { onDelete: "cascade" }),
+  packageId: text("packageId").notNull(),
   employeeName: text("employeeName").notNull(),
-  employeeAddress: text("employeeAddress").notNull(),
-  employeeCity: text("employeeCity").notNull(),
-  employeePostalCode: text("employeePostalCode").notNull(),
-  packageContents: jsonb("packageContents").notNull().default('[]'), // Array of {productId, productName, quantity}
-  pudoShippingCost: decimal("pudoShippingCost", { precision: 10, scale: 2 }).notNull().default("0"),
-  pudoTrackingNumber: text("pudoTrackingNumber"),
-  shipmentStatus: text("shipmentStatus").notNull().default("pending"), // pending, shipped, delivered, cancelled
-  notes: text("notes"), // Admin notes for this shipment
+  deliveryAddress: text("deliveryAddress").notNull(),
+  specialInstructions: text("specialInstructions"),
+  shippingCost: text("shippingCost").notNull().default("0"),
+  trackingNumber: text("trackingNumber"),
+  carrierName: text("carrierName"),
+  status: text("status").notNull().default("pending"), // pending, shipped, delivered, cancelled
+  packageWeight: text("packageWeight"),
+  packageDimensions: text("packageDimensions"),
+  estimatedDeliveryDate: text("estimatedDeliveryDate"),
+  actualDeliveryDate: text("actualDeliveryDate"),
   createdAt: text("createdAt").default(String(new Date().toISOString())).notNull(),
   updatedAt: text("updatedAt").default(String(new Date().toISOString())).notNull(),
 }, (table) => {
   return {
     corporateOrderIdIdx: index("corporateShipments_corporateOrderId_idx").on(table.corporateOrderId),
-    shipmentStatusIdx: index("corporateShipments_shipmentStatus_idx").on(table.shipmentStatus),
+    statusIdx: index("corporateShipments_status_idx").on(table.status),
     createdAtIdx: index("corporateShipments_createdAt_idx").on(table.createdAt),
   };
 });
@@ -1556,9 +1566,10 @@ export const corporateInvoiceLineItems = pgTable("corporateInvoiceLineItems", {
   corporateOrderId: integer("corporateOrderId").notNull().references(() => corporateOrders.id, { onDelete: "cascade" }),
   lineItemType: text("lineItemType").notNull(), // 'packaging', 'shipping', 'manual', 'item'
   description: text("description").notNull(),
+  unitCost: text("unitCost").notNull(),
   quantity: integer("quantity").notNull().default(1),
-  unitCost: decimal("unitCost", { precision: 10, scale: 2 }).notNull(),
-  totalCost: decimal("totalCost", { precision: 10, scale: 2 }).notNull(),
+  totalCost: text("totalCost").notNull(),
+  packageId: text("packageId"),
   relatedShipmentId: integer("relatedShipmentId").references(() => corporateShipments.id), // For shipping line items
   createdAt: text("createdAt").default(String(new Date().toISOString())).notNull(),
 }, (table) => {

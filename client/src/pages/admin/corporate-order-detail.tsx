@@ -101,7 +101,7 @@ export default function CorporateOrderDetailPage() {
             </Button>
             <div>
               <h1 className="text-3xl font-bold text-pink-600">{order.orderNumber}</h1>
-              <p className="text-muted-foreground">{order.corporateCompanyName}</p>
+              <p className="text-muted-foreground">{order.companyName}</p>
             </div>
           </div>
           
@@ -182,17 +182,17 @@ export default function CorporateOrderDetailPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <p className="font-medium">{order.corporateContactName}</p>
+                <p className="font-medium">{order.contactPerson}</p>
                 <p className="text-sm text-muted-foreground">Contact Person</p>
               </div>
               <div className="flex items-center gap-2">
                 <Mail className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">{order.corporateContactEmail}</span>
+                <span className="text-sm">{order.contactEmail}</span>
               </div>
-              {order.corporateContactPhone && (
+              {order.contactPhone && (
                 <div className="flex items-center gap-2">
                   <Phone className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">{order.corporateContactPhone}</span>
+                  <span className="text-sm">{order.contactPhone}</span>
                 </div>
               )}
             </CardContent>
@@ -209,15 +209,15 @@ export default function CorporateOrderDetailPage() {
             <CardContent className="space-y-4">
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">Items Value:</span>
-                <span>{formatCurrency(parseFloat(order.itemsValue))}</span>
+                <span>{formatCurrency(parseFloat(order.totalItemsValue))}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">Packaging:</span>
-                <span>{formatCurrency(parseFloat(order.packagingCosts))}</span>
+                <span>{formatCurrency(parseFloat(order.totalPackagingCosts))}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">Shipping:</span>
-                <span>{formatCurrency(parseFloat(order.shippingCosts))}</span>
+                <span>{formatCurrency(parseFloat(order.totalShippingCosts))}</span>
               </div>
               <hr />
               <div className="flex justify-between items-center font-bold text-lg">
@@ -283,13 +283,13 @@ export default function CorporateOrderDetailPage() {
         </Card>
 
         {/* Notes Section */}
-        {order.notes && (
+        {order.adminNotes && (
           <Card>
             <CardHeader>
-              <CardTitle>Notes</CardTitle>
+              <CardTitle>Admin Notes</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">{order.notes}</p>
+              <p className="text-muted-foreground">{order.adminNotes}</p>
             </CardContent>
           </Card>
         )}
