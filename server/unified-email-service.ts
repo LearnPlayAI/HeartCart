@@ -1365,6 +1365,215 @@ export class UnifiedEmailService {
       };
     }
   }
+
+  /**
+   * Send corporate order approval email to customer
+   */
+  async sendCorporateOrderApprovalEmail(emailData: {
+    recipientEmail: string;
+    recipientName: string;
+    companyName: string;
+    orderNumber: string;
+    orderDescription: string;
+    items: Array<{
+      productName: string;
+      quantity: number;
+      unitPrice: string;
+      totalPrice: string;
+      size?: string;
+      color?: string;
+    }>;
+    totalItemsValue: string;
+    totalPackagingCosts: string;
+    totalShippingCosts: string;
+    totalInvoiceAmount: string;
+  }): Promise<{ success: boolean; emailId?: string; error?: string }> {
+    try {
+      const subject = `Corporate Order Approval Required - ${emailData.orderNumber}`;
+      
+      // Create the HTML email template
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>${subject}</title>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #FF69B4 0%, #E91E63 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .header h1 { margin: 0; font-size: 28px; font-weight: bold; }
+            .content { background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; }
+            .order-details { background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; }
+            .items-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+            .items-table th, .items-table td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+            .items-table th { background: #f8f9fa; font-weight: bold; }
+            .totals { background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; }
+            .totals .total-row { display: flex; justify-content: space-between; margin: 8px 0; }
+            .totals .total-row.final { font-weight: bold; font-size: 18px; border-top: 2px solid #FF69B4; padding-top: 10px; margin-top: 15px; }
+            .action-section { background: #fff3f8; border: 2px solid #FF69B4; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center; }
+            .action-section h3 { color: #E91E63; margin-top: 0; }
+            .footer { background: #f8f9fa; padding: 20px; text-align: center; border-radius: 0 0 10px 10px; color: #666; }
+            .badge { background: #FF69B4; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>HeartCart</h1>
+              <p style="margin: 10px 0 0 0; font-size: 16px;">Corporate Order Approval Required</p>
+            </div>
+            
+            <div class="content">
+              <h2>Hello ${emailData.recipientName},</h2>
+              
+              <p>Your corporate order has been prepared and is ready for your approval. Please review the details below:</p>
+              
+              <div class="order-details">
+                <h3 style="margin-top: 0; color: #E91E63;">Order Information</h3>
+                <p><strong>Order Number:</strong> <span class="badge">${emailData.orderNumber}</span></p>
+                <p><strong>Company:</strong> ${emailData.companyName}</p>
+                <p><strong>Description:</strong> ${emailData.orderDescription}</p>
+              </div>
+
+              <h3>Order Items</h3>
+              <table class="items-table">
+                <thead>
+                  <tr>
+                    <th>Product</th>
+                    <th>Quantity</th>
+                    <th>Unit Price</th>
+                    <th>Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${emailData.items.map(item => `
+                    <tr>
+                      <td>
+                        <strong>${item.productName}</strong>
+                        ${item.size ? `<br><small>Size: ${item.size}</small>` : ''}
+                        ${item.color ? `<br><small>Color: ${item.color}</small>` : ''}
+                      </td>
+                      <td>${item.quantity}</td>
+                      <td>R${item.unitPrice}</td>
+                      <td><strong>R${item.totalPrice}</strong></td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+
+              <div class="totals">
+                <div class="total-row">
+                  <span>Items Subtotal:</span>
+                  <span>R${emailData.totalItemsValue}</span>
+                </div>
+                <div class="total-row">
+                  <span>Packaging Costs:</span>
+                  <span>R${emailData.totalPackagingCosts}</span>
+                </div>
+                <div class="total-row">
+                  <span>Shipping Costs:</span>
+                  <span>R${emailData.totalShippingCosts}</span>
+                </div>
+                <div class="total-row final">
+                  <span>Total Invoice Amount:</span>
+                  <span>R${emailData.totalInvoiceAmount}</span>
+                </div>
+              </div>
+
+              <div class="action-section">
+                <h3>Next Steps</h3>
+                <p><strong>Please review this order and respond with:</strong></p>
+                <ul style="text-align: left; display: inline-block;">
+                  <li>Your approval to proceed with this order</li>
+                  <li>Employee details for each item (name, email, phone, delivery address)</li>
+                  <li>Any changes or modifications needed</li>
+                </ul>
+                <p style="margin-top: 20px;">
+                  <strong>Reply to this email with your approval and employee information.</strong>
+                </p>
+              </div>
+
+              <p>If you have any questions or need modifications to this order, please don't hesitate to contact us.</p>
+              
+              <p>Thank you for choosing HeartCart!</p>
+            </div>
+            
+            <div class="footer">
+              <p><strong>HeartCart</strong><br>
+              For the Love of Shopping<br>
+              Email: sales@heartcart.shop<br>
+              Website: heartcart.shop</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+
+      // Create plain text version
+      const textContent = `
+        HeartCart - Corporate Order Approval Required
+
+        Hello ${emailData.recipientName},
+
+        Your corporate order has been prepared and is ready for your approval.
+
+        Order Information:
+        - Order Number: ${emailData.orderNumber}
+        - Company: ${emailData.companyName}
+        - Description: ${emailData.orderDescription}
+
+        Order Items:
+        ${emailData.items.map(item => `
+        - ${item.productName} ${item.size ? `(Size: ${item.size})` : ''} ${item.color ? `(Color: ${item.color})` : ''}
+          Quantity: ${item.quantity} | Unit Price: R${item.unitPrice} | Total: R${item.totalPrice}
+        `).join('')}
+
+        Order Totals:
+        Items Subtotal: R${emailData.totalItemsValue}
+        Packaging Costs: R${emailData.totalPackagingCosts}
+        Shipping Costs: R${emailData.totalShippingCosts}
+        Total Invoice Amount: R${emailData.totalInvoiceAmount}
+
+        Next Steps:
+        Please review this order and respond with:
+        1. Your approval to proceed with this order
+        2. Employee details for each item (name, email, phone, delivery address)
+        3. Any changes or modifications needed
+
+        Reply to this email with your approval and employee information.
+
+        If you have any questions, please contact us at sales@heartcart.shop
+
+        Thank you for choosing HeartCart!
+        Website: heartcart.shop
+      `;
+
+      // Send the email
+      const emailResult = await this.sendEmail({
+        recipientEmail: emailData.recipientEmail,
+        subject,
+        htmlContent,
+        textContent,
+        emailType: 'corporate_order_approval',
+        metadata: {
+          orderNumber: emailData.orderNumber,
+          companyName: emailData.companyName,
+          totalAmount: emailData.totalInvoiceAmount,
+          itemCount: emailData.items.length,
+        }
+      });
+
+      return emailResult;
+    } catch (error) {
+      console.error('Error sending corporate order approval email:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error occurred' 
+      };
+    }
+  }
 }
 
 export const unifiedEmailService = new UnifiedEmailService();

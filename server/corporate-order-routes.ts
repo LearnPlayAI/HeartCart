@@ -74,6 +74,109 @@ router.post('/corporate-orders', isAdmin, asyncHandler(async (req, res) => {
   }
 }));
 
+// Add product to corporate order (admin only)
+router.post('/corporate-orders/:id/items', isAdmin, asyncHandler(async (req, res) => {
+  try {
+    const corporateOrderId = parseInt(req.params.id);
+    if (isNaN(corporateOrderId)) {
+      return sendError(res, 'Invalid order ID', 400);
+    }
+
+    // Verify the corporate order exists
+    const order = await storage.getCorporateOrder(corporateOrderId);
+    if (!order) {
+      return sendError(res, 'Corporate order not found', 404);
+    }
+
+    const itemData = insertCorporateOrderItemSchema.parse({
+      ...req.body,
+      corporateOrderId
+    });
+
+    const item = await storage.addCorporateOrderItem(itemData);
+    logger.info('Item added to corporate order', { orderId: corporateOrderId, itemId: item.id });
+    
+    sendSuccess(res, { item });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return sendError(res, 'Invalid item data', 400, 'VALIDATION_ERROR', error.errors);
+    }
+    logger.error('Error adding item to corporate order', { error, body: req.body });
+    sendError(res, 'Failed to add item to corporate order', 500);
+  }
+}));
+
+// Remove item from corporate order (admin only)
+router.delete('/corporate-orders/:id/items/:itemId', isAdmin, asyncHandler(async (req, res) => {
+  try {
+    const corporateOrderId = parseInt(req.params.id);
+    const itemId = parseInt(req.params.itemId);
+    
+    if (isNaN(corporateOrderId) || isNaN(itemId)) {
+      return sendError(res, 'Invalid order or item ID', 400);
+    }
+
+    const success = await storage.removeCorporateOrderItem(itemId);
+    if (!success) {
+      return sendError(res, 'Item not found or could not be removed', 404);
+    }
+
+    logger.info('Item removed from corporate order', { orderId: corporateOrderId, itemId });
+    sendSuccess(res, { message: 'Item removed successfully' });
+  } catch (error) {
+    logger.error('Error removing item from corporate order', { error, itemId: req.params.itemId });
+    sendError(res, 'Failed to remove item from corporate order', 500);
+  }
+}));
+
+// Send approval email to corporate customer (admin only)
+router.post('/corporate-orders/:id/send-approval-email', isAdmin, asyncHandler(async (req, res) => {
+  try {
+    const corporateOrderId = parseInt(req.params.id);
+    if (isNaN(corporateOrderId)) {
+      return sendError(res, 'Invalid order ID', 400);
+    }
+
+    // Get the corporate order with its items
+    const orderWithDetails = await storage.getCorporateOrderWithDetails(corporateOrderId);
+    if (!orderWithDetails) {
+      return sendError(res, 'Corporate order not found', 404);
+    }
+
+    // Check if order has items
+    if (!orderWithDetails.items || orderWithDetails.items.length === 0) {
+      return sendError(res, 'Cannot send approval email - order has no items', 400);
+    }
+
+    // Send the approval email
+    const emailResult = await storage.sendCorporateOrderApprovalEmail(orderWithDetails);
+    
+    if (emailResult.success) {
+      // Update the order to mark that item preview was sent
+      await storage.updateCorporateOrderStatus(corporateOrderId, { itemPreviewSent: true });
+      
+      logger.info('Corporate order approval email sent', { 
+        orderId: corporateOrderId, 
+        recipientEmail: orderWithDetails.contactEmail 
+      });
+      
+      sendSuccess(res, { 
+        message: 'Approval email sent successfully',
+        emailId: emailResult.emailId 
+      });
+    } else {
+      logger.error('Failed to send corporate order approval email', { 
+        orderId: corporateOrderId, 
+        error: emailResult.error 
+      });
+      sendError(res, emailResult.error || 'Failed to send approval email', 500);
+    }
+  } catch (error) {
+    logger.error('Error sending corporate order approval email', { error, orderId: req.params.id });
+    sendError(res, 'Failed to send approval email', 500);
+  }
+}));
+
 // =============================================================================
 // CORPORATE WORKFLOW TRACKING ROUTES
 // =============================================================================

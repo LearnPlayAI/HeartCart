@@ -8,12 +8,15 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { formatCurrency } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { AddProductToCorporateOrderModal } from "@/components/admin/AddProductToCorporateOrderModal";
+import { useState } from 'react';
 
 export default function CorporateOrderDetailPage() {
   const [, setLocation] = useLocation();
   const { orderId } = useParams();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
 
   // Fetch corporate order details
   const { data: orderData, isLoading } = useQuery({
@@ -286,10 +289,10 @@ export default function CorporateOrderDetailPage() {
             )}
             <Button 
               className="bg-pink-600 hover:bg-pink-700"
-              onClick={() => setLocation(`/admin/corporate-orders/${orderId}/add-item`)}
+              onClick={() => setIsAddProductModalOpen(true)}
             >
               <Plus className="h-4 w-4 mr-2" />
-              Add Item
+              Add Product
             </Button>
             {order.supplierOrderPlaced && (
               <Button 
@@ -643,6 +646,13 @@ export default function CorporateOrderDetailPage() {
           </Card>
         )}
       </div>
+
+      {/* Add Product Modal */}
+      <AddProductToCorporateOrderModal
+        isOpen={isAddProductModalOpen}
+        onClose={() => setIsAddProductModalOpen(false)}
+        corporateOrderId={parseInt(orderId || '0')}
+      />
     </AdminLayout>
   );
 }

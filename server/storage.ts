@@ -8036,6 +8036,163 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  // =============================================================================
+  // CORPORATE ORDER METHODS
+  // =============================================================================
+
+  /**
+   * Remove an item from a corporate order
+   */
+  async removeCorporateOrderItem(itemId: number): Promise<boolean> {
+    try {
+      const result = await db
+        .delete(corporateOrderItems)
+        .where(eq(corporateOrderItems.id, itemId));
+      
+      return result.count > 0;
+    } catch (error) {
+      logger.error('Error removing corporate order item', { error, itemId });
+      throw error;
+    }
+  }
+
+  /**
+   * Get all items for a corporate order
+   */
+  async getCorporateOrderItems(corporateOrderId: number): Promise<CorporateOrderItem[]> {
+    try {
+      return await db
+        .select()
+        .from(corporateOrderItems)
+        .where(eq(corporateOrderItems.corporateOrderId, corporateOrderId))
+        .orderBy(asc(corporateOrderItems.createdAt));
+    } catch (error) {
+      logger.error('Error getting corporate order items', { error, corporateOrderId });
+      throw error;
+    }
+  }
+
+  /**
+   * Update corporate order fields
+   */
+  async updateCorporateOrder(id: number, updates: Partial<InsertCorporateOrder>): Promise<CorporateOrder | undefined> {
+    try {
+      const [updatedOrder] = await db
+        .update(corporateOrders)
+        .set({
+          ...updates,
+          updatedAt: new Date().toISOString(),
+        })
+        .where(eq(corporateOrders.id, id))
+        .returning();
+      
+      return updatedOrder;
+    } catch (error) {
+      logger.error('Error updating corporate order', { error, id, updates });
+      throw error;
+    }
+  }
+
+  /**
+   * Add an item to a corporate order
+   */
+  async addCorporateOrderItem(itemData: InsertCorporateOrderItem): Promise<CorporateOrderItem> {
+    try {
+      const [newItem] = await db
+        .insert(corporateOrderItems)
+        .values(itemData)
+        .returning();
+      
+      return newItem;
+    } catch (error) {
+      logger.error('Error adding corporate order item', { error, itemData });
+      throw error;
+    }
+  }
+
+  /**
+   * Calculate and update corporate order totals
+   */
+  async calculateCorporateOrderTotals(corporateOrderId: number): Promise<void> {
+    try {
+      // Get all items for this order
+      const items = await this.getCorporateOrderItems(corporateOrderId);
+      
+      // Calculate totals
+      let totalItemsValue = 0;
+      items.forEach(item => {
+        totalItemsValue += parseFloat(item.totalPrice);
+      });
+
+      // Get existing order to preserve packaging and shipping costs
+      const order = await this.getCorporateOrder(corporateOrderId);
+      if (!order) {
+        throw new Error('Corporate order not found');
+      }
+
+      const totalPackagingCosts = parseFloat(order.totalPackagingCosts);
+      const totalShippingCosts = parseFloat(order.totalShippingCosts);
+      const totalInvoiceAmount = totalItemsValue + totalPackagingCosts + totalShippingCosts;
+
+      // Update the order with new totals
+      await db
+        .update(corporateOrders)
+        .set({
+          totalItemsValue: totalItemsValue.toFixed(2),
+          totalInvoiceAmount: totalInvoiceAmount.toFixed(2),
+          updatedAt: new Date().toISOString(),
+        })
+        .where(eq(corporateOrders.id, corporateOrderId));
+
+    } catch (error) {
+      logger.error('Error calculating corporate order totals', { error, corporateOrderId });
+      throw error;
+    }
+  }
+
+  /**
+   * Send corporate order approval email to customer
+   */
+  async sendCorporateOrderApprovalEmail(orderWithDetails: CorporateOrder & { items: CorporateOrderItem[] }): Promise<{ success: boolean; emailId?: string; error?: string }> {
+    try {
+      const { UnifiedEmailService } = await import('./unified-email-service');
+      const emailService = new UnifiedEmailService();
+
+      // Create email data for the approval email
+      const emailData = {
+        recipientEmail: orderWithDetails.contactEmail,
+        recipientName: orderWithDetails.contactPerson,
+        companyName: orderWithDetails.companyName,
+        orderNumber: orderWithDetails.orderNumber,
+        orderDescription: orderWithDetails.orderDescription || '',
+        items: orderWithDetails.items.map(item => ({
+          productName: item.productName,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          totalPrice: item.totalPrice,
+          size: item.size || '',
+          color: item.color || '',
+        })),
+        totalItemsValue: orderWithDetails.totalItemsValue,
+        totalPackagingCosts: orderWithDetails.totalPackagingCosts,
+        totalShippingCosts: orderWithDetails.totalShippingCosts,
+        totalInvoiceAmount: orderWithDetails.totalInvoiceAmount,
+      };
+
+      // Send the approval email
+      const emailResult = await emailService.sendCorporateOrderApprovalEmail(emailData);
+      
+      if (emailResult.success) {
+        return { success: true, emailId: emailResult.emailId };
+      } else {
+        return { success: false, error: emailResult.error || 'Failed to send approval email' };
+      }
+    } catch (error) {
+      logger.error('Error sending corporate order approval email', { error, orderId: orderWithDetails.id });
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  }
+
   // ===============================================================
   // USER ADMIN MANAGEMENT METHODS
   // ===============================================================
