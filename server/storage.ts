@@ -15540,6 +15540,21 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async updateCorporateOrderItem(id: number, itemData: Partial<InsertCorporateOrderItem>): Promise<CorporateOrderItem | undefined> {
+    try {
+      const [updatedItem] = await db
+        .update(corporateOrderItems)
+        .set(itemData)
+        .where(eq(corporateOrderItems.id, id))
+        .returning();
+      
+      return updatedItem;
+    } catch (error) {
+      logger.error('Error updating corporate order item', { error, id, itemData });
+      throw error;
+    }
+  }
+
   async deleteCorporateOrderItem(id: number): Promise<boolean> {
     try {
       const [deletedItem] = await db
@@ -15629,6 +15644,35 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  // Get corporate shipments with items
+  async getCorporateShipmentsWithItems(corporateOrderId: number): Promise<Array<CorporateShipment & { items: CorporateOrderItem[] }>> {
+    try {
+      const shipments = await this.getCorporateShipments(corporateOrderId);
+      const shipmentsWithItems = [];
+
+      for (const shipment of shipments) {
+        // Get items associated with this shipment via packageId
+        const items = await db.query.corporateOrderItems.findMany({
+          where: and(
+            eq(corporateOrderItems.corporateOrderId, corporateOrderId),
+            eq(corporateOrderItems.packageId, shipment.packageId)
+          ),
+          orderBy: [asc(corporateOrderItems.id)],
+        });
+
+        shipmentsWithItems.push({
+          ...shipment,
+          items
+        });
+      }
+
+      return shipmentsWithItems;
+    } catch (error) {
+      logger.error('Error getting corporate shipments with items', { error, corporateOrderId });
+      throw error;
+    }
+  }
+
   // Corporate invoice line items
   async addCorporateInvoiceLineItem(lineItemData: InsertCorporateInvoiceLineItem): Promise<CorporateInvoiceLineItem> {
     try {
@@ -15684,6 +15728,17 @@ export class DatabaseStorage implements IStorage {
       return !!deletedLineItem;
     } catch (error) {
       logger.error('Error deleting corporate invoice line item', { error, id });
+      throw error;
+    }
+  }
+
+  async getCorporateOrder(id: number): Promise<CorporateOrder | undefined> {
+    try {
+      return await db.query.corporateOrders.findFirst({
+        where: eq(corporateOrders.id, id),
+      });
+    } catch (error) {
+      logger.error('Error getting corporate order', { error, id });
       throw error;
     }
   }

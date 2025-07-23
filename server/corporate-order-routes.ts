@@ -599,4 +599,73 @@ router.post('/corporate-orders/:id/calculate-totals', isAdmin, asyncHandler(asyn
   }
 }));
 
+// Create employee shipment (split items from corporate order)
+router.post('/corporate-orders/:orderId/shipments', isAdmin, asyncHandler(async (req, res) => {
+  try {
+    const orderId = parseInt(req.params.orderId);
+    const { packageId, employeeName, deliveryAddress, specialInstructions, estimatedDeliveryDate, itemIds } = req.body;
+
+    // Validate required fields
+    if (!packageId || !employeeName || !deliveryAddress || !itemIds || itemIds.length === 0) {
+      return sendError(res, 'Missing required fields: packageId, employeeName, deliveryAddress, and itemIds', 400);
+    }
+
+    // Verify corporate order exists and is paid
+    const corporateOrder = await storage.getCorporateOrder(orderId);
+    if (!corporateOrder) {
+      return sendError(res, 'Corporate order not found', 404);
+    }
+    
+    if (corporateOrder.paymentStatus !== 'paid') {
+      return sendError(res, 'Corporate order must be paid before creating shipments', 400);
+    }
+
+    // Create employee shipment
+    const shipment = await storage.createCorporateShipment({
+      corporateOrderId: orderId,
+      packageId,
+      employeeName,
+      deliveryAddress,
+      specialInstructions: specialInstructions || null,
+      estimatedDeliveryDate: estimatedDeliveryDate || null,
+      status: 'pending',
+      shippingCost: '0',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+
+    // Update the selected items to be associated with this shipment
+    for (const itemId of itemIds) {
+      await storage.updateCorporateOrderItem(itemId, { 
+        packageId: packageId 
+      });
+    }
+
+    logger.info('Corporate employee shipment created', { 
+      shipmentId: shipment.id, 
+      orderId, 
+      packageId,
+      employeeName,
+      itemCount: itemIds.length 
+    });
+
+    sendSuccess(res, { shipment });
+  } catch (error) {
+    logger.error('Error creating corporate employee shipment', { error, orderId: req.params.orderId });
+    sendError(res, 'Failed to create employee shipment', 500);
+  }
+}));
+
+// Get corporate order shipments
+router.get('/corporate-orders/:orderId/shipments', isAdmin, asyncHandler(async (req, res) => {
+  try {
+    const orderId = parseInt(req.params.orderId);
+    const shipments = await storage.getCorporateShipments(orderId);
+    sendSuccess(res, { shipments });
+  } catch (error) {
+    logger.error('Error fetching corporate shipments', { error, orderId: req.params.orderId });
+    sendError(res, 'Failed to fetch shipments', 500);
+  }
+}));
+
 export default router;

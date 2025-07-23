@@ -2,7 +2,7 @@ import AdminLayout from "@/components/admin/layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Edit, Plus, Package, Truck, Building2, DollarSign, Calendar, User, Mail, Phone, Send, Trash2 } from "lucide-react";
+import { ArrowLeft, Edit, Plus, Package, Truck, Building2, DollarSign, Calendar, User, Mail, Phone, Send, Trash2, AlertCircle } from "lucide-react";
 import { useLocation, useParams } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -335,10 +335,11 @@ export default function CorporateOrderDetailPage() {
                               <span className="text-sm">Unit: {formatCurrency(parseFloat(item.unitPrice))}</span>
                               <span className="font-medium">Total: {formatCurrency(parseFloat(item.totalPrice))}</span>
                             </div>
-                            {(item.size || item.color) && (
+                            {(item.size || item.color || item.packageId) && (
                               <div className="flex gap-2 mt-1">
                                 {item.size && <span className="text-xs bg-gray-100 px-2 py-1 rounded">Size: {item.size}</span>}
                                 {item.color && <span className="text-xs bg-gray-100 px-2 py-1 rounded">Color: {item.color}</span>}
+                                {item.packageId && <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">Package: {item.packageId}</span>}
                               </div>
                             )}
                           </div>
@@ -395,32 +396,95 @@ export default function CorporateOrderDetailPage() {
           </CardContent>
         </Card>
 
-        {/* Shipments Section */}
-        <Card>
-          <CardHeader>
-            <div className="flex justify-between items-center">
+        {/* Employee Shipments Section */}
+        {order.paymentStatus === 'paid' && (
+          <Card>
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <CardTitle className="flex items-center gap-2">
+                  <Truck className="h-5 w-5" />
+                  Employee Shipments ({order.shipments?.length || 0})
+                </CardTitle>
+                <Button 
+                  size="sm"
+                  className="bg-blue-600 hover:bg-blue-700"
+                  onClick={() => setLocation(`/admin/corporate-orders/${orderId}/add-shipment`)}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Shipment
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {order.shipments && order.shipments.length > 0 ? (
+                <div className="space-y-4">
+                  {order.shipments.map((shipment: any) => (
+                    <div key={shipment.id} className="border rounded-lg p-4">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h4 className="font-medium text-gray-900">{shipment.packageId}</h4>
+                            <Badge variant={getStatusBadgeVariant(shipment.status)}>
+                              {shipment.status}
+                            </Badge>
+                          </div>
+                          <div className="space-y-1 text-sm text-gray-600">
+                            <div className="flex items-center gap-2">
+                              <User className="h-4 w-4" />
+                              <span>Employee: {shipment.employeeName}</span>
+                            </div>
+                            <div>Address: {shipment.deliveryAddress}</div>
+                            {shipment.specialInstructions && (
+                              <div>Instructions: {shipment.specialInstructions}</div>
+                            )}
+                            {shipment.estimatedDeliveryDate && (
+                              <div>Est. Delivery: {new Date(shipment.estimatedDeliveryDate).toLocaleDateString()}</div>
+                            )}
+                            {shipment.trackingNumber && (
+                              <div>Tracking: {shipment.trackingNumber}</div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right text-sm text-gray-600">
+                          <p>Created: {new Date(shipment.createdAt).toLocaleDateString()}</p>
+                          {shipment.shippingCost !== '0' && (
+                            <p>Cost: {formatCurrency(parseFloat(shipment.shippingCost))}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Truck className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No employee shipments created yet</p>
+                  <p className="text-sm">Click "Create Shipment" to start organizing deliveries</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Payment Required Message for Unpaid Orders */}
+        {order.paymentStatus !== 'paid' && (
+          <Card>
+            <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Truck className="h-5 w-5" />
-                Shipments
+                Employee Shipments
               </CardTitle>
-              <Button 
-                size="sm"
-                className="bg-blue-600 hover:bg-blue-700"
-                onClick={() => setLocation(`/admin/corporate-orders/${orderId}/add-shipment`)}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Create Shipment
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-8 text-muted-foreground">
-              <Truck className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No shipments created yet</p>
-              <p className="text-sm">Click "Create Shipment" to start organizing deliveries</p>
-            </div>
-          </CardContent>
-        </Card>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8 text-muted-foreground">
+                <AlertCircle className="h-12 w-12 mx-auto mb-4 text-amber-500" />
+                <p>Payment Required</p>
+                <p className="text-sm">Order must be paid before creating employee shipments</p>
+                <p className="text-sm">Current status: <span className="font-medium">{order.paymentStatus}</span></p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Notes Section */}
         {order.adminNotes && (
