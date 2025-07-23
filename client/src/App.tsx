@@ -244,6 +244,8 @@ function App() {
                   <AdminProtectedRoute path="/admin/promotions/:id/products" component={PromotionProductsPage} />
                   <AdminProtectedRoute path="/admin/orders" component={AdminOrders} />
                   <AdminProtectedRoute path="/admin/orders/:id" component={AdminOrderDetail} />
+                  <AdminProtectedRoute path="/admin/corporate-orders" component={React.lazy(() => import("@/pages/admin/corporate-orders"))} />
+                  <AdminProtectedRoute path="/admin/corporate-orders/:orderId" component={React.lazy(() => import("@/pages/admin/corporate-order-detail"))} />
                   <AdminProtectedRoute path="/admin/supplier-orders" component={SupplierOrders} />
                   <AdminProtectedRoute path="/admin/user-carts" component={UserCartsPage} />
                   <AdminProtectedRoute path="/admin/user-carts/:userId" component={UserCartDetailPage} />

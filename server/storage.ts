@@ -48,13 +48,6 @@ import {
   attributeOptions,
   type AttributeOption,
   type InsertAttributeOption,
-  // Promotion system imports
-  promotions,
-  type Promotion,
-  type InsertPromotion,
-  productPromotions,
-  type ProductPromotion,
-  type InsertProductPromotion,
   // Email and token management
   mailTokens,
   type MailToken,
@@ -109,6 +102,19 @@ import {
   repPayments,
   type RepPayment,
   type InsertRepPayment,
+  // Corporate Order system imports
+  corporateOrders,
+  type CorporateOrder,
+  type InsertCorporateOrder,
+  corporateOrderItems,
+  type CorporateOrderItem,
+  type InsertCorporateOrderItem,
+  corporateShipments,
+  type CorporateShipment,
+  type InsertCorporateShipment,
+  corporateInvoiceLineItems,
+  type CorporateInvoiceLineItem,
+  type InsertCorporateInvoiceLineItem,
 } from "@shared/schema";
 import { db } from "./db";
 import {
@@ -628,6 +634,50 @@ export interface IStorage {
   calculateRepEarnings(repId: number, startDate?: string, endDate?: string): Promise<{ totalEarnings: number; commissionCount: number }>;
   createRepPayment(paymentData: InsertRepPayment): Promise<RepPayment>;
   getRepPayments(repId: number): Promise<RepPayment[]>;
+
+  // Corporate Order System operations
+  createCorporateOrder(orderData: InsertCorporateOrder): Promise<CorporateOrder>;
+  getCorporateOrder(id: number): Promise<CorporateOrder | undefined>;
+  getCorporateOrderByOrderNumber(orderNumber: string): Promise<CorporateOrder | undefined>;
+  getAllCorporateOrders(): Promise<CorporateOrder[]>;
+  updateCorporateOrder(id: number, orderData: Partial<InsertCorporateOrder>): Promise<CorporateOrder | undefined>;
+  deleteCorporateOrder(id: number): Promise<boolean>;
+  
+  // Corporate order items
+  addCorporateOrderItem(itemData: InsertCorporateOrderItem): Promise<CorporateOrderItem>;
+  getCorporateOrderItems(corporateOrderId: number): Promise<CorporateOrderItem[]>;
+  updateCorporateOrderItem(id: number, itemData: Partial<InsertCorporateOrderItem>): Promise<CorporateOrderItem | undefined>;
+  deleteCorporateOrderItem(id: number): Promise<boolean>;
+  
+  // Corporate shipments
+  createCorporateShipment(shipmentData: InsertCorporateShipment): Promise<CorporateShipment>;
+  getCorporateShipments(corporateOrderId: number): Promise<CorporateShipment[]>;
+  getCorporateShipment(id: number): Promise<CorporateShipment | undefined>;
+  updateCorporateShipment(id: number, shipmentData: Partial<InsertCorporateShipment>): Promise<CorporateShipment | undefined>;
+  deleteCorporateShipment(id: number): Promise<boolean>;
+  
+  // Corporate invoice line items
+  addCorporateInvoiceLineItem(lineItemData: InsertCorporateInvoiceLineItem): Promise<CorporateInvoiceLineItem>;
+  getCorporateInvoiceLineItems(corporateOrderId: number): Promise<CorporateInvoiceLineItem[]>;
+  updateCorporateInvoiceLineItem(id: number, lineItemData: Partial<InsertCorporateInvoiceLineItem>): Promise<CorporateInvoiceLineItem | undefined>;
+  deleteCorporateInvoiceLineItem(id: number): Promise<boolean>;
+  
+  // Corporate order management operations
+  getCorporateOrderWithDetails(id: number): Promise<CorporateOrder & {
+    items: CorporateOrderItem[];
+    shipments: CorporateShipment[];
+    invoiceLineItems: CorporateInvoiceLineItem[];
+    createdByAdmin: User;
+  } | undefined>;
+  updateCorporateOrderStatus(id: number, status: string): Promise<boolean>;
+  updateCorporateOrderPaymentStatus(id: number, paymentStatus: string, paymentMethod?: string): Promise<boolean>;
+  calculateCorporateOrderTotals(id: number): Promise<{ 
+    itemsValue: number; 
+    packagingCosts: number; 
+    shippingCosts: number; 
+    totalAmount: number; 
+  }>;
+  generateCorporateOrderNumber(): Promise<string>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -15315,6 +15365,444 @@ export class DatabaseStorage implements IStorage {
       };
     } catch (error) {
       logger.error('Error getting user cart stats', { error });
+      throw error;
+    }
+  }
+
+  // =============================================================================
+  // CORPORATE ORDER SYSTEM IMPLEMENTATION
+  // =============================================================================
+
+  async generateCorporateOrderNumber(): Promise<string> {
+    try {
+      // Get the current year and today's date
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const dateString = `${year}${month}${day}`;
+      
+      // Find the highest order number for today
+      const existingOrders = await db
+        .select({ orderNumber: corporateOrders.orderNumber })
+        .from(corporateOrders)
+        .where(like(corporateOrders.orderNumber, `HTC-CORP-${dateString}-%`))
+        .orderBy(desc(corporateOrders.orderNumber));
+      
+      let nextSequence = 1;
+      if (existingOrders.length > 0) {
+        // Extract the sequence number from the last order
+        const lastOrderNumber = existingOrders[0].orderNumber;
+        const sequencePart = lastOrderNumber.split('-').pop();
+        if (sequencePart) {
+          nextSequence = parseInt(sequencePart, 10) + 1;
+        }
+      }
+      
+      const sequenceString = String(nextSequence).padStart(3, '0');
+      return `HTC-CORP-${dateString}-${sequenceString}`;
+    } catch (error) {
+      logger.error('Error generating corporate order number', { error });
+      throw error;
+    }
+  }
+
+  async createCorporateOrder(orderData: InsertCorporateOrder): Promise<CorporateOrder> {
+    try {
+      const orderNumber = await this.generateCorporateOrderNumber();
+      const now = new Date().toISOString();
+      
+      const [order] = await db
+        .insert(corporateOrders)
+        .values({
+          ...orderData,
+          orderNumber,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .returning();
+      
+      logger.info('Corporate order created', { orderId: order.id, orderNumber });
+      return order;
+    } catch (error) {
+      logger.error('Error creating corporate order', { error, orderData });
+      throw error;
+    }
+  }
+
+  async getCorporateOrder(id: number): Promise<CorporateOrder | undefined> {
+    try {
+      return await db.query.corporateOrders.findFirst({
+        where: eq(corporateOrders.id, id),
+      });
+    } catch (error) {
+      logger.error('Error getting corporate order', { error, id });
+      throw error;
+    }
+  }
+
+  async getCorporateOrderByOrderNumber(orderNumber: string): Promise<CorporateOrder | undefined> {
+    try {
+      return await db.query.corporateOrders.findFirst({
+        where: eq(corporateOrders.orderNumber, orderNumber),
+      });
+    } catch (error) {
+      logger.error('Error getting corporate order by order number', { error, orderNumber });
+      throw error;
+    }
+  }
+
+  async getAllCorporateOrders(): Promise<CorporateOrder[]> {
+    try {
+      return await db.query.corporateOrders.findMany({
+        orderBy: [desc(corporateOrders.createdAt)],
+      });
+    } catch (error) {
+      logger.error('Error getting all corporate orders', { error });
+      throw error;
+    }
+  }
+
+  async updateCorporateOrder(id: number, orderData: Partial<InsertCorporateOrder>): Promise<CorporateOrder | undefined> {
+    try {
+      const [updatedOrder] = await db
+        .update(corporateOrders)
+        .set({
+          ...orderData,
+          updatedAt: new Date().toISOString(),
+        })
+        .where(eq(corporateOrders.id, id))
+        .returning();
+      
+      return updatedOrder;
+    } catch (error) {
+      logger.error('Error updating corporate order', { error, id, orderData });
+      throw error;
+    }
+  }
+
+  async deleteCorporateOrder(id: number): Promise<boolean> {
+    try {
+      const [deletedOrder] = await db
+        .delete(corporateOrders)
+        .where(eq(corporateOrders.id, id))
+        .returning();
+      
+      return !!deletedOrder;
+    } catch (error) {
+      logger.error('Error deleting corporate order', { error, id });
+      throw error;
+    }
+  }
+
+  // Corporate order items
+  async addCorporateOrderItem(itemData: InsertCorporateOrderItem): Promise<CorporateOrderItem> {
+    try {
+      const [item] = await db
+        .insert(corporateOrderItems)
+        .values({
+          ...itemData,
+          createdAt: new Date().toISOString(),
+        })
+        .returning();
+      
+      return item;
+    } catch (error) {
+      logger.error('Error adding corporate order item', { error, itemData });
+      throw error;
+    }
+  }
+
+  async getCorporateOrderItems(corporateOrderId: number): Promise<CorporateOrderItem[]> {
+    try {
+      return await db.query.corporateOrderItems.findMany({
+        where: eq(corporateOrderItems.corporateOrderId, corporateOrderId),
+        orderBy: [asc(corporateOrderItems.id)],
+      });
+    } catch (error) {
+      logger.error('Error getting corporate order items', { error, corporateOrderId });
+      throw error;
+    }
+  }
+
+  async updateCorporateOrderItem(id: number, itemData: Partial<InsertCorporateOrderItem>): Promise<CorporateOrderItem | undefined> {
+    try {
+      const [updatedItem] = await db
+        .update(corporateOrderItems)
+        .set(itemData)
+        .where(eq(corporateOrderItems.id, id))
+        .returning();
+      
+      return updatedItem;
+    } catch (error) {
+      logger.error('Error updating corporate order item', { error, id, itemData });
+      throw error;
+    }
+  }
+
+  async deleteCorporateOrderItem(id: number): Promise<boolean> {
+    try {
+      const [deletedItem] = await db
+        .delete(corporateOrderItems)
+        .where(eq(corporateOrderItems.id, id))
+        .returning();
+      
+      return !!deletedItem;
+    } catch (error) {
+      logger.error('Error deleting corporate order item', { error, id });
+      throw error;
+    }
+  }
+
+  // Corporate shipments
+  async createCorporateShipment(shipmentData: InsertCorporateShipment): Promise<CorporateShipment> {
+    try {
+      const now = new Date().toISOString();
+      const [shipment] = await db
+        .insert(corporateShipments)
+        .values({
+          ...shipmentData,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .returning();
+      
+      return shipment;
+    } catch (error) {
+      logger.error('Error creating corporate shipment', { error, shipmentData });
+      throw error;
+    }
+  }
+
+  async getCorporateShipments(corporateOrderId: number): Promise<CorporateShipment[]> {
+    try {
+      return await db.query.corporateShipments.findMany({
+        where: eq(corporateShipments.corporateOrderId, corporateOrderId),
+        orderBy: [asc(corporateShipments.id)],
+      });
+    } catch (error) {
+      logger.error('Error getting corporate shipments', { error, corporateOrderId });
+      throw error;
+    }
+  }
+
+  async getCorporateShipment(id: number): Promise<CorporateShipment | undefined> {
+    try {
+      return await db.query.corporateShipments.findFirst({
+        where: eq(corporateShipments.id, id),
+      });
+    } catch (error) {
+      logger.error('Error getting corporate shipment', { error, id });
+      throw error;
+    }
+  }
+
+  async updateCorporateShipment(id: number, shipmentData: Partial<InsertCorporateShipment>): Promise<CorporateShipment | undefined> {
+    try {
+      const [updatedShipment] = await db
+        .update(corporateShipments)
+        .set({
+          ...shipmentData,
+          updatedAt: new Date().toISOString(),
+        })
+        .where(eq(corporateShipments.id, id))
+        .returning();
+      
+      return updatedShipment;
+    } catch (error) {
+      logger.error('Error updating corporate shipment', { error, id, shipmentData });
+      throw error;
+    }
+  }
+
+  async deleteCorporateShipment(id: number): Promise<boolean> {
+    try {
+      const [deletedShipment] = await db
+        .delete(corporateShipments)
+        .where(eq(corporateShipments.id, id))
+        .returning();
+      
+      return !!deletedShipment;
+    } catch (error) {
+      logger.error('Error deleting corporate shipment', { error, id });
+      throw error;
+    }
+  }
+
+  // Corporate invoice line items
+  async addCorporateInvoiceLineItem(lineItemData: InsertCorporateInvoiceLineItem): Promise<CorporateInvoiceLineItem> {
+    try {
+      const [lineItem] = await db
+        .insert(corporateInvoiceLineItems)
+        .values({
+          ...lineItemData,
+          createdAt: new Date().toISOString(),
+        })
+        .returning();
+      
+      return lineItem;
+    } catch (error) {
+      logger.error('Error adding corporate invoice line item', { error, lineItemData });
+      throw error;
+    }
+  }
+
+  async getCorporateInvoiceLineItems(corporateOrderId: number): Promise<CorporateInvoiceLineItem[]> {
+    try {
+      return await db.query.corporateInvoiceLineItems.findMany({
+        where: eq(corporateInvoiceLineItems.corporateOrderId, corporateOrderId),
+        orderBy: [asc(corporateInvoiceLineItems.id)],
+      });
+    } catch (error) {
+      logger.error('Error getting corporate invoice line items', { error, corporateOrderId });
+      throw error;
+    }
+  }
+
+  async updateCorporateInvoiceLineItem(id: number, lineItemData: Partial<InsertCorporateInvoiceLineItem>): Promise<CorporateInvoiceLineItem | undefined> {
+    try {
+      const [updatedLineItem] = await db
+        .update(corporateInvoiceLineItems)
+        .set(lineItemData)
+        .where(eq(corporateInvoiceLineItems.id, id))
+        .returning();
+      
+      return updatedLineItem;
+    } catch (error) {
+      logger.error('Error updating corporate invoice line item', { error, id, lineItemData });
+      throw error;
+    }
+  }
+
+  async deleteCorporateInvoiceLineItem(id: number): Promise<boolean> {
+    try {
+      const [deletedLineItem] = await db
+        .delete(corporateInvoiceLineItems)
+        .where(eq(corporateInvoiceLineItems.id, id))
+        .returning();
+      
+      return !!deletedLineItem;
+    } catch (error) {
+      logger.error('Error deleting corporate invoice line item', { error, id });
+      throw error;
+    }
+  }
+
+  // Corporate order management operations
+  async getCorporateOrderWithDetails(id: number): Promise<CorporateOrder & {
+    items: CorporateOrderItem[];
+    shipments: CorporateShipment[];
+    invoiceLineItems: CorporateInvoiceLineItem[];
+    createdByAdmin: User;
+  } | undefined> {
+    try {
+      const order = await db.query.corporateOrders.findFirst({
+        where: eq(corporateOrders.id, id),
+        with: {
+          items: true,
+          shipments: true,
+          invoiceLineItems: true,
+          createdByAdmin: true,
+        },
+      });
+      
+      return order;
+    } catch (error) {
+      logger.error('Error getting corporate order with details', { error, id });
+      throw error;
+    }
+  }
+
+  async updateCorporateOrderStatus(id: number, status: string): Promise<boolean> {
+    try {
+      const [updatedOrder] = await db
+        .update(corporateOrders)
+        .set({
+          status,
+          updatedAt: new Date().toISOString(),
+        })
+        .where(eq(corporateOrders.id, id))
+        .returning();
+      
+      return !!updatedOrder;
+    } catch (error) {
+      logger.error('Error updating corporate order status', { error, id, status });
+      throw error;
+    }
+  }
+
+  async updateCorporateOrderPaymentStatus(id: number, paymentStatus: string, paymentMethod?: string): Promise<boolean> {
+    try {
+      const updateData: any = {
+        paymentStatus,
+        updatedAt: new Date().toISOString(),
+      };
+      
+      if (paymentMethod) {
+        updateData.paymentMethod = paymentMethod;
+      }
+      
+      const [updatedOrder] = await db
+        .update(corporateOrders)
+        .set(updateData)
+        .where(eq(corporateOrders.id, id))
+        .returning();
+      
+      return !!updatedOrder;
+    } catch (error) {
+      logger.error('Error updating corporate order payment status', { error, id, paymentStatus, paymentMethod });
+      throw error;
+    }
+  }
+
+  async calculateCorporateOrderTotals(id: number): Promise<{ 
+    itemsValue: number; 
+    packagingCosts: number; 
+    shippingCosts: number; 
+    totalAmount: number; 
+  }> {
+    try {
+      // Get order items
+      const items = await this.getCorporateOrderItems(id);
+      const itemsValue = items.reduce((sum, item) => sum + Number(item.totalPrice), 0);
+      
+      // Get invoice line items
+      const lineItems = await this.getCorporateInvoiceLineItems(id);
+      
+      const packagingCosts = lineItems
+        .filter(item => item.lineItemType === 'packaging')
+        .reduce((sum, item) => sum + Number(item.totalCost), 0);
+      
+      const shippingCosts = lineItems
+        .filter(item => item.lineItemType === 'shipping')
+        .reduce((sum, item) => sum + Number(item.totalCost), 0);
+      
+      const additionalCosts = lineItems
+        .filter(item => item.lineItemType === 'manual')
+        .reduce((sum, item) => sum + Number(item.totalCost), 0);
+      
+      const totalAmount = itemsValue + packagingCosts + shippingCosts + additionalCosts;
+      
+      // Update the order totals
+      await db
+        .update(corporateOrders)
+        .set({
+          totalItemsValue: itemsValue.toFixed(2),
+          totalPackagingCosts: packagingCosts.toFixed(2),
+          totalShippingCosts: shippingCosts.toFixed(2),
+          totalInvoiceAmount: totalAmount.toFixed(2),
+          updatedAt: new Date().toISOString(),
+        })
+        .where(eq(corporateOrders.id, id));
+      
+      return {
+        itemsValue,
+        packagingCosts,
+        shippingCosts,
+        totalAmount,
+      };
+    } catch (error) {
+      logger.error('Error calculating corporate order totals', { error, id });
       throw error;
     }
   }

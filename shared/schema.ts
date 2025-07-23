@@ -1473,6 +1473,101 @@ export const systemSettings = pgTable("systemSettings", {
   updatedAt: text("updatedAt").default(String(new Date().toISOString())).notNull(),
 });
 
+// =============================================================================
+// CORPORATE ORDER SYSTEM TABLES
+// =============================================================================
+
+// Corporate Orders table - main corporate order tracking
+export const corporateOrders = pgTable("corporateOrders", {
+  id: serial("id").primaryKey(),
+  orderNumber: text("orderNumber").notNull().unique(),
+  corporateCompanyName: text("corporateCompanyName").notNull(),
+  corporateContactName: text("corporateContactName").notNull(),
+  corporateContactEmail: text("corporateContactEmail").notNull(),
+  corporateContactPhone: text("corporateContactPhone"),
+  status: text("status").notNull().default("pending"), // pending, invoice_sent, paid, processing, completed, cancelled
+  totalItemsValue: decimal("totalItemsValue", { precision: 10, scale: 2 }).notNull().default("0"),
+  totalPackagingCosts: decimal("totalPackagingCosts", { precision: 10, scale: 2 }).notNull().default("0"),
+  totalShippingCosts: decimal("totalShippingCosts", { precision: 10, scale: 2 }).notNull().default("0"),
+  totalInvoiceAmount: decimal("totalInvoiceAmount", { precision: 10, scale: 2 }).notNull().default("0"),
+  paymentStatus: text("paymentStatus").notNull().default("pending"), // pending, paid, failed
+  paymentMethod: text("paymentMethod"), // eft, card
+  invoicePath: text("invoicePath"), // Path to generated invoice PDF
+  yocoCheckoutId: text("yocoCheckoutId"), // Yoco checkout session ID
+  yocoPaymentId: text("yocoPaymentId"), // Yoco payment ID after successful payment
+  notes: text("notes"), // Admin notes
+  createdAt: text("createdAt").default(String(new Date().toISOString())).notNull(),
+  updatedAt: text("updatedAt").default(String(new Date().toISOString())).notNull(),
+  createdByAdminId: integer("createdByAdminId").notNull().references(() => users.id),
+}, (table) => {
+  return {
+    orderNumberIdx: index("corporateOrders_orderNumber_idx").on(table.orderNumber),
+    statusIdx: index("corporateOrders_status_idx").on(table.status),
+    paymentStatusIdx: index("corporateOrders_paymentStatus_idx").on(table.paymentStatus),
+    createdAtIdx: index("corporateOrders_createdAt_idx").on(table.createdAt),
+  };
+});
+
+// Corporate Order Items table - products in the corporate order
+export const corporateOrderItems = pgTable("corporateOrderItems", {
+  id: serial("id").primaryKey(),
+  corporateOrderId: integer("corporateOrderId").notNull().references(() => corporateOrders.id, { onDelete: "cascade" }),
+  productId: integer("productId").notNull().references(() => products.id),
+  productName: text("productName").notNull(),
+  productSku: text("productSku"),
+  productImageUrl: text("productImageUrl"),
+  quantity: integer("quantity").notNull(),
+  unitPrice: decimal("unitPrice", { precision: 10, scale: 2 }).notNull(),
+  totalPrice: decimal("totalPrice", { precision: 10, scale: 2 }).notNull(),
+  createdAt: text("createdAt").default(String(new Date().toISOString())).notNull(),
+}, (table) => {
+  return {
+    corporateOrderIdIdx: index("corporateOrderItems_corporateOrderId_idx").on(table.corporateOrderId),
+    productIdIdx: index("corporateOrderItems_productId_idx").on(table.productId),
+  };
+});
+
+// Corporate Shipments table - individual employee shipments
+export const corporateShipments = pgTable("corporateShipments", {
+  id: serial("id").primaryKey(),
+  corporateOrderId: integer("corporateOrderId").notNull().references(() => corporateOrders.id, { onDelete: "cascade" }),
+  employeeName: text("employeeName").notNull(),
+  employeeAddress: text("employeeAddress").notNull(),
+  employeeCity: text("employeeCity").notNull(),
+  employeePostalCode: text("employeePostalCode").notNull(),
+  packageContents: jsonb("packageContents").notNull().default('[]'), // Array of {productId, productName, quantity}
+  pudoShippingCost: decimal("pudoShippingCost", { precision: 10, scale: 2 }).notNull().default("0"),
+  pudoTrackingNumber: text("pudoTrackingNumber"),
+  shipmentStatus: text("shipmentStatus").notNull().default("pending"), // pending, shipped, delivered, cancelled
+  notes: text("notes"), // Admin notes for this shipment
+  createdAt: text("createdAt").default(String(new Date().toISOString())).notNull(),
+  updatedAt: text("updatedAt").default(String(new Date().toISOString())).notNull(),
+}, (table) => {
+  return {
+    corporateOrderIdIdx: index("corporateShipments_corporateOrderId_idx").on(table.corporateOrderId),
+    shipmentStatusIdx: index("corporateShipments_shipmentStatus_idx").on(table.shipmentStatus),
+    createdAtIdx: index("corporateShipments_createdAt_idx").on(table.createdAt),
+  };
+});
+
+// Corporate Invoice Line Items table - additional costs and manual entries
+export const corporateInvoiceLineItems = pgTable("corporateInvoiceLineItems", {
+  id: serial("id").primaryKey(),
+  corporateOrderId: integer("corporateOrderId").notNull().references(() => corporateOrders.id, { onDelete: "cascade" }),
+  lineItemType: text("lineItemType").notNull(), // 'packaging', 'shipping', 'manual', 'item'
+  description: text("description").notNull(),
+  quantity: integer("quantity").notNull().default(1),
+  unitCost: decimal("unitCost", { precision: 10, scale: 2 }).notNull(),
+  totalCost: decimal("totalCost", { precision: 10, scale: 2 }).notNull(),
+  relatedShipmentId: integer("relatedShipmentId").references(() => corporateShipments.id), // For shipping line items
+  createdAt: text("createdAt").default(String(new Date().toISOString())).notNull(),
+}, (table) => {
+  return {
+    corporateOrderIdIdx: index("corporateInvoiceLineItems_corporateOrderId_idx").on(table.corporateOrderId),
+    lineItemTypeIdx: index("corporateInvoiceLineItems_lineItemType_idx").on(table.lineItemType),
+  };
+});
+
 // Credit system insert schemas
 export const insertCustomerCreditSchema = createInsertSchema(customerCredits).omit({
   id: true,
@@ -1491,6 +1586,41 @@ export const insertOrderItemSupplierStatusSchema = createInsertSchema(orderItemS
   updatedAt: true,
 });
 
+// Corporate Order System insert schemas
+export const insertCorporateOrderSchema = createInsertSchema(corporateOrders).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  orderNumber: true, // Generated automatically
+}).extend({
+  status: z.enum(["pending", "invoice_sent", "paid", "processing", "completed", "cancelled"]).default("pending"),
+  paymentStatus: z.enum(["pending", "paid", "failed"]).default("pending"),
+  paymentMethod: z.enum(["eft", "card"]).nullable().optional(),
+  yocoCheckoutId: z.string().nullable().optional(),
+  yocoPaymentId: z.string().nullable().optional(),
+});
+
+export const insertCorporateOrderItemSchema = createInsertSchema(corporateOrderItems).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCorporateShipmentSchema = createInsertSchema(corporateShipments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  packageContents: z.array(z.record(z.any())).default([]),
+  shipmentStatus: z.enum(["pending", "shipped", "delivered", "cancelled"]).default("pending"),
+});
+
+export const insertCorporateInvoiceLineItemSchema = createInsertSchema(corporateInvoiceLineItems).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  lineItemType: z.enum(["packaging", "shipping", "manual", "item"]),
+});
+
 // Credit system types
 export type CustomerCredit = typeof customerCredits.$inferSelect;
 export type InsertCustomerCredit = z.infer<typeof insertCustomerCreditSchema>;
@@ -1500,6 +1630,19 @@ export type InsertCreditTransaction = z.infer<typeof insertCreditTransactionSche
 
 export type OrderItemSupplierStatus = typeof orderItemSupplierStatus.$inferSelect;
 export type InsertOrderItemSupplierStatus = z.infer<typeof insertOrderItemSupplierStatusSchema>;
+
+// Corporate Order System types
+export type CorporateOrder = typeof corporateOrders.$inferSelect;
+export type InsertCorporateOrder = z.infer<typeof insertCorporateOrderSchema>;
+
+export type CorporateOrderItem = typeof corporateOrderItems.$inferSelect;
+export type InsertCorporateOrderItem = z.infer<typeof insertCorporateOrderItemSchema>;
+
+export type CorporateShipment = typeof corporateShipments.$inferSelect;
+export type InsertCorporateShipment = z.infer<typeof insertCorporateShipmentSchema>;
+
+export type CorporateInvoiceLineItem = typeof corporateInvoiceLineItems.$inferSelect;
+export type InsertCorporateInvoiceLineItem = z.infer<typeof insertCorporateInvoiceLineItemSchema>;
 
 // System Settings types and schemas
 export type SystemSetting = typeof systemSettings.$inferSelect;
@@ -1575,5 +1718,46 @@ export const repPaymentsRelations = relations(repPayments, ({ one }) => ({
   rep: one(salesReps, {
     fields: [repPayments.repId],
     references: [salesReps.id]
+  })
+}));
+
+// Corporate Order System relations
+export const corporateOrdersRelations = relations(corporateOrders, ({ one, many }) => ({
+  createdByAdmin: one(users, {
+    fields: [corporateOrders.createdByAdminId],
+    references: [users.id]
+  }),
+  items: many(corporateOrderItems),
+  shipments: many(corporateShipments),
+  invoiceLineItems: many(corporateInvoiceLineItems)
+}));
+
+export const corporateOrderItemsRelations = relations(corporateOrderItems, ({ one }) => ({
+  corporateOrder: one(corporateOrders, {
+    fields: [corporateOrderItems.corporateOrderId],
+    references: [corporateOrders.id]
+  }),
+  product: one(products, {
+    fields: [corporateOrderItems.productId],
+    references: [products.id]
+  })
+}));
+
+export const corporateShipmentsRelations = relations(corporateShipments, ({ one, many }) => ({
+  corporateOrder: one(corporateOrders, {
+    fields: [corporateShipments.corporateOrderId],
+    references: [corporateOrders.id]
+  }),
+  invoiceLineItems: many(corporateInvoiceLineItems)
+}));
+
+export const corporateInvoiceLineItemsRelations = relations(corporateInvoiceLineItems, ({ one }) => ({
+  corporateOrder: one(corporateOrders, {
+    fields: [corporateInvoiceLineItems.corporateOrderId],
+    references: [corporateOrders.id]
+  }),
+  relatedShipment: one(corporateShipments, {
+    fields: [corporateInvoiceLineItems.relatedShipmentId],
+    references: [corporateShipments.id]
   })
 }));
