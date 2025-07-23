@@ -53,7 +53,6 @@ import { registerAuthTestRoutes } from "./auth-test-routes";
 import { registerDatabaseTestRoutes } from "./database-test-routes";
 import { unifiedEmailService } from "./unified-email-service";
 import { emailIntegrationRoutes } from "./email-integration-routes";
-import corporateOrderRoutes from "./corporate-order-routes";
 import { emailTestRoutes } from "./email-test-routes";
 import { emailVerificationRoutes } from "./email-verification-endpoint";
 import { registerApiTestRoutes } from "./api-test-routes";
@@ -259,9 +258,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register admin routes for order management
   app.use("/api/admin", adminRoutes);
-  
-  // Register corporate order routes for bulk order management
-  app.use("/api/admin", corporateOrderRoutes);
   
   // Register authentication testing routes
   registerAuthTestRoutes(app);

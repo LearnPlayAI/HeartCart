@@ -81,8 +81,6 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
     const payment = event.payload;
     const checkoutId = payment.metadata.checkoutId;
     const tempCheckoutId = payment.metadata.tempCheckoutId;
-    const orderType = payment.metadata.orderType || 'regular'; // 'regular' or 'corporate'
-    const corporateOrderId = payment.metadata.corporateOrderId ? parseInt(payment.metadata.corporateOrderId) : null;
     const customerId = parseInt(payment.metadata.customerId);
     const customerEmail = payment.metadata.customerEmail;
     const customerFullName = payment.metadata.customerFullName; // Extract customer's full name from metadata
@@ -91,53 +89,10 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
     
     console.log('📋 WEBHOOK: Extracted payment metadata:', {
       checkoutId,
-      orderType,
-      corporateOrderId,
       customerId,
       customerEmail,
       hasCartData: !!cartDataStr
     });
-
-    // Handle corporate order payment
-    if (orderType === 'corporate' && corporateOrderId) {
-      try {
-        // Get corporate order
-        const corporateOrder = await storage.getCorporateOrder(corporateOrderId);
-        if (!corporateOrder) {
-          return res.status(400).json({ error: 'Corporate order not found' });
-        }
-
-        // Update payment status to paid
-        await storage.updateCorporateOrderPaymentStatus(corporateOrderId, 'paid', 'card');
-        
-        // Send confirmation email
-        const { UnifiedEmailService } = await import('./unified-email-service.js');
-        const emailService = new UnifiedEmailService();
-        
-        // Create payment confirmation data
-        const paymentData = {
-          orderId: corporateOrder.id,
-          orderNumber: corporateOrder.orderNumber,
-          customerEmail: corporateOrder.contactEmail,
-          customerName: corporateOrder.contactPerson,
-          totalAmount: parseFloat(corporateOrder.totalInvoiceAmount),
-          paymentMethod: 'card',
-          transactionId: payment.id
-        };
-
-        await emailService.sendPaymentConfirmationEmail(paymentData);
-
-        console.log('✅ WEBHOOK: Corporate order payment processed successfully:', corporateOrderId);
-        return res.status(200).json({ 
-          received: true, 
-          corporateOrderId,
-          message: 'Corporate payment processed successfully' 
-        });
-      } catch (error) {
-        console.error('❌ WEBHOOK: Failed to process corporate payment:', error);
-        return res.status(500).json({ error: 'Failed to process corporate payment' });
-      }
-    }
 
 
 

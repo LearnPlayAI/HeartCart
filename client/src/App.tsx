@@ -73,7 +73,6 @@ import CustomerPromotionsPage from "@/pages/promotions";
 import FeaturedPage from "@/pages/featured";
 import UserAdminPageFixed from "@/pages/admin/users-fixed";
 import SalesRepsPage from "@/pages/admin/sales-reps";
-import CorporatePaymentPage from "@/pages/corporate-payment";
 import CreateSalesRepPage from "@/pages/admin/sales-reps/create";
 import EditSalesRepPage from "@/pages/admin/sales-reps/edit";
 import SalesRepCommissionsPage from "@/pages/admin/sales-reps/commissions";
@@ -245,12 +244,6 @@ function App() {
                   <AdminProtectedRoute path="/admin/promotions/:id/products" component={PromotionProductsPage} />
                   <AdminProtectedRoute path="/admin/orders" component={AdminOrders} />
                   <AdminProtectedRoute path="/admin/orders/:id" component={AdminOrderDetail} />
-                  <AdminProtectedRoute path="/admin/corporate-orders" component={React.lazy(() => import("@/pages/admin/corporate-orders"))} />
-                  <AdminProtectedRoute path="/admin/corporate-orders/create" component={React.lazy(() => import("@/pages/admin/corporate-orders-create"))} />
-                  <AdminProtectedRoute path="/admin/corporate-orders/:orderId" component={React.lazy(() => import("@/pages/admin/corporate-order-detail"))} />
-                  <AdminProtectedRoute path="/admin/corporate-orders/:orderId/edit" component={React.lazy(() => import("@/pages/admin/corporate-orders-edit"))} />
-                  <AdminProtectedRoute path="/admin/corporate-orders/:orderId/add-item" component={React.lazy(() => import("@/pages/admin/corporate-order-add-item"))} />
-                  <AdminProtectedRoute path="/admin/corporate-orders/:orderId/add-shipment" component={React.lazy(() => import("@/pages/admin/corporate-order-add-shipment"))} />
                   <AdminProtectedRoute path="/admin/supplier-orders" component={SupplierOrders} />
                   <AdminProtectedRoute path="/admin/user-carts" component={UserCartsPage} />
                   <AdminProtectedRoute path="/admin/user-carts/:userId" component={UserCartDetailPage} />
@@ -314,10 +307,6 @@ function App() {
                           <Route path="/verify-email"><VerifyEmail /></Route>
                           <Route path="/terms-and-conditions"><TermsAndConditions /></Route>
                           <Route path="/privacy-policy"><PrivacyPolicy /></Route>
-                          
-                          {/* Corporate Payment Page - Public Access */}
-                          <Route path="/corporate-payment/:corporateOrderId"><CorporatePaymentPage /></Route>
-                          
                           <Route><NotFound /></Route>
                         </Switch>
                       </main>
