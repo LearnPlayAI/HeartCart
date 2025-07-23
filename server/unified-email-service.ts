@@ -59,6 +59,204 @@ export class UnifiedEmailService {
     return crypto.randomBytes(32).toString('hex');
   }
 
+  /**
+   * Send corporate payment options email with EFT details and Yoco payment link
+   */
+  async sendCorporatePaymentOptionsEmail(corporateOrder: any): Promise<boolean> {
+    if (!this.isInitialized) {
+      console.warn('⚠️ Email service not initialized, cannot send corporate payment options email');
+      return false;
+    }
+
+    try {
+      const recipient = new Recipient(corporateOrder.contactEmail, corporateOrder.contactPerson);
+      
+      // Calculate total amount
+      const totalAmount = parseFloat(corporateOrder.totalInvoiceAmount);
+      
+      // Generate Yoco payment link (will be implemented)
+      const yocoPaymentLink = `https://heartcart.shop/corporate-payment/${corporateOrder.id}`;
+      
+      // Create comprehensive email content
+      const emailHtml = this.createCorporatePaymentOptionsEmailTemplate(corporateOrder, yocoPaymentLink);
+      
+      const emailParams = new EmailParams()
+        .setFrom(this.fromSender)
+        .setTo([recipient])
+        .setSubject(`Payment Options for Corporate Order ${corporateOrder.orderNumber}`)
+        .setHtml(emailHtml)
+        .setSettings({
+          track_clicks: false,
+          track_opens: true
+        });
+
+      const response = await this.mailerSend.email.send(emailParams);
+      
+      // Log email in database
+      await this.logEmail(
+        corporateOrder.contactEmail,
+        'corporate_payment_options',
+        `Payment options for corporate order ${corporateOrder.orderNumber}`,
+        JSON.stringify(corporateOrder),
+        'sent'
+      );
+
+      console.log('✅ Corporate payment options email sent successfully');
+      return true;
+    } catch (error) {
+      console.error('❌ Failed to send corporate payment options email:', error);
+      
+      await this.logEmail(
+        corporateOrder.contactEmail,
+        'corporate_payment_options',
+        `Payment options for corporate order ${corporateOrder.orderNumber}`,
+        JSON.stringify(corporateOrder),
+        'failed',
+        error instanceof Error ? error.message : 'Unknown error'
+      );
+      
+      return false;
+    }
+  }
+
+  private createCorporatePaymentOptionsEmailTemplate(order: any, yocoPaymentLink: string): string {
+    const totalAmount = parseFloat(order.totalInvoiceAmount);
+    
+    // Generate items list
+    const itemsHtml = order.items.map((item: any) => `
+      <tr style="border-bottom: 1px solid #e5e7eb;">
+        <td style="padding: 12px; text-align: left;">${item.productName}</td>
+        <td style="padding: 12px; text-align: center;">${item.quantity}</td>
+        <td style="padding: 12px; text-align: center;">${item.employeeName}</td>
+        <td style="padding: 12px; text-align: right;">R ${parseFloat(item.totalPrice).toFixed(2)}</td>
+      </tr>
+    `).join('');
+
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Corporate Order Payment Options</title>
+      </head>
+      <body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: Arial, sans-serif;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: white; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+          
+          <!-- Header -->
+          <div style="background: linear-gradient(135deg, ${HEARTCART_COLORS.HOT_PINK} 0%, ${HEARTCART_COLORS.DARK_PINK} 100%); padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">HeartCart</h1>
+            <p style="color: white; margin: 10px 0 0 0; font-size: 16px;">Corporate Order Payment Options</p>
+          </div>
+          
+          <!-- Content -->
+          <div style="padding: 30px;">
+            <h2 style="color: ${HEARTCART_COLORS.DARK_GRAY}; margin: 0 0 20px 0;">Dear ${order.contactPerson},</h2>
+            
+            <p style="color: ${HEARTCART_COLORS.GRAY}; line-height: 1.6; margin: 0 0 20px 0;">
+              Your corporate order <strong>${order.orderNumber}</strong> for <strong>${order.companyName}</strong> is ready for payment. 
+              Please review the order details below and choose your preferred payment method.
+            </p>
+
+            <!-- Order Summary -->
+            <div style="background-color: ${HEARTCART_COLORS.LIGHT_GRAY}; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <h3 style="color: ${HEARTCART_COLORS.DARK_GRAY}; margin: 0 0 15px 0;">Order Summary</h3>
+              <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                  <tr style="background-color: ${HEARTCART_COLORS.HOT_PINK}; color: white;">
+                    <th style="padding: 12px; text-align: left; border-radius: 4px 0 0 4px;">Product</th>
+                    <th style="padding: 12px; text-align: center;">Qty</th>
+                    <th style="padding: 12px; text-align: center;">Employee</th>
+                    <th style="padding: 12px; text-align: right; border-radius: 0 4px 4px 0;">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${itemsHtml}
+                </tbody>
+              </table>
+              
+              <div style="margin-top: 15px; padding-top: 15px; border-top: 2px solid ${HEARTCART_COLORS.HOT_PINK};">
+                <div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: bold; color: ${HEARTCART_COLORS.DARK_GRAY};">
+                  <span>Total Amount: R ${totalAmount.toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Payment Options -->
+            <h3 style="color: ${HEARTCART_COLORS.DARK_GRAY}; margin: 30px 0 20px 0;">Choose Your Payment Method</h3>
+            
+            <!-- EFT Payment Option -->
+            <div style="border: 2px solid ${HEARTCART_COLORS.HOT_PINK}; border-radius: 8px; padding: 20px; margin: 20px 0;">
+              <h4 style="color: ${HEARTCART_COLORS.HOT_PINK}; margin: 0 0 15px 0;">Option 1: Bank Transfer (EFT)</h4>
+              <div style="background-color: #fff; padding: 15px; border-radius: 6px; border: 1px solid #e5e7eb;">
+                <p style="margin: 5px 0; color: ${HEARTCART_COLORS.DARK_GRAY};"><strong>Bank:</strong> Capitec Business</p>
+                <p style="margin: 5px 0; color: ${HEARTCART_COLORS.DARK_GRAY};"><strong>Account Name:</strong> Tee Me You</p>
+                <p style="margin: 5px 0; color: ${HEARTCART_COLORS.DARK_GRAY};"><strong>Account Type:</strong> Transact</p>
+                <p style="margin: 5px 0; color: ${HEARTCART_COLORS.DARK_GRAY};"><strong>Account Number:</strong> 1053816278</p>
+                <p style="margin: 5px 0; color: ${HEARTCART_COLORS.DARK_GRAY};"><strong>Reference:</strong> ${order.orderNumber}</p>
+              </div>
+              <p style="color: ${HEARTCART_COLORS.GRAY}; font-size: 14px; margin: 10px 0 0 0;">
+                After making the transfer, please email your proof of payment to sales@heartcart.shop
+              </p>
+            </div>
+            
+            <!-- Card Payment Option -->
+            <div style="border: 2px solid ${HEARTCART_COLORS.SUCCESS}; border-radius: 8px; padding: 20px; margin: 20px 0;">
+              <h4 style="color: ${HEARTCART_COLORS.SUCCESS}; margin: 0 0 15px 0;">Option 2: Secure Card Payment</h4>
+              <p style="color: ${HEARTCART_COLORS.GRAY}; margin: 0 0 15px 0;">
+                Pay securely online with your credit or debit card. Your payment will be processed immediately.
+              </p>
+              <div style="text-align: center;">
+                <a href="${yocoPaymentLink}" 
+                   style="display: inline-block; background: linear-gradient(135deg, ${HEARTCART_COLORS.SUCCESS} 0%, #059669 100%); 
+                          color: white; text-decoration: none; padding: 15px 30px; border-radius: 8px; 
+                          font-weight: bold; font-size: 16px;">
+                  Pay Now with Card
+                </a>
+              </div>
+            </div>
+
+            <!-- Employee Details Request -->
+            <div style="background-color: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 20px; margin: 30px 0;">
+              <h4 style="color: #92400e; margin: 0 0 15px 0;">📋 Employee Details Required</h4>
+              <p style="color: #92400e; margin: 0 0 10px 0;">
+                To ensure accurate delivery, please provide the following details for each employee:
+              </p>
+              <ul style="color: #92400e; margin: 0; padding-left: 20px;">
+                <li>Full Name and Surname</li>
+                <li>Phone Number</li>
+                <li>Complete Delivery Address</li>
+              </ul>
+              <p style="color: #92400e; margin: 15px 0 0 0; font-size: 14px;">
+                Please email these details to sales@heartcart.shop after making your payment.
+              </p>
+            </div>
+
+            <p style="color: ${HEARTCART_COLORS.GRAY}; line-height: 1.6; margin: 20px 0;">
+              If you have any questions about your order or need assistance with payment, 
+              please don't hesitate to contact us at sales@heartcart.shop.
+            </p>
+            
+            <p style="color: ${HEARTCART_COLORS.GRAY}; margin: 20px 0 0 0;">
+              Best regards,<br>
+              <strong style="color: ${HEARTCART_COLORS.HOT_PINK};">The HeartCart Team</strong>
+            </p>
+          </div>
+          
+          <!-- Footer -->
+          <div style="background-color: ${HEARTCART_COLORS.LIGHT_GRAY}; padding: 20px; text-align: center; border-radius: 0 0 8px 8px;">
+            <p style="color: ${HEARTCART_COLORS.GRAY}; margin: 0; font-size: 14px;">
+              HeartCart | For the Love of Shopping<br>
+              sales@heartcart.shop | heartcart.shop
+            </p>
+          </div>
+          
+        </div>
+      </body>
+      </html>
+    `;
+  }
+
   async createPasswordResetToken(userId: number, email: string): Promise<{ token: string; expires: Date }> {
     const token = this.generateSecureToken();
     // Create token that expires in 1 hour SAST time, but store as UTC in database

@@ -1522,6 +1522,7 @@ export const corporateOrderItems = pgTable("corporateOrderItems", {
   employeeName: text("employeeName").notNull(),
   employeeEmail: text("employeeEmail").notNull(),
   employeePhone: text("employeePhone"),
+  employeeAddress: text("employeeAddress"),
   size: text("size"),
   color: text("color"),
   attributeSelections: json("attributeSelections"),

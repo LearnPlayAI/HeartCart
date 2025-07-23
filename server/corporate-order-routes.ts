@@ -74,6 +74,140 @@ router.post('/corporate-orders', isAdmin, asyncHandler(async (req, res) => {
   }
 }));
 
+// =============================================================================
+// CORPORATE ORDER ITEM ROUTES
+// =============================================================================
+
+// Add item to corporate order (admin only)
+router.post('/corporate-orders/:id/items', isAdmin, asyncHandler(async (req, res) => {
+  try {
+    const corporateOrderId = parseInt(req.params.id);
+    if (isNaN(corporateOrderId)) {
+      return sendError(res, 'Invalid corporate order ID', 400);
+    }
+
+    // Verify order exists
+    const order = await storage.getCorporateOrder(corporateOrderId);
+    if (!order) {
+      return sendError(res, 'Corporate order not found', 404);
+    }
+
+    const itemData = insertCorporateOrderItemSchema.parse({
+      ...req.body,
+      corporateOrderId
+    });
+
+    const item = await storage.addCorporateOrderItem(itemData);
+    logger.info('Corporate order item added', { itemId: item.id, corporateOrderId });
+    
+    sendSuccess(res, { item });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return sendError(res, 'Invalid item data', 400, 'VALIDATION_ERROR', error.errors);
+    }
+    logger.error('Error adding corporate order item', { error, body: req.body });
+    sendError(res, 'Failed to add item to corporate order', 500);
+  }
+}));
+
+// Get all items for a corporate order (admin only)
+router.get('/corporate-orders/:id/items', isAdmin, asyncHandler(async (req, res) => {
+  try {
+    const corporateOrderId = parseInt(req.params.id);
+    if (isNaN(corporateOrderId)) {
+      return sendError(res, 'Invalid corporate order ID', 400);
+    }
+
+    const items = await storage.getCorporateOrderItems(corporateOrderId);
+    sendSuccess(res, { items });
+  } catch (error) {
+    logger.error('Error getting corporate order items', { error, corporateOrderId: req.params.id });
+    sendError(res, 'Failed to retrieve corporate order items', 500);
+  }
+}));
+
+// Update corporate order item (admin only)
+router.put('/corporate-orders/:orderId/items/:itemId', isAdmin, asyncHandler(async (req, res) => {
+  try {
+    const itemId = parseInt(req.params.itemId);
+    if (isNaN(itemId)) {
+      return sendError(res, 'Invalid item ID', 400);
+    }
+
+    const updateData = insertCorporateOrderItemSchema.partial().parse(req.body);
+    const item = await storage.updateCorporateOrderItem(itemId, updateData);
+    
+    if (!item) {
+      return sendError(res, 'Corporate order item not found', 404);
+    }
+
+    logger.info('Corporate order item updated', { itemId });
+    sendSuccess(res, { item });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return sendError(res, 'Invalid item data', 400, 'VALIDATION_ERROR', error.errors);
+    }
+    logger.error('Error updating corporate order item', { error, itemId: req.params.itemId });
+    sendError(res, 'Failed to update corporate order item', 500);
+  }
+}));
+
+// Delete corporate order item (admin only)
+router.delete('/corporate-orders/:orderId/items/:itemId', isAdmin, asyncHandler(async (req, res) => {
+  try {
+    const itemId = parseInt(req.params.itemId);
+    if (isNaN(itemId)) {
+      return sendError(res, 'Invalid item ID', 400);
+    }
+
+    const success = await storage.deleteCorporateOrderItem(itemId);
+    if (!success) {
+      return sendError(res, 'Corporate order item not found', 404);
+    }
+
+    logger.info('Corporate order item deleted', { itemId });
+    sendSuccess(res, { message: 'Item deleted successfully' });
+  } catch (error) {
+    logger.error('Error deleting corporate order item', { error, itemId: req.params.itemId });
+    sendError(res, 'Failed to delete corporate order item', 500);
+  }
+}));
+
+// Send payment options email to customer (admin only)
+router.post('/corporate-orders/:id/send-payment-options', isAdmin, asyncHandler(async (req, res) => {
+  try {
+    const corporateOrderId = parseInt(req.params.id);
+    if (isNaN(corporateOrderId)) {
+      return sendError(res, 'Invalid corporate order ID', 400);
+    }
+
+    const order = await storage.getCorporateOrderWithDetails(corporateOrderId);
+    if (!order) {
+      return sendError(res, 'Corporate order not found', 404);
+    }
+
+    if (!order.items || order.items.length === 0) {
+      return sendError(res, 'Cannot send payment options - no items in order', 400);
+    }
+
+    // Import unified email service
+    const { UnifiedEmailService } = await import('./unified-email-service.js');
+    const emailService = new UnifiedEmailService();
+
+    // Send corporate payment options email
+    await emailService.sendCorporatePaymentOptionsEmail(order);
+
+    // Update order status to indicate email has been sent
+    await storage.updateCorporateOrderStatus(corporateOrderId, 'invoice_sent');
+
+    logger.info('Corporate payment options email sent', { corporateOrderId, customerEmail: order.contactEmail });
+    sendSuccess(res, { message: 'Payment options email sent successfully' });
+  } catch (error) {
+    logger.error('Error sending payment options email', { error, corporateOrderId: req.params.id });
+    sendError(res, 'Failed to send payment options email', 500);
+  }
+}));
+
 // Update corporate order (admin only)
 router.patch('/corporate-orders/:id', isAdmin, asyncHandler(async (req, res) => {
   try {
