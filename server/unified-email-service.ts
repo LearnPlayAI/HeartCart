@@ -60,6 +60,60 @@ export class UnifiedEmailService {
   }
 
   /**
+   * Send corporate item preview email to show items before final order confirmation
+   */
+  async sendCorporateItemPreviewEmail(corporateOrder: any, items: any[]): Promise<boolean> {
+    if (!this.isInitialized) {
+      console.warn('⚠️ Email service not initialized, cannot send corporate item preview email');
+      return false;
+    }
+
+    try {
+      const recipient = new Recipient(corporateOrder.contactEmail, corporateOrder.contactPerson);
+      
+      // Create comprehensive email content
+      const emailHtml = this.createCorporateItemPreviewEmailTemplate(corporateOrder, items);
+      
+      const emailParams = new EmailParams()
+        .setFrom(this.fromSender)
+        .setTo([recipient])
+        .setSubject(`Item Preview for Corporate Order ${corporateOrder.orderNumber}`)
+        .setHtml(emailHtml)
+        .setSettings({
+          track_clicks: false,
+          track_opens: true
+        });
+
+      const response = await this.mailerSend.email.send(emailParams);
+      
+      // Log email in database
+      await this.logEmail(
+        corporateOrder.contactEmail,
+        'corporate_item_preview',
+        `Item preview for corporate order ${corporateOrder.orderNumber}`,
+        JSON.stringify({ order: corporateOrder, items }),
+        'sent'
+      );
+
+      console.log('✅ Corporate item preview email sent successfully');
+      return true;
+    } catch (error) {
+      console.error('❌ Failed to send corporate item preview email:', error);
+      
+      await this.logEmail(
+        corporateOrder.contactEmail,
+        'corporate_item_preview',
+        `Item preview for corporate order ${corporateOrder.orderNumber}`,
+        JSON.stringify({ order: corporateOrder, items }),
+        'failed',
+        error instanceof Error ? error.message : 'Unknown error'
+      );
+      
+      return false;
+    }
+  }
+
+  /**
    * Send corporate payment options email with EFT details and Yoco payment link
    */
   async sendCorporatePaymentOptionsEmail(corporateOrder: any): Promise<boolean> {
@@ -117,6 +171,139 @@ export class UnifiedEmailService {
       
       return false;
     }
+  }
+
+  private createCorporateItemPreviewEmailTemplate(order: any, items: any[]): string {
+    // Generate items list HTML
+    const itemsHtml = items.map(item => `
+      <tr style="border-bottom: 1px solid ${HEARTCART_COLORS.LIGHT_GRAY};">
+        <td style="padding: 15px; text-align: left;">
+          <div style="font-weight: 600; color: ${HEARTCART_COLORS.DARK_GRAY}; margin-bottom: 5px;">${item.productName}</div>
+          <div style="font-size: 12px; color: ${HEARTCART_COLORS.GRAY}; margin-bottom: 3px;">SKU: ${item.productSku}</div>
+          ${item.size ? `<div style="font-size: 12px; color: ${HEARTCART_COLORS.GRAY};">Size: ${item.size}</div>` : ''}
+          ${item.color ? `<div style="font-size: 12px; color: ${HEARTCART_COLORS.GRAY};">Color: ${item.color}</div>` : ''}
+        </td>
+        <td style="padding: 15px; text-align: center; font-weight: 600; color: ${HEARTCART_COLORS.DARK_GRAY};">${item.quantity}</td>
+        <td style="padding: 15px; text-align: right; font-weight: 600; color: ${HEARTCART_COLORS.HOT_PINK};">R${parseFloat(item.unitPrice).toFixed(2)}</td>
+        <td style="padding: 15px; text-align: right; font-weight: 700; color: ${HEARTCART_COLORS.DARK_PINK};">R${parseFloat(item.totalPrice).toFixed(2)}</td>
+      </tr>
+    `).join('');
+
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Corporate Order Item Preview - HeartCart</title>
+        <style>
+          @media (max-width: 600px) {
+            .container { width: 95% !important; margin: 10px auto !important; }
+            .header { padding: 20px !important; }
+            .content { padding: 25px !important; }
+            .table-responsive { overflow-x: auto; }
+            .item-table { font-size: 14px !important; }
+            .item-table td { padding: 10px 8px !important; }
+          }
+        </style>
+      </head>
+      <body style="margin: 0; padding: 0; background: linear-gradient(135deg, ${HEARTCART_COLORS.LIGHT_GRAY} 0%, ${HEARTCART_COLORS.WHITE} 100%); font-family: 'Segoe UI', Arial, sans-serif;">
+        <div class="container" style="max-width: 700px; margin: 20px auto; background: ${HEARTCART_COLORS.WHITE}; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 32px rgba(255, 105, 180, 0.2);">
+          
+          <!-- Header -->
+          <div class="header" style="background: linear-gradient(135deg, ${HEARTCART_COLORS.HOT_PINK} 0%, ${HEARTCART_COLORS.DARK_PINK} 100%); padding: 40px; text-align: center; position: relative;">
+            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 6px; background: linear-gradient(90deg, ${HEARTCART_COLORS.HOT_PINK} 0%, ${HEARTCART_COLORS.ACCENT_PINK} 50%, ${HEARTCART_COLORS.DARK_PINK} 100%);"></div>
+            <div style="display: inline-block; background: ${HEARTCART_COLORS.WHITE}; padding: 12px; border-radius: 50%; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);">
+              <span style="font-size: 28px; color: ${HEARTCART_COLORS.HOT_PINK};">🛍️</span>
+            </div>
+            <h1 style="color: ${HEARTCART_COLORS.WHITE}; margin: 0; font-size: 36px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3); letter-spacing: 1px;">HeartCart</h1>
+            <p style="color: ${HEARTCART_COLORS.WHITE}; margin: 8px 0 0 0; font-size: 16px; opacity: 0.9;">Corporate Order Preview</p>
+          </div>
+          
+          <!-- Main Content -->
+          <div class="content" style="padding: 40px; background: ${HEARTCART_COLORS.WHITE};">
+            <!-- Order Details -->
+            <div style="background: linear-gradient(135deg, ${HEARTCART_COLORS.LIGHT_PINK} 0%, ${HEARTCART_COLORS.WHITE} 100%); border: 2px solid ${HEARTCART_COLORS.HOT_PINK}; padding: 25px; border-radius: 12px; margin-bottom: 30px;">
+              <h2 style="color: ${HEARTCART_COLORS.DARK_PINK}; margin: 0 0 15px 0; font-size: 24px; font-weight: 600;">Order ${order.orderNumber}</h2>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                <span style="color: ${HEARTCART_COLORS.DARK_GRAY}; font-weight: 500;">Company:</span>
+                <span style="color: ${HEARTCART_COLORS.DARK_GRAY}; font-weight: 600;">${order.companyName}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                <span style="color: ${HEARTCART_COLORS.DARK_GRAY}; font-weight: 500;">Contact Person:</span>
+                <span style="color: ${HEARTCART_COLORS.DARK_GRAY}; font-weight: 600;">${order.contactPerson}</span>
+              </div>
+            </div>
+
+            <div style="text-align: center; margin-bottom: 30px;">
+              <h2 style="color: ${HEARTCART_COLORS.DARK_PINK}; margin: 0; font-size: 28px; font-weight: 600;">Item Preview</h2>
+              <p style="color: ${HEARTCART_COLORS.GRAY}; margin: 10px 0 0 0; font-size: 16px;">
+                Please review the items below and provide employee details for delivery
+              </p>
+            </div>
+            
+            <!-- Items Table -->
+            <div class="table-responsive" style="margin: 30px 0;">
+              <table class="item-table" style="width: 100%; border-collapse: collapse; background: ${HEARTCART_COLORS.WHITE}; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                <thead>
+                  <tr style="background: linear-gradient(135deg, ${HEARTCART_COLORS.HOT_PINK} 0%, ${HEARTCART_COLORS.DARK_PINK} 100%);">
+                    <th style="padding: 15px; text-align: left; color: ${HEARTCART_COLORS.WHITE}; font-weight: 600;">Item Details</th>
+                    <th style="padding: 15px; text-align: center; color: ${HEARTCART_COLORS.WHITE}; font-weight: 600;">Qty</th>
+                    <th style="padding: 15px; text-align: right; color: ${HEARTCART_COLORS.WHITE}; font-weight: 600;">Unit Price</th>
+                    <th style="padding: 15px; text-align: right; color: ${HEARTCART_COLORS.WHITE}; font-weight: 600;">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${itemsHtml}
+                </tbody>
+              </table>
+            </div>
+            
+            <!-- Instructions -->
+            <div style="background: linear-gradient(135deg, ${HEARTCART_COLORS.LIGHT_PINK} 0%, ${HEARTCART_COLORS.HOT_PINK} 20%); padding: 25px; border-radius: 8px; margin: 30px 0; border-left: 4px solid ${HEARTCART_COLORS.DARK_PINK}; position: relative;">
+              <div style="position: absolute; top: -8px; left: 16px; background: ${HEARTCART_COLORS.DARK_PINK}; color: ${HEARTCART_COLORS.WHITE}; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">NEXT STEPS</div>
+              <h3 style="color: ${HEARTCART_COLORS.DARK_PINK}; margin: 0 0 15px 0; font-size: 18px; font-weight: 600;">Employee Information Required</h3>
+              <p style="margin: 0 0 15px 0; color: ${HEARTCART_COLORS.DARK_GRAY}; font-size: 14px; line-height: 1.5;">
+                To complete your corporate order, please reply to this email with the following employee details for each item:
+              </p>
+              <ul style="margin: 0; padding-left: 20px; color: ${HEARTCART_COLORS.DARK_GRAY}; font-size: 14px; line-height: 1.5;">
+                <li>Employee Full Name</li>
+                <li>Employee Email Address</li>
+                <li>Employee Phone Number</li>
+                <li>Delivery Address</li>
+                <li>Item SKU/Name they should receive</li>
+              </ul>
+            </div>
+            
+            <!-- Contact Information -->
+            <div style="text-align: center; margin: 40px 0;">
+              <p style="color: ${HEARTCART_COLORS.DARK_GRAY}; margin: 0 0 10px 0; font-size: 16px;">
+                Questions about your order?
+              </p>
+              <p style="margin: 0;">
+                <a href="mailto:sales@heartcart.shop" style="color: ${HEARTCART_COLORS.HOT_PINK}; text-decoration: none; font-weight: 600;">sales@heartcart.shop</a>
+              </p>
+            </div>
+          </div>
+          
+          <!-- Footer -->
+          <div style="background: ${HEARTCART_COLORS.DARK_GRAY}; padding: 25px; text-align: center;">
+            <div style="margin-bottom: 15px;">
+              <span style="display: inline-block; background: ${HEARTCART_COLORS.WHITE}; padding: 8px 12px; border-radius: 20px; margin: 0 5px; box-shadow: 0 2px 8px rgba(255, 105, 180, 0.2);">
+                <span style="font-size: 16px; color: ${HEARTCART_COLORS.HOT_PINK};">🛍️</span>
+              </span>
+            </div>
+            <p style="color: ${HEARTCART_COLORS.WHITE}; margin: 0; font-size: 14px; font-weight: 500;">
+              © 2024 HeartCart • South Africa's Premium Corporate Solutions
+            </p>
+            <p style="color: ${HEARTCART_COLORS.LIGHT_GRAY}; margin: 8px 0 0 0; font-size: 12px;">
+              Thank you for choosing HeartCart for your corporate needs!
+            </p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
   }
 
   private createCorporatePaymentOptionsEmailTemplate(order: any, yocoPaymentLink: string): string {
@@ -1116,6 +1303,67 @@ export class UnifiedEmailService {
     const now = new Date();
     await db.delete(mailTokens)
       .where(lt(mailTokens.expiresAt, now));
+  }
+
+  private async logEmail(
+    recipientEmail: string,
+    emailType: string,
+    subject: string,
+    metadata: string,
+    status: 'sent' | 'failed',
+    errorMessage?: string
+  ): Promise<void> {
+    try {
+      await db.insert(emailLogs).values({
+        recipientEmail,
+        emailType,
+        subject,
+        metadata,
+        deliveryStatus: status,
+        errorMessage: errorMessage || null,
+        createdAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('❌ Failed to log email:', error);
+    }
+  }
+
+  private async sendMailerSendEmail(
+    recipientEmail: string,
+    subject: string,
+    htmlContent: string,
+    textContent: string
+  ): Promise<{ success: boolean; error?: string; messageId?: string }> {
+    try {
+      if (!this.isInitialized) {
+        throw new Error('Email service not initialized');
+      }
+
+      const recipient = new Recipient(recipientEmail);
+      const emailParams = new EmailParams()
+        .setFrom(this.fromSender)
+        .setTo([recipient])
+        .setSubject(subject)
+        .setHtml(htmlContent)
+        .setText(textContent)
+        .setSettings({
+          track_clicks: false,
+          track_opens: true
+        });
+
+      const response = await this.mailerSend.email.send(emailParams);
+      
+      return {
+        success: true,
+        messageId: response.statusText || 'sent'
+      };
+    } catch (error: any) {
+      console.error('❌ MailerSend email error:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to send email'
+      };
+    }
   }
 }
 

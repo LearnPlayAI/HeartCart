@@ -101,7 +101,15 @@ router.post('/corporate-orders/:id/send-item-preview', isAdmin, asyncHandler(asy
       return sendError(res, 'No items found in order', 400);
     }
 
-    // Send item preview email (to be implemented)
+    // Send item preview email using unified email service
+    const { UnifiedEmailService } = await import('./unified-email-service');
+    const emailService = new UnifiedEmailService();
+    
+    const emailSent = await emailService.sendCorporateItemPreviewEmail(order, items);
+    if (!emailSent) {
+      return sendError(res, 'Failed to send item preview email', 500);
+    }
+
     await storage.updateCorporateOrder(orderId, { 
       itemPreviewSent: true 
     });
