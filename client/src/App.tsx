@@ -73,6 +73,7 @@ import CustomerPromotionsPage from "@/pages/promotions";
 import FeaturedPage from "@/pages/featured";
 import UserAdminPageFixed from "@/pages/admin/users-fixed";
 import SalesRepsPage from "@/pages/admin/sales-reps";
+import CorporatePaymentPage from "@/pages/corporate-payment";
 import CreateSalesRepPage from "@/pages/admin/sales-reps/create";
 import EditSalesRepPage from "@/pages/admin/sales-reps/edit";
 import SalesRepCommissionsPage from "@/pages/admin/sales-reps/commissions";
@@ -313,6 +314,10 @@ function App() {
                           <Route path="/verify-email"><VerifyEmail /></Route>
                           <Route path="/terms-and-conditions"><TermsAndConditions /></Route>
                           <Route path="/privacy-policy"><PrivacyPolicy /></Route>
+                          
+                          {/* Corporate Payment Page - Public Access */}
+                          <Route path="/corporate-payment/:corporateOrderId"><CorporatePaymentPage /></Route>
+                          
                           <Route><NotFound /></Route>
                         </Switch>
                       </main>
