@@ -153,7 +153,7 @@ router.post('/corporate-orders/:id/send-approval-email', isAdmin, asyncHandler(a
     
     if (emailResult.success) {
       // Update the order to mark that item preview was sent
-      await storage.updateCorporateOrderStatus(corporateOrderId, { itemPreviewSent: true });
+      await storage.updateCorporateOrder(corporateOrderId, { itemPreviewSent: true });
       
       logger.info('Corporate order approval email sent', { 
         orderId: corporateOrderId, 
@@ -838,9 +838,10 @@ router.post('/corporate-orders/:orderId/shipments', isAdmin, asyncHandler(async 
       packageId,
       employeeName,
       deliveryAddress,
+      packageContents: [],
+      shipmentStatus: 'pending',
       specialInstructions: specialInstructions || null,
       estimatedDeliveryDate: estimatedDeliveryDate || null,
-      status: 'pending',
       shippingCost: '0'
     });
 

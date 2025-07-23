@@ -247,11 +247,6 @@ export function CorporateOrdersPage() {
                   <Calendar className="h-4 w-4" />
                   <span>Created: {new Date(order.createdAt).toLocaleDateString()}</span>
                 </div>
-                {order.expectedDeliveryDate && (
-                  <div className="text-sm text-muted-foreground">
-                    Expected: {new Date(order.expectedDeliveryDate).toLocaleDateString()}
-                  </div>
-                )}
               </div>
 
               {/* Action Buttons */}
