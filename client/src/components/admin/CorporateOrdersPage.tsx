@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,14 +19,6 @@ import {
   Calendar
 } from "lucide-react";
 import { 
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { 
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -36,7 +29,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { CorporateOrderForm } from "./CorporateOrderForm";
 import { formatCurrency } from "@/lib/utils";
 
 interface CorporateOrder {
@@ -63,11 +55,9 @@ interface CorporateOrder {
 
 export function CorporateOrdersPage() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedOrder, setSelectedOrder] = useState<CorporateOrder | null>(null);
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState<CorporateOrder | null>(null);
   
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -167,28 +157,13 @@ export function CorporateOrdersPage() {
           </p>
         </div>
         
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-pink-600 hover:bg-pink-700">
-              <Plus className="h-4 w-4 mr-2" />
-              New Corporate Order
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Create New Corporate Order</DialogTitle>
-              <DialogDescription>
-                Create a new bulk order for a corporate client
-              </DialogDescription>
-            </DialogHeader>
-            <CorporateOrderForm 
-              onSuccess={() => {
-                setIsCreateDialogOpen(false);
-                queryClient.invalidateQueries({ queryKey: ['/api/admin/corporate-orders'] });
-              }}
-            />
-          </DialogContent>
-        </Dialog>
+        <Button 
+          className="bg-pink-600 hover:bg-pink-700"
+          onClick={() => setLocation('/admin/corporate-orders/create')}
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          New Corporate Order
+        </Button>
       </div>
 
       {/* Search and Filters */}
@@ -282,7 +257,7 @@ export function CorporateOrdersPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setSelectedOrder(order)}
+                  onClick={() => setLocation(`/admin/corporate-orders/${order.id}`)}
                   className="flex-1"
                 >
                   <Eye className="h-4 w-4 mr-2" />
@@ -291,10 +266,7 @@ export function CorporateOrdersPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => {
-                    setSelectedOrder(order);
-                    setIsEditDialogOpen(true);
-                  }}
+                  onClick={() => setLocation(`/admin/corporate-orders/${order.id}/edit`)}
                 >
                   <Edit className="h-4 w-4" />
                 </Button>
@@ -322,54 +294,19 @@ export function CorporateOrdersPage() {
               {searchTerm ? "No orders match your search criteria." : "Create your first corporate order to get started."}
             </p>
             {!searchTerm && (
-              <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button className="bg-pink-600 hover:bg-pink-700">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Corporate Order
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>Create New Corporate Order</DialogTitle>
-                    <DialogDescription>
-                      Create a new bulk order for a corporate client
-                    </DialogDescription>
-                  </DialogHeader>
-                  <CorporateOrderForm 
-                    onSuccess={() => {
-                      setIsCreateDialogOpen(false);
-                      queryClient.invalidateQueries({ queryKey: ['/api/admin/corporate-orders'] });
-                    }}
-                  />
-                </DialogContent>
-              </Dialog>
+              <Button 
+                className="bg-pink-600 hover:bg-pink-700"
+                onClick={() => setLocation('/admin/corporate-orders/create')}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Create Corporate Order
+              </Button>
             )}
           </CardContent>
         </Card>
       )}
 
-      {/* Edit Dialog */}
-      {selectedOrder && (
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Edit Corporate Order</DialogTitle>
-              <DialogDescription>
-                Update corporate order details
-              </DialogDescription>
-            </DialogHeader>
-            <CorporateOrderForm 
-              order={selectedOrder}
-              onSuccess={() => {
-                setIsEditDialogOpen(false);
-                setSelectedOrder(null);
-                queryClient.invalidateQueries({ queryKey: ['/api/admin/corporate-orders'] });
-              }}
-            />
-          </DialogContent>
-        </Dialog>
-      )}
+
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog 

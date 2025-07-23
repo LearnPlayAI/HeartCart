@@ -245,7 +245,11 @@ function App() {
                   <AdminProtectedRoute path="/admin/orders" component={AdminOrders} />
                   <AdminProtectedRoute path="/admin/orders/:id" component={AdminOrderDetail} />
                   <AdminProtectedRoute path="/admin/corporate-orders" component={React.lazy(() => import("@/pages/admin/corporate-orders"))} />
+                  <AdminProtectedRoute path="/admin/corporate-orders/create" component={React.lazy(() => import("@/pages/admin/corporate-orders-create"))} />
                   <AdminProtectedRoute path="/admin/corporate-orders/:orderId" component={React.lazy(() => import("@/pages/admin/corporate-order-detail"))} />
+                  <AdminProtectedRoute path="/admin/corporate-orders/:orderId/edit" component={React.lazy(() => import("@/pages/admin/corporate-orders-edit"))} />
+                  <AdminProtectedRoute path="/admin/corporate-orders/:orderId/add-item" component={React.lazy(() => import("@/pages/admin/corporate-order-add-item"))} />
+                  <AdminProtectedRoute path="/admin/corporate-orders/:orderId/add-shipment" component={React.lazy(() => import("@/pages/admin/corporate-order-add-shipment"))} />
                   <AdminProtectedRoute path="/admin/supplier-orders" component={SupplierOrders} />
                   <AdminProtectedRoute path="/admin/user-carts" component={UserCartsPage} />
                   <AdminProtectedRoute path="/admin/user-carts/:userId" component={UserCartDetailPage} />
