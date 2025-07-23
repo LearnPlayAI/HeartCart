@@ -13,7 +13,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-const corporateOrderSchema = z.object({
+// Simplified schema for initial creation - only collect company/contact info
+const corporateOrderCreateSchema = z.object({
+  companyName: z.string().min(1, "Company name is required"),
+  companyAddress: z.string().optional(),
+  contactPerson: z.string().min(1, "Contact name is required"),
+  contactEmail: z.string().email("Valid email is required"),
+  contactPhone: z.string().optional(),
+  orderDescription: z.string().optional(),
+  adminNotes: z.string().optional(),
+});
+
+// Full schema for updates when order has more details
+const corporateOrderUpdateSchema = z.object({
   companyName: z.string().min(1, "Company name is required"),
   companyAddress: z.string().optional(),
   contactPerson: z.string().min(1, "Contact name is required"),
@@ -29,7 +41,8 @@ const corporateOrderSchema = z.object({
   adminNotes: z.string().optional(),
 });
 
-type CorporateOrderFormData = z.infer<typeof corporateOrderSchema>;
+type CorporateOrderCreateData = z.infer<typeof corporateOrderCreateSchema>;
+type CorporateOrderUpdateData = z.infer<typeof corporateOrderUpdateSchema>;
 
 interface CorporateOrder {
   id: number;
@@ -63,10 +76,14 @@ interface CorporateOrderFormProps {
 export function CorporateOrderForm({ order, onSuccess }: CorporateOrderFormProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const isEditing = !!order;
 
-  const form = useForm<CorporateOrderFormData>({
-    resolver: zodResolver(corporateOrderSchema),
-    defaultValues: {
+  // Use different schemas for create vs update
+  const schema = isEditing ? corporateOrderUpdateSchema : corporateOrderCreateSchema;
+  
+  const form = useForm({
+    resolver: zodResolver(schema),
+    defaultValues: isEditing ? {
       companyName: order?.companyName || "",
       companyAddress: order?.companyAddress || "",
       contactPerson: order?.contactPerson || "",
@@ -80,24 +97,42 @@ export function CorporateOrderForm({ order, onSuccess }: CorporateOrderFormProps
       totalPackagingCosts: order?.totalPackagingCosts || "20.00",
       totalShippingCosts: order?.totalShippingCosts || "85.00",
       adminNotes: order?.adminNotes || "",
+    } : {
+      companyName: "",
+      companyAddress: "",
+      contactPerson: "",
+      contactEmail: "",
+      contactPhone: "",
+      orderDescription: "",
+      adminNotes: "",
     },
   });
 
   // Create or update corporate order mutation
   const saveMutation = useMutation({
-    mutationFn: (data: CorporateOrderFormData) => {
-      const payload = {
-        ...data,
-        totalInvoiceAmount: (
-          parseFloat(data.totalItemsValue) + 
-          parseFloat(data.totalPackagingCosts) + 
-          parseFloat(data.totalShippingCosts)
-        ).toFixed(2)
-      };
-
-      if (order) {
+    mutationFn: (data: any) => {
+      if (isEditing) {
+        // For updates, include financial calculations
+        const payload = {
+          ...data,
+          totalInvoiceAmount: (
+            parseFloat(data.totalItemsValue || "0") + 
+            parseFloat(data.totalPackagingCosts || "0") + 
+            parseFloat(data.totalShippingCosts || "0")
+          ).toFixed(2)
+        };
         return apiRequest('PATCH', `/api/admin/corporate-orders/${order.id}`, payload);
       } else {
+        // For creation, only send basic company info with defaults
+        const payload = {
+          ...data,
+          status: "pending",
+          paymentStatus: "pending",
+          totalItemsValue: "0.00",
+          totalPackagingCosts: "20.00", 
+          totalShippingCosts: "85.00",
+          totalInvoiceAmount: "105.00" // Default packaging + shipping
+        };
         return apiRequest('POST', '/api/admin/corporate-orders', payload);
       }
     },
@@ -120,7 +155,7 @@ export function CorporateOrderForm({ order, onSuccess }: CorporateOrderFormProps
     }
   });
 
-  const onSubmit = (data: CorporateOrderFormData) => {
+  const onSubmit = (data: any) => {
     saveMutation.mutate(data);
   };
 
@@ -157,13 +192,13 @@ export function CorporateOrderForm({ order, onSuccess }: CorporateOrderFormProps
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Company Information</CardTitle>
-          <CardDescription>Details about the corporate client</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Company Information</CardTitle>
+            <CardDescription>Basic details about the corporate client</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="companyName">Company Name *</Label>
@@ -220,216 +255,207 @@ export function CorporateOrderForm({ order, onSuccess }: CorporateOrderFormProps
               </div>
             </div>
 
-            {/* Company Address and Order Description */}
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="companyAddress">Company Address</Label>
-                <Textarea
-                  id="companyAddress"
-                  {...form.register("companyAddress")}
-                  placeholder="Enter company address..."
-                  rows={3}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="orderDescription">Order Description</Label>
-                <Textarea
-                  id="orderDescription"
-                  {...form.register("orderDescription")}
-                  placeholder="Describe the order requirements..."
-                  rows={3}
-                />
-              </div>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Order Status</CardTitle>
-          <CardDescription>Current status and payment information</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="status">Order Status *</Label>
-              <Select 
-                value={form.watch("status")} 
-                onValueChange={(value) => form.setValue("status", value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  {statusOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {form.formState.errors.status && (
-                <p className="text-sm text-red-600">
-                  {form.formState.errors.status.message}
-                </p>
-              )}
+              <Label htmlFor="companyAddress">Company Address</Label>
+              <Textarea
+                id="companyAddress"
+                {...form.register("companyAddress")}
+                placeholder="Enter company address..."
+                rows={3}
+              />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="paymentStatus">Payment Status *</Label>
-              <Select 
-                value={form.watch("paymentStatus")} 
-                onValueChange={(value) => form.setValue("paymentStatus", value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select payment status" />
-                </SelectTrigger>
-                <SelectContent>
-                  {paymentStatusOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {form.formState.errors.paymentStatus && (
-                <p className="text-sm text-red-600">
-                  {form.formState.errors.paymentStatus.message}
-                </p>
-              )}
+              <Label htmlFor="orderDescription">Order Description</Label>
+              <Textarea
+                id="orderDescription"
+                {...form.register("orderDescription")}
+                placeholder="Describe the order requirements..."
+                rows={3}
+              />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="paymentMethod">Payment Method</Label>
-              <Select 
-                value={form.watch("paymentMethod") || ""} 
-                onValueChange={(value) => form.setValue("paymentMethod", value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select payment method" />
-                </SelectTrigger>
-                <SelectContent>
-                  {paymentMethodOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Financial Information</CardTitle>
-          <CardDescription>Order costs and pricing details</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="totalItemsValue">Items Value (R) *</Label>
-                <Input
-                  id="totalItemsValue"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  {...form.register("totalItemsValue")}
-                  placeholder="0.00"
-                />
-                {form.formState.errors.totalItemsValue && (
-                  <p className="text-sm text-red-600">
-                    {form.formState.errors.totalItemsValue.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="totalPackagingCosts">Packaging Costs (R) *</Label>
-                <Input
-                  id="totalPackagingCosts"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  {...form.register("totalPackagingCosts")}
-                  placeholder="20.00"
-                />
-                {form.formState.errors.totalPackagingCosts && (
-                  <p className="text-sm text-red-600">
-                    {form.formState.errors.totalPackagingCosts.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="totalShippingCosts">Shipping Costs (R) *</Label>
-                <Input
-                  id="totalShippingCosts"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  {...form.register("totalShippingCosts")}
-                  placeholder="85.00"
-                />
-                {form.formState.errors.totalShippingCosts && (
-                  <p className="text-sm text-red-600">
-                    {form.formState.errors.totalShippingCosts.message}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Total Calculation Display */}
-            <div className="p-4 bg-pink-50 rounded-lg">
-              <div className="flex justify-between items-center">
-                <span className="font-medium">Total Amount:</span>
-                <span className="text-2xl font-bold text-pink-600">
-                  R {calculateTotal().toFixed(2)}
-                </span>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Additional Information</CardTitle>
-          <CardDescription>Notes and delivery details</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="adminNotes">Admin Notes</Label>
               <Textarea
                 id="adminNotes"
                 {...form.register("adminNotes")}
-                placeholder="Add any additional notes about this order..."
-                rows={4}
+                placeholder="Internal notes about this order"
+                rows={2}
               />
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      {/* Submit Button */}
-      <div className="flex justify-end">
-        <Button
-          type="submit"
-          onClick={form.handleSubmit(onSubmit)}
-          disabled={saveMutation.isPending}
-          className="bg-pink-600 hover:bg-pink-700 min-w-32"
-        >
-          {saveMutation.isPending && (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          )}
-          {order ? "Update Order" : "Create Order"}
-        </Button>
-      </div>
+        {/* Only show status and financial fields when editing existing orders */}
+        {isEditing && (
+          <>
+            <Card>
+              <CardHeader>
+                <CardTitle>Order Status</CardTitle>
+                <CardDescription>Current status and payment information</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="status">Order Status *</Label>
+                    <Select 
+                      value={form.watch("status")} 
+                      onValueChange={(value) => form.setValue("status", value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {statusOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {form.formState.errors.status && (
+                      <p className="text-sm text-red-600">
+                        {form.formState.errors.status.message}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="paymentStatus">Payment Status *</Label>
+                    <Select 
+                      value={form.watch("paymentStatus")} 
+                      onValueChange={(value) => form.setValue("paymentStatus", value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select payment status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {paymentStatusOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {form.formState.errors.paymentStatus && (
+                      <p className="text-sm text-red-600">
+                        {form.formState.errors.paymentStatus.message}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="paymentMethod">Payment Method</Label>
+                    <Select 
+                      value={form.watch("paymentMethod") || ""} 
+                      onValueChange={(value) => form.setValue("paymentMethod", value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select payment method" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {paymentMethodOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Financial Information</CardTitle>
+                <CardDescription>Order costs and pricing details</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="totalItemsValue">Items Value (R) *</Label>
+                      <Input
+                        id="totalItemsValue"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        {...form.register("totalItemsValue")}
+                        placeholder="0.00"
+                      />
+                      {form.formState.errors.totalItemsValue && (
+                        <p className="text-sm text-red-600">
+                          {form.formState.errors.totalItemsValue.message}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="totalPackagingCosts">Packaging Costs (R) *</Label>
+                      <Input
+                        id="totalPackagingCosts"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        {...form.register("totalPackagingCosts")}
+                        placeholder="20.00"
+                      />
+                      {form.formState.errors.totalPackagingCosts && (
+                        <p className="text-sm text-red-600">
+                          {form.formState.errors.totalPackagingCosts.message}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="totalShippingCosts">Shipping Costs (R) *</Label>
+                      <Input
+                        id="totalShippingCosts"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        {...form.register("totalShippingCosts")}
+                        placeholder="85.00"
+                      />
+                      {form.formState.errors.totalShippingCosts && (
+                        <p className="text-sm text-red-600">
+                          {form.formState.errors.totalShippingCosts.message}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Total Calculation Display */}
+                  <div className="p-4 bg-pink-50 rounded-lg">
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium">Total Amount:</span>
+                      <span className="text-2xl font-bold text-pink-600">
+                        R {calculateTotal().toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        )}
+
+        {/* Submit Button */}
+        <div className="flex justify-end">
+          <Button
+            type="submit"
+            disabled={saveMutation.isPending}
+            className="bg-pink-600 hover:bg-pink-700 min-w-32"
+          >
+            {saveMutation.isPending && (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            )}
+            {isEditing ? "Update Order" : "Create Order"}
+          </Button>
+        </div>
+      </form>
     </div>
   );
 }
