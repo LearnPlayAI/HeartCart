@@ -49,7 +49,9 @@ import {
   Building2,
   Download,
   Copy,
-  Check
+  Check,
+  Plus,
+  RotateCcw
 } from 'lucide-react';
 import OrderStatusTimeline from '@/components/OrderStatusTimeline';
 
@@ -339,6 +341,11 @@ export default function AdminOrderDetail() {
   const [adminNotes, setAdminNotes] = useState("");
   const [actualShippingCost, setActualShippingCost] = useState("");
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  
+  // Custom line items state
+  const [lineItemType, setLineItemType] = useState<'packaging' | 'shipping' | 'misc'>('packaging');
+  const [customPrice, setCustomPrice] = useState('');
+  const [isAddingLineItem, setIsAddingLineItem] = useState(false);
 
   // Force cache invalidation on component mount to ensure fresh data
   useEffect(() => {
@@ -692,6 +699,64 @@ export default function AdminOrderDetail() {
       });
     },
   });
+
+  // Custom line item mutation
+  const addLineItemMutation = useMutation({
+    mutationFn: async ({ lineItemType, customPrice }: { lineItemType: 'packaging' | 'shipping' | 'misc', customPrice: number }) => {
+      return await apiRequest('POST', `/api/admin/orders/${orderId}/line-items`, { lineItemType, customPrice });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Line Item Added",
+        description: "Custom line item has been successfully added to the order.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/orders', orderId] });
+      setCustomPrice('');
+      setIsAddingLineItem(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to Add Line Item",
+        description: error.message || "An error occurred while adding the line item.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Invoice regeneration mutation
+  const regenerateInvoiceMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest('POST', `/api/admin/orders/${orderId}/regenerate-invoice`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Invoice Regenerated",
+        description: "Invoice has been successfully regenerated with all current order items.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/orders', orderId] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to Regenerate Invoice",
+        description: error.message || "An error occurred while regenerating the invoice.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Handle adding custom line item
+  const handleAddLineItem = () => {
+    const price = parseFloat(customPrice);
+    if (!price || price <= 0 || price > 99999.99) {
+      toast({
+        title: "Invalid Price",
+        description: "Please enter a valid price between R0.01 and R99,999.99",
+        variant: "destructive",
+      });
+      return;
+    }
+    addLineItemMutation.mutate({ lineItemType, customPrice: price });
+  };
 
   // Proof of Payment download function
   const downloadProofOfPayment = async () => {
@@ -1116,6 +1181,24 @@ export default function AdminOrderDetail() {
                         Generate Invoice
                       </Button>
                     )}
+                    
+                    {/* Regenerate Invoice Button */}
+                    {(order.paymentStatus === 'payment_received' || order.status === 'payment received') && order.invoicePath && (
+                      <Button 
+                        onClick={() => regenerateInvoiceMutation.mutate()}
+                        disabled={regenerateInvoiceMutation.isPending}
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center gap-2 text-orange-600 border-orange-600 hover:bg-orange-600 hover:text-white"
+                      >
+                        {regenerateInvoiceMutation.isPending ? (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+                        ) : (
+                          <RotateCcw className="h-4 w-4" />
+                        )}
+                        Regenerate Invoice
+                      </Button>
+                    )}
                   </div>
                 </div>
 
@@ -1265,17 +1348,73 @@ export default function AdminOrderDetail() {
 
                 {order.paymentReceivedDate && (
                   <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                    <p className="text-sm font-medium text-green-800">Card Payment Received On:</p>
-                    <p className="text-sm text-green-600">
-                      {new Date(order.paymentReceivedDate).toLocaleDateString('en-ZA', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        timeZone: 'Africa/Johannesburg'
-                      })} SAST
-                    </p>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="text-sm font-medium text-green-800">Card Payment Received On:</p>
+                        <p className="text-sm text-green-600">
+                          {new Date(order.paymentReceivedDate).toLocaleDateString('en-ZA', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            timeZone: 'Africa/Johannesburg'
+                          })} SAST
+                        </p>
+                      </div>
+                      
+                      {/* Card Payment Invoice Actions */}
+                      <div className="flex items-center gap-2">
+                        {/* Invoice Download Button */}
+                        {order.invoicePath && (
+                          <Button 
+                            onClick={downloadInvoice}
+                            variant="outline"
+                            size="sm"
+                            className="flex items-center gap-2"
+                          >
+                            <Download className="h-4 w-4" />
+                            Download Invoice
+                          </Button>
+                        )}
+                        
+                        {/* Generate Invoice Button - if no invoice exists */}
+                        {!order.invoicePath && (
+                          <Button 
+                            onClick={() => generateInvoiceMutation.mutate()}
+                            disabled={generateInvoiceMutation.isPending}
+                            variant="outline"
+                            size="sm"
+                            className="flex items-center gap-2 text-[#FF69B4] border-[#FF69B4] hover:bg-[#FF69B4] hover:text-white"
+                          >
+                            {generateInvoiceMutation.isPending ? (
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+                            ) : (
+                              <FileText className="h-4 w-4" />
+                            )}
+                            Generate Invoice
+                          </Button>
+                        )}
+                        
+                        {/* Regenerate Invoice Button */}
+                        {order.invoicePath && (
+                          <Button 
+                            onClick={() => regenerateInvoiceMutation.mutate()}
+                            disabled={regenerateInvoiceMutation.isPending}
+                            variant="outline"
+                            size="sm"
+                            className="flex items-center gap-2 text-orange-600 border-orange-600 hover:bg-orange-600 hover:text-white"
+                          >
+                            {regenerateInvoiceMutation.isPending ? (
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+                            ) : (
+                              <RotateCcw className="h-4 w-4" />
+                            )}
+                            Regenerate Invoice
+                          </Button>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 )}
               </CardContent>
@@ -1376,6 +1515,98 @@ export default function AdminOrderDetail() {
                     <p className="text-muted-foreground">No items found for this order.</p>
                   </div>
                 )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Custom Line Items Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Package2 className="h-5 w-5" />
+                  <span>Custom Line Items</span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsAddingLineItem(!isAddingLineItem)}
+                  disabled={addLineItemMutation.isPending}
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${addLineItemMutation.isPending ? 'animate-spin' : ''}`} />
+                  Add Line Item
+                </Button>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isAddingLineItem && (
+                <div className="space-y-4 p-4 bg-muted rounded-lg mb-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Line Item Type</label>
+                      <Select value={lineItemType} onValueChange={(value: 'packaging' | 'shipping' | 'misc') => setLineItemType(value)}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="packaging">Additional Packaging</SelectItem>
+                          <SelectItem value="shipping">Additional Shipping</SelectItem>
+                          <SelectItem value="misc">Miscellaneous Costs</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Custom Price (R)</label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        max="99999.99"
+                        value={customPrice}
+                        onChange={(e) => setCustomPrice(e.target.value)}
+                        placeholder="0.00"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Actions</label>
+                      <div className="flex space-x-2">
+                        <Button
+                          onClick={handleAddLineItem}
+                          disabled={addLineItemMutation.isPending || !customPrice}
+                          size="sm"
+                        >
+                          {addLineItemMutation.isPending ? (
+                            <>
+                              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                              Adding...
+                            </>
+                          ) : (
+                            <>
+                              <Plus className="h-4 w-4 mr-2" />
+                              Add
+                            </>
+                          )}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setIsAddingLineItem(false);
+                            setCustomPrice('');
+                          }}
+                          size="sm"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              <div className="text-sm text-muted-foreground">
+                Use this section to add additional charges to the order such as extra packaging, additional shipping costs, or miscellaneous fees. These items will be included in invoice regeneration.
               </div>
             </CardContent>
           </Card>

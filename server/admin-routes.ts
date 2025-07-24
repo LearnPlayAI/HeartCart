@@ -2105,4 +2105,90 @@ router.post("/user-carts/:userId/send-email", isAdmin, asyncHandler(async (req: 
   }
 }));
 
+// ===============================================================
+// CUSTOM LINE ITEMS AND INVOICE REGENERATION ROUTES
+// ===============================================================
+
+// Add custom line item to order
+router.post("/orders/:id/line-items", isAdmin, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const orderId = parseInt(req.params.id);
+    const { lineItemType, customPrice } = req.body;
+
+    // Validation
+    if (isNaN(orderId)) {
+      return sendError(res, "Invalid order ID", 400);
+    }
+
+    if (!lineItemType || !['packaging', 'shipping', 'misc'].includes(lineItemType)) {
+      return sendError(res, "Invalid line item type. Must be 'packaging', 'shipping', or 'misc'", 400);
+    }
+
+    if (!customPrice || typeof customPrice !== 'number' || customPrice <= 0) {
+      return sendError(res, "Custom price must be a positive number", 400);
+    }
+
+    if (customPrice > 99999.99) {
+      return sendError(res, "Custom price cannot exceed R99,999.99", 400);
+    }
+
+    // Add the custom line item
+    const newOrderItem = await storage.addCustomLineItem(orderId, lineItemType, customPrice);
+
+    logger.info("Custom line item added to order", {
+      orderId,
+      lineItemType,
+      customPrice,
+      orderItemId: newOrderItem.id,
+      adminUserId: req.user?.id
+    });
+
+    return sendSuccess(res, {
+      message: "Custom line item added successfully",
+      orderItem: newOrderItem
+    });
+
+  } catch (error) {
+    logger.error("Error adding custom line item", { 
+      error: error instanceof Error ? error.message : String(error),
+      orderId: req.params.id,
+      adminUserId: req.user?.id 
+    });
+    return sendError(res, "Failed to add custom line item", 500);
+  }
+}));
+
+// Regenerate invoice for order
+router.post("/orders/:id/regenerate-invoice", isAdmin, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const orderId = parseInt(req.params.id);
+
+    if (isNaN(orderId)) {
+      return sendError(res, "Invalid order ID", 400);
+    }
+
+    // Regenerate the invoice
+    const newInvoicePath = await storage.regenerateInvoice(orderId);
+
+    logger.info("Invoice regenerated for order", {
+      orderId,
+      newInvoicePath,
+      adminUserId: req.user?.id
+    });
+
+    return sendSuccess(res, {
+      message: "Invoice regenerated successfully",
+      invoicePath: newInvoicePath
+    });
+
+  } catch (error) {
+    logger.error("Error regenerating invoice", { 
+      error: error instanceof Error ? error.message : String(error),
+      orderId: req.params.id,
+      adminUserId: req.user?.id 
+    });
+    return sendError(res, "Failed to regenerate invoice", 500);
+  }
+}));
+
 export { router as adminRoutes };

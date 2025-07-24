@@ -131,6 +131,17 @@ HeartCart is a comprehensive e-commerce platform built as a dropshipping solutio
 ## Changelog
 ```
 Changelog:
+- July 24, 2025. COMPLETE CUSTOM LINE ITEMS AND INVOICE REGENERATION SYSTEM IMPLEMENTATION:
+  * COMPREHENSIVE FUNCTIONALITY: Successfully implemented complete custom line items management with invoice regeneration capabilities
+  * ADMIN PRODUCTS CREATED: Added 3 admin products (Additional Packaging, Additional Shipping, Miscellaneous Costs) with SKUs ADMIN-PACKAGING, ADMIN-SHIPPING, ADMIN-MISC
+  * FRONTEND IMPLEMENTATION: Added complete UI components for custom line items with form validation, dropdown selection, and price input (R0.01-R99,999.99 range)
+  * BACKEND API ENDPOINTS: Implemented /api/admin/orders/:id/line-items POST endpoint for adding custom line items and /api/admin/orders/:id/regenerate-invoice POST endpoint
+  * STORAGE METHODS: Added addCustomLineItem() and regenerateOrderInvoice() methods with comprehensive validation and error handling
+  * INVOICE REGENERATION: Added regeneration buttons to both EFT and Card payment management sections with visual loading states and success feedback
+  * COMPREHENSIVE UI: Custom line items section with expandable form, type selection (packaging/shipping/misc), price validation, and admin controls
+  * MUTATION HANDLING: Implemented React Query mutations with proper cache invalidation, error handling, and user feedback through toast notifications
+  * PRODUCTION-READY: All components include loading states, error handling, input validation, and comprehensive user feedback systems
+  * System allows admins to add additional charges to orders and regenerate invoices with updated totals including custom line items
 - July 21, 2025. ADMIN SIDEBAR COLLAPSED STATE LOGO UPDATE:
   * FIXED: Replaced letter "T" with HeartCart company logo in collapsed admin sidebar state
   * Enhanced collapsed sidebar branding by showing 8x8 rounded company logo image instead of text

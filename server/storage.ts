@@ -15318,6 +15318,149 @@ export class DatabaseStorage implements IStorage {
       throw error;
     }
   }
+
+  // ===============================================================
+  // CUSTOM LINE ITEMS FOR ADMIN ORDERS
+  // ===============================================================
+
+  /**
+   * Add a custom line item to an existing order
+   * @param orderId The order ID to add the line item to
+   * @param lineItemType The type of line item (packaging, shipping, misc)
+   * @param customPrice The custom price for the line item
+   * @returns The created order item
+   */
+  async addCustomLineItem(
+    orderId: number,
+    lineItemType: 'packaging' | 'shipping' | 'misc',
+    customPrice: number
+  ): Promise<OrderItem> {
+    try {
+      // Get the admin product for the line item type
+      const skuMap = {
+        packaging: 'ADMIN-PACKAGING',
+        shipping: 'ADMIN-SHIPPING', 
+        misc: 'ADMIN-MISC'
+      };
+
+      const [adminProduct] = await db
+        .select()
+        .from(products)
+        .where(eq(products.sku, skuMap[lineItemType]));
+
+      if (!adminProduct) {
+        throw new Error(`Admin product not found for type: ${lineItemType}`);
+      }
+
+      // Create the order item
+      const [newOrderItem] = await db
+        .insert(orderItems)
+        .values({
+          orderId,
+          productId: adminProduct.id,
+          productName: adminProduct.name,
+          productSku: adminProduct.sku,
+          productImageUrl: null,
+          quantity: 1,
+          unitPrice: customPrice,
+          totalPrice: customPrice,
+          selectedAttributes: {},
+          attributeDisplayText: null,
+          createdAt: new Date().toISOString(),
+        })
+        .returning();
+
+      // Update the order total
+      const [currentOrder] = await db
+        .select()
+        .from(orders)
+        .where(eq(orders.id, orderId));
+
+      if (currentOrder) {
+        const newTotalAmount = Number(currentOrder.totalAmount) + customPrice;
+        await db
+          .update(orders)
+          .set({ 
+            totalAmount: newTotalAmount,
+            updatedAt: new Date().toISOString()
+          })
+          .where(eq(orders.id, orderId));
+      }
+
+      logger.info('Added custom line item to order', {
+        orderId,
+        lineItemType,
+        customPrice,
+        orderItemId: newOrderItem.id
+      });
+
+      return newOrderItem;
+    } catch (error) {
+      logger.error('Error adding custom line item', { 
+        error, 
+        orderId, 
+        lineItemType, 
+        customPrice 
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Regenerate invoice for an existing order
+   * @param orderId The order ID to regenerate invoice for
+   * @returns The new invoice path
+   */
+  async regenerateInvoice(orderId: number): Promise<string> {
+    try {
+      // Get the full order details
+      const fullOrder = await this.getOrderById(orderId);
+      if (!fullOrder) {
+        throw new Error('Order not found');
+      }
+
+      // Import InvoiceGenerator
+      const { InvoiceGenerator } = await import('./services/invoice-generator');
+      
+      // Create invoice data
+      const invoiceData = {
+        order: fullOrder,
+        items: fullOrder.items || [],
+        customer: {
+          name: fullOrder.customerName,
+          email: fullOrder.customerEmail,
+          phone: fullOrder.customerPhone,
+          address: fullOrder.shippingAddress,
+          city: fullOrder.shippingCity,
+          postalCode: fullOrder.shippingPostalCode
+        },
+        pudo: fullOrder.lockerDetails || fullOrder.pudoLocker,
+        creditUsed: fullOrder.creditUsed || 0,
+        remainingBalance: fullOrder.remainingBalance || 0
+      };
+
+      // Generate new invoice
+      const invoiceGenerator = InvoiceGenerator.getInstance();
+      const invoicePath = await invoiceGenerator.generateInvoicePDF(invoiceData);
+
+      // Update order with new invoice path
+      await this.updateOrderInvoicePath(orderId, invoicePath);
+
+      logger.info('Regenerated invoice for order', {
+        orderId,
+        orderNumber: fullOrder.orderNumber,
+        invoicePath
+      });
+
+      return invoicePath;
+    } catch (error) {
+      logger.error('Error regenerating invoice', { 
+        error, 
+        orderId 
+      });
+      throw error;
+    }
+  }
 }
 
 export const storage = new DatabaseStorage();
