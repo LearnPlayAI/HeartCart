@@ -131,6 +131,13 @@ HeartCart is a comprehensive e-commerce platform built as a dropshipping solutio
 ## Changelog
 ```
 Changelog:
+- July 28, 2025. PRODUCT WIZARD MARKUP RESTRICTION REMOVAL:
+  * REMOVED: 20% minimum markup validation from admin product wizard basic info step
+  * FUNCTIONALITY: Admins can now create products with zero markup (no profit) or any markup percentage
+  * FORM SUBMISSION: Removed validation block that prevented saving products below 20% markup
+  * WARNING REMOVAL: Removed real-time toast warnings when entering sale prices below 20% markup
+  * PRESERVED: Markup calculation function remains intact for display and reference purposes
+  * IMPACT: Complete flexibility in product pricing - allows break-even pricing strategies and promotional products
 - July 24, 2025. COMPLETE CUSTOM LINE ITEMS AND INVOICE REGENERATION SYSTEM IMPLEMENTATION:
   * COMPREHENSIVE FUNCTIONALITY: Successfully implemented complete custom line items management with invoice regeneration capabilities
   * ADMIN PRODUCTS CREATED: Added 3 admin products (Additional Packaging, Additional Shipping, Miscellaneous Costs) with SKUs ADMIN-PACKAGING, ADMIN-SHIPPING, ADMIN-MISC

@@ -288,20 +288,6 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
 
   // Handle form submission
   const onSubmit = (data: BasicInfoFormValues) => {
-    // Validate 20% minimum TMY markup if both cost price and sale price are set
-    if (data.costPrice && data.salePrice) {
-      const markup = calculateTMYMarkup(data.costPrice, data.salePrice);
-      if (markup !== null && markup < 20) {
-        const minimumPrice = data.costPrice * 1.2;
-        toast({
-          title: 'Invalid Pricing',
-          description: `Sale price must be at least R${minimumPrice.toFixed(2)} to maintain 20% TMY markup. Current markup: ${markup.toFixed(1)}%`,
-          variant: 'destructive'
-        });
-        return; // Stop form submission
-      }
-    }
-
     // If sale price is set, ensure onSale is true
     if (data.salePrice && data.salePrice < data.regularPrice) {
       data.onSale = true;
@@ -330,22 +316,9 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ draft, onSave, onS
   const handleSalePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const salePrice = parseFloat(e.target.value);
     const regularPrice = form.getValues('regularPrice');
-    const costPrice = form.getValues('costPrice');
     
     if (!isNaN(salePrice) && salePrice > 0 && salePrice < regularPrice) {
       form.setValue('onSale', true);
-    }
-    
-    // Check minimum 20% TMY markup
-    if (costPrice && !isNaN(salePrice) && salePrice > 0) {
-      const minimumPrice = costPrice * 1.2; // 20% markup
-      if (salePrice < minimumPrice) {
-        toast({
-          title: 'Price Warning',
-          description: `Sale price must be at least R${minimumPrice.toFixed(2)} to maintain 20% TMY markup.`,
-          variant: 'destructive'
-        });
-      }
     }
   };
 
