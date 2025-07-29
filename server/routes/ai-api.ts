@@ -9,11 +9,23 @@ import express from 'express';
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
 import asyncHandler from 'express-async-handler';
 import { z } from 'zod';
+import { getCurrentAiModelSetting } from '../ai-service';
 
 const router = express.Router();
 
 // Initialize Google Generative AI
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+
+// Helper function to get current AI model
+async function getCurrentAiModel() {
+  try {
+    const currentModelSetting = await getCurrentAiModelSetting();
+    return currentModelSetting.modelName;
+  } catch (error) {
+    console.log('Using fallback model due to settings error:', error);
+    return 'gemini-2.0-flash'; // Fallback to free tier model
+  }
+}
 
 // Safety settings for the AI model
 const safetySettings = [
@@ -53,14 +65,15 @@ const generateDescriptionSchema = z.object({
  * 
  * POST /api/ai/generate-description
  */
-router.post('/generate-description', asyncHandler(async (req, res) => {
+router.post('/generate-description', asyncHandler(async (req, res): Promise<void> => {
   try {
     // Validate the request body
     const validatedData = generateDescriptionSchema.parse(req.body);
     
-    // Get the Gemini Pro model
+    // Get the current AI model from settings
+    const currentModel = await getCurrentAiModel();
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
+      model: currentModel,
       safetySettings,
     });
     
@@ -120,7 +133,7 @@ const enhanceProductSchema = z.object({
  * 
  * POST /api/ai/optimize-seo
  */
-router.post('/optimize-seo', asyncHandler(async (req, res) => {
+router.post('/optimize-seo', asyncHandler(async (req, res): Promise<void> => {
   try {
     // Validate the request body
     const validatedData = seoOptimizationSchema.parse(req.body);
@@ -208,14 +221,15 @@ router.post('/optimize-seo', asyncHandler(async (req, res) => {
  * 
  * POST /api/ai/enhance-product
  */
-router.post('/enhance-product', asyncHandler(async (req, res) => {
+router.post('/enhance-product', asyncHandler(async (req, res): Promise<void> => {
   try {
     // Validate the request body
     const validatedData = enhanceProductSchema.parse(req.body);
     
-    // Get the Gemini Pro model
+    // Get the current AI model from settings
+    const currentModel = await getCurrentAiModel();
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
+      model: currentModel,
       safetySettings,
     });
     
@@ -296,22 +310,24 @@ router.post('/enhance-product', asyncHandler(async (req, res) => {
     // Handle API key related errors like the SEO endpoint
     if (error instanceof Error) {
       if (error.message.includes('API key')) {
-        return res.status(401).json({
+        res.status(401).json({
           success: false,
           error: {
             code: 'INVALID_API_KEY',
             message: 'Invalid or missing Gemini API key',
           },
         });
+        return;
       }
       if (error.message.includes('quota') || error.message.includes('limit')) {
-        return res.status(429).json({
+        res.status(429).json({
           success: false,
           error: {
             code: 'QUOTA_EXCEEDED',
             message: 'API quota exceeded. Please try again later.',
           },
         });
+        return;
       }
     }
     
@@ -516,7 +532,7 @@ const categorySuggestionSchema = z.object({
  * 
  * POST /api/ai/suggest-categories
  */
-router.post('/suggest-categories', asyncHandler(async (req, res) => {
+router.post('/suggest-categories', asyncHandler(async (req, res): Promise<void> => {
   try {
     // Validate the request body
     const validatedData = categorySuggestionSchema.parse(req.body);
@@ -539,9 +555,10 @@ router.post('/suggest-categories', asyncHandler(async (req, res) => {
         .map(child => ({ id: child.id, name: child.name }))
     }));
     
-    // Get the Gemini Pro model
+    // Get the current AI model from settings
+    const currentModel = await getCurrentAiModel();
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
+      model: currentModel,
       safetySettings,
     });
     
@@ -610,22 +627,24 @@ router.post('/suggest-categories', asyncHandler(async (req, res) => {
     // Handle API key related errors
     if (error instanceof Error) {
       if (error.message.includes('API key')) {
-        return res.status(401).json({
+        res.status(401).json({
           success: false,
           error: {
             code: 'INVALID_API_KEY',
             message: 'Invalid or missing Gemini API key',
           },
         });
+        return;
       }
       if (error.message.includes('quota') || error.message.includes('limit')) {
-        return res.status(429).json({
+        res.status(429).json({
           success: false,
           error: {
             code: 'QUOTA_EXCEEDED',
             message: 'API quota exceeded. Please try again later.',
           },
         });
+        return;
       }
     }
     
@@ -706,5 +725,101 @@ Rules:
 
   return prompt;
 }
+
+// AI Model Management Routes
+
+// Get available AI models with status
+router.get('/models', asyncHandler(async (req, res): Promise<void> => {
+  try {
+    const { getModelStatuses, getCurrentAiModelSetting } = await import('../ai-service');
+    
+    const modelStatuses = await getModelStatuses();
+    const currentModel = await getCurrentAiModelSetting();
+    
+    res.json({
+      success: true,
+      data: {
+        models: modelStatuses,
+        currentModel: currentModel.modelName,
+        isDefault: currentModel.isDefault
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching AI models:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch AI models'
+    });
+  }
+}));
+
+// Update current AI model
+router.post('/models/update', asyncHandler(async (req, res): Promise<void> => {
+  try {
+    const { modelName } = req.body;
+    
+    if (!modelName) {
+      res.status(400).json({
+        success: false,
+        message: 'Model name is required'
+      });
+      return;
+    }
+    
+    const { updateAiModel } = await import('../ai-service');
+    const success = await updateAiModel(modelName);
+    
+    if (success) {
+      res.json({
+        success: true,
+        message: `Successfully updated AI model to ${modelName}`
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: 'Failed to update AI model. The model may not be available.'
+      });
+    }
+  } catch (error) {
+    console.error('Error updating AI model:', error);
+    res.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : 'Failed to update AI model'
+    });
+  }
+}));
+
+// Test AI model connectivity
+router.post('/models/test', asyncHandler(async (req, res): Promise<void> => {
+  try {
+    const { modelName } = req.body;
+    
+    if (!modelName) {
+      res.status(400).json({
+        success: false,
+        message: 'Model name is required'
+      });
+      return;
+    }
+    
+    const { testModelConnectivity } = await import('../ai-service');
+    const isWorking = await testModelConnectivity(modelName);
+    
+    res.json({
+      success: true,
+      data: {
+        modelName,
+        isWorking,
+        message: isWorking ? 'Model is working correctly' : 'Model is not responding'
+      }
+    });
+  } catch (error) {
+    console.error('Error testing AI model:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to test AI model connectivity'
+    });
+  }
+}));
 
 export default router;

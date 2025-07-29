@@ -131,6 +131,22 @@ HeartCart is a comprehensive e-commerce platform built as a dropshipping solutio
 ## Changelog
 ```
 Changelog:
+- July 29, 2025. COMPREHENSIVE GOOGLE GEMINI AI MODEL MODERNIZATION AND FUTURE-PROOFING:
+  * CRITICAL UPDATE: Replaced deprecated Gemini 1.5 models with current 2025 model lineup
+  * MODELS UPDATED: Switched from deprecated gemini-1.5-flash/pro to gemini-2.0-flash (default), gemini-2.5-flash, gemini-2.5-flash-lite, gemini-2.5-pro
+  * DEFAULT MODEL: Set gemini-2.0-flash as default (free tier) replacing deprecated gemini-1.5-flash
+  * DYNAMIC MODEL SYSTEM: Implemented future-proof architecture with real-time model connectivity testing and dynamic model selection
+  * ADMIN INTERFACE: Completely rebuilt /admin/ai-settings page with modern model management UI including:
+    - Real-time model status checking (working/not responding)
+    - One-click model testing and switching
+    - Visual model cards with capability badges (Free Tier, Best Value, Cost Efficient, Most Powerful)
+    - Current model display with status indicators
+  * API ENDPOINTS: Added comprehensive model management APIs (/api/ai/models GET, /api/ai/models/update POST, /api/ai/models/test POST)
+  * CONNECTIVITY TESTING: Automatic model validation before switching with real-time status updates
+  * TYPESCRIPT FIXES: Resolved all compilation errors in AI service and routes
+  * FUTURE-PROOF DESIGN: System now adapts automatically to Google's model changes - admins can easily switch models without code changes
+  * COMPREHENSIVE COVERAGE: Updated all AI features (product analysis, description generation, category suggestions, SEO optimization) to use dynamic model selection
+  * This update ensures AI functionality continues working when Google deprecates models and provides easy management for future model transitions
 - July 28, 2025. PRODUCT WIZARD MARKUP RESTRICTION REMOVAL:
   * REMOVED: 20% minimum markup validation from admin product wizard basic info step
   * FUNCTIONALITY: Admins can now create products with zero markup (no profit) or any markup percentage

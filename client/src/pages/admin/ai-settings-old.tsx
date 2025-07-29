@@ -2,6 +2,7 @@ import React from "react";
 import { AdminLayout } from "@/components/admin/layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, InfoIcon, CheckCircle2, TestTube, AlertCircle, Zap } from "lucide-react";
 import { useAIModels, useUpdateAIModel, useTestAIModel } from "@/hooks/use-ai-settings";
 import { Helmet } from "react-helmet";
@@ -82,7 +83,6 @@ function ModelCard({ model, isCurrentModel, onSelect, isUpdating }: ModelCardPro
               size="sm"
               onClick={handleTest}
               disabled={testModelMutation.isPending}
-              title="Test model connectivity"
             >
               {testModelMutation.isPending ? (
                 <Loader2 className="h-3 w-3 animate-spin" />
@@ -96,7 +96,6 @@ function ModelCard({ model, isCurrentModel, onSelect, isUpdating }: ModelCardPro
                 onClick={() => onSelect(model.modelName)}
                 disabled={isUpdating || !model.isWorking}
                 size="sm"
-                title={!model.isWorking ? "Model not responding - test first" : "Switch to this model"}
               >
                 {isUpdating ? (
                   <Loader2 className="h-3 w-3 animate-spin" />
@@ -159,27 +158,17 @@ export default function AISettingsPage() {
                 </TooltipProvider>
               </CardTitle>
               <CardDescription>
-                Choose which Gemini AI model to use for all AI features. Models are tested automatically to ensure they're working.
+                Choose which Gemini AI model to use for all AI features
               </CardDescription>
             </CardHeader>
             <CardContent>
               {isLoadingModels ? (
                 <div className="flex justify-center items-center h-20">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  <span className="ml-2 text-gray-600">Loading AI models...</span>
                 </div>
               ) : aiModelsError ? (
                 <div className="text-red-500 p-4 rounded-md bg-red-50">
-                  <h3 className="font-semibold mb-2">Error loading AI models</h3>
-                  <p>{aiModelsError.message}</p>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => refetch()}
-                    className="mt-2"
-                  >
-                    Retry
-                  </Button>
+                  Error loading AI models: {aiModelsError.message}
                 </div>
               ) : (
                 <div className="space-y-6">
@@ -202,28 +191,69 @@ export default function AISettingsPage() {
                   {/* Available Models List */}
                   <div className="space-y-4">
                     <h3 className="text-lg font-semibold">Available Models</h3>
-                    <div className="space-y-3">
-                      {aiModelsResponse?.data?.models?.map((model: any) => (
-                        <ModelCard
-                          key={model.modelName}
-                          model={model}
-                          isCurrentModel={model.modelName === aiModelsResponse.data.currentModel}
-                          onSelect={handleModelChange}
-                          isUpdating={updateModelMutation.isPending}
-                        />
-                      ))}
-                    </div>
+                    {aiModelsResponse?.data?.models?.map((model: any) => (
+                      <ModelCard
+                        key={model.modelName}
+                        model={model}
+                        isCurrentModel={model.modelName === aiModelsResponse.data.currentModel}
+                        onSelect={handleModelChange}
+                        isUpdating={updateModelMutation.isPending}
+                      />
+                    ))}
                   </div>
 
-                  {/* Instructions */}
-                  <div className="bg-gray-50 p-4 rounded-lg border">
-                    <h3 className="font-semibold text-gray-900 mb-2">How to use:</h3>
-                    <ul className="text-sm text-gray-600 space-y-1">
-                      <li>• <strong>Test button</strong>: Check if a model is responding correctly</li>
-                      <li>• <strong>Switch button</strong>: Change to a different working model</li>
-                      <li>• <strong>Status indicators</strong>: Green = working, Red = not responding</li>
-                      <li>• Models are automatically tested when this page loads</li>
-                    </ul>
+                        <SelectContent>
+                          {aiModels?.available?.map((model) => (
+                            <SelectItem key={model} value={model}>
+                              <div className="flex items-center">
+                                <span>{model}</span>
+                                {model === aiModels?.current && (
+                                  <CheckCircle2 className="ml-2 h-4 w-4 text-green-500" />
+                                )}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button 
+                      onClick={() => aiModels?.current && handleModelChange(aiModels?.current)}
+                      disabled={updateModelMutation.isPending || !aiModels?.current}
+                      className="min-w-32"
+                    >
+                      {updateModelMutation.isPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Updating...
+                        </>
+                      ) : (
+                        "Reinitialize Model"
+                      )}
+                    </Button>
+                  </div>
+                  
+                  <div className="bg-slate-50 p-4 rounded-md space-y-2">
+                    <h3 className="font-medium">Available Models</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {aiModels?.available?.map((model) => (
+                        <div 
+                          key={model} 
+                          className={`border rounded-md p-3 relative ${
+                            model === aiModels?.current ? "border-primary bg-pink-50" : "border-gray-200"
+                          }`}
+                        >
+                          <div className="flex items-center">
+                            <span className="font-medium">{model}</span>
+                            {model === aiModels?.current && (
+                              <Badge className="ml-2 bg-primary text-white">Active</Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-500 mt-1">
+                            {getModelDescription(model)}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
@@ -249,4 +279,15 @@ export default function AISettingsPage() {
       </Tabs>
     </AdminLayout>
   );
+}
+
+function getModelDescription(modelName: string): string {
+  const descriptions: Record<string, string> = {
+    'gemini-1.5-flash': 'Fast and efficient model for most tasks with good balance of speed and quality.',
+    'gemini-1.5-pro': 'Most powerful model with advanced reasoning and high quality output. Slower but more accurate.',
+    'gemini-pro': 'Legacy model with solid performance for most tasks.',
+    'gemini-pro-vision': 'Legacy model with vision capabilities for image analysis.'
+  };
+  
+  return descriptions[modelName] || 'Google Gemini AI model';
 }

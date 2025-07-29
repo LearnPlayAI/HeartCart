@@ -5,15 +5,16 @@ import { storage } from './storage';
 // Initialize the Gemini API
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
-// Available AI models
+// Available AI models (updated for 2025)
 const AVAILABLE_MODELS = [
-  'gemini-1.5-flash',
-  'gemini-1.5-pro',
-  'gemini-pro'
+  'gemini-2.0-flash',       // Free tier - General use, next-gen features
+  'gemini-2.5-flash',       // Best price-performance with thinking
+  'gemini-2.5-flash-lite',  // Most cost-efficient, high throughput
+  'gemini-2.5-pro'          // Most powerful thinking model
 ];
 
-// Default model
-const DEFAULT_MODEL = 'gemini-1.5-flash';
+// Default model - using free tier gemini-2.0-flash
+const DEFAULT_MODEL = 'gemini-2.0-flash';
 
 // Get current AI model from settings
 async function getCurrentModel(): Promise<string> {
@@ -55,6 +56,12 @@ export async function updateAiModel(modelName: string): Promise<boolean> {
       throw new Error(`Model ${modelName} is not available`);
     }
     
+    // Test model connectivity before saving
+    const isWorking = await testModelConnectivity(modelName);
+    if (!isWorking) {
+      throw new Error(`Model ${modelName} is not responding. It may be deprecated or unavailable.`);
+    }
+    
     // Update or create the setting
     const settings = await storage.getAllAiSettings();
     const existingSetting = settings.find(s => s.settingName === 'current_model');
@@ -78,6 +85,45 @@ export async function updateAiModel(modelName: string): Promise<boolean> {
     console.error('Error updating AI model:', error);
     return false;
   }
+}
+
+// Test if a model is currently working
+export async function testModelConnectivity(modelName: string): Promise<boolean> {
+  try {
+    const testModel = genAI.getGenerativeModel({ 
+      model: modelName,
+      generationConfig: { temperature: 0.1, maxOutputTokens: 10 } 
+    });
+    
+    const result = await testModel.generateContent('Say "test"');
+    const response = await result.response;
+    const text = response.text();
+    
+    return text.length > 0;
+  } catch (error) {
+    console.log(`Model ${modelName} connectivity test failed:`, error);
+    return false;
+  }
+}
+
+// Get model status for all available models
+export async function getModelStatuses(): Promise<Array<{modelName: string, isWorking: boolean, description: string}>> {
+  const modelDescriptions: Record<string, string> = {
+    'gemini-2.0-flash': 'Free tier model with next-generation features and speed. Best for general use.',
+    'gemini-2.5-flash': 'Best price-performance model with thinking capabilities. Ideal for complex tasks.',
+    'gemini-2.5-flash-lite': 'Most cost-efficient model optimized for high throughput and low latency.',
+    'gemini-2.5-pro': 'Most powerful thinking model with maximum accuracy for complex reasoning.'
+  };
+
+  const statuses = await Promise.all(
+    AVAILABLE_MODELS.map(async (modelName) => ({
+      modelName,
+      isWorking: await testModelConnectivity(modelName),
+      description: modelDescriptions[modelName] || 'Google Gemini AI model'
+    }))
+  );
+
+  return statuses;
 }
 
 /**
