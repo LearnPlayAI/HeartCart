@@ -5,16 +5,42 @@ import { storage } from './storage';
 // Initialize the Gemini API
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
-// Available AI models (updated for 2025)
-const AVAILABLE_MODELS = [
-  'gemini-2.0-flash',       // Free tier - General use, next-gen features
-  'gemini-2.5-flash',       // Best price-performance with thinking
-  'gemini-2.5-flash-lite',  // Most cost-efficient, high throughput
-  'gemini-2.5-pro'          // Most powerful thinking model
-];
-
 // Default model - using free tier gemini-2.0-flash
 const DEFAULT_MODEL = 'gemini-2.0-flash';
+
+// Default models configuration for initialization
+const DEFAULT_MODELS_CONFIG = {
+  models: [
+    {
+      name: 'gemini-2.0-flash',
+      displayName: 'Gemini 2.0 Flash',
+      description: 'Free tier model with next-generation features and speed. Best for general use.',
+      badge: { text: 'Free Tier', variant: 'default' },
+      isEnabled: true
+    },
+    {
+      name: 'gemini-2.5-flash',
+      displayName: 'Gemini 2.5 Flash',
+      description: 'Best price-performance model with thinking capabilities. Ideal for complex tasks.',
+      badge: { text: 'Best Value', variant: 'secondary' },
+      isEnabled: true
+    },
+    {
+      name: 'gemini-2.5-flash-lite',
+      displayName: 'Gemini 2.5 Flash Lite',
+      description: 'Most cost-efficient model optimized for high throughput and low latency.',
+      badge: { text: 'Cost Efficient', variant: 'outline' },
+      isEnabled: true
+    },
+    {
+      name: 'gemini-2.5-pro',
+      displayName: 'Gemini 2.5 Pro',
+      description: 'Most powerful thinking model with maximum accuracy for complex reasoning.',
+      badge: { text: 'Most Powerful', variant: 'destructive' },
+      isEnabled: true
+    }
+  ]
+};
 
 // Get current AI model from settings
 async function getCurrentModel(): Promise<string> {
@@ -37,9 +63,51 @@ async function getModel() {
   });
 }
 
-// Export functions for AI settings management
-export function getAvailableAiModels(): string[] {
-  return [...AVAILABLE_MODELS];
+// Initialize default models in database if not exists
+async function initializeDefaultModels(): Promise<void> {
+  try {
+    const settings = await storage.getAllAiSettings();
+    const modelsConfig = settings.find(s => s.settingName === 'available_models');
+    
+    if (!modelsConfig) {
+      // First time setup - save default models configuration
+      await storage.saveAiSetting({
+        settingName: 'available_models',
+        settingValue: JSON.stringify(DEFAULT_MODELS_CONFIG),
+        description: 'Available AI models configuration with metadata'
+      });
+      console.log('Initialized default AI models configuration in database');
+    }
+  } catch (error) {
+    console.error('Error initializing default AI models:', error);
+  }
+}
+
+// Get available models from database
+async function getAvailableModelsFromDb(): Promise<Array<{name: string, displayName: string, description: string, badge: {text: string, variant: string}, isEnabled: boolean}>> {
+  try {
+    await initializeDefaultModels(); // Ensure models are initialized
+    
+    const settings = await storage.getAllAiSettings();
+    const modelsConfig = settings.find(s => s.settingName === 'available_models');
+    
+    if (modelsConfig) {
+      const config = JSON.parse(modelsConfig.settingValue);
+      return config.models.filter((model: any) => model.isEnabled);
+    }
+    
+    // Fallback to default configuration
+    return DEFAULT_MODELS_CONFIG.models.filter(model => model.isEnabled);
+  } catch (error) {
+    console.error('Error fetching models from database, using fallback:', error);
+    return DEFAULT_MODELS_CONFIG.models.filter(model => model.isEnabled);
+  }
+}
+
+// Export functions for AI settings management (maintaining backward compatibility)
+export async function getAvailableAiModels(): Promise<string[]> {
+  const models = await getAvailableModelsFromDb();
+  return models.map(model => model.name);
 }
 
 export async function getCurrentAiModelSetting(): Promise<{ modelName: string; isDefault: boolean }> {
@@ -52,7 +120,8 @@ export async function getCurrentAiModelSetting(): Promise<{ modelName: string; i
 
 export async function updateAiModel(modelName: string): Promise<boolean> {
   try {
-    if (!AVAILABLE_MODELS.includes(modelName)) {
+    const availableModels = await getAvailableAiModels();
+    if (!availableModels.includes(modelName)) {
       throw new Error(`Model ${modelName} is not available`);
     }
     
@@ -107,19 +176,16 @@ export async function testModelConnectivity(modelName: string): Promise<boolean>
 }
 
 // Get model status for all available models
-export async function getModelStatuses(): Promise<Array<{modelName: string, isWorking: boolean, description: string}>> {
-  const modelDescriptions: Record<string, string> = {
-    'gemini-2.0-flash': 'Free tier model with next-generation features and speed. Best for general use.',
-    'gemini-2.5-flash': 'Best price-performance model with thinking capabilities. Ideal for complex tasks.',
-    'gemini-2.5-flash-lite': 'Most cost-efficient model optimized for high throughput and low latency.',
-    'gemini-2.5-pro': 'Most powerful thinking model with maximum accuracy for complex reasoning.'
-  };
+export async function getModelStatuses(): Promise<Array<{modelName: string, displayName: string, isWorking: boolean, description: string, badge: {text: string, variant: string}}>> {
+  const modelsConfig = await getAvailableModelsFromDb();
 
   const statuses = await Promise.all(
-    AVAILABLE_MODELS.map(async (modelName) => ({
-      modelName,
-      isWorking: await testModelConnectivity(modelName),
-      description: modelDescriptions[modelName] || 'Google Gemini AI model'
+    modelsConfig.map(async (model) => ({
+      modelName: model.name,
+      displayName: model.displayName,
+      isWorking: await testModelConnectivity(model.name),
+      description: model.description,
+      badge: model.badge
     }))
   );
 

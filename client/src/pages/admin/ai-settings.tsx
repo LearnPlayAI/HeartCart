@@ -18,8 +18,13 @@ import { Badge } from "@/components/ui/badge";
 interface ModelCardProps {
   model: {
     modelName: string;
+    displayName: string;
     isWorking: boolean;
     description: string;
+    badge: {
+      text: string;
+      variant: string;
+    };
   };
   isCurrentModel: boolean;
   onSelect: (modelName: string) => void;
@@ -33,25 +38,7 @@ function ModelCard({ model, isCurrentModel, onSelect, isUpdating }: ModelCardPro
     testModelMutation.mutate(model.modelName);
   };
 
-  const getModelDisplayName = (modelName: string) => {
-    const displayNames: Record<string, string> = {
-      'gemini-2.0-flash': 'Gemini 2.0 Flash',
-      'gemini-2.5-flash': 'Gemini 2.5 Flash', 
-      'gemini-2.5-flash-lite': 'Gemini 2.5 Flash Lite',
-      'gemini-2.5-pro': 'Gemini 2.5 Pro'
-    };
-    return displayNames[modelName] || modelName;
-  };
-
-  const getModelBadge = (modelName: string) => {
-    if (modelName === 'gemini-2.0-flash') return { text: 'Free Tier', variant: 'default' as const };
-    if (modelName === 'gemini-2.5-flash') return { text: 'Best Value', variant: 'secondary' as const };
-    if (modelName === 'gemini-2.5-flash-lite') return { text: 'Cost Efficient', variant: 'outline' as const };
-    if (modelName === 'gemini-2.5-pro') return { text: 'Most Powerful', variant: 'destructive' as const };
-    return { text: 'Standard', variant: 'outline' as const };
-  };
-
-  const badge = getModelBadge(model.modelName);
+  // All model metadata now comes from the API - no hardcoded configurations
 
   return (
     <Card className={`border-2 transition-all ${isCurrentModel ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
@@ -59,8 +46,8 @@ function ModelCard({ model, isCurrentModel, onSelect, isUpdating }: ModelCardPro
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
-              <h4 className="font-semibold">{getModelDisplayName(model.modelName)}</h4>
-              <Badge variant={badge.variant}>{badge.text}</Badge>
+              <h4 className="font-semibold">{model.displayName}</h4>
+              <Badge variant={model.badge.variant as any}>{model.badge.text}</Badge>
               {model.isWorking ? (
                 <CheckCircle2 className="h-4 w-4 text-green-600" />
               ) : (
@@ -113,7 +100,7 @@ function ModelCard({ model, isCurrentModel, onSelect, isUpdating }: ModelCardPro
 }
 
 export default function AISettingsPage() {
-  const { data: aiModelsResponse, isLoading: isLoadingModels, error: aiModelsError, refetch } = useAIModels();
+  const { data: aiModelsData, isLoading: isLoadingModels, error: aiModelsError, refetch } = useAIModels();
   const updateModelMutation = useUpdateAIModel();
 
   const handleModelChange = (modelName: string) => {
@@ -189,8 +176,8 @@ export default function AISettingsPage() {
                       <div>
                         <h3 className="font-semibold text-blue-900">Current AI Model</h3>
                         <p className="text-sm text-blue-700">
-                          {aiModelsResponse?.data?.currentModel || 'Loading...'}
-                          {aiModelsResponse?.data?.isDefault && (
+                          {aiModelsData?.data?.currentModel || 'Loading...'}
+                          {aiModelsData?.data?.isDefault && (
                             <Badge variant="secondary" className="ml-2">Default</Badge>
                           )}
                         </p>
@@ -203,11 +190,11 @@ export default function AISettingsPage() {
                   <div className="space-y-4">
                     <h3 className="text-lg font-semibold">Available Models</h3>
                     <div className="space-y-3">
-                      {aiModelsResponse?.data?.models?.map((model: any) => (
+                      {aiModelsData?.data?.models?.map((model: any) => (
                         <ModelCard
                           key={model.modelName}
                           model={model}
-                          isCurrentModel={model.modelName === aiModelsResponse.data.currentModel}
+                          isCurrentModel={model.modelName === aiModelsData.data.currentModel}
                           onSelect={handleModelChange}
                           isUpdating={updateModelMutation.isPending}
                         />

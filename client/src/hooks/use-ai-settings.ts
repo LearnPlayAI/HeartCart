@@ -5,8 +5,13 @@ import { useToast } from '@/hooks/use-toast';
 // Types for AI Models
 interface AIModel {
   modelName: string;
+  displayName: string;
   isWorking: boolean;
   description: string;
+  badge: {
+    text: string;
+    variant: string;
+  };
 }
 
 interface AIModelsResponse {
