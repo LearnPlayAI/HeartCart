@@ -3417,11 +3417,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Get all promotions with their associated products
   app.get("/api/promotions", withStandardResponse(async (req: Request, res: Response) => {
+    // SECURITY FIX: Check user role for admin filtering
+    const user = req.user as any;
+    const isAdmin = user && user.role === 'admin';
+    
+    // Apply admin filtering options
+    const filterOptions = {
+      includeInactive: isAdmin,
+      includeCategoryInactive: isAdmin
+    };
+    
     const promotions = await storage.getPromotions();
     const promotionsWithProducts = [];
     
     for (const promotion of promotions) {
-      const products = await storage.getPromotionProducts(promotion.id);
+      const products = await storage.getPromotionProducts(promotion.id, filterOptions);
       promotionsWithProducts.push({
         ...promotion,
         promotionProducts: products
@@ -3445,6 +3455,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.set('Pragma', 'no-cache');
       res.set('Expires', '0');
       
+      // SECURITY FIX: Check user role for admin filtering
+      const user = req.user as any;
+      const isAdmin = user && user.role === 'admin';
+      
+      // Apply admin filtering options
+      const filterOptions = {
+        includeInactive: isAdmin,
+        includeCategoryInactive: isAdmin
+      };
+      
       const activePromotions = await storage.getActivePromotions();
       const promotionsWithProducts = [];
       
@@ -3452,7 +3472,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allPromotionalProducts = [];
       
       for (const promotion of activePromotions) {
-        const products = await storage.getPromotionProducts(promotion.id);
+        const products = await storage.getPromotionProducts(promotion.id, filterOptions);
         
         // Enhance products with calculated promotional pricing information
         const enhancedProducts = products.map(productPromotion => {

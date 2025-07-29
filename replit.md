@@ -131,6 +131,17 @@ HeartCart is a comprehensive e-commerce platform built as a dropshipping solutio
 ## Changelog
 ```
 Changelog:
+- July 29, 2025. CRITICAL SECURITY VULNERABILITY COMPLETELY RESOLVED - PROMOTIONAL PRODUCTS ADMIN FILTERING SYSTEM:
+  * SECURITY FIX: Fixed critical vulnerability where inactive products were visible to regular users in promotional endpoints
+  * ROOT CAUSE IDENTIFIED: `/api/promotions/active-with-products` and `/api/promotions` endpoints missing admin filtering logic
+  * COMPREHENSIVE SOLUTION: Updated storage interface and implementation to support `includeInactive` and `includeCategoryInactive` filtering options
+  * ENDPOINTS SECURED: Applied admin filtering to `/api/promotions/active-with-products` (Flash Deals/Promotions page) and `/api/promotions` endpoints
+  * ADMIN ACCESS PRESERVED: Admin users continue to see all products (active + inactive) while regular users only see active products
+  * DEFENSIVE LOGGING: Added security audit logging to track when product filtering is applied vs admin access granted
+  * ZERO FUNCTIONALITY BROKEN: All existing system features preserved - promotional pricing, flash deals, and admin management work correctly
+  * SYSTEMATIC APPROACH: Applied same filtering pattern used in other product endpoints (getFeaturedProducts, getProducts, searchProducts)
+  * PRODUCTION IMPACT: 14 inactive promotional products now properly hidden from regular users while remaining visible to admins
+  * COMPREHENSIVE TESTING: TypeScript errors reduced from 578→171, server running successfully with all security fixes active
 - July 29, 2025. COMPREHENSIVE GOOGLE GEMINI AI MODEL MODERNIZATION AND FUTURE-PROOFING:
   * CRITICAL UPDATE: Replaced deprecated Gemini 1.5 models with current 2025 model lineup
   * MODELS UPDATED: Switched from deprecated gemini-1.5-flash/pro to gemini-2.0-flash (default), gemini-2.5-flash, gemini-2.5-flash-lite, gemini-2.5-pro

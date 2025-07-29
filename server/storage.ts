@@ -518,7 +518,10 @@ export interface IStorage {
   deletePromotion(id: number): Promise<boolean>;
   
   // Product-Promotion relationship operations
-  getPromotionProducts(promotionId: number): Promise<(Product & { discountOverride?: number })[]>;
+  getPromotionProducts(
+    promotionId: number, 
+    options?: { includeInactive?: boolean; includeCategoryInactive?: boolean }
+  ): Promise<(Product & { discountOverride?: number })[]>;
   getProductPromotions(productId: number): Promise<Promotion[]>;
   addProductToPromotion(promotionId: number, productId: number, discountOverride?: number): Promise<ProductPromotion>;
   removeProductFromPromotion(promotionId: number, productId: number): Promise<boolean>;
@@ -11056,7 +11059,10 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getPromotionProducts(promotionId: number): Promise<any[]> {
+  async getPromotionProducts(
+    promotionId: number, 
+    options?: { includeInactive?: boolean; includeCategoryInactive?: boolean }
+  ): Promise<any[]> {
     try {
       // First get the promotion details
       const [promotion] = await db
@@ -11068,13 +11074,29 @@ export class DatabaseStorage implements IStorage {
         return [];
       }
 
+      // Create conditions array for filtering
+      const conditions: SQL<unknown>[] = [eq(productPromotions.promotionId, promotionId)];
+
+      // Only filter active products if not explicitly including inactive ones
+      if (!options?.includeInactive) {
+        conditions.push(eq(products.isActive, true));
+        logger.info(`Filtering inactive products for promotion ${promotionId}`, { includeInactive: false });
+      } else {
+        logger.info(`Including inactive products for promotion ${promotionId} (admin access)`, { includeInactive: true });
+      }
+
+      // Only filter active categories if not explicitly including inactive ones
+      if (!options?.includeCategoryInactive) {
+        conditions.push(eq(categories.isActive, true));
+      }
+
       // Get the promotion products with basic product info
       const promotionProductsList = await db
         .select()
         .from(productPromotions)
         .innerJoin(products, eq(productPromotions.productId, products.id))
         .leftJoin(categories, eq(products.categoryId, categories.id))
-        .where(eq(productPromotions.promotionId, promotionId));
+        .where(and(...conditions));
 
       // Then get parent categories for each category if they exist
       const result = [];
