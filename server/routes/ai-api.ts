@@ -138,9 +138,10 @@ router.post('/optimize-seo', asyncHandler(async (req, res): Promise<void> => {
     // Validate the request body
     const validatedData = seoOptimizationSchema.parse(req.body);
     
-    // Get the Gemini Pro model
+    // Get the current AI model from settings
+    const currentModel = await getCurrentAiModel();
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
+      model: currentModel,
       safetySettings,
     });
     
