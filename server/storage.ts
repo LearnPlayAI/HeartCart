@@ -15480,6 +15480,16 @@ export class DatabaseStorage implements IStorage {
         userId: fullOrder.userId
       };
 
+      logger.info('Invoice data prepared for regeneration', {
+        orderId,
+        orderNumber: fullOrder.orderNumber,
+        hasItems: !!fullOrder.items,
+        itemsLength: fullOrder.items?.length || 0,
+        orderItemsLength: invoiceData.orderItems?.length || 0,
+        shippingMethod: fullOrder.shippingMethod,
+        invoiceDataKeys: Object.keys(invoiceData)
+      });
+
       // Generate new invoice
       const invoiceGenerator = InvoiceGenerator.getInstance();
       const invoicePath = await invoiceGenerator.generateInvoicePDF(invoiceData);

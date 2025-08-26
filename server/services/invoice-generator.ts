@@ -9,11 +9,12 @@ export interface InvoiceData {
   customerName: string;
   customerEmail: string;
   customerPhone: string;
-  shippingAddress: string; // Kept for legacy but not used - PUDO only
-  shippingCity: string; // Kept for legacy but not used - PUDO only  
-  shippingPostalCode: string; // Kept for legacy but not used - PUDO only
+  shippingAddress: any; // Can be string or object with addressLine1, city, etc.
+  shippingCity: string;  
+  shippingPostalCode: string;
   selectedLockerName?: string; // PUDO locker name
   selectedLockerAddress?: string; // PUDO locker address
+  shippingMethod: string; // Required field for shipping method handling
   orderItems: Array<{
     productName: string;
     quantity: number;
@@ -67,11 +68,20 @@ export class InvoiceGenerator {
 
   async generateInvoicePDF(data: InvoiceData): Promise<string> {
     try {
+      // Critical debug logging
+      console.log('🔥 INVOICE DEBUG - Full data object:', JSON.stringify(data, null, 2));
+      console.log('🔥 INVOICE DEBUG - orderItems type:', typeof data.orderItems);
+      console.log('🔥 INVOICE DEBUG - orderItems value:', data.orderItems);
+      console.log('🔥 INVOICE DEBUG - orderItems isArray:', Array.isArray(data.orderItems));
+      
       logger.info('Starting PDF invoice generation with VAT', { 
         orderNumber: data.orderNumber,
         vatAmount: data.vatAmount,
         vatRate: data.vatRate,
-        vatRegistered: data.vatRegistered
+        vatRegistered: data.vatRegistered,
+        orderItemsCount: data.orderItems?.length || 0,
+        hasOrderItems: !!data.orderItems,
+        dataKeys: Object.keys(data)
       });
 
       // Create new jsPDF instance
@@ -231,6 +241,18 @@ export class InvoiceGenerator {
 
     // Order items
     doc.setFont('helvetica', 'normal');
+    
+    // Defensive check for orderItems
+    if (!data.orderItems || !Array.isArray(data.orderItems)) {
+      logger.error('Order items array is missing or invalid', { 
+        orderItems: data.orderItems,
+        orderItemsType: typeof data.orderItems,
+        isArray: Array.isArray(data.orderItems),
+        dataKeys: Object.keys(data)
+      });
+      throw new Error('Order items array is missing or invalid');
+    }
+    
     data.orderItems.forEach(item => {
       if (yPosition > 250) { // Add new page if needed
         doc.addPage();
