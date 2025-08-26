@@ -15447,21 +15447,37 @@ export class DatabaseStorage implements IStorage {
       // Import InvoiceGenerator
       const { InvoiceGenerator } = await import('./services/invoice-generator');
       
-      // Create invoice data
+      // Create invoice data in the correct format expected by InvoiceGenerator
       const invoiceData = {
-        order: fullOrder,
-        items: fullOrder.items || [],
-        customer: {
-          name: fullOrder.customerName,
-          email: fullOrder.customerEmail,
-          phone: fullOrder.customerPhone,
-          address: fullOrder.shippingAddress,
-          city: fullOrder.shippingCity,
-          postalCode: fullOrder.shippingPostalCode
-        },
-        pudo: fullOrder.lockerDetails || fullOrder.pudoLocker,
+        orderNumber: fullOrder.orderNumber,
+        customerName: fullOrder.customerName,
+        customerEmail: fullOrder.customerEmail,
+        customerPhone: fullOrder.customerPhone,
+        shippingAddress: fullOrder.shippingAddress,
+        shippingCity: fullOrder.shippingCity, 
+        shippingPostalCode: fullOrder.shippingPostalCode,
+        selectedLockerName: fullOrder.lockerDetails?.name || fullOrder.pudoLocker?.name,
+        selectedLockerAddress: fullOrder.lockerDetails?.address || fullOrder.pudoLocker?.address,
+        shippingMethod: fullOrder.shippingMethod,
+        orderItems: (fullOrder.items || []).map(item => ({
+          productName: item.productName,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          totalPrice: item.totalPrice,
+          attributeDisplayText: item.attributeDisplayText
+        })),
+        subtotalAmount: fullOrder.subtotalAmount,
+        shippingCost: fullOrder.shippingCost,
+        vatAmount: fullOrder.vatAmount,
+        vatRate: fullOrder.vatRate,
+        vatRegistered: fullOrder.vatRegistered,
+        vatRegistrationNumber: fullOrder.vatRegistrationNumber,
         creditUsed: fullOrder.creditUsed || 0,
-        remainingBalance: fullOrder.remainingBalance || 0
+        remainingBalance: fullOrder.remainingBalance || 0,
+        totalAmount: fullOrder.totalAmount,
+        paymentMethod: fullOrder.paymentMethod,
+        paymentReceivedDate: fullOrder.paymentReceivedDate,
+        userId: fullOrder.userId
       };
 
       // Generate new invoice
