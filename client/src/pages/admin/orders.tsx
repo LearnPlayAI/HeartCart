@@ -776,6 +776,8 @@ export default function AdminOrdersPage() {
     onSuccess: (data) => {
       // Invalidate and refetch orders list to update statistics and order display
       queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
+      // Invalidate financial summary to update dashboard calculations
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/financial-summary'] });
       refetch(); // Force immediate refetch
       
       toast({

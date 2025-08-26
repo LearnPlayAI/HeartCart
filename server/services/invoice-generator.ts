@@ -68,20 +68,12 @@ export class InvoiceGenerator {
 
   async generateInvoicePDF(data: InvoiceData): Promise<string> {
     try {
-      // Critical debug logging
-      console.log('🔥 INVOICE DEBUG - Full data object:', JSON.stringify(data, null, 2));
-      console.log('🔥 INVOICE DEBUG - orderItems type:', typeof data.orderItems);
-      console.log('🔥 INVOICE DEBUG - orderItems value:', data.orderItems);
-      console.log('🔥 INVOICE DEBUG - orderItems isArray:', Array.isArray(data.orderItems));
-      
       logger.info('Starting PDF invoice generation with VAT', { 
         orderNumber: data.orderNumber,
         vatAmount: data.vatAmount,
         vatRate: data.vatRate,
         vatRegistered: data.vatRegistered,
-        orderItemsCount: data.orderItems?.length || 0,
-        hasOrderItems: !!data.orderItems,
-        dataKeys: Object.keys(data)
+        orderItemsCount: data.orderItems?.length || 0
       });
 
       // Create new jsPDF instance
