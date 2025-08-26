@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
-import { CheckCircle, Copy, Building2, MapPin, Clock, Phone, Package, Mail, User, Upload, FileCheck, XCircle } from 'lucide-react';
+import { CheckCircle, Copy, Building2, MapPin, Clock, Phone, Package, Mail, User, Upload, FileCheck, XCircle, Truck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
@@ -359,8 +359,8 @@ export default function PaymentConfirmation() {
             </CardContent>
           </Card>
 
-          {/* PUDO Locker Details */}
-          {orderData.lockerDetails && (
+          {/* PUDO Locker Details - Only for locker delivery */}
+          {orderData.shippingMethod === 'pudo-locker' && orderData.lockerDetails && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
@@ -395,6 +395,51 @@ export default function PaymentConfirmation() {
                       <p>• PUDO tracking information will be sent to your email</p>
                       <p>• Track your order status in "My Orders" (accessible from the user menu)</p>
                       <p>• Bring your ID and collection code when picking up</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* PUDO Door Delivery Details - Only for door delivery */}
+          {orderData.shippingMethod === 'pudo-door' && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Truck className="w-5 h-5 mr-2" />
+                  PUDO to your Door Delivery
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex items-start">
+                      <MapPin className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0 text-gray-500" />
+                      <div>
+                        <p className="font-semibold">Delivery Address:</p>
+                        <p className="text-gray-600">{orderData.shippingAddress?.addressLine1}</p>
+                        {orderData.shippingAddress?.addressLine2 && (
+                          <p className="text-gray-600">{orderData.shippingAddress.addressLine2}</p>
+                        )}
+                        <p className="text-gray-600">
+                          {orderData.shippingAddress?.city}, {orderData.shippingAddress?.province} {orderData.shippingAddress?.postalCode}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Delivery Information */}
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                    <h4 className="font-semibold text-green-900 mb-2 flex items-center">
+                      <Truck className="w-4 h-4 mr-1" />
+                      Delivery Information
+                    </h4>
+                    <div className="text-sm text-green-800 space-y-1">
+                      <p>• Your order will be delivered directly to your door</p>
+                      <p>• PUDO tracking information will be sent to your email</p>
+                      <p>• Track your order status in "My Orders" (accessible from the user menu)</p>
+                      <p>• Please ensure someone is available to receive the delivery</p>
                     </div>
                   </div>
                 </div>

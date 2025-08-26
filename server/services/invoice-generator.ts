@@ -178,18 +178,42 @@ export class InvoiceGenerator {
 
     yPosition += 35; // Increased to accommodate the longer company address
 
-    // PUDO Locker Collection (No physical address delivery)
+    // Shipping Method Details (Dynamic based on selected method)
     doc.setFont('helvetica', 'bold');
-    doc.text('Collection Point:', margin, yPosition);
-    yPosition += 7;
-    doc.setFont('helvetica', 'normal');
-    if (data.selectedLockerName && data.selectedLockerAddress) {
-      doc.text(`PUDO Locker: ${data.selectedLockerName}`, margin, yPosition);
-      doc.text(data.selectedLockerAddress, margin, yPosition + 5);
-      doc.text('SMS notification will be sent with collection code', margin, yPosition + 10);
+    if (data.shippingMethod === 'pudo-locker') {
+      doc.text('Collection Point:', margin, yPosition);
+      yPosition += 7;
+      doc.setFont('helvetica', 'normal');
+      if (data.selectedLockerName && data.selectedLockerAddress) {
+        doc.text(`PUDO Locker: ${data.selectedLockerName}`, margin, yPosition);
+        doc.text(data.selectedLockerAddress, margin, yPosition + 5);
+        doc.text('SMS notification will be sent with collection code', margin, yPosition + 10);
+      } else {
+        doc.text('PUDO Locker Collection', margin, yPosition);
+        doc.text('SMS notification will be sent with locker details', margin, yPosition + 5);
+      }
+    } else if (data.shippingMethod === 'pudo-door') {
+      doc.text('Delivery Address:', margin, yPosition);
+      yPosition += 7;
+      doc.setFont('helvetica', 'normal');
+      if (data.shippingAddress) {
+        doc.text(data.shippingAddress.addressLine1, margin, yPosition);
+        if (data.shippingAddress.addressLine2) {
+          doc.text(data.shippingAddress.addressLine2, margin, yPosition + 5);
+          yPosition += 5;
+        }
+        doc.text(`${data.shippingAddress.city}, ${data.shippingAddress.province} ${data.shippingAddress.postalCode}`, margin, yPosition + 5);
+        doc.text('PUDO to your Door delivery', margin, yPosition + 10);
+      } else {
+        doc.text('PUDO to your Door delivery', margin, yPosition);
+        doc.text('Delivery to customer address', margin, yPosition + 5);
+      }
     } else {
-      doc.text('PUDO Locker Collection', margin, yPosition);
-      doc.text('SMS notification will be sent with locker details', margin, yPosition + 5);
+      // Fallback for any other shipping method
+      doc.text('Shipping Method:', margin, yPosition);
+      yPosition += 7;
+      doc.setFont('helvetica', 'normal');
+      doc.text(data.shippingMethod || 'Standard Delivery', margin, yPosition);
     }
     
     yPosition += 20;

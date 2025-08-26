@@ -320,8 +320,8 @@ export default function OrderConfirmationPage() {
               </Card>
             )}
 
-            {/* PUDO Locker Details */}
-            {order.shippingMethod === 'pudo' && order.lockerDetails && (
+            {/* PUDO Locker Details - Only for locker delivery */}
+            {order.shippingMethod === 'pudo-locker' && order.lockerDetails && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center">
@@ -356,6 +356,51 @@ export default function OrderConfirmationPage() {
                         <p>• PUDO tracking information will be sent to your email</p>
                         <p>• Track your order status in "My Orders" (accessible from the user menu)</p>
                         <p>• Bring your ID and collection code when picking up</p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* PUDO Door Delivery Details - Only for door delivery */}
+            {order.shippingMethod === 'pudo-door' && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Truck className="w-5 h-5 mr-2" />
+                    PUDO to your Door Delivery
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <div className="flex items-start">
+                        <MapPin className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0 text-gray-500" />
+                        <div>
+                          <p className="font-semibold">Delivery Address:</p>
+                          <p className="text-gray-600">{order.shippingAddress?.addressLine1}</p>
+                          {order.shippingAddress?.addressLine2 && (
+                            <p className="text-gray-600">{order.shippingAddress.addressLine2}</p>
+                          )}
+                          <p className="text-gray-600">
+                            {order.shippingAddress?.city}, {order.shippingAddress?.province} {order.shippingAddress?.postalCode}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Delivery Information */}
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                      <h4 className="font-semibold text-green-900 mb-2 flex items-center">
+                        <Truck className="w-4 h-4 mr-1" />
+                        Delivery Information
+                      </h4>
+                      <div className="text-sm text-green-800 space-y-1">
+                        <p>• Your order will be delivered directly to your door</p>
+                        <p>• PUDO tracking information will be sent to your email</p>
+                        <p>• Track your order status in "My Orders" (accessible from the user menu)</p>
+                        <p>• Please ensure someone is available to receive the delivery</p>
                       </div>
                     </div>
                   </div>
