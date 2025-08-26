@@ -1,6 +1,6 @@
 /**
  * Admin Shipping Fee Settings Card Component
- * Allows admin to skip R85 shipping fee for testing card payments
+ * Allows admin to skip shipping fees for testing card payments
  */
 
 import { useState } from 'react';
@@ -76,7 +76,7 @@ export function AdminShippingFeeCard() {
           Admin Shipping Fee Settings
         </CardTitle>
         <CardDescription>
-          Skip R85 shipping fee for admin card payments to enable testing with cheaper amounts
+          Skip shipping fees for admin card payments to enable testing with cheaper amounts
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -84,10 +84,10 @@ export function AdminShippingFeeCard() {
         <div className="flex items-center justify-between p-4 border rounded-lg">
           <div className="space-y-1">
             <Label htmlFor="skip-shipping-fee" className="text-base font-medium">
-              Skip R85 Shipping Fee for Admin
+              Skip Shipping Fees for Admin
             </Label>
             <p className="text-sm text-muted-foreground">
-              Remove shipping fee from card payments when admin places orders
+              Remove shipping fees from card payments when admin places orders
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -111,10 +111,10 @@ export function AdminShippingFeeCard() {
               <span className="font-medium">Regular Customers</span>
             </div>
             <Badge variant="default" className="bg-green-100 text-green-800">
-              R85 Shipping Always
+              Shipping Always Applied
             </Badge>
             <p className="text-xs text-muted-foreground mt-1">
-              Normal customers always pay R85 shipping
+              Normal customers always pay shipping costs (R85 lockers / R119 door)
             </p>
           </div>
 
@@ -125,12 +125,12 @@ export function AdminShippingFeeCard() {
             </div>
             <Badge variant={currentSkipEnabled ? "default" : "secondary"} 
                    className={currentSkipEnabled ? "bg-purple-100 text-purple-800" : "bg-gray-100 text-gray-600"}>
-              {currentSkipEnabled ? 'R85 Skipped' : 'R85 Charged'}
+              {currentSkipEnabled ? 'Shipping Skipped' : 'Shipping Charged'}
             </Badge>
             <p className="text-xs text-muted-foreground mt-1">
               {currentSkipEnabled 
-                ? 'Admin card payments skip R85 shipping' 
-                : 'Admin pays normal R85 shipping'}
+                ? 'Admin card payments skip shipping fees' 
+                : 'Admin pays normal shipping costs'}
             </p>
           </div>
         </div>
@@ -138,7 +138,7 @@ export function AdminShippingFeeCard() {
         {/* Impact Notice */}
         <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
           <p className="text-sm text-purple-800">
-            <strong>Testing Impact:</strong> When enabled, admin users pay R85 less during card payments, 
+            <strong>Testing Impact:</strong> When enabled, admin users pay reduced amounts during card payments, 
             but orders still show full amount including shipping in database, emails, and invoices.
           </p>
         </div>
@@ -147,7 +147,7 @@ export function AdminShippingFeeCard() {
         <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <p className="text-sm text-blue-800">
             <strong>Usage:</strong> Enable this setting to test real card payments with cheaper amounts. 
-            For example, a R50 product will charge R50 instead of R135 (R50 + R85 shipping).
+            For example, a R50 product will charge R50 instead of R169 (R50 + R119 door shipping).
           </p>
         </div>
       </CardContent>

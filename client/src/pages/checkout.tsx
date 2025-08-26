@@ -1029,8 +1029,8 @@ export default function CheckoutPage() {
               </div>
             )}
 
-            {/* PUDO Locker Selection Validation */}
-            {!selectedLocker && (
+            {/* PUDO Locker Selection Validation - Only show for locker delivery */}
+            {form.watch('shippingMethod') === 'pudo-locker' && !selectedLocker && (
               <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
                 <div className="flex items-center gap-2">
                   <AlertCircle className="h-4 w-4 text-amber-600" />
