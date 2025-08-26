@@ -4077,15 +4077,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     asyncHandler(async (req: Request, res: Response) => {
       try {
         if (!req.isAuthenticated()) {
-          // For non-authenticated users, return empty totals
+          // For non-authenticated users, return empty totals (no shipping in cart)
           return res.json({
             success: true,
             data: {
               subtotal: 0,
-              shippingCost: 85, // Standard PUDO shipping
+              shippingCost: 0, // Shipping calculated at checkout
               vatRate: 0,
               vatAmount: 0,
-              totalAmount: 85,
+              totalAmount: 0,
               itemCount: 0,
               vatBreakdown: {
                 vatableAmount: 0,
@@ -4118,13 +4118,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return sum + (currentPrice * quantity);
         }, 0);
         
-        const shippingCost = 85; // Standard PUDO shipping
+        const shippingCost = 0; // Shipping calculated at checkout, not in cart
         
         // VAT calculation logic: Apply VAT only if settings are active AND company is VAT registered
+        // VAT applies only to product subtotal, shipping VAT is handled at checkout
         const shouldApplyVAT = vatRateActive && vatRegisteredActive && vatRegistered;
         const effectiveVATRate = shouldApplyVAT ? vatRateValue : 0;
         
-        const vatableAmount = subtotal + shippingCost;
+        const vatableAmount = subtotal; // Only product subtotal for cart VAT
         const vatAmount = vatableAmount * (effectiveVATRate / 100);
         const totalAmount = vatableAmount + vatAmount;
         

@@ -128,18 +128,11 @@ const CartDrawer = () => {
   const finalTotal = cartTotals?.subtotal || 0; // Before VAT
   const totalDiscount = 0; // No discounts in simplified system
   
-  // Calculate shipping with exemption logic using server-side data
+  // Cart total excludes shipping - will be calculated at checkout
   const availableCredit = creditBalance?.availableCredits ? parseFloat(creditBalance.availableCredits) : 0;
-  const baseShipping = cartTotals?.shippingCost || 85;
-  const { shippingCost: shipping, isShippingWaived, reasonForWaiver } = calculateShippingCost(
-    baseShipping,
-    transactions || [],
-    availableCredit,
-    userOrders
-  );
   
-  // Use server-side total amount that includes VAT
-  const cartTotal = cartTotals?.totalAmount || (finalTotal + shipping);
+  // Use server-side subtotal (no shipping included in cart)
+  const cartTotal = cartTotals?.subtotal || finalTotal;
   
   // Automatically apply maximum available credits
   const autoCreditAmount = Math.min(availableCredit, cartTotal);
@@ -365,17 +358,7 @@ const CartDrawer = () => {
               </div>
               <div className="flex justify-between mb-2 text-sm">
                 <span className="text-gray-600">Shipping</span>
-                <div className="text-right">
-                  {isShippingWaived ? (
-                    <div>
-                      <span className="line-through text-gray-400 text-xs">R85.00</span>
-                      <span className="ml-2 font-medium text-green-600">FREE</span>
-                      <div className="text-xs text-green-600">{reasonForWaiver}</div>
-                    </div>
-                  ) : (
-                    <span className="font-medium">{formatCurrency(shipping)}</span>
-                  )}
-                </div>
+                <span className="font-medium text-gray-500">Calculated at checkout</span>
               </div>
               
               {/* VAT Display - Only show when VAT is registered */}

@@ -7793,6 +7793,7 @@ export class DatabaseStorage implements IStorage {
           totalAmount: orders.totalAmount,
           transactionFeeAmount: orders.transactionFeeAmount,
           actualShippingCost: orders.actualShippingCost,
+          shippingCost: orders.shippingCost,
           creditUsed: orders.creditUsed,
           itemQuantity: orderItems.quantity,
           itemProductId: orderItems.productId,
@@ -7839,6 +7840,7 @@ export class DatabaseStorage implements IStorage {
         transactionFeeAmount: number;
         creditUsed: number;
         actualShippingCost: number;
+        shippingCost: number;
         productCosts: number;
       }>();
 
@@ -7854,6 +7856,7 @@ export class DatabaseStorage implements IStorage {
             transactionFeeAmount: row.transactionFeeAmount || 0,
             creditUsed: parseFloat(row.creditUsed?.toString() || '0'),
             actualShippingCost: row.actualShippingCost || 60, // Default to R60 if not set
+            shippingCost: row.shippingCost || 85, // Customer shipping cost paid, default R85 for old orders
             productCosts: 0,
           });
         }
@@ -7878,6 +7881,7 @@ export class DatabaseStorage implements IStorage {
       let totalProductCosts = 0;
       let totalPaymentProcessingFees = 0;
       let totalShippingCosts = 0;
+      let totalShippingRevenue = 0;
       let totalCustomerCreditsUsed = 0;
 
       for (const [orderId, orderData] of orderTotals) {
@@ -7885,15 +7889,14 @@ export class DatabaseStorage implements IStorage {
         totalProductCosts += orderData.productCosts;
         totalPaymentProcessingFees += orderData.transactionFeeAmount;
         totalShippingCosts += orderData.actualShippingCost;
+        totalShippingRevenue += orderData.shippingCost; // Use actual customer shipping cost paid
         totalCustomerCreditsUsed += orderData.creditUsed;
       }
 
       // Fixed costs per delivered order
       const PACKAGING_COST_PER_ORDER = 5; // R5 packaging cost
-      const SHIPPING_REVENUE_PER_ORDER = 85; // R85 shipping charge per order
       
       const totalPackagingCosts = orderCount * PACKAGING_COST_PER_ORDER;
-      const totalShippingRevenue = orderCount * SHIPPING_REVENUE_PER_ORDER;
       const totalShippingProfits = totalShippingRevenue - totalShippingCosts;
 
       // Calculate totals - shipping profits are added to profit, not costs
@@ -7909,7 +7912,7 @@ export class DatabaseStorage implements IStorage {
         const orderShippingCost = orderData.actualShippingCost;
         const orderPackagingCost = PACKAGING_COST_PER_ORDER;
         const orderCreditsUsed = orderData.creditUsed;
-        const orderShippingProfit = SHIPPING_REVENUE_PER_ORDER - orderShippingCost;
+        const orderShippingProfit = orderData.shippingCost - orderShippingCost;
         
         const orderTotalCosts = orderProductCosts + orderPaymentFees + orderShippingCost + orderPackagingCost + orderCreditsUsed;
         const orderProfit = orderData.totalAmount - orderTotalCosts + orderShippingProfit;

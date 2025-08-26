@@ -81,7 +81,7 @@ const createOrderSchema = z.object({
     province: z.string().min(1, "Province is required"),
     postalCode: z.string().min(1, "Postal code is required")
   }),
-  shippingMethod: z.string().default("pudo"),
+  shippingMethod: z.string().default("pudo-door"),
   shippingCost: z.number(),
   paymentMethod: z.string().default("eft"),
   specialInstructions: z.string().optional(),
@@ -188,6 +188,17 @@ router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Respons
       }
     }
 
+    // Validate shipping method and locker requirements
+    if (orderData.shippingMethod === "pudo-locker") {
+      if (!orderData.selectedLockerId || !orderData.lockerDetails) {
+        return sendError(res, "PUDO locker selection is required for locker delivery method", 400);
+      }
+    } else if (orderData.shippingMethod === "pudo-door") {
+      // No locker required for door delivery
+    } else {
+      return sendError(res, "Invalid shipping method. Must be 'pudo-locker' or 'pudo-door'", 400);
+    }
+
     // Validate products exist and prepare order items
     const orderItems = [];
     for (const item of orderData.orderItems) {
@@ -239,7 +250,7 @@ router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Respons
           creditUsed: orderData.creditUsed,
           originalTotal: remainingBalance + orderData.creditUsed,
           newTotal: newTotal,
-          shippingSaved: 85 // R85 shipping cost waived
+          shippingSaved: orderData.shippingCost // Actual shipping cost waived
         });
       }
       
@@ -344,13 +355,13 @@ router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Respons
       remainingBalance: remainingBalance,
       paymentReferenceNumber: orderData.paymentReferenceNumber || null,
       eftPop: orderData.proofOfPayment || null, // Save proof of payment URL to eftPop field
-      // PUDO Locker Details - mapping to camelCase columns
-      selectedLockerId: orderData.selectedLockerId || null,
-      selectedLockerCode: orderData.lockerDetails?.code || null,
-      selectedLockerName: orderData.lockerDetails?.name || null,
-      selectedLockerAddress: orderData.lockerDetails?.address || null,
-      // Also save to the lockerDetails JSONB column
-      lockerDetails: orderData.lockerDetails ? {
+      // PUDO Locker Details - only save for locker delivery method
+      selectedLockerId: orderData.shippingMethod === "pudo-locker" ? (orderData.selectedLockerId || null) : null,
+      selectedLockerCode: orderData.shippingMethod === "pudo-locker" ? (orderData.lockerDetails?.code || null) : null,
+      selectedLockerName: orderData.shippingMethod === "pudo-locker" ? (orderData.lockerDetails?.name || null) : null,
+      selectedLockerAddress: orderData.shippingMethod === "pudo-locker" ? (orderData.lockerDetails?.address || null) : null,
+      // Also save to the lockerDetails JSONB column (only for locker delivery)
+      lockerDetails: orderData.shippingMethod === "pudo-locker" && orderData.lockerDetails ? {
         id: orderData.selectedLockerId,
         code: orderData.lockerDetails.code,
         name: orderData.lockerDetails.name,
@@ -525,8 +536,8 @@ router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Respons
         paymentMethod: orderData.paymentMethod,
         paymentStatus: finalPaymentStatus,
         shippingMethod: orderData.shippingMethod,
-        selectedLockerName: orderData.lockerDetails?.name,
-        selectedLockerAddress: orderData.lockerDetails?.address,
+        selectedLockerName: orderData.shippingMethod === "pudo-locker" ? orderData.lockerDetails?.name : null,
+        selectedLockerAddress: orderData.shippingMethod === "pudo-locker" ? orderData.lockerDetails?.address : null,
         shippingAddress: orderData.shippingAddress.addressLine1 + (orderData.shippingAddress.addressLine2 ? ', ' + orderData.shippingAddress.addressLine2 : ''),
         shippingCity: orderData.shippingAddress.city,
         shippingPostalCode: orderData.shippingAddress.postalCode

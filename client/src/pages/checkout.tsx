@@ -50,7 +50,7 @@ const checkoutSchema = z.object({
   postalCode: z.string().min(4, "Please enter a valid postal code"),
   
   // Shipping Method
-  shippingMethod: z.enum(["pudo"], {
+  shippingMethod: z.enum(["pudo-locker", "pudo-door"], {
     required_error: "Please select a shipping method"
   }),
   
@@ -75,7 +75,15 @@ const provinces = [
 // Shipping options with detailed information
 const shippingOptions = [
   {
-    id: "pudo",
+    id: "pudo-door",
+    name: "PUDO to your Door",
+    description: "Delivered directly to your address",
+    price: 119,
+    estimatedDays: "2-3 business days",
+    icon: Truck
+  },
+  {
+    id: "pudo-locker",
     name: "PUDO Lockers",
     description: "Collect from nearest PUDO locker",
     price: 85,
@@ -224,7 +232,7 @@ export default function CheckoutPage() {
       city: "",
       province: "",
       postalCode: "",
-      shippingMethod: "pudo",
+      shippingMethod: "pudo-door",
       paymentMethod: "card", // Card payment as default
       specialInstructions: "",
       saveDetails: true
@@ -256,7 +264,7 @@ export default function CheckoutPage() {
         city: userData.city || "",
         province: userData.province || "",
         postalCode: userData.postalCode || "",
-        shippingMethod: "pudo",
+        shippingMethod: "pudo-door",
         paymentMethod: "card", // Card payment as default
         specialInstructions: "",
         saveDetails: true
@@ -445,7 +453,7 @@ export default function CheckoutPage() {
     }
 
     // Validate PUDO locker selection for PUDO shipping
-    if (data.shippingMethod === "pudo" && !selectedLocker) {
+    if (data.shippingMethod === "pudo-locker" && !selectedLocker) {
       toast({
         title: "Locker Required",
         description: "Please select a PUDO locker for pickup.",
@@ -839,7 +847,7 @@ export default function CheckoutPage() {
             </Card>
 
             {/* PUDO Locker Selection */}
-            {selectedShippingMethod === "pudo" && (
+            {selectedShippingMethod === "pudo-locker" && (
               <PudoLockerPicker
                 selectedLockerId={selectedLocker?.id}
                 onLockerSelect={setSelectedLocker}
@@ -978,7 +986,7 @@ export default function CheckoutPage() {
                 selectedLockerId: selectedLocker?.id,
                 formValid: form.formState.isValid,
                 formErrors: Object.keys(form.formState.errors),
-                pudoCheck: selectedShippingMethod === "pudo" && !selectedLocker?.id
+                pudoCheck: selectedShippingMethod === "pudo-locker" && !selectedLocker?.id
               };
               console.log('🔘 Button State Debug:', buttonState);
               return null;
@@ -989,7 +997,7 @@ export default function CheckoutPage() {
               type="submit"
               size="lg"
               className="w-full bg-gradient-to-r from-pink-600 to-pink-700 hover:from-pink-700 hover:to-pink-800"
-              disabled={isProcessing || (selectedShippingMethod === "pudo" && !selectedLocker?.id) || !form.formState.isValid || Object.keys(form.formState.errors).length > 0}
+              disabled={isProcessing || (selectedShippingMethod === "pudo-locker" && !selectedLocker?.id) || !form.formState.isValid || Object.keys(form.formState.errors).length > 0}
             >
               {isProcessing ? (
                 <>

@@ -1045,7 +1045,7 @@ export default function AdminOrderDetail() {
                 <div>
                   <label className="text-sm font-medium">Customer Shipping Cost:</label>
                   <div className="bg-gray-50 p-2 rounded mt-1">
-                    <span className="text-sm font-medium">R85.00</span>
+                    <span className="text-sm font-medium">{formatCurrency(order.shippingCost)}</span>
                     <span className="text-xs text-gray-500 ml-2">(Fixed rate)</span>
                   </div>
                 </div>
@@ -1666,7 +1666,13 @@ export default function AdminOrderDetail() {
                 <div className="flex items-center space-x-2">
                   <Truck className="h-4 w-4 text-muted-foreground" />
                   <div>
-                    <p className="font-medium capitalize">{order.shippingMethod}</p>
+                    <p className="font-medium">
+                      {order.shippingMethod === 'pudo-locker' 
+                        ? 'PUDO Lockers (R85)' 
+                        : order.shippingMethod === 'pudo-door' 
+                        ? 'PUDO to your Door (R119)' 
+                        : order.shippingMethod}
+                    </p>
                     <p className="text-sm text-muted-foreground">Shipping Method</p>
                   </div>
                 </div>
@@ -1683,7 +1689,7 @@ export default function AdminOrderDetail() {
           </Card>
 
           {/* PUDO Locker Information */}
-          {(order.lockerDetails || order.pudoLocker) && (
+          {order.shippingMethod === 'pudo-locker' && (order.lockerDetails || order.pudoLocker) && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
