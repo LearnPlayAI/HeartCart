@@ -1046,7 +1046,11 @@ export default function AdminOrderDetail() {
                   <label className="text-sm font-medium">Customer Shipping Cost:</label>
                   <div className="bg-gray-50 p-2 rounded mt-1">
                     <span className="text-sm font-medium">{formatCurrency(order.shippingCost)}</span>
-                    <span className="text-xs text-gray-500 ml-2">(Fixed rate)</span>
+                    <span className="text-xs text-gray-500 ml-2">
+                      ({order.shippingMethod === 'pudo-locker' ? 'PUDO Lockers' : 
+                        order.shippingMethod === 'pudo-door' ? 'PUDO to your Door' : 
+                        order.shippingMethod || 'Standard'})
+                    </span>
                   </div>
                 </div>
                 

@@ -117,6 +117,36 @@ export interface OrderConfirmationWithPaymentEmailData {
   invoicePath?: string; // For PDF invoice attachment
 }
 
+export interface SalesNotificationEmailData {
+  customerName: string;
+  customerEmail: string;
+  customerPhone?: string;
+  orderNumber: string;
+  orderId: number;
+  orderItems: Array<{
+    productName: string;
+    quantity: number;
+    unitPrice: number;
+    totalPrice: number;
+    attributeDisplayText?: string;
+  }>;
+  subtotalAmount: number;
+  shippingCost: number;
+  totalAmount: number;
+  paymentMethod: string;
+  paymentStatus: string;
+  shippingMethod: string;
+  selectedLockerName?: string;
+  selectedLockerAddress?: string;
+  shippingAddress?: string;
+  shippingCity?: string;
+  shippingPostalCode?: string;
+  vatAmount?: number;
+  vatRate?: number;
+  vatRegistered?: boolean;
+  vatRegistrationNumber?: string;
+}
+
 export interface CartAbandonmentEmailData {
   email: string;
   customerName: string;
@@ -1319,6 +1349,340 @@ export class DatabaseEmailService {
     } catch (error) {
       logger.error('Error sending order confirmation email', { error, data });
       throw error;
+    }
+  }
+
+  /**
+   * Send sales notification email to sales@heartcart.shop
+   */
+  async sendSalesNotificationEmail(data: SalesNotificationEmailData): Promise<void> {
+    try {
+      // Generate order items HTML
+      const orderItemsHtml = data.orderItems.map(item => `
+        <tr>
+          <td style="padding: 12px; border-bottom: 1px solid #e9ecef; vertical-align: top;">
+            <strong>${item.productName}</strong>
+            ${item.attributeDisplayText ? `<br><small style="color: #6c757d;">${item.attributeDisplayText}</small>` : ''}
+          </td>
+          <td style="padding: 12px; border-bottom: 1px solid #e9ecef; text-align: center;">${item.quantity}</td>
+          <td style="padding: 12px; border-bottom: 1px solid #e9ecef; text-align: right;">R ${item.unitPrice.toFixed(2)}</td>
+          <td style="padding: 12px; border-bottom: 1px solid #e9ecef; text-align: right;"><strong>R ${item.totalPrice.toFixed(2)}</strong></td>
+        </tr>
+      `).join('');
+
+      // Generate shipping information 
+      const shippingInfoHtml = data.shippingMethod === 'pudo-locker' && data.selectedLockerName ? `
+        <div style="background: linear-gradient(135deg, #FFF0F6 0%, #FFE4E1 100%); padding: 20px; border-left: 4px solid #FF69B4; margin: 25px 0; border-radius: 8px;">
+          <h4 style="margin: 0 0 10px 0; color: #E91E63; display: flex; align-items: center;">
+            <span style="font-size: 18px; margin-right: 8px;">📦</span>
+            PUDO Locker Delivery (R${data.shippingCost})
+          </h4>
+          <p style="margin: 0; font-size: 14px; color: #4A5568;"><strong>Selected Locker:</strong> ${data.selectedLockerName}</p>
+          <p style="margin: 5px 0 0 0; font-size: 14px; color: #718096;">${data.selectedLockerAddress}</p>
+        </div>
+      ` : `
+        <div style="background: linear-gradient(135deg, #FFF0F6 0%, #FFE4E1 100%); padding: 20px; border-left: 4px solid #FF69B4; margin: 25px 0; border-radius: 8px;">
+          <h4 style="margin: 0 0 10px 0; color: #E91E63; display: flex; align-items: center;">
+            <span style="font-size: 18px; margin-right: 8px;">🚚</span>
+            PUDO to your Door (R${data.shippingCost})
+          </h4>
+          <p style="margin: 0; font-size: 14px; color: #4A5568;">${data.shippingAddress}</p>
+          <p style="margin: 5px 0 0 0; font-size: 14px; color: #718096;">${data.shippingCity}, ${data.shippingPostalCode}</p>
+        </div>
+      `;
+
+      // Generate payment status badge
+      const paymentStatusBadge = data.paymentStatus === 'paid' ? 
+        '<span style="background: #10B981; color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold;">✓ PAID</span>' :
+        '<span style="background: #F59E0B; color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold;">⏳ PENDING VERIFICATION</span>';
+
+      const emailParams = new EmailParams()
+        .setFrom(this.sender)
+        .setTo([new Recipient("sales@heartcart.shop", "HeartCart Sales Team")])
+        .setSubject(`🛍️ New Order Alert - ${data.orderNumber}`)
+        .setSettings({
+          track_clicks: false,
+          track_opens: true
+        })
+        .setHtml(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>New Order Alert - HeartCart</title>
+          </head>
+          <body style="margin: 0; padding: 0; background: linear-gradient(135deg, #F3F4F6 0%, #FFFFFF 100%); font-family: 'Segoe UI', Arial, sans-serif;">
+            <div class="container" style="max-width: 700px; margin: 20px auto; background: #FFFFFF; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 32px rgba(255, 105, 180, 0.2);">
+              
+              <!-- Header -->
+              <div class="header" style="background: linear-gradient(135deg, #FF69B4 0%, #E91E63 100%); padding: 30px; text-align: center; position: relative;">
+                <div style="position: absolute; top: 0; left: 0; width: 100%; height: 6px; background: linear-gradient(90deg, #FF69B4 0%, #FF1493 50%, #E91E63 100%);"></div>
+                <div style="display: inline-block; background: #FFFFFF; padding: 15px; border-radius: 50%; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);">
+                  <span style="font-size: 32px; color: #FF69B4;">🔔</span>
+                </div>
+                <h1 style="color: #FFFFFF; margin: 0; font-size: 32px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">New Order Alert!</h1>
+                <p style="color: #FFFFFF; margin: 8px 0 0 0; font-size: 16px; opacity: 0.9;">Sales Team Notification</p>
+              </div>
+            
+            <div style="background: #FFFFFF; padding: 30px;">
+              <div style="text-align: center; margin-bottom: 25px;">
+                <h2 style="color: #E91E63; margin: 0; font-size: 24px; font-weight: 600;">Order #${data.orderNumber}</h2>
+                <p style="color: #6B7280; margin: 8px 0 0 0; font-size: 14px;">A new order has been placed on HeartCart.shop</p>
+              </div>
+              
+              <!-- Customer Information -->
+              <div style="background: linear-gradient(135deg, #FFF0F6 0%, #FFFFFF 100%); padding: 25px; border-radius: 12px; border: 2px solid #FF69B4; margin: 25px 0; box-shadow: 0 4px 12px rgba(255, 105, 180, 0.1);">
+                <h3 style="margin: 0 0 15px 0; color: #E91E63; display: flex; align-items: center;">
+                  <span style="font-size: 18px; margin-right: 8px;">👤</span>
+                  Customer Information
+                </h3>
+                <table style="width: 100%; border-collapse: collapse;">
+                  <tr>
+                    <td style="padding: 8px 0; font-weight: bold; color: #E91E63; width: 30%;">Name:</td>
+                    <td style="padding: 8px 0; color: #4A5568;">${data.customerName}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; font-weight: bold; color: #E91E63;">Email:</td>
+                    <td style="padding: 8px 0; color: #4A5568;"><a href="mailto:${data.customerEmail}" style="color: #FF69B4; text-decoration: none;">${data.customerEmail}</a></td>
+                  </tr>
+                  ${data.customerPhone ? `
+                  <tr>
+                    <td style="padding: 8px 0; font-weight: bold; color: #E91E63;">Phone:</td>
+                    <td style="padding: 8px 0; color: #4A5568;"><a href="tel:${data.customerPhone}" style="color: #FF69B4; text-decoration: none;">${data.customerPhone}</a></td>
+                  </tr>
+                  ` : ''}
+                </table>
+              </div>
+
+              <!-- Order Details -->
+              <div style="background: linear-gradient(135deg, #FFF0F6 0%, #FFFFFF 100%); padding: 25px; border-radius: 12px; border: 2px solid #FF69B4; margin: 25px 0; box-shadow: 0 4px 12px rgba(255, 105, 180, 0.1);">
+                <h3 style="margin: 0 0 15px 0; color: #E91E63; display: flex; align-items: center;">
+                  <span style="font-size: 18px; margin-right: 8px;">💳</span>
+                  Payment & Order Details
+                </h3>
+                <table style="width: 100%; border-collapse: collapse;">
+                  <tr>
+                    <td style="padding: 8px 0; font-weight: bold; color: #E91E63; width: 30%;">Order ID:</td>
+                    <td style="padding: 8px 0; color: #4A5568;">#${data.orderId}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; font-weight: bold; color: #E91E63;">Payment Status:</td>
+                    <td style="padding: 8px 0;">${paymentStatusBadge}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; font-weight: bold; color: #E91E63;">Payment Method:</td>
+                    <td style="padding: 8px 0; color: #4A5568;">${data.paymentMethod === 'eft' ? 'EFT Bank Transfer' : data.paymentMethod}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; font-weight: bold; color: #E91E63;">Order Total:</td>
+                    <td style="padding: 8px 0; color: #10B981; font-weight: bold; font-size: 16px;">R ${data.totalAmount.toFixed(2)}</td>
+                  </tr>
+                </table>
+              </div>
+
+              ${shippingInfoHtml}
+              
+              <!-- Order Items -->
+              <div style="background: linear-gradient(135deg, #FFF0F6 0%, #FFFFFF 100%); padding: 25px; border-radius: 12px; border: 2px solid #FF69B4; margin: 25px 0; box-shadow: 0 4px 12px rgba(255, 105, 180, 0.1);">
+                <h3 style="margin: 0 0 15px 0; color: #E91E63; display: flex; align-items: center;">
+                  <span style="font-size: 18px; margin-right: 8px;">📋</span>
+                  Order Items
+                </h3>
+                <table style="width: 100%; border-collapse: collapse;">
+                  <thead>
+                    <tr style="background: linear-gradient(135deg, #FF69B4 0%, #E91E63 100%);">
+                      <th style="padding: 12px; text-align: left; border-bottom: 2px solid #E91E63; color: #FFFFFF; font-weight: 600;">Product</th>
+                      <th style="padding: 12px; text-align: center; border-bottom: 2px solid #E91E63; color: #FFFFFF; font-weight: 600;">Qty</th>
+                      <th style="padding: 12px; text-align: right; border-bottom: 2px solid #E91E63; color: #FFFFFF; font-weight: 600;">Unit Price</th>
+                      <th style="padding: 12px; text-align: right; border-bottom: 2px solid #E91E63; color: #FFFFFF; font-weight: 600;">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${orderItemsHtml}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td colspan="3" style="padding: 12px; text-align: right; font-weight: bold; color: #E91E63;">Subtotal:</td>
+                      <td style="padding: 12px; text-align: right; font-weight: bold; color: #4A5568;">R ${data.subtotalAmount.toFixed(2)}</td>
+                    </tr>
+                    <tr>
+                      <td colspan="3" style="padding: 12px; text-align: right; font-weight: bold; color: #E91E63;">Shipping:</td>
+                      <td style="padding: 12px; text-align: right; font-weight: bold; color: #4A5568;">R ${data.shippingCost.toFixed(2)}</td>
+                    </tr>
+                    ${data.vatRegistered && data.vatAmount !== undefined && data.vatAmount > 0 ? `
+                    <tr>
+                      <td colspan="3" style="padding: 12px; text-align: right; font-weight: bold; color: #E91E63;">VAT (${data.vatRate}%):</td>
+                      <td style="padding: 12px; text-align: right; font-weight: bold; color: #4A5568;">R ${data.vatAmount.toFixed(2)}</td>
+                    </tr>
+                    ` : ''}
+                    <tr style="background: linear-gradient(135deg, #FFF0F6 0%, #FFE4E1 100%);">
+                      <td colspan="3" style="padding: 15px 12px; text-align: right; font-weight: bold; font-size: 18px; color: #E91E63;">TOTAL:</td>
+                      <td style="padding: 15px 12px; text-align: right; font-weight: bold; font-size: 18px; color: #10B981;">R ${data.totalAmount.toFixed(2)}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+              
+              <!-- Action Buttons -->
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="https://heartcart.shop/admin/orders/${data.orderId}" 
+                   style="display: inline-block; 
+                          background: linear-gradient(135deg, #FF69B4 0%, #E91E63 100%); 
+                          color: #FFFFFF; 
+                          padding: 15px 30px; 
+                          text-decoration: none; 
+                          border-radius: 25px; 
+                          font-weight: bold; 
+                          box-shadow: 0 4px 15px rgba(255, 105, 180, 0.4); 
+                          margin: 0 10px;
+                          transition: all 0.3s ease;
+                          letter-spacing: 0.5px;">
+                  📋 View Order Details
+                </a>
+                <a href="mailto:${data.customerEmail}?subject=Re: Order ${data.orderNumber}" 
+                   style="display: inline-block; 
+                          background: linear-gradient(135deg, #6B7280 0%, #4A5568 100%); 
+                          color: #FFFFFF; 
+                          padding: 15px 30px; 
+                          text-decoration: none; 
+                          border-radius: 25px; 
+                          font-weight: bold; 
+                          box-shadow: 0 4px 15px rgba(107, 114, 128, 0.3); 
+                          margin: 0 10px;
+                          transition: all 0.3s ease;
+                          letter-spacing: 0.5px;">
+                  ✉️ Contact Customer
+                </a>
+              </div>
+
+              ${data.paymentStatus !== 'paid' ? `
+                <div style="background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%); border: 2px solid #F59E0B; padding: 20px; border-radius: 12px; margin: 25px 0; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);">
+                  <p style="margin: 0; color: #92400E; font-weight: bold; display: flex; align-items: center;">
+                    <span style="font-size: 18px; margin-right: 8px;">⚠️</span>
+                    Payment Verification Required
+                  </p>
+                  <p style="margin: 10px 0 0 0; color: #78350F; font-size: 14px;">This order requires payment verification before processing. Please check for proof of payment uploads.</p>
+                </div>
+              ` : `
+                <div style="background: linear-gradient(135deg, #DCFCE7 0%, #BBF7D0 100%); border: 2px solid #10B981; padding: 20px; border-radius: 12px; margin: 25px 0; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);">
+                  <p style="margin: 0; color: #047857; font-weight: bold; display: flex; align-items: center;">
+                    <span style="font-size: 18px; margin-right: 8px;">✅</span>
+                    Payment Confirmed - Ready to Process
+                  </p>
+                  <p style="margin: 10px 0 0 0; color: #065F46; font-size: 14px;">This order is paid and ready for processing and fulfillment.</p>
+                </div>
+              `}
+              
+              <!-- Footer -->
+              <div style="background: #4A5568; padding: 20px; text-align: center; border-radius: 12px; margin: 25px 0;">
+                <p style="color: #FFFFFF; margin: 0; font-size: 14px; font-weight: 500;">
+                  HeartCart Sales Team Dashboard
+                </p>
+                <p style="color: #CBD5E0; margin: 8px 0 0 0; font-size: 12px;">
+                  <a href="https://heartcart.shop/admin" style="color: #FF69B4; text-decoration: none;">Admin Dashboard</a> | 
+                  <a href="https://heartcart.shop/admin/orders" style="color: #FF69B4; text-decoration: none;">All Orders</a>
+                </p>
+              </div>
+            </div>
+          </body>
+          </html>
+        `)
+        .setText(`
+          🛍️ NEW ORDER ALERT - ${data.orderNumber}
+          
+          A new order has been placed on HeartCart.shop
+          
+          CUSTOMER INFORMATION:
+          - Name: ${data.customerName}
+          - Email: ${data.customerEmail}
+          ${data.customerPhone ? `- Phone: ${data.customerPhone}` : ''}
+          
+          ORDER DETAILS:
+          - Order ID: #${data.orderId}
+          - Order Number: ${data.orderNumber}
+          - Payment Status: ${data.paymentStatus}
+          - Payment Method: ${data.paymentMethod === 'eft' ? 'EFT Bank Transfer' : data.paymentMethod}
+          - Total Amount: R ${data.totalAmount.toFixed(2)}
+          
+          SHIPPING:
+          ${data.shippingMethod === 'pudo-locker' && data.selectedLockerName ? 
+            `PUDO Locker Delivery (R${data.shippingCost})\nLocker: ${data.selectedLockerName}\nAddress: ${data.selectedLockerAddress}` :
+            `PUDO to your Door (R${data.shippingCost})\nAddress: ${data.shippingAddress}, ${data.shippingCity}, ${data.shippingPostalCode}`
+          }
+          
+          ORDER ITEMS:
+          ${data.orderItems.map(item => 
+            `- ${item.productName} ${item.attributeDisplayText ? `(${item.attributeDisplayText})` : ''} x ${item.quantity} = R ${item.totalPrice.toFixed(2)}`
+          ).join('\n')}
+          
+          FINANCIAL SUMMARY:
+          - Subtotal: R ${data.subtotalAmount.toFixed(2)}
+          - Shipping: R ${data.shippingCost.toFixed(2)}
+          ${data.vatRegistered && data.vatAmount ? `- VAT (${data.vatRate}%): R ${data.vatAmount.toFixed(2)}` : ''}
+          - TOTAL: R ${data.totalAmount.toFixed(2)}
+          
+          ${data.paymentStatus !== 'paid' ? 
+            '⚠️ PAYMENT VERIFICATION REQUIRED\nThis order requires payment verification before processing.' :
+            '✅ PAYMENT CONFIRMED - READY TO PROCESS'
+          }
+          
+          ACTIONS:
+          - View Order: https://heartcart.shop/admin/orders/${data.orderId}
+          - Contact Customer: ${data.customerEmail}
+          - Admin Dashboard: https://heartcart.shop/admin
+          
+          HeartCart Sales Team
+        `);
+
+      // Send email
+      const response = await this.mailerSend.email.send(emailParams);
+      
+      // Log email
+      const emailLogData: InsertEmailLog = {
+        userId: null,
+        recipientEmail: "sales@heartcart.shop",
+        emailType: 'sales_notification',
+        subject: `🛍️ New Order Alert - ${data.orderNumber}`,
+        deliveryStatus: response.statusCode === 202 ? 'sent' : 'failed',
+        mailerSendId: response.body?.message_id || null,
+        errorMessage: response.statusCode !== 202 ? `HTTP ${response.statusCode}` : null,
+        sentAt: this.getSASTTime()
+      };
+
+      await storage.logEmail(emailLogData);
+      
+      if (response.statusCode === 202) {
+        logger.info('Sales notification email sent successfully', { 
+          orderNumber: data.orderNumber,
+          orderId: data.orderId,
+          messageId: response.body?.message_id 
+        });
+      } else {
+        logger.warn('Sales notification email delivery issue', { 
+          orderNumber: data.orderNumber,
+          orderId: data.orderId,
+          statusCode: response.statusCode,
+          response: response.body
+        });
+      }
+    } catch (error) {
+      // Log failed email to database
+      const failedEmailLogData: InsertEmailLog = {
+        userId: null,
+        recipientEmail: "sales@heartcart.shop",
+        emailType: 'sales_notification',
+        subject: `🛍️ New Order Alert - ${data.orderNumber}`,
+        deliveryStatus: 'failed',
+        errorMessage: error instanceof Error ? error.message : String(error),
+        mailerSendId: null,
+        sentAt: this.getSASTTime()
+      };
+      
+      await storage.logEmail(failedEmailLogData);
+      
+      logger.error('Error sending sales notification email', { error, orderNumber: data.orderNumber, orderId: data.orderId });
+      // Don't throw error for sales notification - order creation should continue even if sales email fails
     }
   }
 

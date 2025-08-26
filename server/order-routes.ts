@@ -560,6 +560,55 @@ router.post("/", isAuthenticated, asyncHandler(async (req: Request, res: Respons
       });
     }
 
+    // Send sales notification email to sales@heartcart.shop
+    try {
+      const salesEmailData = {
+        customerName: `${orderData.customerInfo.firstName} ${orderData.customerInfo.lastName}`,
+        customerEmail: orderData.customerInfo.email,
+        customerPhone: orderData.customerInfo.phone,
+        orderNumber: newOrder.orderNumber,
+        orderId: newOrder.id,
+        orderItems: orderItems.map(item => ({
+          productName: item.productName,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          totalPrice: item.totalPrice,
+          attributeDisplayText: item.attributeDisplayText
+        })),
+        subtotalAmount: orderData.subtotal,
+        shippingCost: orderData.shippingCost,
+        totalAmount: orderData.total,
+        paymentMethod: orderData.paymentMethod,
+        paymentStatus: finalPaymentStatus,
+        shippingMethod: orderData.shippingMethod,
+        selectedLockerName: orderData.shippingMethod === "pudo-locker" ? orderData.lockerDetails?.name : null,
+        selectedLockerAddress: orderData.shippingMethod === "pudo-locker" ? orderData.lockerDetails?.address : null,
+        shippingAddress: orderData.shippingAddress.addressLine1 + (orderData.shippingAddress.addressLine2 ? ', ' + orderData.shippingAddress.addressLine2 : ''),
+        shippingCity: orderData.shippingAddress.city,
+        shippingPostalCode: orderData.shippingAddress.postalCode,
+        vatAmount: finalVatAmount,
+        vatRate: vatSettings.vatRate,
+        vatRegistered: vatSettings.vatEnabled,
+        vatRegistrationNumber: vatSettings.vatRegistrationNumber
+      };
+
+      await databaseEmailService.sendSalesNotificationEmail(salesEmailData);
+      
+      logger.info("Sales notification email sent", {
+        orderId: newOrder.id,
+        orderNumber: newOrder.orderNumber,
+        salesEmail: "sales@heartcart.shop"
+      });
+    } catch (salesEmailError) {
+      // Log email error but don't fail the order creation
+      logger.error("Failed to send sales notification email", {
+        error: salesEmailError,
+        orderId: newOrder.id,
+        orderNumber: newOrder.orderNumber,
+        salesEmail: "sales@heartcart.shop"
+      });
+    }
+
     // Send standardized success response
     return sendSuccess(res, {
       id: newOrder.id,
