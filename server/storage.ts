@@ -2439,6 +2439,10 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  // Category cache for performance optimization
+  private categoryCache = new Map<string, { data: Category[]; timestamp: number }>();
+  private readonly CATEGORY_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
   async searchProducts(
     query: string,
     limit = 20,
@@ -2451,152 +2455,316 @@ export class DatabaseStorage implements IStorage {
     },
   ): Promise<Product[]> {
     try {
-      // Split query into individual terms and create search patterns
+      // Enhanced category-aware search implementation
       const searchTerms = query.trim().split(/\s+/).filter(term => term.length > 0);
       
-      // Get ALL products instead of limiting to 1000 - this was the critical bug!
-      const allProductsResult = await this.getAllProducts(
-        10000, // Increased limit to ensure we get ALL products (1274 active products exist)
-        0,
-        options?.categoryId,
-        undefined,
-        options
-      );
+      // Step 1: Detect categories in search query
+      const { categoryMatches, remainingTerms } = await this.detectCategoriesInQuery(searchTerms, options);
       
-      // Extract products array from the result object
-      const allProducts = allProductsResult.products;
+      // Step 2: Run searches in parallel for better performance
+      const [normalResults, categoryResults] = await Promise.all([
+        this.runNormalSearch(query, searchTerms, limit * 2, offset, options), // Get more results for merging
+        this.runCategoryAwareSearch(categoryMatches, remainingTerms, limit, options)
+      ]);
       
-      // Filter and rank products based on search terms
-      const rankedProducts = allProducts
-        .filter(product => {
-          if (!options?.includeInactive && !product.isActive) return false;
-          
-          // Apply category filtering if specified
-          if (options?.categoryId && product.categoryId !== options.categoryId) return false;
-          if (options?.parentCategoryId && product.category?.parentCategoryId !== options.parentCategoryId) return false;
-          
-          const productText = [
-            product.name,
-            product.description,
-            product.brand,
-            product.supplier,
-            product.sku,
-            product.metaTitle,
-            product.metaDescription,
-            product.metaKeywords,
-            product.dimensions,
-            product.specialSaleText,
-            product.discountLabel,
-            ...(product.tags || [])
-          ].join(' ').toLowerCase();
-          
-          const queryLower = query.toLowerCase();
-          
-          // Prioritize exact phrase matches first
-          if (productText.includes(queryLower)) {
-            return true;
-          }
-          
-          // Then check if ALL search terms are present (AND logic for better accuracy)
-          if (searchTerms.length > 1) {
-            return searchTerms.every(term => {
-              const searchTerm = term.toLowerCase();
-              return productText.includes(searchTerm);
-            });
-          }
-          
-          // For single terms, use the original matching logic
-          return searchTerms.some(term => {
-            const searchTerm = term.toLowerCase();
-            return productText.includes(searchTerm);
-          });
-        })
-        .map(product => {
-          // Calculate relevance score for ranking
-          let score = 0;
-          const productName = product.name?.toLowerCase() || '';
-          const productDescription = product.description?.toLowerCase() || '';
-          const productBrand = product.brand?.toLowerCase() || '';
-          const productSku = product.sku?.toLowerCase() || '';
-          const queryLower = query.toLowerCase();
-          
-          // HIGHEST PRIORITY: Exact phrase matches in name
-          if (productName.includes(queryLower)) {
-            score += 1000; // Much higher score for exact phrase matches
-            
-            // Extra bonus if the phrase is at the start of the name
-            if (productName.startsWith(queryLower)) {
-              score += 500;
-            }
-            
-            // Extra bonus if it's the exact name
-            if (productName === queryLower) {
-              score += 300;
-            }
-          }
-          
-          // HIGH PRIORITY: Exact phrase matches in other fields
-          if (productSku.includes(queryLower)) score += 800;
-          if (productBrand.includes(queryLower)) score += 600;
-          if (productDescription.includes(queryLower)) score += 400;
-          
-          // MEDIUM PRIORITY: Individual term matching for multi-word queries
-          if (searchTerms.length > 1) {
-            let termMatchCount = 0;
-            searchTerms.forEach(term => {
-              const searchTerm = term.toLowerCase();
-              
-              // Count how many terms match in the name
-              if (productName.includes(searchTerm)) {
-                termMatchCount++;
-                score += 100; // Bonus for each term in name
-                
-                if (productName.startsWith(searchTerm)) score += 50;
-              }
-              
-              // Term matches in other important fields
-              if (productSku.includes(searchTerm)) score += 80;
-              if (productBrand.includes(searchTerm)) score += 60;
-              if (productDescription.includes(searchTerm)) score += 30;
-              if (product.tags?.some(tag => tag.toLowerCase().includes(searchTerm))) score += 40;
-            });
-            
-            // Bonus for having ALL terms in the name
-            if (termMatchCount === searchTerms.length) {
-              score += 200;
-            }
-          } else {
-            // Single term matching (original logic for single words)
-            const searchTerm = searchTerms[0]?.toLowerCase() || '';
-            
-            if (productName === searchTerm) score += 200;
-            else if (productName.startsWith(searchTerm)) score += 150;
-            else if (productName.includes(searchTerm)) score += 100;
-            
-            if (productSku === searchTerm) score += 180;
-            else if (productSku.includes(searchTerm)) score += 80;
-            
-            if (productBrand === searchTerm) score += 140;
-            else if (productBrand.includes(searchTerm)) score += 60;
-            
-            if (productDescription.includes(searchTerm)) score += 40;
-            if (product.tags?.some(tag => tag.toLowerCase().includes(searchTerm))) score += 50;
-          }
-          
-          return { product, score };
-        })
-        .sort((a, b) => b.score - a.score) // Sort by relevance score descending
+      // Step 3: Merge and rank all results
+      const mergedResults = this.mergeAndRankResults(normalResults, categoryResults, query, searchTerms);
+      
+      // Step 4: Apply pagination and return final results
+      const finalResults = mergedResults
         .slice(offset, offset + limit)
         .map(item => item.product);
 
-      // Debug logs removed for production - these were causing noise in production logs
-      
       // Enrich products with main image URLs
-      return await this.enrichProductsWithMainImage(rankedProducts);
+      return await this.enrichProductsWithMainImage(finalResults);
     } catch (error) {
       console.error(`Error in searchProducts for query "${query}":`, error);
       throw error;
     }
+  }
+
+  // Helper method: Get cached categories for performance
+  private async getCachedCategories(options?: { includeInactive?: boolean }): Promise<Category[]> {
+    const cacheKey = `categories_${options?.includeInactive ? 'all' : 'active'}`;
+    const cached = this.categoryCache.get(cacheKey);
+    
+    if (cached && Date.now() - cached.timestamp < this.CATEGORY_CACHE_TTL) {
+      return cached.data;
+    }
+    
+    const categories = await this.getAllCategories(options);
+    this.categoryCache.set(cacheKey, { data: categories, timestamp: Date.now() });
+    return categories;
+  }
+
+  // Helper method: Detect categories in search query terms
+  private async detectCategoriesInQuery(
+    searchTerms: string[], 
+    options?: { includeInactive?: boolean }
+  ): Promise<{ categoryMatches: Category[]; remainingTerms: string[] }> {
+    const allCategories = await this.getCachedCategories(options);
+    const categoryMatches: Category[] = [];
+    const remainingTerms: string[] = [];
+    
+    searchTerms.forEach(term => {
+      const termLower = term.toLowerCase();
+      
+      // Find categories that match this term (both directions)
+      const matchedCategory = allCategories.find(cat => {
+        const categoryNameLower = cat.name.toLowerCase();
+        // Match if term is in category name OR category name is in term
+        return categoryNameLower.includes(termLower) || 
+               termLower.includes(categoryNameLower) ||
+               // Also check if term matches start of category name for better matching
+               categoryNameLower.startsWith(termLower) ||
+               termLower.startsWith(categoryNameLower);
+      });
+      
+      if (matchedCategory && !categoryMatches.some(c => c.id === matchedCategory.id)) {
+        categoryMatches.push(matchedCategory);
+      } else {
+        remainingTerms.push(term);
+      }
+    });
+    
+    return { categoryMatches, remainingTerms };
+  }
+
+  // Helper method: Run normal search (existing logic)
+  private async runNormalSearch(
+    query: string,
+    searchTerms: string[],
+    limit: number,
+    offset: number,
+    options?: { 
+      includeInactive?: boolean; 
+      includeCategoryInactive?: boolean;
+      categoryId?: number;
+      parentCategoryId?: number;
+    }
+  ): Promise<Array<{ product: Product; score: number; source: string }>> {
+    // Get ALL products for comprehensive search
+    const allProductsResult = await this.getAllProducts(
+      10000, // Ensure we get ALL products 
+      0,
+      options?.categoryId,
+      undefined,
+      options
+    );
+    
+    const allProducts = allProductsResult.products;
+    
+    return allProducts
+      .filter(product => {
+        if (!options?.includeInactive && !product.isActive) return false;
+        
+        // Apply category filtering if specified
+        if (options?.categoryId && product.categoryId !== options.categoryId) return false;
+        if (options?.parentCategoryId && product.category?.parentCategoryId !== options.parentCategoryId) return false;
+        
+        const productText = [
+          product.name,
+          product.description,
+          product.brand,
+          product.supplier,
+          product.sku,
+          product.metaTitle,
+          product.metaDescription,
+          product.metaKeywords,
+          product.dimensions,
+          product.specialSaleText,
+          product.discountLabel,
+          ...(product.tags || [])
+        ].join(' ').toLowerCase();
+        
+        const queryLower = query.toLowerCase();
+        
+        // Prioritize exact phrase matches first
+        if (productText.includes(queryLower)) {
+          return true;
+        }
+        
+        // Then check if ALL search terms are present (AND logic for better accuracy)
+        if (searchTerms.length > 1) {
+          return searchTerms.every(term => {
+            const searchTerm = term.toLowerCase();
+            return productText.includes(searchTerm);
+          });
+        }
+        
+        // For single terms, use the original matching logic
+        return searchTerms.some(term => {
+          const searchTerm = term.toLowerCase();
+          return productText.includes(searchTerm);
+        });
+      })
+      .map(product => {
+        const score = this.calculateProductScore(product, query, searchTerms);
+        return { product, score, source: 'normal' };
+      });
+  }
+
+  // Helper method: Run category-aware search
+  private async runCategoryAwareSearch(
+    categoryMatches: Category[], 
+    remainingTerms: string[], 
+    limit: number,
+    options?: { includeInactive?: boolean; includeCategoryInactive?: boolean }
+  ): Promise<Array<{ product: Product; score: number; source: string; matchedCategory?: string }>> {
+    if (categoryMatches.length === 0) return [];
+    
+    const categoryResults: Array<{ product: Product; score: number; source: string; matchedCategory?: string }> = [];
+    
+    // Search within each matched category
+    for (const category of categoryMatches) {
+      try {
+        const categoryProducts = await this.getAllProducts(
+          5000, // Get enough products from this category
+          0,
+          category.id, // Filter by this specific category
+          undefined,
+          options
+        );
+        
+        // If no remaining terms, return all products from matched categories
+        let matchingProducts = categoryProducts.products;
+        
+        // If there are remaining terms, filter products that match them
+        if (remainingTerms.length > 0) {
+          matchingProducts = categoryProducts.products.filter(product => {
+            const productText = [
+              product.name,
+              product.description,
+              product.metaKeywords,
+              product.brand,
+              product.supplier,
+              product.sku,
+              ...(product.tags || [])
+            ].join(' ').toLowerCase();
+            
+            // ALL remaining terms must be present
+            return remainingTerms.every(term => 
+              productText.includes(term.toLowerCase())
+            );
+          });
+        }
+        
+        // Score these results higher because they match categories
+        const scoredProducts = matchingProducts.map(product => {
+          const baseScore = this.calculateProductScore(product, remainingTerms.join(' '), remainingTerms);
+          return {
+            product,
+            score: 2000 + baseScore, // High bonus for category matches
+            source: 'category_match',
+            matchedCategory: category.name
+          };
+        });
+        
+        categoryResults.push(...scoredProducts);
+      } catch (error) {
+        console.error(`Error searching in category ${category.name}:`, error);
+        // Continue with other categories if one fails
+      }
+    }
+    
+    return categoryResults;
+  }
+
+  // Helper method: Calculate product relevance score
+  private calculateProductScore(product: Product, query: string, searchTerms: string[]): number {
+    let score = 0;
+    const productName = product.name?.toLowerCase() || '';
+    const productDescription = product.description?.toLowerCase() || '';
+    const productBrand = product.brand?.toLowerCase() || '';
+    const productSku = product.sku?.toLowerCase() || '';
+    const queryLower = query.toLowerCase();
+    
+    // HIGHEST PRIORITY: Exact phrase matches in name
+    if (productName.includes(queryLower)) {
+      score += 1000;
+      
+      if (productName.startsWith(queryLower)) {
+        score += 500;
+      }
+      
+      if (productName === queryLower) {
+        score += 300;
+      }
+    }
+    
+    // HIGH PRIORITY: Exact phrase matches in other fields
+    if (productSku.includes(queryLower)) score += 800;
+    if (productBrand.includes(queryLower)) score += 600;
+    if (productDescription.includes(queryLower)) score += 400;
+    
+    // MEDIUM PRIORITY: Individual term matching for multi-word queries
+    if (searchTerms.length > 1) {
+      let termMatchCount = 0;
+      searchTerms.forEach(term => {
+        const searchTerm = term.toLowerCase();
+        
+        if (productName.includes(searchTerm)) {
+          termMatchCount++;
+          score += 100;
+          
+          if (productName.startsWith(searchTerm)) score += 50;
+        }
+        
+        if (productSku.includes(searchTerm)) score += 80;
+        if (productBrand.includes(searchTerm)) score += 60;
+        if (productDescription.includes(searchTerm)) score += 30;
+        if (product.tags?.some(tag => tag.toLowerCase().includes(searchTerm))) score += 40;
+      });
+      
+      // Bonus for having ALL terms in the name
+      if (termMatchCount === searchTerms.length) {
+        score += 200;
+      }
+    } else {
+      // Single term matching (original logic for single words)
+      const searchTerm = searchTerms[0]?.toLowerCase() || '';
+      
+      if (productName === searchTerm) score += 200;
+      else if (productName.startsWith(searchTerm)) score += 150;
+      else if (productName.includes(searchTerm)) score += 100;
+      
+      if (productSku === searchTerm) score += 180;
+      else if (productSku.includes(searchTerm)) score += 80;
+      
+      if (productBrand === searchTerm) score += 140;
+      else if (productBrand.includes(searchTerm)) score += 60;
+      
+      if (productDescription.includes(searchTerm)) score += 40;
+      if (product.tags?.some(tag => tag.toLowerCase().includes(searchTerm))) score += 50;
+    }
+    
+    return score;
+  }
+
+  // Helper method: Merge and rank results from different search strategies
+  private mergeAndRankResults(
+    normalResults: Array<{ product: Product; score: number; source: string }>,
+    categoryResults: Array<{ product: Product; score: number; source: string; matchedCategory?: string }>,
+    originalQuery: string,
+    searchTerms: string[]
+  ): Array<{ product: Product; score: number; source: string; matchedCategory?: string }> {
+    // Combine all results
+    const allResults = [...normalResults, ...categoryResults];
+    
+    // Remove duplicates (prioritize category matches)
+    const uniqueResults = new Map<number, { product: Product; score: number; source: string; matchedCategory?: string }>();
+    
+    allResults.forEach(result => {
+      const existingResult = uniqueResults.get(result.product.id);
+      
+      if (!existingResult || result.score > existingResult.score) {
+        uniqueResults.set(result.product.id, result);
+      }
+    });
+    
+    // Convert back to array and sort by score
+    return Array.from(uniqueResults.values())
+      .sort((a, b) => b.score - a.score);
   }
 
   async createProduct(product: InsertProduct): Promise<Product> {
