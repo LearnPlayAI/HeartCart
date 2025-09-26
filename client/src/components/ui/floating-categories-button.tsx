@@ -21,7 +21,11 @@ export function FloatingCategoriesButton({ className }: FloatingCategoriesButton
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger asChild>
           <button
-            className="fixed bottom-6 right-6 z-50 flex items-center space-x-2 bg-gradient-to-r from-[#FF69B4] to-[#FF1493] text-white px-4 py-3 rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 active:scale-95"
+            className="fixed bottom-20 right-4 z-50 flex items-center space-x-2 bg-[#EE00DA] text-white px-5 py-4 rounded-full shadow-2xl hover:shadow-3xl transform hover:scale-110 transition-all duration-300 active:scale-95 border-4 border-white/30 backdrop-blur-sm"
+            style={{
+              background: 'linear-gradient(135deg, #EE00DA 0%, #B800A3 100%)',
+              boxShadow: '0 10px 25px rgba(238, 0, 218, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.2)'
+            }}
             aria-label="Open categories menu"
           >
             <Grid3X3 className="h-5 w-5" />
