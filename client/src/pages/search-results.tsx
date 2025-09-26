@@ -24,27 +24,45 @@ const SearchResults = () => {
   const [location] = useLocation();
   useProductListingScroll();
   
-  // Track current URL search string for proper reactivity
-  const [urlSearchString, setUrlSearchString] = useState(window.location.search);
+  // Force re-render trigger for URL changes
+  const [urlChangeCounter, setUrlChangeCounter] = useState(0);
   const [sortBy, setSortBy] = useState('default');
   const [page, setPage] = useState(1);
   const limit = 20;
   
-  // Extract query from current URL search parameters
+  // Extract query directly from URL - always current
   const currentQuery = useMemo(() => {
-    const urlSearchParams = new URLSearchParams(urlSearchString);
-    return urlSearchParams.get('q') || '';
-  }, [urlSearchString]);
+    const urlSearchParams = new URLSearchParams(window.location.search);
+    const query = urlSearchParams.get('q') || '';
+    console.log('🔍 Current search query from URL:', query);
+    return query;
+  }, [urlChangeCounter, location]); // Depend on both counter and location
   
-  // Detect URL search parameter changes on every render
+  // Comprehensive URL change detection
   useEffect(() => {
-    const newSearchString = window.location.search;
-    if (newSearchString !== urlSearchString) {
-      setUrlSearchString(newSearchString);
-      console.log('Search page - URL search params changed:', newSearchString);
-      console.log('Search page - query updated to:', new URLSearchParams(newSearchString).get('q') || '');
-    }
-  });
+    const handleUrlChange = () => {
+      console.log('🔄 URL change detected, forcing re-render');
+      setUrlChangeCounter(prev => prev + 1);
+    };
+    
+    // Listen for popstate (back/forward buttons)
+    window.addEventListener('popstate', handleUrlChange);
+    
+    // Monitor for URL changes every 100ms (for programmatic navigation)
+    let lastUrl = window.location.href;
+    const checkUrlChange = () => {
+      if (window.location.href !== lastUrl) {
+        lastUrl = window.location.href;
+        handleUrlChange();
+      }
+    };
+    const urlCheckInterval = setInterval(checkUrlChange, 100);
+    
+    return () => {
+      window.removeEventListener('popstate', handleUrlChange);
+      clearInterval(urlCheckInterval);
+    };
+  }, []);
   
   const { 
     data: response,
