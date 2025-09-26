@@ -2453,11 +2453,10 @@ export class DatabaseStorage implements IStorage {
     try {
       // Split query into individual terms and create search patterns
       const searchTerms = query.trim().split(/\s+/).filter(term => term.length > 0);
-      // Debug logs removed for production - these were causing noise in production logs
       
-      // Get all products first, then apply sophisticated ranking
+      // Get ALL products instead of limiting to 1000 - this was the critical bug!
       const allProductsResult = await this.getAllProducts(
-        1000, // Get more products for ranking
+        10000, // Increased limit to ensure we get ALL products (1274 active products exist)
         0,
         options?.categoryId,
         undefined,
