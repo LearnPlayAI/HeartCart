@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation, Link } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet';
@@ -24,22 +24,28 @@ const SearchResults = () => {
   const [location] = useLocation();
   useProductListingScroll();
   
-  // Track query from URL with proper reactivity to parameter changes
+  // Track query state and URL search parameters separately for reactivity
   const [query, setQuery] = useState('');
+  const [prevLocation, setPrevLocation] = useState(location);
   const [sortBy, setSortBy] = useState('default');
   const [page, setPage] = useState(1);
   const limit = 20;
   
-  // Update query when URL changes - check on every render for parameter changes
+  // Detect URL changes including search parameter changes
   useEffect(() => {
-    const urlSearchParams = new URLSearchParams(window.location.search);
+    const currentSearch = window.location.search;
+    const urlSearchParams = new URLSearchParams(currentSearch);
     const newQuery = urlSearchParams.get('q') || '';
-    if (newQuery !== query) {
+    
+    // Update query if URL changed or location changed
+    if (location !== prevLocation || newQuery !== query) {
       setQuery(newQuery);
-      console.log('Search page - location:', location);
+      setPrevLocation(location);
+      console.log('Search page - location changed:', location);
       console.log('Search page - query updated to:', newQuery);
+      console.log('Search page - search params:', currentSearch);
     }
-  }); // No dependencies - check on every render for URL parameter changes
+  }, [location, query, prevLocation]);
   
   const { 
     data: response,
