@@ -24,8 +24,8 @@ const SearchResults = () => {
   const [location] = useLocation();
   useProductListingScroll();
   
-  // Get query from URL using wouter's location for better state management
-  const urlSearchParams = new URLSearchParams(location.split('?')[1] || '');
+  // Get query from URL search parameters
+  const urlSearchParams = new URLSearchParams(window.location.search);
   const query = urlSearchParams.get('q') || '';
   
   console.log('Search page - location:', location);
