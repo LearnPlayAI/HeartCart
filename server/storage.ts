@@ -2476,23 +2476,40 @@ export class DatabaseStorage implements IStorage {
           if (options?.categoryId && product.categoryId !== options.categoryId) return false;
           if (options?.parentCategoryId && product.category?.parentCategoryId !== options.parentCategoryId) return false;
           
-          // Check if any search term matches
+          const productText = [
+            product.name,
+            product.description,
+            product.brand,
+            product.supplier,
+            product.sku,
+            product.metaTitle,
+            product.metaDescription,
+            product.metaKeywords,
+            product.dimensions,
+            product.specialSaleText,
+            product.discountLabel,
+            ...(product.tags || [])
+          ].join(' ').toLowerCase();
+          
+          const queryLower = query.toLowerCase();
+          
+          // Prioritize exact phrase matches first
+          if (productText.includes(queryLower)) {
+            return true;
+          }
+          
+          // Then check if ALL search terms are present (AND logic for better accuracy)
+          if (searchTerms.length > 1) {
+            return searchTerms.every(term => {
+              const searchTerm = term.toLowerCase();
+              return productText.includes(searchTerm);
+            });
+          }
+          
+          // For single terms, use the original matching logic
           return searchTerms.some(term => {
             const searchTerm = term.toLowerCase();
-            return (
-              product.name?.toLowerCase().includes(searchTerm) ||
-              product.description?.toLowerCase().includes(searchTerm) ||
-              product.brand?.toLowerCase().includes(searchTerm) ||
-              product.supplier?.toLowerCase().includes(searchTerm) ||
-              product.sku?.toLowerCase().includes(searchTerm) ||
-              product.metaTitle?.toLowerCase().includes(searchTerm) ||
-              product.metaDescription?.toLowerCase().includes(searchTerm) ||
-              product.metaKeywords?.toLowerCase().includes(searchTerm) ||
-              product.dimensions?.toLowerCase().includes(searchTerm) ||
-              product.specialSaleText?.toLowerCase().includes(searchTerm) ||
-              product.discountLabel?.toLowerCase().includes(searchTerm) ||
-              product.tags?.some(tag => tag.toLowerCase().includes(searchTerm))
-            );
+            return productText.includes(searchTerm);
           });
         })
         .map(product => {
@@ -2502,36 +2519,70 @@ export class DatabaseStorage implements IStorage {
           const productDescription = product.description?.toLowerCase() || '';
           const productBrand = product.brand?.toLowerCase() || '';
           const productSku = product.sku?.toLowerCase() || '';
+          const queryLower = query.toLowerCase();
           
-          searchTerms.forEach(term => {
-            const searchTerm = term.toLowerCase();
+          // HIGHEST PRIORITY: Exact phrase matches in name
+          if (productName.includes(queryLower)) {
+            score += 1000; // Much higher score for exact phrase matches
             
-            // Exact name match gets highest score
-            if (productName === searchTerm) score += 100;
-            // Name starts with term gets high score
-            else if (productName.startsWith(searchTerm)) score += 80;
-            // Name contains term gets medium score
-            else if (productName.includes(searchTerm)) score += 60;
+            // Extra bonus if the phrase is at the start of the name
+            if (productName.startsWith(queryLower)) {
+              score += 500;
+            }
             
-            // SKU exact match gets high score
-            if (productSku === searchTerm) score += 90;
-            else if (productSku.includes(searchTerm)) score += 50;
+            // Extra bonus if it's the exact name
+            if (productName === queryLower) {
+              score += 300;
+            }
+          }
+          
+          // HIGH PRIORITY: Exact phrase matches in other fields
+          if (productSku.includes(queryLower)) score += 800;
+          if (productBrand.includes(queryLower)) score += 600;
+          if (productDescription.includes(queryLower)) score += 400;
+          
+          // MEDIUM PRIORITY: Individual term matching for multi-word queries
+          if (searchTerms.length > 1) {
+            let termMatchCount = 0;
+            searchTerms.forEach(term => {
+              const searchTerm = term.toLowerCase();
+              
+              // Count how many terms match in the name
+              if (productName.includes(searchTerm)) {
+                termMatchCount++;
+                score += 100; // Bonus for each term in name
+                
+                if (productName.startsWith(searchTerm)) score += 50;
+              }
+              
+              // Term matches in other important fields
+              if (productSku.includes(searchTerm)) score += 80;
+              if (productBrand.includes(searchTerm)) score += 60;
+              if (productDescription.includes(searchTerm)) score += 30;
+              if (product.tags?.some(tag => tag.toLowerCase().includes(searchTerm))) score += 40;
+            });
             
-            // Brand exact match gets high score
-            if (productBrand === searchTerm) score += 70;
-            else if (productBrand.includes(searchTerm)) score += 40;
+            // Bonus for having ALL terms in the name
+            if (termMatchCount === searchTerms.length) {
+              score += 200;
+            }
+          } else {
+            // Single term matching (original logic for single words)
+            const searchTerm = searchTerms[0]?.toLowerCase() || '';
             
-            // Description contains term gets lower score
-            if (productDescription.includes(searchTerm)) score += 20;
+            if (productName === searchTerm) score += 200;
+            else if (productName.startsWith(searchTerm)) score += 150;
+            else if (productName.includes(searchTerm)) score += 100;
             
-            // Tags match gets medium score
-            if (product.tags?.some(tag => tag.toLowerCase().includes(searchTerm))) score += 30;
+            if (productSku === searchTerm) score += 180;
+            else if (productSku.includes(searchTerm)) score += 80;
             
-            // Bonus for multiple word matches in name
-            const nameWords = productName.split(' ');
-            const matchingWords = nameWords.filter(word => word.includes(searchTerm));
-            score += matchingWords.length * 10;
-          });
+            if (productBrand === searchTerm) score += 140;
+            else if (productBrand.includes(searchTerm)) score += 60;
+            
+            if (productDescription.includes(searchTerm)) score += 40;
+            if (product.tags?.some(tag => tag.toLowerCase().includes(searchTerm))) score += 50;
+          }
           
           return { product, score };
         })
