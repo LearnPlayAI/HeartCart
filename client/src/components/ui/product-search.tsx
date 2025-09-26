@@ -45,9 +45,6 @@ export function ProductSearch({
     const searchUrl = `/search?q=${encodeURIComponent(trimmedQuery)}`;
     console.log('Navigating to:', searchUrl);
     
-    // Clear the search input after submitting to indicate action was taken
-    setSearchQuery('');
-    
     // Force navigation even if we're already on search page with different query
     if (window.location.pathname === '/search') {
       // Force reload of search page with new query
