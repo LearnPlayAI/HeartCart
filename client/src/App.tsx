@@ -34,6 +34,7 @@ import TermsAndConditions from "@/pages/TermsAndConditions";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import CartDrawer from "@/components/cart/cart-drawer";
 import { SessionExpiryWarning } from "@/components/session/session-expiry-warning";
+import FloatingCategoriesButton from "@/components/ui/floating-categories-button";
 
 import MobileAppInstallButton from "@/components/pwa/MobileAppInstallButton";
 import React, { Suspense } from "react";
@@ -312,6 +313,7 @@ function App() {
                       </main>
                       <Footer />
                       <CartDrawer />
+                      <FloatingCategoriesButton />
                     </div>
                   </Route>
                 </Switch>

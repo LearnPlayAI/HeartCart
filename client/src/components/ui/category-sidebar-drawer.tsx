@@ -27,11 +27,11 @@ export function CategorySidebarDrawer({ className, onCategorySelect }: CategoryS
       <SheetTrigger asChild>
         <Button 
           variant="ghost" 
-          size="icon"
-          className="md:hidden text-white hover:bg-white/20"
+          className="md:hidden text-white hover:bg-white/20 flex items-center space-x-1 px-2 py-1"
           aria-label="Open categories menu"
         >
           <Menu className="h-5 w-5" />
+          <span className="text-sm font-medium">Categories</span>
         </Button>
       </SheetTrigger>
       <SheetContent side="left" className="p-0 w-80 h-full flex flex-col">
