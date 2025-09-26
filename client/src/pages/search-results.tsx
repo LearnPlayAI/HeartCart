@@ -24,12 +24,11 @@ const SearchResults = () => {
   const [location] = useLocation();
   useProductListingScroll();
   
-  // Get query from URL using both location and window.location
-  const urlSearchParams = new URLSearchParams(window.location.search);
+  // Get query from URL using wouter's location for better state management
+  const urlSearchParams = new URLSearchParams(location.split('?')[1] || '');
   const query = urlSearchParams.get('q') || '';
   
   console.log('Search page - location:', location);
-  console.log('Search page - window.location.search:', window.location.search);
   console.log('Search page - query:', query);
   const [sortBy, setSortBy] = useState('default');
   const [page, setPage] = useState(1);
@@ -89,9 +88,10 @@ const SearchResults = () => {
     });
   });
   
-  // Reset page when query changes
+  // Reset page when query changes and ensure proper state management
   useEffect(() => {
     setPage(1);
+    setSortBy('default'); // Reset sort when query changes
   }, [query]);
   
   const handleSortChange = (value: string) => {

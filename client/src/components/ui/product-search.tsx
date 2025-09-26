@@ -1,4 +1,4 @@
-import React, { useState, FormEvent } from 'react';
+import React, { useState, FormEvent, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -24,6 +24,11 @@ export function ProductSearch({
   const [searchQuery, setSearchQuery] = useState(initialQuery);
   const [, navigate] = useLocation();
 
+  // Update searchQuery when initialQuery prop changes (important for search results page)
+  useEffect(() => {
+    setSearchQuery(initialQuery);
+  }, [initialQuery]);
+
   const handleSearchSubmit = (e: FormEvent) => {
     e.preventDefault();
     
@@ -39,7 +44,18 @@ export function ProductSearch({
     // Otherwise, navigate to search results page using router navigation
     const searchUrl = `/search?q=${encodeURIComponent(trimmedQuery)}`;
     console.log('Navigating to:', searchUrl);
-    navigate(searchUrl);
+    
+    // Clear the search input after submitting to indicate action was taken
+    setSearchQuery('');
+    
+    // Force navigation even if we're already on search page with different query
+    if (window.location.pathname === '/search') {
+      // Force reload of search page with new query
+      window.history.pushState({}, '', searchUrl);
+      window.location.reload();
+    } else {
+      navigate(searchUrl);
+    }
   };
 
   // Define component styles based on props
