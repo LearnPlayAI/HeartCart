@@ -24,14 +24,19 @@ const SearchResults = () => {
   const [location] = useLocation();
   useProductListingScroll();
   
-  // Get query from URL search parameters
-  const urlSearchParams = new URLSearchParams(window.location.search);
-  const query = urlSearchParams.get('q') || '';
-  
-  console.log('Search page - location:', location);
-  console.log('Search page - query:', query);
+  // State for the current search query
+  const [query, setQuery] = useState('');
   const [sortBy, setSortBy] = useState('default');
   const [page, setPage] = useState(1);
+  
+  // Update query whenever the URL changes (this makes the component reactive to navigation)
+  useEffect(() => {
+    const urlSearchParams = new URLSearchParams(window.location.search);
+    const newQuery = urlSearchParams.get('q') || '';
+    setQuery(newQuery);
+    console.log('Search page - location:', location);
+    console.log('Search page - query:', newQuery);
+  }, [location]); // Re-run when location changes
   const limit = 20;
   
   const { 
