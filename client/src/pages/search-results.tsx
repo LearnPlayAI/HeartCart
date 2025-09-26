@@ -24,28 +24,27 @@ const SearchResults = () => {
   const [location] = useLocation();
   useProductListingScroll();
   
-  // Track query state and URL search parameters separately for reactivity
-  const [query, setQuery] = useState('');
-  const [prevLocation, setPrevLocation] = useState(location);
+  // Track current URL search string for proper reactivity
+  const [urlSearchString, setUrlSearchString] = useState(window.location.search);
   const [sortBy, setSortBy] = useState('default');
   const [page, setPage] = useState(1);
   const limit = 20;
   
-  // Detect URL changes including search parameter changes
+  // Extract query from current URL search parameters
+  const currentQuery = useMemo(() => {
+    const urlSearchParams = new URLSearchParams(urlSearchString);
+    return urlSearchParams.get('q') || '';
+  }, [urlSearchString]);
+  
+  // Detect URL search parameter changes on every render
   useEffect(() => {
-    const currentSearch = window.location.search;
-    const urlSearchParams = new URLSearchParams(currentSearch);
-    const newQuery = urlSearchParams.get('q') || '';
-    
-    // Update query if URL changed or location changed
-    if (location !== prevLocation || newQuery !== query) {
-      setQuery(newQuery);
-      setPrevLocation(location);
-      console.log('Search page - location changed:', location);
-      console.log('Search page - query updated to:', newQuery);
-      console.log('Search page - search params:', currentSearch);
+    const newSearchString = window.location.search;
+    if (newSearchString !== urlSearchString) {
+      setUrlSearchString(newSearchString);
+      console.log('Search page - URL search params changed:', newSearchString);
+      console.log('Search page - query updated to:', new URLSearchParams(newSearchString).get('q') || '');
     }
-  }, [location, query, prevLocation]);
+  });
   
   const { 
     data: response,
@@ -53,11 +52,11 @@ const SearchResults = () => {
     isFetching,
     error
   } = useQuery<StandardApiResponse<Product[]>>({
-    queryKey: ['/api/search', query, page, limit],
+    queryKey: ['/api/search', currentQuery, page, limit],
     queryFn: async () => {
       const offset = (page - 1) * limit;
       const searchParams = new URLSearchParams({
-        q: query,
+        q: currentQuery,
         limit: limit.toString(),
         offset: offset.toString()
       });
@@ -68,7 +67,7 @@ const SearchResults = () => {
       }
       return response.json();
     },
-    enabled: query.length > 0,
+    enabled: currentQuery.length > 0,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
     refetchOnWindowFocus: false, // Don't refetch on window focus
   });
@@ -105,7 +104,7 @@ const SearchResults = () => {
   useEffect(() => {
     setPage(1);
     setSortBy('default'); // Reset sort when query changes
-  }, [query]); // Reset when query changes
+  }, [currentQuery]); // Reset when query changes
   
   const handleSortChange = (value: string) => {
     setSortBy(value);
@@ -139,15 +138,15 @@ const SearchResults = () => {
   return (
     <>
       <Helmet>
-        <title>Search Results for "{query}" - HeartCart</title>
-        <meta name="description" content={`Search results for "${query}". Find South African products at unbeatable prices.`} />
+        <title>Search Results for "{currentQuery}" - HeartCart</title>
+        <meta name="description" content={`Search results for "${currentQuery}". Find South African products at unbeatable prices.`} />
       </Helmet>
       
       <div className="container mx-auto px-4 py-6">
         {/* Search Header */}
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            Search Results for "{query}"
+            Search Results for "{currentQuery}"
           </h1>
           <p className="text-gray-600">
             {isLoading ? 'Searching...' : `Found ${products?.length || 0} results`}
@@ -170,7 +169,7 @@ const SearchResults = () => {
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center">
             <SearchIcon className="h-5 w-5 text-gray-500 mr-2" />
-            <span className="text-gray-500">Results for <span className="font-medium">"{query}"</span></span>
+            <span className="text-gray-500">Results for <span className="font-medium">"{currentQuery}"</span></span>
           </div>
           
           <Select value={sortBy} onValueChange={handleSortChange}>
@@ -199,7 +198,7 @@ const SearchResults = () => {
                   <div className="animate-spin rounded-full h-12 w-12 border-4 border-pink-500 border-t-transparent absolute top-0 left-0"></div>
                 </div>
                 <div className="text-center">
-                  <p className="text-xl font-semibold text-gray-800">Searching for "{query}"</p>
+                  <p className="text-xl font-semibold text-gray-800">Searching for "{currentQuery}"</p>
                   <p className="text-gray-600 mt-1">Finding the best products for you...</p>
                 </div>
               </div>
@@ -268,7 +267,7 @@ const SearchResults = () => {
               <SearchIcon className="h-12 w-12 text-gray-300 mb-4" />
               <h2 className="text-xl font-medium mb-2">No results found</h2>
               <p className="text-gray-600 mb-6 text-center">
-                We couldn't find any products matching "{query}".<br />
+                We couldn't find any products matching "{currentQuery}".<br />
                 Try using different keywords or browse our categories.
               </p>
               <Button asChild>
