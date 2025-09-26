@@ -152,16 +152,6 @@ const SearchResults = () => {
           </Alert>
         )}
         
-        {/* Refined search bar */}
-        <div className="mb-6">
-          <ProductSearch 
-            size="md"
-            variant="outlined"
-            initialQuery={query}
-            placeholder="Refine your search..."
-            className="mb-3"
-          />
-        </div>
         
         {/* Sort Options */}
         <div className="flex justify-between items-center mb-6">
