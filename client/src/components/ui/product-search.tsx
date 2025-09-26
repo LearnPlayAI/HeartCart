@@ -45,14 +45,8 @@ export function ProductSearch({
     const searchUrl = `/search?q=${encodeURIComponent(trimmedQuery)}`;
     console.log('Navigating to:', searchUrl);
     
-    // Force navigation even if we're already on search page with different query
-    if (window.location.pathname === '/search') {
-      // Force reload of search page with new query
-      window.history.pushState({}, '', searchUrl);
-      window.location.reload();
-    } else {
-      navigate(searchUrl);
-    }
+    // Always use router navigation for better SPA experience
+    navigate(searchUrl);
   };
 
   // Define component styles based on props
