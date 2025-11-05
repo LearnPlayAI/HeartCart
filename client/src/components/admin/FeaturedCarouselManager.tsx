@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, X, GripVertical, Search, Save } from 'lucide-react';
 import { apiRequest, queryClient } from '@/lib/queryClient';
@@ -28,15 +29,29 @@ export function FeaturedCarouselManager() {
   });
   const [productSearch, setProductSearch] = useState('');
   const [showProductSelector, setShowProductSelector] = useState(false);
+  const [selectedParentCategoryId, setSelectedParentCategoryId] = useState<string>('');
+  const [selectedChildCategoryId, setSelectedChildCategoryId] = useState<string>('');
 
   const { data: settingData, isLoading } = useQuery({
     queryKey: ['/api/admin/settings/featuredCarouselProducts'],
     retry: false
   });
 
+  const { data: categoriesData } = useQuery({
+    queryKey: ['/api/categories/with-children'],
+    retry: false
+  });
+
+  // Determine which categoryId to use for the product search
+  const activeCategoryId = selectedChildCategoryId || selectedParentCategoryId;
+
   const { data: searchResults } = useQuery({
-    queryKey: ['/api/products', { search: productSearch, limit: 20 }],
-    enabled: showProductSelector && productSearch.length > 2
+    queryKey: ['/api/products', { 
+      search: productSearch.length >= 2 ? productSearch : undefined,
+      categoryId: activeCategoryId || undefined,
+      limit: 50
+    }],
+    enabled: showProductSelector && !!activeCategoryId
   });
 
   const { data: selectedProductsData } = useQuery({
@@ -80,6 +95,17 @@ export function FeaturedCarouselManager() {
     }
   });
 
+  const handleParentCategoryChange = (categoryId: string) => {
+    setSelectedParentCategoryId(categoryId);
+    setSelectedChildCategoryId(''); // Reset child when parent changes
+    setProductSearch(''); // Reset search
+  };
+
+  const handleChildCategoryChange = (categoryId: string) => {
+    setSelectedChildCategoryId(categoryId);
+    setProductSearch(''); // Reset search
+  };
+
   const handleAddProduct = (product: Product) => {
     if (config.products.some(p => p.productId === product.id)) {
       toast({
@@ -101,7 +127,6 @@ export function FeaturedCarouselManager() {
     }));
 
     setProductSearch('');
-    setShowProductSelector(false);
     
     toast({
       title: 'Product Added',
@@ -192,44 +217,108 @@ export function FeaturedCarouselManager() {
           </div>
 
           {showProductSelector && (
-            <div className="border rounded-lg p-4 bg-gray-50">
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search products..."
-                  value={productSearch}
-                  onChange={(e) => setProductSearch(e.target.value)}
-                  className="pl-10"
-                  data-testid="input-search-carousel-products"
-                />
+            <div className="border rounded-lg p-4 bg-gray-50 space-y-4">
+              {/* Step 1: Select Parent Category */}
+              <div className="space-y-2">
+                <Label>1. Select Parent Category</Label>
+                <Select value={selectedParentCategoryId} onValueChange={handleParentCategoryChange}>
+                  <SelectTrigger data-testid="select-carousel-parent-category">
+                    <SelectValue placeholder="Choose a parent category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categoriesData?.success && categoriesData.data.map((parent: any) => (
+                      <SelectItem key={parent.category.id} value={parent.category.id.toString()}>
+                        {parent.category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
-              {productSearch.length > 2 && searchResults?.data && (
-                <div className="mt-4 max-h-64 overflow-y-auto space-y-2">
-                  {searchResults.data.map((product: Product) => (
-                    <div
-                      key={product.id}
-                      className="flex items-center justify-between p-3 bg-white rounded-lg border hover:border-pink-300 cursor-pointer"
-                      onClick={() => handleAddProduct(product)}
-                      data-testid={`product-option-${product.id}`}
-                    >
-                      <div className="flex items-center space-x-3">
-                        {product.imageUrl && (
-                          <img
-                            src={product.imageUrl}
-                            alt={product.name}
-                            className="w-12 h-12 object-cover rounded"
-                          />
-                        )}
-                        <div>
-                          <p className="font-medium">{product.name}</p>
-                          <p className="text-sm text-gray-500">R {product.price}</p>
-                        </div>
-                      </div>
-                      <Plus className="h-5 w-5 text-pink-500" />
-                    </div>
-                  ))}
+              {/* Step 2: Select Child Category (if parent has children) */}
+              {selectedParentCategoryId && (() => {
+                const parentCategory = categoriesData?.success ? 
+                  categoriesData.data.find((p: any) => p.category.id.toString() === selectedParentCategoryId) : 
+                  null;
+                const hasChildren = parentCategory?.children && parentCategory.children.length > 0;
+                
+                return hasChildren ? (
+                  <div className="space-y-2">
+                    <Label>2. Select Subcategory (optional)</Label>
+                    <Select value={selectedChildCategoryId} onValueChange={handleChildCategoryChange}>
+                      <SelectTrigger data-testid="select-carousel-child-category">
+                        <SelectValue placeholder="All subcategories" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">All subcategories</SelectItem>
+                        {parentCategory.children.map((child: any) => (
+                          <SelectItem key={child.id} value={child.id.toString()}>
+                            {child.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : null;
+              })()}
+
+              {/* Step 3: Search within selected category */}
+              {selectedParentCategoryId && (
+                <div className="space-y-2">
+                  <Label>{selectedChildCategoryId ? '3' : '2'}. Search Products (optional)</Label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Search within selected category..."
+                      value={productSearch}
+                      onChange={(e) => setProductSearch(e.target.value)}
+                      className="pl-10"
+                      data-testid="input-search-carousel-products"
+                    />
+                  </div>
                 </div>
+              )}
+
+              {/* Product Results */}
+              {activeCategoryId && searchResults?.data && (
+                <div className="space-y-2">
+                  <Label>Available Products ({searchResults.data.length})</Label>
+                  <div className="max-h-64 overflow-y-auto space-y-2">
+                    {searchResults.data.length === 0 ? (
+                      <p className="text-center py-8 text-gray-500">No products found in this category</p>
+                    ) : (
+                      searchResults.data.map((product: Product) => (
+                        <div
+                          key={product.id}
+                          className="flex items-center justify-between p-3 bg-white rounded-lg border hover:border-pink-300 cursor-pointer transition-colors"
+                          onClick={() => handleAddProduct(product)}
+                          data-testid={`product-option-${product.id}`}
+                        >
+                          <div className="flex items-center space-x-3">
+                            {product.imageUrl && (
+                              <img
+                                src={product.imageUrl}
+                                alt={product.name}
+                                className="w-12 h-12 object-cover rounded"
+                              />
+                            )}
+                            <div>
+                              <p className="font-medium">{product.name}</p>
+                              <p className="text-sm text-gray-500">R {product.price}</p>
+                            </div>
+                          </div>
+                          <Plus className="h-5 w-5 text-pink-500" />
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {!activeCategoryId && (
+                <p className="text-center py-8 text-gray-500">
+                  Select a category above to view products
+                </p>
               )}
             </div>
           )}
