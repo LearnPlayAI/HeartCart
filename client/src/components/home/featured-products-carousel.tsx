@@ -115,7 +115,7 @@ export function FeaturedProductsCarousel() {
           behavior: 'smooth',
         });
       }
-    }, 3000); // 3 seconds
+    }, 5000); // 5 seconds
 
     return () => clearInterval(autoScrollInterval);
   }, [isAutoScrollPaused, products]);
