@@ -18,16 +18,15 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-// Configure database connection with increased pool size for stability
+// Configure database connection pool with optimized settings for connection reuse
 export const pool = new Pool({ 
   connectionString: process.env.DATABASE_URL,
-  // Increased pool settings for better connection availability
-  max: 50, // Increased from 30 to 50 for improved connection availability
-  min: 1, // Minimum connections to maintain
-  idleTimeoutMillis: 5000, // Close idle connections after 5 seconds (reduced from 15s for faster release)
-  connectionTimeoutMillis: 2000, // Reduced connection timeout for faster failure detection
-  maxUses: 1000, // Connection refresh after 1000 uses to prevent memory leaks
-  acquireTimeoutMillis: 3000, // Timeout for acquiring connection from pool (reduced from 5s)
+  // Optimized pool settings to minimize connection creation
+  max: 20, // Reduced from 50 - force connection reuse instead of creating new ones
+  min: 2, // Keep 2 connections warm for faster response times
+  idleTimeoutMillis: 30000, // Keep idle connections for 30 seconds to enable reuse during bursts
+  connectionTimeoutMillis: 5000, // Allow more time to acquire connections
+  maxUses: 7500, // Connections can be reused many times before refresh
 });
 
 // Add comprehensive pool error handling with connection recovery
@@ -44,15 +43,6 @@ pool.on('error', (err) => {
   
   // Don't exit process, just log the error
   // The pool will handle reconnection automatically
-});
-
-// Add connection event handling for better stability monitoring
-pool.on('disconnect', (client) => {
-  logger.debug('Database client disconnected', {
-    totalCount: pool.totalCount,
-    idleCount: pool.idleCount,
-    waitingCount: pool.waitingCount
-  });
 });
 
 // Enhanced connection pool monitoring for resource-constrained environment

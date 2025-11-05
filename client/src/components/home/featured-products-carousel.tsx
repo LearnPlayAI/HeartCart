@@ -19,10 +19,12 @@ export function FeaturedProductsCarousel() {
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(false);
 
-  const { data: settingData } = useQuery({
+  const { data: settingData } = useQuery<any>({
     queryKey: ['/api/settings/featuredCarouselProducts'],
     retry: false,
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    staleTime: 0, // Don't cache - always fetch fresh data
+    refetchOnMount: 'always', // Force refetch on mount regardless of staleTime
+    refetchOnWindowFocus: 'always', // Force refetch when user returns to tab
   });
 
   let config: CarouselConfig | null = null;
@@ -38,16 +40,20 @@ export function FeaturedProductsCarousel() {
     ?.sort((a, b) => a.position - b.position)
     .map(p => p.productId) || [];
 
-  const { data: productsData } = useQuery({
+  const { data: productsData } = useQuery<any>({
     queryKey: ['/api/products/by-ids', { ids: productIds.join(',') }],
     enabled: productIds.length > 0,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 0, // Don't cache - always fetch fresh data
+    refetchOnMount: 'always', // Force refetch on mount regardless of staleTime
+    refetchOnWindowFocus: 'always', // Force refetch when user returns to tab
   });
 
   // Fetch active promotions
-  const { data: promotionsResponse } = useQuery({
+  const { data: promotionsResponse } = useQuery<any>({
     queryKey: ['/api/promotions/active-with-products'],
-    staleTime: 5 * 60 * 1000,
+    staleTime: 0, // Don't cache - always fetch fresh data
+    refetchOnMount: 'always', // Force refetch on mount regardless of staleTime
+    refetchOnWindowFocus: 'always', // Force refetch when user returns to tab
   });
 
   const products: Product[] = productsData?.success ? productsData.data : [];
