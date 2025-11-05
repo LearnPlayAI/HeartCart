@@ -65,7 +65,7 @@ export function MarketingBanner() {
       className="relative overflow-hidden rounded-lg shadow-md mb-4 md:mb-6"
       data-testid="marketing-banner"
     >
-      <AspectRatio ratio={21 / 9} className="bg-gradient-to-r from-purple-500 to-pink-500">
+      <AspectRatio ratio={4 / 1} className="bg-gradient-to-r from-purple-500 to-pink-500">
         <div className="relative w-full h-full flex items-center justify-center">
           {/* Responsive Banner Image */}
           {config.imageVariants && config.imageVariants.length > 0 ? (

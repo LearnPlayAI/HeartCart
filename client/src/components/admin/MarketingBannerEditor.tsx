@@ -472,7 +472,7 @@ export function MarketingBannerEditor() {
 
         {showPreview && config.enabled && (
           <div className="mt-6 border rounded-lg overflow-hidden">
-            <AspectRatio ratio={21 / 9} className="bg-gradient-to-r from-purple-500 to-pink-500">
+            <AspectRatio ratio={4 / 1} className="bg-gradient-to-r from-purple-500 to-pink-500">
               <div className="relative w-full h-full flex items-center justify-center">
                 {config.imageVariants && config.imageVariants.length > 0 ? (
                   <picture>
