@@ -18,6 +18,7 @@ export function FeaturedProductsCarousel() {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(false);
+  const [isAutoScrollPaused, setIsAutoScrollPaused] = useState(false);
 
   const { data: settingData } = useQuery<any>({
     queryKey: ['/api/settings/featuredCarouselProducts'],
@@ -88,6 +89,37 @@ export function FeaturedProductsCarousel() {
     return () => window.removeEventListener('resize', updateArrowVisibility);
   }, [products]);
 
+  // Auto-scroll carousel every 3 seconds
+  useEffect(() => {
+    if (!scrollContainerRef.current || isAutoScrollPaused || products.length === 0) {
+      return;
+    }
+
+    const autoScrollInterval = setInterval(() => {
+      if (!scrollContainerRef.current) return;
+
+      const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
+      const isAtEnd = scrollLeft + clientWidth >= scrollWidth - 10;
+
+      if (isAtEnd) {
+        // Loop back to the beginning
+        scrollContainerRef.current.scrollTo({
+          left: 0,
+          behavior: 'smooth',
+        });
+      } else {
+        // Scroll to the right
+        const scrollAmount = clientWidth * 0.8;
+        scrollContainerRef.current.scrollTo({
+          left: scrollLeft + scrollAmount,
+          behavior: 'smooth',
+        });
+      }
+    }, 3000); // 3 seconds
+
+    return () => clearInterval(autoScrollInterval);
+  }, [isAutoScrollPaused, products]);
+
   const scroll = (direction: 'left' | 'right') => {
     if (!scrollContainerRef.current) return;
 
@@ -133,7 +165,7 @@ export function FeaturedProductsCarousel() {
         {showRightArrow && (
           <button
             onClick={() => scroll('right')}
-            className="absolute right-2 top-1/2 -translate-y-1/2 z-10 hover:bg-white shadow-lg rounded-full p-2 transition-all bg-[#862dd4] text-[#ffffff]"
+            className="absolute right-2 top-1/2 -translate-y-1/2 z-10 hover:bg-white shadow-lg rounded-full p-2 transition-all bg-[#862dd4] text-[#ff69b4]"
             aria-label="Scroll right"
             data-testid="carousel-scroll-right"
           >
