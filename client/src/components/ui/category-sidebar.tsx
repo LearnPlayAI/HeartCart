@@ -289,10 +289,14 @@ export function CategorySidebar({
                                 )}
                               >
                                 <div className="flex items-center gap-2">
-                                  <div className={cn(
-                                    "w-1.5 h-1.5 rounded-full",
-                                    selectedCategoryId === child.id ? "bg-white" : "bg-pink-300"
-                                  )} />
+                                  {child.icon ? (
+                                    <span className="text-base">{child.icon}</span>
+                                  ) : (
+                                    <div className={cn(
+                                      "w-1.5 h-1.5 rounded-full",
+                                      selectedCategoryId === child.id ? "bg-white" : "bg-pink-300"
+                                    )} />
+                                  )}
                                   {child.name}
                                 </div>
                               </button>
@@ -308,10 +312,14 @@ export function CategorySidebar({
                                 )}
                               >
                                 <div className="flex items-center gap-2">
-                                  <div className={cn(
-                                    "w-1.5 h-1.5 rounded-full",
-                                    categorySlug === child.slug ? "bg-white" : "bg-pink-300"
-                                  )} />
+                                  {child.icon ? (
+                                    <span className="text-base">{child.icon}</span>
+                                  ) : (
+                                    <div className={cn(
+                                      "w-1.5 h-1.5 rounded-full",
+                                      categorySlug === child.slug ? "bg-white" : "bg-pink-300"
+                                    )} />
+                                  )}
                                   {child.name}
                                 </div>
                               </Link>
