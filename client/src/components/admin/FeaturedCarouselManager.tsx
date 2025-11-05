@@ -38,7 +38,7 @@ export function FeaturedCarouselManager() {
   });
 
   const { data: categoriesData } = useQuery({
-    queryKey: ['/api/categories/with-children'],
+    queryKey: ['/api/categories/main/with-children'],
     retry: false
   });
 

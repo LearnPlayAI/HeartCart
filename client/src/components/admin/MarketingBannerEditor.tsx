@@ -213,7 +213,7 @@ export function MarketingBannerEditor() {
         ...prev,
         ctaCategoryId: selectedCategory.id,
         ctaCategorySlug: selectedCategory.slug,
-        ctaLink: `/products?categoryId=${selectedCategory.id}`
+        ctaLink: `/products?categoryId=${selectedCategory.id}&includeChildren=true`
       }));
     }
   };
@@ -225,7 +225,7 @@ export function MarketingBannerEditor() {
         return {
           ...prev,
           ctaLinkType: type,
-          ctaLink: `/products?categoryId=${prev.ctaCategoryId}`
+          ctaLink: `/products?categoryId=${prev.ctaCategoryId}&includeChildren=true`
         };
       } else if (type === 'custom') {
         // Switch to custom mode
