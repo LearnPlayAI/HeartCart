@@ -1,7 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
+import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { useLocation } from 'wouter';
 import { ArrowRight } from 'lucide-react';
+
+interface ImageVariant {
+  url: string;
+  width: number;
+  height: number;
+  size: number;
+  suffix: string;
+}
 
 interface BannerConfig {
   enabled: boolean;
@@ -11,6 +20,7 @@ interface BannerConfig {
   ctaLink: string;
   backgroundImageUrl?: string;
   backgroundObjectKey?: string;
+  imageVariants?: ImageVariant[];
   textColor?: string;
   overlayOpacity?: number;
 }
@@ -50,66 +60,88 @@ export function MarketingBanner() {
     }
   };
 
-  const backgroundStyle = config.backgroundImageUrl
-    ? {
-        backgroundImage: `url(${config.backgroundImageUrl})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-      }
-    : {
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      };
-
   return (
     <div
       className="relative overflow-hidden rounded-lg shadow-md mb-4 md:mb-6"
       data-testid="marketing-banner"
     >
-      <div
-        className="relative h-48 md:h-64 lg:h-80 flex items-center justify-center"
-        style={backgroundStyle}
-      >
-        {/* Overlay */}
-        <div
-          className="absolute inset-0 bg-black transition-opacity"
-          style={{ opacity: config.overlayOpacity || 0.3 }}
-        ></div>
+      <AspectRatio ratio={21 / 9} className="bg-gradient-to-r from-purple-500 to-pink-500">
+        <div className="relative w-full h-full flex items-center justify-center">
+          {/* Responsive Banner Image */}
+          {config.imageVariants && config.imageVariants.length > 0 ? (
+            <picture>
+              <source
+                media="(min-width: 1920px)"
+                srcSet={config.imageVariants.find(v => v.suffix === '4k')?.url}
+              />
+              <source
+                media="(min-width: 1280px)"
+                srcSet={config.imageVariants.find(v => v.suffix === 'hd')?.url}
+              />
+              <source
+                media="(min-width: 768px)"
+                srcSet={config.imageVariants.find(v => v.suffix === 'desktop')?.url}
+              />
+              <source
+                media="(min-width: 480px)"
+                srcSet={config.imageVariants.find(v => v.suffix === 'tablet')?.url}
+              />
+              <img
+                src={config.imageVariants.find(v => v.suffix === 'mobile')?.url || config.backgroundImageUrl}
+                alt={config.title}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            </picture>
+          ) : config.backgroundImageUrl ? (
+            <img
+              src={config.backgroundImageUrl}
+              alt={config.title}
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+          ) : null}
 
-        {/* Content */}
-        <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
-          <h1
-            className="text-2xl md:text-4xl lg:text-5xl font-bold mb-3 md:mb-4 animate-fade-in"
-            style={{ color: config.textColor || '#FFFFFF' }}
-          >
-            {config.title}
-          </h1>
+          {/* Overlay */}
+          <div
+            className="absolute inset-0 bg-black transition-opacity"
+            style={{ opacity: config.overlayOpacity || 0.3 }}
+          />
 
-          {config.subtitle && (
-            <p
-              className="text-base md:text-xl lg:text-2xl mb-4 md:mb-6 animate-fade-in"
-              style={{
-                color: config.textColor || '#FFFFFF',
-                animationDelay: '0.1s',
-              }}
+          {/* Content */}
+          <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
+            <h1
+              className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-2 sm:mb-3 md:mb-4 animate-fade-in"
+              style={{ color: config.textColor || '#FFFFFF' }}
             >
-              {config.subtitle}
-            </p>
-          )}
+              {config.title}
+            </h1>
 
-          {config.ctaText && (
-            <Button
-              onClick={handleCtaClick}
-              size="lg"
-              className="bg-pink-500 hover:bg-pink-600 text-white font-semibold px-8 py-6 text-lg shadow-lg hover:shadow-xl transition-all animate-fade-in"
-              style={{ animationDelay: '0.2s' }}
-              data-testid="fulvic-hero-cta-button"
-            >
-              {config.ctaText}
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
-          )}
+            {config.subtitle && (
+              <p
+                className="text-base sm:text-lg md:text-xl lg:text-2xl mb-4 sm:mb-5 md:mb-6 animate-fade-in"
+                style={{
+                  color: config.textColor || '#FFFFFF',
+                  animationDelay: '0.1s',
+                }}
+              >
+                {config.subtitle}
+              </p>
+            )}
+
+            {config.ctaText && (
+              <Button
+                onClick={handleCtaClick}
+                size="lg"
+                className="bg-pink-500 hover:bg-pink-600 text-white font-semibold px-6 sm:px-8 py-4 sm:py-6 text-base sm:text-lg shadow-lg hover:shadow-xl transition-all animate-fade-in"
+                style={{ animationDelay: '0.2s' }}
+                data-testid="fulvic-hero-cta-button"
+              >
+                {config.ctaText}
+                <ArrowRight className="ml-2 h-4 sm:h-5 w-4 sm:w-5" />
+              </Button>
+            )}
+          </div>
         </div>
-      </div>
+      </AspectRatio>
     </div>
   );
 }

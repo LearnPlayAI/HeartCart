@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { useToast } from '@/hooks/use-toast';
 import { Upload, X, Eye, Save, Link as LinkIcon } from 'lucide-react';
 import { apiRequest, queryClient } from '@/lib/queryClient';
@@ -471,40 +472,68 @@ export function MarketingBannerEditor() {
 
         {showPreview && config.enabled && (
           <div className="mt-6 border rounded-lg overflow-hidden">
-            <div 
-              className="relative h-64 flex items-center justify-center"
-              style={{
-                backgroundImage: config.backgroundImageUrl ? `url(${config.backgroundImageUrl})` : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-              }}
-            >
-              <div 
-                className="absolute inset-0 bg-black"
-                style={{ opacity: config.overlayOpacity || 0.3 }}
-              ></div>
-              <div className="relative z-10 text-center px-4">
-                <h2 
-                  className="text-3xl md:text-4xl font-bold mb-2"
-                  style={{ color: config.textColor }}
-                >
-                  {config.title || 'Banner Title'}
-                </h2>
-                <p 
-                  className="text-lg md:text-xl mb-4"
-                  style={{ color: config.textColor }}
-                >
-                  {config.subtitle || 'Banner subtitle text'}
-                </p>
-                {config.ctaText && (
-                  <Button 
-                    className="bg-pink-500 hover:bg-pink-600 text-white"
+            <AspectRatio ratio={21 / 9} className="bg-gradient-to-r from-purple-500 to-pink-500">
+              <div className="relative w-full h-full flex items-center justify-center">
+                {config.imageVariants && config.imageVariants.length > 0 ? (
+                  <picture>
+                    <source
+                      media="(min-width: 1920px)"
+                      srcSet={config.imageVariants.find(v => v.suffix === '4k')?.url}
+                    />
+                    <source
+                      media="(min-width: 1280px)"
+                      srcSet={config.imageVariants.find(v => v.suffix === 'hd')?.url}
+                    />
+                    <source
+                      media="(min-width: 768px)"
+                      srcSet={config.imageVariants.find(v => v.suffix === 'desktop')?.url}
+                    />
+                    <source
+                      media="(min-width: 480px)"
+                      srcSet={config.imageVariants.find(v => v.suffix === 'tablet')?.url}
+                    />
+                    <img
+                      src={config.imageVariants.find(v => v.suffix === 'mobile')?.url || config.backgroundImageUrl}
+                      alt="Banner background"
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                  </picture>
+                ) : config.backgroundImageUrl ? (
+                  <img
+                    src={config.backgroundImageUrl}
+                    alt="Banner background"
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                ) : null}
+                
+                <div 
+                  className="absolute inset-0 bg-black"
+                  style={{ opacity: config.overlayOpacity || 0.3 }}
+                />
+                
+                <div className="relative z-10 text-center px-4 max-w-4xl">
+                  <h2 
+                    className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-2 sm:mb-3"
+                    style={{ color: config.textColor }}
                   >
-                    {config.ctaText}
-                  </Button>
-                )}
+                    {config.title || 'Banner Title'}
+                  </h2>
+                  <p 
+                    className="text-base sm:text-lg md:text-xl lg:text-2xl mb-4 sm:mb-6"
+                    style={{ color: config.textColor }}
+                  >
+                    {config.subtitle || 'Banner subtitle text'}
+                  </p>
+                  {config.ctaText && (
+                    <Button 
+                      className="bg-pink-500 hover:bg-pink-600 text-white text-sm sm:text-base"
+                    >
+                      {config.ctaText}
+                    </Button>
+                  )}
+                </div>
               </div>
-            </div>
+            </AspectRatio>
           </div>
         )}
       </CardContent>
