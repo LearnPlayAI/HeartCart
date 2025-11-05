@@ -92,7 +92,7 @@ export function FulvicBannerEditor() {
     setUploadingImage(true);
     try {
       const formData = new FormData();
-      formData.append('image', file);
+      formData.append('file', file);
 
       const response = await fetch('/api/upload', {
         method: 'POST',
