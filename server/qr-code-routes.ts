@@ -23,16 +23,16 @@ router.get('/products/:id/qr-code', asyncHandler(async (req: Request, res: Respo
       return;
     }
 
-    const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-      ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
-      : 'https://heartcart.shop';
+    // Always use production URL for QR codes (they're meant for physical/external sharing)
+    const baseUrl = 'https://heartcart.shop';
     
     // Get platform from query parameter, default to offline
     const platform = (req.query.platform as string) || 'offline';
     const validPlatforms = ['whatsapp', 'facebook', 'instagram', 'tiktok', 'offline', 'social'];
     const utmMedium = validPlatforms.includes(platform) ? platform : 'offline';
     
-    const productUrl = `${baseUrl}/product/${product.slug}?utm_source=qr&utm_medium=${utmMedium}&utm_campaign=product_${platform}`;
+    // Use product ID format for reliable routing
+    const productUrl = `${baseUrl}/product/id/${product.id}?utm_source=qr&utm_medium=${utmMedium}&utm_campaign=product_${platform}`;
     
     const format = (req.query.format as string) || 'png';
     const size = parseInt(req.query.size as string) || 300;
@@ -91,16 +91,16 @@ router.get('/products/:id/qr-social-kit', asyncHandler(async (req: Request, res:
       return;
     }
 
-    const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-      ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
-      : 'https://heartcart.shop';
+    // Always use production URL for QR codes (they're meant for physical/external sharing)
+    const baseUrl = 'https://heartcart.shop';
     
+    // Use product ID format for reliable routing
     const platforms = {
-      whatsapp: `${baseUrl}/product/${product.slug}?utm_source=qr&utm_medium=whatsapp&utm_campaign=product_share`,
-      facebook: `${baseUrl}/product/${product.slug}?utm_source=qr&utm_medium=facebook&utm_campaign=product_share`,
-      instagram: `${baseUrl}/product/${product.slug}?utm_source=qr&utm_medium=instagram&utm_campaign=product_share`,
-      tiktok: `${baseUrl}/product/${product.slug}?utm_source=qr&utm_medium=tiktok&utm_campaign=product_share`,
-      general: `${baseUrl}/product/${product.slug}?utm_source=qr&utm_medium=social&utm_campaign=product_share`
+      whatsapp: `${baseUrl}/product/id/${product.id}?utm_source=qr&utm_medium=whatsapp&utm_campaign=product_share`,
+      facebook: `${baseUrl}/product/id/${product.id}?utm_source=qr&utm_medium=facebook&utm_campaign=product_share`,
+      instagram: `${baseUrl}/product/id/${product.id}?utm_source=qr&utm_medium=instagram&utm_campaign=product_share`,
+      tiktok: `${baseUrl}/product/id/${product.id}?utm_source=qr&utm_medium=tiktok&utm_campaign=product_share`,
+      general: `${baseUrl}/product/id/${product.id}?utm_source=qr&utm_medium=social&utm_campaign=product_share`
     };
 
     const qrCodes: Record<string, string> = {};
