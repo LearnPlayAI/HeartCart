@@ -36,6 +36,7 @@ import path from "path";
 import fs from "fs";
 import fileRoutes from "./file-routes";
 import uploadHandlers from "./upload-handlers";
+import bannerRoutes from "./banner-routes";
 import fileBrowserRoutes from "./file-browser-routes";
 import registerAttributeRoutes from "./attribute-routes";
 import registerProductAttributeRoutes from "./attribute-routes-product";
@@ -301,7 +302,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Mount upload handler routes
   app.use('/api/upload', uploadHandlers);
   
-
+  // Mount banner routes for marketing banner image uploads
+  app.use('/api/banners', bannerRoutes);
   
   // Health check endpoint with build version for cache busting
   app.get('/api/health', asyncHandler(async (req: Request, res: Response) => {
