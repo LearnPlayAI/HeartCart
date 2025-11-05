@@ -7938,6 +7938,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }));
 
+  // Admin system settings endpoints - protected routes
+  app.get('/api/admin/settings/:key', isAdmin, asyncHandler(async (req, res) => {
+    try {
+      const { key } = req.params;
+      
+      let setting = await storage.getSystemSetting(key);
+      
+      // If setting doesn't exist, create it with default value
+      if (!setting) {
+        const defaultValue = key === 'marketingBannerConfig' 
+          ? JSON.stringify({ enabled: false, title: '', subtitle: '', ctaText: '', ctaLink: '' })
+          : JSON.stringify({ enabled: false, products: [] });
+        
+        setting = await storage.setSystemSetting(key, defaultValue);
+      }
+      
+      return sendSuccess(res, setting);
+    } catch (error) {
+      logger.error('Error fetching admin system setting:', error);
+      return sendError(res, 'Failed to fetch system setting', 500);
+    }
+  }));
+
+  app.put('/api/admin/settings/:key', isAdmin, asyncHandler(async (req, res) => {
+    try {
+      const { key } = req.params;
+      const { value } = req.body;
+      
+      if (!value) {
+        return sendError(res, 'Setting value is required', 400);
+      }
+      
+      const setting = await storage.setSystemSetting(key, value);
+      return sendSuccess(res, setting);
+    } catch (error) {
+      logger.error('Error updating admin system setting:', error);
+      return sendError(res, 'Failed to update system setting', 500);
+    }
+  }));
+
   // Public system settings endpoint for customer-facing features
   const publicSettings = ['marketingBannerConfig', 'featuredCarouselProducts'];
   app.get('/api/settings/:key', asyncHandler(async (req, res) => {
