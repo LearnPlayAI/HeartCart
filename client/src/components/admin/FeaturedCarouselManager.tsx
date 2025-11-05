@@ -30,7 +30,7 @@ export function FeaturedCarouselManager() {
   const [productSearch, setProductSearch] = useState('');
   const [showProductSelector, setShowProductSelector] = useState(false);
   const [selectedParentCategoryId, setSelectedParentCategoryId] = useState<string>('');
-  const [selectedChildCategoryId, setSelectedChildCategoryId] = useState<string>('');
+  const [selectedChildCategoryId, setSelectedChildCategoryId] = useState<string>('all');
 
   const { data: settingData, isLoading } = useQuery({
     queryKey: ['/api/admin/settings/featuredCarouselProducts'],
@@ -43,7 +43,10 @@ export function FeaturedCarouselManager() {
   });
 
   // Determine which categoryId to use for the product search
-  const activeCategoryId = selectedChildCategoryId || selectedParentCategoryId;
+  // Treat "all" sentinel as no child selection (use parent instead)
+  const activeCategoryId = (selectedChildCategoryId && selectedChildCategoryId !== 'all') 
+    ? selectedChildCategoryId 
+    : selectedParentCategoryId;
 
   const { data: searchResults } = useQuery({
     queryKey: ['/api/products', { 
@@ -97,7 +100,7 @@ export function FeaturedCarouselManager() {
 
   const handleParentCategoryChange = (categoryId: string) => {
     setSelectedParentCategoryId(categoryId);
-    setSelectedChildCategoryId(''); // Reset child when parent changes
+    setSelectedChildCategoryId('all'); // Reset to "all" when parent changes
     setProductSearch(''); // Reset search
   };
 
@@ -250,7 +253,7 @@ export function FeaturedCarouselManager() {
                         <SelectValue placeholder="All subcategories" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All subcategories</SelectItem>
+                        <SelectItem value="all">All subcategories</SelectItem>
                         {parentCategory.children.map((child: any) => (
                           <SelectItem key={child.id} value={child.id.toString()}>
                             {child.name}
