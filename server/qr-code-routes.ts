@@ -12,13 +12,15 @@ router.get('/products/:id/qr-code', asyncHandler(async (req: Request, res: Respo
     const productId = parseInt(req.params.id);
     
     if (isNaN(productId)) {
-      return sendError(res, 'Invalid product ID', 400);
+      sendError(res, 'Invalid product ID', 400);
+      return;
     }
 
-    const product = await storage.getProduct(productId);
+    const product = await storage.getProductById(productId, { includeInactive: true });
     
     if (!product) {
-      return sendError(res, 'Product not found', 404);
+      sendError(res, 'Product not found', 404);
+      return;
     }
 
     const baseUrl = process.env.REPLIT_DEV_DOMAIN 
@@ -48,7 +50,8 @@ router.get('/products/:id/qr-code', asyncHandler(async (req: Request, res: Respo
       
       res.setHeader('Content-Type', 'image/svg+xml');
       res.setHeader('Content-Disposition', `inline; filename="product-${productId}-qr.svg"`);
-      return res.send(qrSvg);
+      res.send(qrSvg);
+      return;
     } else {
       const qrBuffer = await QRCode.toBuffer(productUrl, {
         type: 'png',
@@ -62,11 +65,13 @@ router.get('/products/:id/qr-code', asyncHandler(async (req: Request, res: Respo
       
       res.setHeader('Content-Type', 'image/png');
       res.setHeader('Content-Disposition', `inline; filename="product-${productId}-qr.png"`);
-      return res.send(qrBuffer);
+      res.send(qrBuffer);
+      return;
     }
   } catch (error) {
     logger.error('Error generating QR code', { error, productId: req.params.id });
-    return sendError(res, 'Failed to generate QR code', 500);
+    sendError(res, 'Failed to generate QR code', 500);
+    return;
   }
 }));
 
@@ -75,13 +80,15 @@ router.get('/products/:id/qr-social-kit', asyncHandler(async (req: Request, res:
     const productId = parseInt(req.params.id);
     
     if (isNaN(productId)) {
-      return sendError(res, 'Invalid product ID', 400);
+      sendError(res, 'Invalid product ID', 400);
+      return;
     }
 
-    const product = await storage.getProduct(productId);
+    const product = await storage.getProductById(productId, { includeInactive: true });
     
     if (!product) {
-      return sendError(res, 'Product not found', 404);
+      sendError(res, 'Product not found', 404);
+      return;
     }
 
     const baseUrl = process.env.REPLIT_DEV_DOMAIN 
@@ -110,7 +117,7 @@ router.get('/products/:id/qr-social-kit', asyncHandler(async (req: Request, res:
       qrCodes[platform] = qrDataUrl;
     }
 
-    return sendSuccess(res, {
+    sendSuccess(res, {
       productId: product.id,
       productName: product.name,
       productSlug: product.slug,
@@ -124,9 +131,11 @@ router.get('/products/:id/qr-social-kit', asyncHandler(async (req: Request, res:
         general: `/api/products/${productId}/qr-code?format=png`
       }
     });
+    return;
   } catch (error) {
     logger.error('Error generating QR social kit', { error, productId: req.params.id });
-    return sendError(res, 'Failed to generate QR social kit', 500);
+    sendError(res, 'Failed to generate QR social kit', 500);
+    return;
   }
 }));
 
