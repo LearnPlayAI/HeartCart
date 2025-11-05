@@ -116,7 +116,6 @@ export function FeaturedProductsCarousel() {
           Premium health and wellness solutions for you and your animals
         </p>
       </div>
-
       <div className="relative bg-[#f3e5f5]">
         {/* Left Arrow */}
         {showLeftArrow && (
@@ -134,7 +133,7 @@ export function FeaturedProductsCarousel() {
         {showRightArrow && (
           <button
             onClick={() => scroll('right')}
-            className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white shadow-lg rounded-full p-2 transition-all"
+            className="absolute right-2 top-1/2 -translate-y-1/2 z-10 hover:bg-white shadow-lg rounded-full p-2 transition-all bg-[#862dd4] text-[#ffffff]"
             aria-label="Scroll right"
             data-testid="carousel-scroll-right"
           >
