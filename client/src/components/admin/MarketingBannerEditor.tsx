@@ -5,9 +5,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, X, Eye, Save } from 'lucide-react';
+import { Upload, X, Eye, Save, Link as LinkIcon } from 'lucide-react';
 import { apiRequest, queryClient } from '@/lib/queryClient';
+
+interface ImageVariant {
+  url: string;
+  width: number;
+  height: number;
+  size: number;
+  suffix: string;
+}
 
 interface BannerConfig {
   enabled: boolean;
@@ -15,8 +25,13 @@ interface BannerConfig {
   subtitle: string;
   ctaText: string;
   ctaLink: string;
+  ctaLinkType?: 'category' | 'custom';
+  ctaCategoryId?: number;
+  ctaCategorySlug?: string;
   backgroundImageUrl?: string;
   backgroundObjectKey?: string;
+  imageVariants?: ImageVariant[];
+  bannerId?: string;
   textColor?: string;
   overlayOpacity?: number;
 }
@@ -29,8 +44,10 @@ export function MarketingBannerEditor() {
     subtitle: '',
     ctaText: '',
     ctaLink: '',
+    ctaLinkType: 'custom',
     textColor: '#FFFFFF',
-    overlayOpacity: 0.3
+    overlayOpacity: 0.3,
+    bannerId: `banner-${Date.now()}`
   });
   const [showPreview, setShowPreview] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -39,17 +56,51 @@ export function MarketingBannerEditor() {
     queryKey: ['/api/admin/settings/marketingBannerConfig'],
     retry: false
   });
+  
+  const { data: categoriesData } = useQuery({
+    queryKey: ['/api/categories/main/with-children']
+  });
 
   useEffect(() => {
     if (settingData?.success && settingData.data?.settingValue) {
       try {
         const parsed = JSON.parse(settingData.data.settingValue);
+        
+        // Migration: detect if config uses old format (no ctaLinkType)
+        if (!parsed.ctaLinkType) {
+          // Check if ctaLink matches category pattern
+          const categoryMatch = parsed.ctaLink?.match(/\/products\?category=(.+)/);
+          if (categoryMatch && categoriesData?.success) {
+            // Try to find matching category by slug
+            const slug = categoryMatch[1];
+            const allCategories = categoriesData.data.flatMap((parent: any) => 
+              [parent.category, ...(parent.children || [])]
+            );
+            const matchedCategory = allCategories.find((cat: any) => cat.slug === slug);
+            
+            if (matchedCategory) {
+              parsed.ctaLinkType = 'category';
+              parsed.ctaCategoryId = matchedCategory.id;
+              parsed.ctaCategorySlug = matchedCategory.slug;
+            } else {
+              parsed.ctaLinkType = 'custom';
+            }
+          } else {
+            parsed.ctaLinkType = 'custom';
+          }
+        }
+        
+        // Ensure bannerId exists
+        if (!parsed.bannerId) {
+          parsed.bannerId = `banner-${Date.now()}`;
+        }
+        
         setConfig(parsed);
       } catch (error) {
         console.error('Error parsing banner config:', error);
       }
     }
-  }, [settingData]);
+  }, [settingData, categoriesData]);
 
   const updateMutation = useMutation({
     mutationFn: async (newConfig: BannerConfig) => {
@@ -93,8 +144,9 @@ export function MarketingBannerEditor() {
     try {
       const formData = new FormData();
       formData.append('file', file);
+      formData.append('bannerId', config.bannerId || `banner-${Date.now()}`);
 
-      const response = await fetch('/api/upload', {
+      const response = await fetch('/api/banners/upload', {
         method: 'POST',
         body: formData,
         credentials: 'include',
@@ -104,22 +156,34 @@ export function MarketingBannerEditor() {
         throw new Error('Upload failed');
       }
 
-      const data = await response.json();
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.message || 'Upload failed');
+      }
+      
+      const { variants, bannerId } = result.data;
+      
+      // Use the desktop variant as the primary image
+      const primaryVariant = variants.find((v: ImageVariant) => v.suffix === 'desktop') || variants[0];
       
       setConfig(prev => ({
         ...prev,
-        backgroundImageUrl: data.url,
-        backgroundObjectKey: data.objectKey
+        imageVariants: variants,
+        bannerId,
+        backgroundImageUrl: primaryVariant.url,
+        backgroundObjectKey: `public/banners/${bannerId}/${primaryVariant.url.split('/').pop()}`
       }));
 
       toast({
-        title: 'Image Uploaded',
-        description: 'Banner image uploaded successfully.',
+        title: 'Banner Uploaded',
+        description: result.warning || `Responsive banner images generated successfully.`,
+        variant: result.warning ? 'default' : undefined,
       });
     } catch (error) {
       toast({
         title: 'Upload Failed',
-        description: 'Failed to upload image. Please try again.',
+        description: error instanceof Error ? error.message : 'Failed to upload image. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -131,8 +195,46 @@ export function MarketingBannerEditor() {
     setConfig(prev => ({
       ...prev,
       backgroundImageUrl: undefined,
-      backgroundObjectKey: undefined
+      backgroundObjectKey: undefined,
+      imageVariants: undefined
     }));
+  };
+  
+  const handleCategoryChange = (categoryId: string) => {
+    const allCategories = categoriesData?.success ? categoriesData.data.flatMap((parent: any) => 
+      [parent.category, ...(parent.children || [])]
+    ) : [];
+    
+    const selectedCategory = allCategories.find((cat: any) => cat.id === parseInt(categoryId));
+    
+    if (selectedCategory) {
+      setConfig(prev => ({
+        ...prev,
+        ctaCategoryId: selectedCategory.id,
+        ctaCategorySlug: selectedCategory.slug,
+        ctaLink: `/products?category=${selectedCategory.slug}`
+      }));
+    }
+  };
+  
+  const handleLinkTypeChange = (type: 'category' | 'custom') => {
+    setConfig(prev => {
+      if (type === 'category' && prev.ctaCategorySlug) {
+        // Switch to category mode and regenerate URL
+        return {
+          ...prev,
+          ctaLinkType: type,
+          ctaLink: `/products?category=${prev.ctaCategorySlug}`
+        };
+      } else if (type === 'custom') {
+        // Switch to custom mode
+        return {
+          ...prev,
+          ctaLinkType: type
+        };
+      }
+      return { ...prev, ctaLinkType: type };
+    });
   };
 
   const handleSave = () => {
@@ -208,29 +310,79 @@ export function MarketingBannerEditor() {
           <p className="text-sm text-gray-500">{config.subtitle.length}/150 characters</p>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="ctaText">Button Text</Label>
-            <Input
-              id="ctaText"
-              value={config.ctaText}
-              onChange={(e) => setConfig(prev => ({ ...prev, ctaText: e.target.value }))}
-              placeholder="Shop Now"
-              maxLength={30}
-              data-testid="input-banner-cta-text"
-            />
-          </div>
+        <div className="space-y-2">
+          <Label htmlFor="ctaText">Button Text</Label>
+          <Input
+            id="ctaText"
+            value={config.ctaText}
+            onChange={(e) => setConfig(prev => ({ ...prev, ctaText: e.target.value }))}
+            placeholder="Shop Now"
+            maxLength={30}
+            data-testid="input-banner-cta-text"
+          />
+        </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="ctaLink">Button Link</Label>
-            <Input
-              id="ctaLink"
-              value={config.ctaLink}
-              onChange={(e) => setConfig(prev => ({ ...prev, ctaLink: e.target.value }))}
-              placeholder="/products?category=health-wellness"
-              data-testid="input-banner-cta-link"
-            />
-          </div>
+        <div className="space-y-4 border rounded-lg p-4 bg-gray-50">
+          <Label>Button Destination</Label>
+          
+          <RadioGroup value={config.ctaLinkType} onValueChange={handleLinkTypeChange}>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="category" id="link-category" />
+              <Label htmlFor="link-category" className="font-normal cursor-pointer">
+                Link to Category
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="custom" id="link-custom" />
+              <Label htmlFor="link-custom" className="font-normal cursor-pointer">
+                Custom URL
+              </Label>
+            </div>
+          </RadioGroup>
+
+          {config.ctaLinkType === 'category' ? (
+            <div className="space-y-2">
+              <Select 
+                value={config.ctaCategoryId?.toString() || ''} 
+                onValueChange={handleCategoryChange}
+              >
+                <SelectTrigger data-testid="select-banner-category">
+                  <SelectValue placeholder="Select a category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categoriesData?.success && categoriesData.data.map((parent: any) => (
+                    <div key={parent.category.id}>
+                      <SelectItem value={parent.category.id.toString()}>
+                        {parent.category.name}
+                      </SelectItem>
+                      {parent.children && parent.children.map((child: any) => (
+                        <SelectItem key={child.id} value={child.id.toString()} className="pl-6">
+                          └─ {child.name}
+                        </SelectItem>
+                      ))}
+                    </div>
+                  ))}
+                </SelectContent>
+              </Select>
+              {config.ctaLink && (
+                <div className="flex items-center gap-2 text-sm text-gray-600 bg-white rounded p-2">
+                  <LinkIcon className="h-4 w-4" />
+                  <span className="font-mono text-xs">{config.ctaLink}</span>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Input
+                id="ctaLink"
+                value={config.ctaLink}
+                onChange={(e) => setConfig(prev => ({ ...prev, ctaLink: e.target.value }))}
+                placeholder="/products or /special-offer"
+                data-testid="input-banner-cta-link"
+              />
+              <p className="text-xs text-gray-500">Enter any URL path (e.g., /products, /about, etc.)</p>
+            </div>
+          )}
         </div>
 
         <div className="space-y-2">

@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import multer from 'multer';
 import sharp from 'sharp';
 import { objectStorageService as objectStore, STORAGE_FOLDERS } from './objectstore';
-import { isAdmin } from './auth';
+import { isAdmin } from './auth-middleware';
 
 const router = Router();
 
