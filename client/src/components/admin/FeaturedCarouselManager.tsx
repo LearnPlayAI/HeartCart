@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -42,19 +42,28 @@ export function FeaturedCarouselManager() {
     retry: false
   });
 
-  // Determine which categoryId to use for the product search
-  // Treat "all" sentinel as no child selection (use parent instead)
-  const activeCategoryId = (selectedChildCategoryId && selectedChildCategoryId !== 'all') 
-    ? selectedChildCategoryId 
-    : selectedParentCategoryId;
+  // Determine which parameters to use for the product search
+  // When "all" is selected (or no child), use parentCategoryId to get all products from parent and children
+  // When specific child is selected, use categoryId for that specific child only
+  const isParentOnly = !selectedChildCategoryId || selectedChildCategoryId === 'all';
+  const activeCategoryId = isParentOnly 
+    ? selectedParentCategoryId 
+    : selectedChildCategoryId;
+  
+  // Build query key with stable primitives
+  const searchTerm = productSearch.length >= 2 ? productSearch : '';
+  const parentCatId = (isParentOnly && selectedParentCategoryId) ? selectedParentCategoryId : '';
+  const childCatId = (!isParentOnly && selectedChildCategoryId !== 'all') ? selectedChildCategoryId : '';
 
   const { data: searchResults } = useQuery({
-    queryKey: ['/api/products', { 
-      search: productSearch.length >= 2 ? productSearch : undefined,
-      categoryId: activeCategoryId || undefined,
+    queryKey: ['/api/products', {
+      parentCategoryId: parentCatId || undefined,
+      categoryId: childCatId || undefined,
+      search: searchTerm || undefined,
       limit: 50
     }],
-    enabled: showProductSelector && !!activeCategoryId
+    // Only run query when parent category is selected
+    enabled: !!selectedParentCategoryId
   });
 
   const { data: selectedProductsData } = useQuery({
