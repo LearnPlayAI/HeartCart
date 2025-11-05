@@ -14,13 +14,13 @@ interface CarouselConfig {
   products: CarouselProduct[];
 }
 
-export function FulvicProductsCarousel() {
+export function FeaturedProductsCarousel() {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(false);
 
   const { data: settingData } = useQuery({
-    queryKey: ['/api/settings/fulvicCarouselProducts'],
+    queryKey: ['/api/settings/featuredCarouselProducts'],
     retry: false,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });

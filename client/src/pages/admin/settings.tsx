@@ -6,8 +6,8 @@ import { VATSettingsCard } from '@/components/admin/VATSettingsCard';
 import { YocoSettingsCard } from '@/components/admin/YocoSettingsCard';
 import { EftSettingsCard } from '@/components/admin/EftSettingsCard';
 import { AdminShippingFeeCard } from '@/components/admin/AdminShippingFeeCard';
-import { FulvicBannerEditor } from '@/components/admin/FulvicBannerEditor';
-import { FulvicCarouselManager } from '@/components/admin/FulvicCarouselManager';
+import { MarketingBannerEditor } from '@/components/admin/MarketingBannerEditor';
+import { FeaturedCarouselManager } from '@/components/admin/FeaturedCarouselManager';
 
 export default function AdminSettingsPage() {
   return (
@@ -38,12 +38,15 @@ export default function AdminSettingsPage() {
             <VATSettingsCard />
           </div>
 
-          {/* Fulvic Wellness Marketing Section */}
+          {/* Marketing Campaigns Section */}
           <div>
-            <h2 className="text-lg font-semibold mb-4 text-purple-700">Fulvic Wellness Marketing</h2>
+            <h2 className="text-lg font-semibold mb-4 text-purple-700">Marketing Campaigns</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Configure homepage promotional banner and featured product carousel. Perfect for seasonal campaigns, special offers, or highlighting product ranges.
+            </p>
             <div className="space-y-4">
-              <FulvicBannerEditor />
-              <FulvicCarouselManager />
+              <MarketingBannerEditor />
+              <FeaturedCarouselManager />
             </div>
           </div>
 

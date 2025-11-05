@@ -3,8 +3,8 @@ import HeroBanner from '@/components/home/hero-banner';
 import FlashDealsSection from '@/components/home/flash-deals';
 import FeaturedProductsSection from '@/components/home/featured-products';
 import AIRecommendedProducts from '@/components/home/ai-recommended';
-import { FulvicWellnessHero } from '@/components/home/fulvic-wellness-hero';
-import { FulvicProductsCarousel } from '@/components/home/fulvic-products-carousel';
+import { MarketingBanner } from '@/components/home/marketing-banner';
+import { FeaturedProductsCarousel } from '@/components/home/featured-products-carousel';
 import { CategorySidebar } from '@/components/ui/category-sidebar';
 import { CategorySidebarDrawer } from '@/components/ui/category-sidebar-drawer';
 import { Helmet } from 'react-helmet';
@@ -28,11 +28,11 @@ const Home = () => {
         
         <HeroBanner />
         
-        {/* Fulvic Wellness Banner - Top Priority Placement */}
-        <FulvicWellnessHero />
+        {/* Marketing Banner - Top Priority Placement */}
+        <MarketingBanner />
         
-        {/* Fulvic Products Carousel - Second Priority Placement */}
-        <FulvicProductsCarousel />
+        {/* Featured Products Carousel - Second Priority Placement */}
+        <FeaturedProductsCarousel />
         
         {/* Mobile Category Drawer - Shown only on mobile */}
         <div className="block md:hidden mb-2">

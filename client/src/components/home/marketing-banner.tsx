@@ -15,11 +15,11 @@ interface BannerConfig {
   overlayOpacity?: number;
 }
 
-export function FulvicWellnessHero() {
+export function MarketingBanner() {
   const [, setLocation] = useLocation();
   
   const { data: settingData } = useQuery({
-    queryKey: ['/api/settings/fulvicHeroConfig'],
+    queryKey: ['/api/settings/marketingBannerConfig'],
     retry: false,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
@@ -63,7 +63,7 @@ export function FulvicWellnessHero() {
   return (
     <div
       className="relative overflow-hidden rounded-lg shadow-md mb-4 md:mb-6"
-      data-testid="fulvic-wellness-hero"
+      data-testid="marketing-banner"
     >
       <div
         className="relative h-48 md:h-64 lg:h-80 flex items-center justify-center"

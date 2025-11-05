@@ -20,7 +20,7 @@ interface CarouselConfig {
   products: CarouselProduct[];
 }
 
-export function FulvicCarouselManager() {
+export function FeaturedCarouselManager() {
   const { toast } = useToast();
   const [config, setConfig] = useState<CarouselConfig>({
     enabled: true,
@@ -30,7 +30,7 @@ export function FulvicCarouselManager() {
   const [showProductSelector, setShowProductSelector] = useState(false);
 
   const { data: settingData, isLoading } = useQuery({
-    queryKey: ['/api/admin/settings/fulvicCarouselProducts'],
+    queryKey: ['/api/admin/settings/featuredCarouselProducts'],
     retry: false
   });
 
@@ -57,7 +57,7 @@ export function FulvicCarouselManager() {
 
   const updateMutation = useMutation({
     mutationFn: async (newConfig: CarouselConfig) => {
-      return await apiRequest('/api/admin/settings/fulvicCarouselProducts', {
+      return await apiRequest('/api/admin/settings/featuredCarouselProducts', {
         method: 'PUT',
         body: JSON.stringify({
           settingValue: JSON.stringify(newConfig)
@@ -65,10 +65,10 @@ export function FulvicCarouselManager() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/settings/fulvicCarouselProducts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/settings/featuredCarouselProducts'] });
       toast({
         title: 'Carousel Updated',
-        description: 'Fulvic products carousel has been saved successfully.',
+        description: 'Featured products carousel has been saved successfully.',
       });
     },
     onError: (error: any) => {
@@ -158,9 +158,9 @@ export function FulvicCarouselManager() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Fulvic Products Carousel</CardTitle>
+        <CardTitle>Featured Products Carousel</CardTitle>
         <CardDescription>
-          Select and arrange products to feature in the Fulvic Wellness carousel
+          Select and arrange products to feature in the homepage carousel. Ideal for highlighting new arrivals, bestsellers, or seasonal items
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">

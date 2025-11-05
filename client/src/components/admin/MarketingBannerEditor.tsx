@@ -21,7 +21,7 @@ interface BannerConfig {
   overlayOpacity?: number;
 }
 
-export function FulvicBannerEditor() {
+export function MarketingBannerEditor() {
   const { toast } = useToast();
   const [config, setConfig] = useState<BannerConfig>({
     enabled: true,
@@ -36,7 +36,7 @@ export function FulvicBannerEditor() {
   const [uploadingImage, setUploadingImage] = useState(false);
 
   const { data: settingData, isLoading } = useQuery({
-    queryKey: ['/api/admin/settings/fulvicHeroConfig'],
+    queryKey: ['/api/admin/settings/marketingBannerConfig'],
     retry: false
   });
 
@@ -53,7 +53,7 @@ export function FulvicBannerEditor() {
 
   const updateMutation = useMutation({
     mutationFn: async (newConfig: BannerConfig) => {
-      return await apiRequest('/api/admin/settings/fulvicHeroConfig', {
+      return await apiRequest('/api/admin/settings/marketingBannerConfig', {
         method: 'PUT',
         body: JSON.stringify({
           settingValue: JSON.stringify(newConfig)
@@ -61,10 +61,10 @@ export function FulvicBannerEditor() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/settings/fulvicHeroConfig'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/settings/marketingBannerConfig'] });
       toast({
         title: 'Banner Updated',
-        description: 'Fulvic Wellness banner has been saved successfully.',
+        description: 'Marketing banner has been saved successfully.',
       });
     },
     onError: (error: any) => {
@@ -163,9 +163,9 @@ export function FulvicBannerEditor() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Fulvic Wellness Banner</CardTitle>
+        <CardTitle>Marketing Banner</CardTitle>
         <CardDescription>
-          Configure the promotional banner that appears at the top of the homepage
+          Configure the promotional banner that appears at the top of the homepage. Perfect for seasonal campaigns, special promotions, or featured product ranges.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">

@@ -7939,7 +7939,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }));
 
   // Public system settings endpoint for customer-facing features
-  const publicSettings = ['fulvicHeroConfig', 'fulvicCarouselProducts'];
+  const publicSettings = ['marketingBannerConfig', 'featuredCarouselProducts'];
   app.get('/api/settings/:key', asyncHandler(async (req, res) => {
     try {
       const { key } = req.params;
@@ -7953,7 +7953,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // If setting doesn't exist, create it with default value
       if (!setting) {
-        const defaultValue = key === 'fulvicHeroConfig' 
+        const defaultValue = key === 'marketingBannerConfig' 
           ? JSON.stringify({ enabled: false, title: '', subtitle: '', ctaText: '', ctaLink: '' })
           : JSON.stringify({ enabled: false, products: [] });
         
