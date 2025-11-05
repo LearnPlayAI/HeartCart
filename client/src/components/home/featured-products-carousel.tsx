@@ -137,7 +137,7 @@ export function FeaturedProductsCarousel() {
             aria-label="Scroll right"
             data-testid="carousel-scroll-right"
           >
-            <ChevronRight className="h-6 w-6 text-purple-600" />
+            <ChevronRight className="h-6 w-6 text-white" />
           </button>
         )}
 
