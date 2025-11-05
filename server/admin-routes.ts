@@ -1241,11 +1241,21 @@ router.get("/settings", isAuthenticated, asyncHandler(async (req: Request, res: 
   }
 }));
 
-// Get specific system setting by key
-router.get("/settings/:key", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
+// Public settings endpoints for customer-facing features
+const publicSettings = ['fulvicHeroConfig', 'fulvicCarouselProducts'];
+
+// Get specific system setting by key (public for allowed keys, admin only for others)
+router.get("/settings/:key", asyncHandler(async (req: Request, res: Response) => {
+  const { key } = req.params;
+  
+  // Check if this is a public setting
+  const isPublic = publicSettings.includes(key);
+  
+  // Require authentication for non-public settings
+  if (!isPublic && !req.user) {
+    return sendError(res, "Authentication required", 401);
+  }
   try {
-    // TODO: Add admin role check here
-    const { key } = req.params;
     
     let setting = await storage.getSystemSetting(key);
     

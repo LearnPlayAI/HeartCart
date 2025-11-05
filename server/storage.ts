@@ -278,6 +278,10 @@ export interface IStorage {
     slug: string,
     options?: { includeInactive?: boolean; includeCategoryInactive?: boolean },
   ): Promise<Product | undefined>;
+  getProductsByIds(
+    ids: number[],
+    options?: { includeInactive?: boolean; includeCategoryInactive?: boolean },
+  ): Promise<Product[]>;
   getProductsByCategory(
     categoryId: number,
     limit?: number,
@@ -2044,6 +2048,63 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error(`Error getting product by slug "${slug}":`, error);
       throw error; // Rethrow so the route handler can catch it and send a proper error response
+    }
+  }
+
+  async getProductsByIds(
+    ids: number[],
+    options?: { includeInactive?: boolean; includeCategoryInactive?: boolean },
+  ): Promise<Product[]> {
+    try {
+      if (ids.length === 0) {
+        return [];
+      }
+
+      // Create conditions array
+      const conditions: SQL<unknown>[] = [inArray(products.id, ids)];
+
+      // Only filter active products if not explicitly including inactive ones
+      if (!options?.includeInactive) {
+        conditions.push(eq(products.isActive, true));
+      }
+
+      // Get the products
+      const productsResult = await db
+        .select()
+        .from(products)
+        .where(and(...conditions));
+
+      if (!productsResult || productsResult.length === 0) {
+        return [];
+      }
+
+      // Filter by category visibility if needed
+      let filteredProducts = productsResult;
+      if (!options?.includeCategoryInactive) {
+        const activeCategories = await db
+          .select()
+          .from(categories)
+          .where(eq(categories.isActive, true));
+
+        const activeCategoryIds = new Set(activeCategories.map(c => c.id));
+        filteredProducts = productsResult.filter(p => 
+          p.categoryId && activeCategoryIds.has(p.categoryId)
+        );
+      }
+
+      // Enrich products with main image URL
+      const enrichedProducts = await this.enrichProductsWithMainImage(
+        filteredProducts,
+      );
+
+      // Maintain the original order based on the input ids array
+      const productMap = new Map(enrichedProducts.map(p => [p.id, p]));
+      return ids
+        .map(id => productMap.get(id))
+        .filter((p): p is Product => p !== undefined);
+    } catch (error) {
+      console.error(`Error getting products by IDs:`, error);
+      throw error;
     }
   }
 

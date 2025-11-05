@@ -6,6 +6,8 @@ import { VATSettingsCard } from '@/components/admin/VATSettingsCard';
 import { YocoSettingsCard } from '@/components/admin/YocoSettingsCard';
 import { EftSettingsCard } from '@/components/admin/EftSettingsCard';
 import { AdminShippingFeeCard } from '@/components/admin/AdminShippingFeeCard';
+import { FulvicBannerEditor } from '@/components/admin/FulvicBannerEditor';
+import { FulvicCarouselManager } from '@/components/admin/FulvicCarouselManager';
 
 export default function AdminSettingsPage() {
   return (
@@ -34,6 +36,15 @@ export default function AdminSettingsPage() {
           <div>
             <h2 className="text-lg font-semibold mb-4 text-orange-700">VAT Configuration</h2>
             <VATSettingsCard />
+          </div>
+
+          {/* Fulvic Wellness Marketing Section */}
+          <div>
+            <h2 className="text-lg font-semibold mb-4 text-purple-700">Fulvic Wellness Marketing</h2>
+            <div className="space-y-4">
+              <FulvicBannerEditor />
+              <FulvicCarouselManager />
+            </div>
           </div>
 
           {/* Website Sharing Section - Moving from Dashboard */}

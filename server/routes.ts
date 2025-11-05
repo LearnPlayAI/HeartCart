@@ -65,6 +65,7 @@ import { registerFileManagerTestRoutes } from "./file-manager-test-routes";
 import authEmailRoutes from "./auth-email-routes";
 import simpleAuthRoutes from "./simple-auth-routes";
 import seoRoutes from "./seo-routes";
+import qrCodeRoutes from "./qr-code-routes";
 import { validateRequest, idSchema } from './validation-middleware';
 import { trackProductInteraction, trackCartActivity } from './interaction-middleware';
 import { 
@@ -137,6 +138,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register SEO routes VERY EARLY to prevent frontend routing from intercepting
   app.use('/', seoRoutes);
+  
+  // Register QR code routes
+  app.use("/api", qrCodeRoutes);
   
   // Register simple auth routes early
   app.use("/api/auth", simpleAuthRoutes);
@@ -857,6 +861,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   }));
+
+  // Bulk fetch products by IDs for Fulvic carousel
+  app.get("/api/products/by-ids",
+    asyncHandler(async (req: Request, res: Response) => {
+      const idsParam = req.query.ids as string;
+      
+      if (!idsParam) {
+        return sendError(res, 'Product IDs are required', 400);
+      }
+      
+      const ids = idsParam.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+      
+      if (ids.length === 0) {
+        return sendError(res, 'Valid product IDs are required', 400);
+      }
+      
+      const products = await storage.getProductsByIds(ids);
+      
+      return sendSuccess(res, products);
+    }));
 
   app.get("/api/products", 
     validateRequest({ query: productsQuerySchema }),
