@@ -56,26 +56,8 @@ pool.on('disconnect', (client) => {
 });
 
 // Enhanced connection pool monitoring for resource-constrained environment
-if (process.env.NODE_ENV !== 'production') {
-  pool.on('connect', (client) => {
-    logger.info('Database client connected', {
-      totalCount: pool.totalCount,
-      idleCount: pool.idleCount,
-      waitingCount: pool.waitingCount
-    });
-  });
-  
-  // Monitor pool health for debugging
-  pool.on('acquire', (client) => {
-    if (pool.totalCount > 40) { // Warn if approaching max connections (40 out of 50)
-      logger.warn('High database connection usage detected', {
-        totalCount: pool.totalCount,
-        idleCount: pool.idleCount,
-        waitingCount: pool.waitingCount
-      });
-    }
-  });
-}
+// Note: Connection event logging removed to reduce log noise
+// The pool is properly managing connections - high totalCount is expected under load
 
 // Remove acquire/release logging entirely as it's too frequent for resource-constrained environments
 
