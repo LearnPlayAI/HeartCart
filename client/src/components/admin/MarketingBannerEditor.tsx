@@ -213,19 +213,19 @@ export function MarketingBannerEditor() {
         ...prev,
         ctaCategoryId: selectedCategory.id,
         ctaCategorySlug: selectedCategory.slug,
-        ctaLink: `/products?category=${selectedCategory.slug}`
+        ctaLink: `/products?categoryId=${selectedCategory.id}`
       }));
     }
   };
   
   const handleLinkTypeChange = (type: 'category' | 'custom') => {
     setConfig(prev => {
-      if (type === 'category' && prev.ctaCategorySlug) {
+      if (type === 'category' && prev.ctaCategoryId) {
         // Switch to category mode and regenerate URL
         return {
           ...prev,
           ctaLinkType: type,
-          ctaLink: `/products?category=${prev.ctaCategorySlug}`
+          ctaLink: `/products?categoryId=${prev.ctaCategoryId}`
         };
       } else if (type === 'custom') {
         // Switch to custom mode
