@@ -19,7 +19,7 @@ export function FulvicWellnessHero() {
   const [, setLocation] = useLocation();
   
   const { data: settingData } = useQuery({
-    queryKey: ['/api/admin/settings/fulvicHeroConfig'],
+    queryKey: ['/api/settings/fulvicHeroConfig'],
     retry: false,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });

@@ -38,6 +38,7 @@ import { Product, Category, insertProductSchema } from '@shared/schema';
 import ImagesBasicInfoStep from './steps/images-basic-info-step';
 import AdditionalInfoStep from './steps/additional-info-step';
 import { ReviewStep } from './steps/review-step';
+import { ProductQRCode } from './ProductQRCode';
 
 // Define product form schema for validation
 const productFormSchema = z.object({
@@ -90,6 +91,7 @@ export default function ProductFormWizard({ productId, catalogId, onSuccess }: P
   const steps = [
     { id: 'images-basic-info', label: 'Images & Basic Info' },
     { id: 'additional-info', label: 'Additional Info' },
+    { id: 'marketing', label: 'Marketing & QR' },
     { id: 'review', label: 'Review & Submit' }
   ];
   
@@ -742,7 +744,34 @@ export default function ProductFormWizard({ productId, catalogId, onSuccess }: P
                 <AdditionalInfoStep form={form} />
               )}
               
-              {currentStep === 2 && (
+              {currentStep === 2 && productId && (
+                <div>
+                  <ProductQRCode 
+                    productId={productId} 
+                    productName={form.getValues('name') || 'Product'}
+                  />
+                  <Alert className="mt-4">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>Marketing Tools</AlertTitle>
+                    <AlertDescription>
+                      Generate QR codes for social media marketing. Each platform has its own tracking code to measure campaign effectiveness.
+                      {!productId && " Save the product first to generate QR codes."}
+                    </AlertDescription>
+                  </Alert>
+                </div>
+              )}
+              
+              {currentStep === 2 && !productId && (
+                <Alert>
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>Save Product First</AlertTitle>
+                  <AlertDescription>
+                    QR codes can only be generated after the product has been saved. Please complete the basic information and save the product to access marketing tools.
+                  </AlertDescription>
+                </Alert>
+              )}
+              
+              {currentStep === 3 && (
                 <ReviewStep 
                   form={form} 
                   uploadedImages={uploadedImages}

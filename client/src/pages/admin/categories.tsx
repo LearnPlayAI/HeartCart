@@ -50,6 +50,7 @@ import { useState, useEffect } from "react";
 import { Category } from "@shared/schema";
 import { useLocation } from "wouter";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
+import EmojiPicker, { EmojiClickData } from "emoji-picker-react";
 
 export default function AdminCategories() {
   const queryClient = useQueryClient();
@@ -63,6 +64,8 @@ export default function AdminCategories() {
   const [newName, setNewName] = useState("");
   const [newSlug, setNewSlug] = useState("");
   const [newDescription, setNewDescription] = useState("");
+  const [newIcon, setNewIcon] = useState<string>("");
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [newParentId, setNewParentId] = useState<string | null>(null);
   const [newLevel, setNewLevel] = useState<number>(0);
   const [newDisplayOrder, setNewDisplayOrder] = useState<number>(0);
@@ -114,7 +117,8 @@ export default function AdminCategories() {
     mutationFn: async (data: { 
       name: string; 
       slug: string; 
-      description: string; 
+      description: string;
+      icon?: string;
       parentId?: number;
       level: number;
       displayOrder: number;
@@ -144,6 +148,8 @@ export default function AdminCategories() {
       setNewName("");
       setNewSlug("");
       setNewDescription("");
+      setNewIcon("");
+      setShowEmojiPicker(false);
       setNewParentId(null);
       setNewLevel(0);
       setNewDisplayOrder(0);
@@ -165,6 +171,7 @@ export default function AdminCategories() {
       name: string; 
       slug: string; 
       description: string;
+      icon?: string;
       parentId?: number | null;
       level: number;
       displayOrder: number;
@@ -419,6 +426,7 @@ export default function AdminCategories() {
       name: newName,
       slug: newSlug || slugify(newName),
       description: newDescription,
+      icon: newIcon || undefined,
       parentId: newParentId ? parseInt(newParentId) : undefined,
       level: newLevel,
       displayOrder: newDisplayOrder
@@ -430,6 +438,8 @@ export default function AdminCategories() {
     setNewName(category.name);
     setNewSlug(category.slug);
     setNewDescription(category.description || "");
+    setNewIcon(category.icon || "");
+    setShowEmojiPicker(false);
     setNewParentId(category.parentId ? category.parentId.toString() : null);
     setNewLevel(category.level || 0);
     setNewDisplayOrder(category.displayOrder || 0);
@@ -453,6 +463,7 @@ export default function AdminCategories() {
       name: newName,
       slug: newSlug || slugify(newName),
       description: newDescription,
+      icon: newIcon || undefined,
       parentId: newParentId ? parseInt(newParentId) : null,
       level: newLevel,
       displayOrder: newDisplayOrder
@@ -1016,6 +1027,38 @@ export default function AdminCategories() {
               </div>
               
               <div className="grid gap-2">
+                <Label htmlFor="icon">Icon / Emoji (Optional)</Label>
+                <div className="flex gap-2 items-center">
+                  <Input 
+                    id="icon" 
+                    value={newIcon} 
+                    onChange={(e) => setNewIcon(e.target.value)} 
+                    placeholder="Enter emoji or leave blank"
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                    data-testid="button-toggle-emoji-picker"
+                  >
+                    {newIcon || "😊"}
+                  </Button>
+                </div>
+                {showEmojiPicker && (
+                  <div className="absolute z-50 mt-1">
+                    <EmojiPicker
+                      onEmojiClick={(emojiData: EmojiClickData) => {
+                        setNewIcon(emojiData.emoji);
+                        setShowEmojiPicker(false);
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+              
+              <div className="grid gap-2">
                 <Label htmlFor="parent">Parent Category</Label>
                 <Select value={newParentId || "none"} onValueChange={(value) => setNewParentId(value === "none" ? null : value)}>
                   <SelectTrigger id="parent">
@@ -1111,6 +1154,38 @@ export default function AdminCategories() {
                   value={newName} 
                   onChange={(e) => setNewName(e.target.value)} 
                 />
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="edit-icon">Icon / Emoji (Optional)</Label>
+                <div className="flex gap-2 items-center">
+                  <Input 
+                    id="edit-icon" 
+                    value={newIcon} 
+                    onChange={(e) => setNewIcon(e.target.value)} 
+                    placeholder="Enter emoji or leave blank"
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                    data-testid="button-toggle-emoji-picker-edit"
+                  >
+                    {newIcon || "😊"}
+                  </Button>
+                </div>
+                {showEmojiPicker && (
+                  <div className="absolute z-50 mt-1">
+                    <EmojiPicker
+                      onEmojiClick={(emojiData: EmojiClickData) => {
+                        setNewIcon(emojiData.emoji);
+                        setShowEmojiPicker(false);
+                      }}
+                    />
+                  </div>
+                )}
               </div>
               
               <div className="grid gap-2">

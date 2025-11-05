@@ -236,7 +236,9 @@ export function CategorySidebar({
                         )}
                       >
                         <div className="flex items-center gap-2">
-                          {expandedCategories[item.category.id] ? (
+                          {item.category.icon ? (
+                            <span className="text-base">{item.category.icon}</span>
+                          ) : expandedCategories[item.category.id] ? (
                             <FolderOpen className="h-4 w-4 text-pink-500" />
                           ) : (
                             <Folder className="h-4 w-4 text-gray-400" />
@@ -256,7 +258,9 @@ export function CategorySidebar({
                         )}
                       >
                         <div className="flex items-center gap-2">
-                          {categorySlug === item.category.slug ? (
+                          {item.category.icon ? (
+                            <span className="text-base">{item.category.icon}</span>
+                          ) : categorySlug === item.category.slug ? (
                             <FolderOpen className="h-4 w-4 text-white" />
                           ) : (
                             <Folder className="h-4 w-4 text-gray-400" />

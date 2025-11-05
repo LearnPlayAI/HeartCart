@@ -7938,6 +7938,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }));
 
+  // Public system settings endpoint for customer-facing features
+  const publicSettings = ['fulvicHeroConfig', 'fulvicCarouselProducts'];
+  app.get('/api/settings/:key', asyncHandler(async (req, res) => {
+    try {
+      const { key } = req.params;
+      
+      // Only allow access to public settings
+      if (!publicSettings.includes(key)) {
+        return sendError(res, 'Setting not found or not publicly accessible', 404);
+      }
+      
+      let setting = await storage.getSystemSetting(key);
+      
+      // If setting doesn't exist, create it with default value
+      if (!setting) {
+        const defaultValue = key === 'fulvicHeroConfig' 
+          ? JSON.stringify({ enabled: false, title: '', subtitle: '', ctaText: '', ctaLink: '' })
+          : JSON.stringify({ enabled: false, products: [] });
+        
+        setting = await storage.setSystemSetting(key, defaultValue);
+      }
+      
+      return sendSuccess(res, setting);
+    } catch (error) {
+      logger.error('Error fetching public system setting:', error);
+      return sendError(res, 'Failed to fetch system setting', 500);
+    }
+  }));
+
   // Validate rep code during registration
   app.get('/api/validate-rep-code/:code', asyncHandler(async (req, res) => {
     try {

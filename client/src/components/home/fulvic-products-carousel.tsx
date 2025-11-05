@@ -20,7 +20,7 @@ export function FulvicProductsCarousel() {
   const [showRightArrow, setShowRightArrow] = useState(false);
 
   const { data: settingData } = useQuery({
-    queryKey: ['/api/admin/settings/fulvicCarouselProducts'],
+    queryKey: ['/api/settings/fulvicCarouselProducts'],
     retry: false,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });

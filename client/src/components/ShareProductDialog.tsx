@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Share2, Copy, MessageCircle, Mail, Send, Check } from "lucide-react";
+import { Share2, Copy, MessageCircle, Mail, Send, Check, QrCode, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { FaFacebook, FaTwitter } from "react-icons/fa";
+import { FaFacebook, FaTwitter, FaTiktok } from "react-icons/fa";
 import { useQuery } from "@tanstack/react-query";
 import { ensureValidImageUrl } from "@/utils/file-utils";
 
@@ -26,6 +27,9 @@ export default function ShareProductDialog({
 }: ShareProductDialogProps) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [activeTab, setActiveTab] = useState("links");
+  const [qrImages, setQrImages] = useState<Record<string, string>>({});
+  const [loadingQR, setLoadingQR] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Use sale price if available, otherwise regular price
@@ -185,6 +189,64 @@ ${productUrl}`;
     setOpen(false);
   };
 
+  const generateQRCode = async (platform: string) => {
+    try {
+      setLoadingQR(platform);
+      const response = await fetch(`/api/products/${productId}/qr-code?platform=${platform}&format=png&size=300`);
+      
+      if (!response.ok) throw new Error('Failed to generate QR code');
+      
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      
+      setQrImages(prev => ({ ...prev, [platform]: url }));
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to generate QR code",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingQR(null);
+    }
+  };
+
+  const downloadQRCode = async (platform: string) => {
+    try {
+      const response = await fetch(`/api/products/${productId}/qr-code?platform=${platform}&format=png&size=600`);
+      
+      if (!response.ok) throw new Error('Failed to download QR code');
+      
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${productTitle.replace(/\s+/g, '-')}-${platform}-qr.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Downloaded",
+        description: "QR code downloaded successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to download QR code",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const qrPlatforms = [
+    { id: "whatsapp", name: "WhatsApp", color: "bg-green-500" },
+    { id: "facebook", name: "Facebook", color: "bg-blue-600" },
+    { id: "instagram", name: "Instagram", color: "bg-pink-500" },
+    { id: "tiktok", name: "TikTok", color: "bg-black" },
+  ];
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -195,18 +257,30 @@ ${productUrl}`;
         )}
       </DialogTrigger>
       
-      <DialogContent className="sm:max-w-md max-w-[95vw] mx-auto" aria-describedby="share-description">
+      <DialogContent className="sm:max-w-lg max-w-[95vw] mx-auto" aria-describedby="share-description">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-pink-600">
             <Share2 className="w-5 h-5" />
             Share this product
           </DialogTitle>
           <p id="share-description" className="text-sm text-muted-foreground sr-only">
-            Share this product via social media, messaging apps, or copy the link to share with others.
+            Share this product via social media, messaging apps, QR codes, or copy the link to share with others.
           </p>
         </DialogHeader>
         
-        <div className="space-y-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="links" data-testid="tab-share-links">
+              <Share2 className="w-4 h-4 mr-2" />
+              Share Links
+            </TabsTrigger>
+            <TabsTrigger value="qrcodes" data-testid="tab-qr-codes">
+              <QrCode className="w-4 h-4 mr-2" />
+              QR Codes
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="links" className="space-y-4 mt-4">
           {/* Product Preview */}
           <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-pink-50 to-purple-50 rounded-lg border border-pink-100">
             {productImage && (
@@ -306,14 +380,96 @@ ${productUrl}`;
             </Button>
           </div>
 
-          {/* URL Display */}
-          <div className="pt-2 border-t border-pink-100">
-            <p className="text-xs text-muted-foreground mb-2">Product URL:</p>
-            <div className="flex items-center gap-2 p-2 bg-gray-50 rounded text-xs break-all border">
-              <span className="flex-1 text-gray-600">{productUrl}</span>
+            {/* URL Display */}
+            <div className="pt-2 border-t border-pink-100">
+              <p className="text-xs text-muted-foreground mb-2">Product URL:</p>
+              <div className="flex items-center gap-2 p-2 bg-gray-50 rounded text-xs break-all border">
+                <span className="flex-1 text-gray-600">{productUrl}</span>
+              </div>
             </div>
-          </div>
-        </div>
+          </TabsContent>
+
+          <TabsContent value="qrcodes" className="space-y-4 mt-4">
+            {/* Product Preview */}
+            <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-pink-50 to-purple-50 rounded-lg border border-pink-100">
+              {productImage && (
+                <img 
+                  src={ensureValidImageUrl(productImage)} 
+                  alt={productTitle}
+                  className="w-12 h-12 object-cover rounded border border-pink-200"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-sm truncate text-gray-800">{productTitle}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-pink-600 font-bold">R{displayPrice.toLocaleString()}</p>
+                  {salePrice && productPrice !== salePrice && (
+                    <p className="text-gray-400 text-sm line-through">R{productPrice.toLocaleString()}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="text-sm text-muted-foreground mb-3">
+              Generate platform-specific QR codes for social media marketing
+            </div>
+
+            {/* QR Code Grid */}
+            <div className="grid grid-cols-2 gap-3">
+              {qrPlatforms.map((platform) => (
+                <div key={platform.id} className="border rounded-lg p-3 space-y-2">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className={`p-1.5 rounded-full text-white ${platform.color}`}>
+                      {platform.id === 'whatsapp' && <MessageCircle className="h-3 w-3" />}
+                      {platform.id === 'facebook' && <FaFacebook className="h-3 w-3" />}
+                      {platform.id === 'instagram' && <Share2 className="h-3 w-3" />}
+                      {platform.id === 'tiktok' && <FaTiktok className="h-3 w-3" />}
+                    </div>
+                    <span className="text-xs font-medium">{platform.name}</span>
+                  </div>
+                  
+                  {qrImages[platform.id] ? (
+                    <div className="space-y-2">
+                      <img 
+                        src={qrImages[platform.id]} 
+                        alt={`${platform.name} QR Code`}
+                        className="w-full aspect-square object-contain bg-white p-2 rounded border"
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full text-xs"
+                        onClick={() => downloadQRCode(platform.id)}
+                        data-testid={`button-download-qr-${platform.id}`}
+                      >
+                        <Download className="h-3 w-3 mr-1" />
+                        Download
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full text-xs"
+                      onClick={() => generateQRCode(platform.id)}
+                      disabled={loadingQR === platform.id}
+                      data-testid={`button-generate-qr-${platform.id}`}
+                    >
+                      {loadingQR === platform.id ? "Generating..." : "Generate QR"}
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="text-xs text-muted-foreground text-center pt-2 border-t">
+              Scan QR codes with a mobile device to visit the product page
+            </div>
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );
