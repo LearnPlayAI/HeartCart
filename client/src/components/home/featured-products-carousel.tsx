@@ -153,11 +153,11 @@ export function FeaturedProductsCarousel() {
         {showLeftArrow && (
           <button
             onClick={() => scroll('left')}
-            className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white shadow-lg rounded-full p-2 transition-all"
+            className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-purple-600 hover:bg-[#ff69b4] shadow-lg rounded-full p-2 transition-all"
             aria-label="Scroll left"
             data-testid="carousel-scroll-left"
           >
-            <ChevronLeft className="h-6 w-6 text-purple-600" />
+            <ChevronLeft className="h-6 w-6 text-white" />
           </button>
         )}
 
@@ -165,7 +165,7 @@ export function FeaturedProductsCarousel() {
         {showRightArrow && (
           <button
             onClick={() => scroll('right')}
-            className="absolute right-2 top-1/2 -translate-y-1/2 z-10 hover:bg-white shadow-lg rounded-full p-2 transition-all bg-[#862dd4] text-[#ff69b4]"
+            className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-purple-600 hover:bg-[#ff69b4] shadow-lg rounded-full p-2 transition-all"
             aria-label="Scroll right"
             data-testid="carousel-scroll-right"
           >
