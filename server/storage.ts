@@ -2719,7 +2719,6 @@ export class DatabaseStorage implements IStorage {
           product.name,
           product.description,
           product.brand,
-          product.supplier,
           product.sku,
           product.metaTitle,
           product.metaDescription,
@@ -2790,7 +2789,6 @@ export class DatabaseStorage implements IStorage {
               product.description,
               product.metaKeywords,
               product.brand,
-              product.supplier,
               product.sku,
               ...(product.tags || [])
             ].join(' ').toLowerCase();
@@ -9237,7 +9235,7 @@ export class DatabaseStorage implements IStorage {
       // Log some key info for debugging
       logger.debug("Creating draft with data", { 
         productId, 
-        supplierValue: product.supplier,
+        supplierId: product.supplierId,
         userId,
         imageCount: allImageUrls.length,
         attributeCount: mappedAttributes.length
@@ -9256,7 +9254,7 @@ export class DatabaseStorage implements IStorage {
         
         // Product relationships
         category_id: product.categoryId,
-        supplier_id: product.supplierId || (typeof product.supplier === 'string' && product.supplier !== '' ? parseInt(product.supplier) : null),
+        supplier_id: product.supplierId,
         catalog_id: product.catalogId,
         
         // Status flags - preserve ALL status fields
@@ -13944,7 +13942,7 @@ export class DatabaseStorage implements IStorage {
         orderId: row.order.id,
         productId: row.product.id,
         productName: row.orderItem.productName || row.product.name,
-        supplierUrl: row.productDraft?.supplierUrl || row.product.supplier || '', // Use actual product URL from drafts
+        supplierUrl: row.productDraft?.supplierUrl || '', // Use product URL from drafts
         quantity: row.orderItem.quantity,
         unitCost: row.product.costPrice || row.orderItem.unitPrice, // Use product costPrice instead of order unitPrice
         totalCost: row.product.costPrice ? 

@@ -109,7 +109,6 @@ export const products = pgTable("products", {
   specialSaleStart: text("special_sale_start"), // Changed from timestamp to text
   specialSaleEnd: text("special_sale_end"), // Changed from timestamp to text
   soldCount: integer("sold_count").default(0),
-  supplier: text("supplier"), // Legacy text field - kept for backward compatibility
   supplierId: integer("supplierId").notNull().references(() => suppliers.id), // Required FK to suppliers table for shipping system
   freeShipping: boolean("free_shipping").default(false),
   weight: doublePrecision("weight"), // in kg
