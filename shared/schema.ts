@@ -837,6 +837,11 @@ export const insertOrderShipmentSchema = createInsertSchema(orderShipments).omit
   updatedAt: true,
 });
 
+// Multi-supplier shipping system update schemas (partial versions for PATCH/PUT operations)
+export const updateLogisticsCompanySchema = insertLogisticsCompanySchema.partial().strict();
+export const updateShippingMethodSchema = insertShippingMethodSchema.partial().strict();
+export const updateSupplierShippingMethodSchema = insertSupplierShippingMethodSchema.partial().strict();
+
 export const insertCatalogSchema = createInsertSchema(catalogs).omit({
   id: true,
   createdAt: true,

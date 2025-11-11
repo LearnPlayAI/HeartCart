@@ -3,7 +3,6 @@ import { createServer, type Server } from "http";
 import { sendError, sendSuccess } from "./api-response";
 import { storage } from "./storage";
 import { objectStoreAdapter } from "./object-store-adapter";
-import asyncHandler from 'express-async-handler';
 import { ZodError } from "zod";
 import { logger } from "./logger";
 import { db } from "./db";
@@ -27,7 +26,9 @@ import {
   insertSupplierSchema,
   insertCatalogSchema,
   insertPromotionSchema,
-  insertProductPromotionSchema
+  insertProductPromotionSchema,
+  insertLogisticsCompanySchema,
+  insertShippingMethodSchema
 } from "@shared/schema";
 import { setupAuth } from "./auth";
 import { isAuthenticated, isAdmin } from "./auth-middleware";
@@ -92,7 +93,6 @@ import {
   AppError,
   ErrorCode
 } from "./error-handler";
-import { sendSuccess, sendError } from './api-response';
 import { responseWrapperMiddleware, withStandardResponse, createPaginatedResponse } from './response-wrapper';
 import * as z from "zod"; // For schema validation
 
@@ -6050,6 +6050,534 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Return generic error for unexpected issues
       throw new AppError(
         "Failed to delete supplier. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
+    }
+  }));
+
+  // ============================================================================
+  // SHIPPING MANAGEMENT ROUTES
+  // ============================================================================
+
+  // Logistics Company Routes (Admin Only)
+  app.get("/api/logistics-companies", isAuthenticated, isAdmin, asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const includeInactive = req.query.includeInactive === 'true';
+      const companies = await storage.getAllLogisticsCompanies(includeInactive);
+      
+      return res.json({
+        success: true,
+        data: companies
+      });
+    } catch (error) {
+      logger.error('Error retrieving logistics companies', { error });
+      throw new AppError(
+        "Failed to retrieve logistics companies. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
+    }
+  }));
+
+  app.get("/api/logistics-companies/:id", isAuthenticated, isAdmin, asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const company = await storage.getLogisticsCompanyWithMethods(id);
+      
+      if (!company) {
+        throw new NotFoundError(`Logistics company with ID ${id} not found`, "logisticsCompany");
+      }
+      
+      return res.json({
+        success: true,
+        data: company
+      });
+    } catch (error) {
+      logger.error('Error retrieving logistics company', { error, id: req.params.id });
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
+      throw new AppError(
+        "Failed to retrieve logistics company details. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
+    }
+  }));
+
+  app.post("/api/logistics-companies", isAuthenticated, isAdmin, asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const companyData = insertLogisticsCompanySchema.parse(req.body);
+      const company = await storage.createLogisticsCompany(companyData);
+      
+      return res.status(201).json({
+        success: true,
+        data: company,
+        message: `Logistics company "${company.name}" created successfully`
+      });
+    } catch (error) {
+      logger.error('Error creating logistics company', { error, body: req.body });
+      throw new AppError(
+        "Failed to create logistics company. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
+    }
+  }));
+
+  app.put("/api/logistics-companies/:id", isAuthenticated, isAdmin, asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updateData = req.body;
+      
+      const company = await storage.updateLogisticsCompany(id, updateData);
+      
+      if (!company) {
+        throw new NotFoundError(`Logistics company with ID ${id} not found`, "logisticsCompany");
+      }
+      
+      return res.json({
+        success: true,
+        data: company,
+        message: `Logistics company "${company.name}" updated successfully`
+      });
+    } catch (error) {
+      logger.error('Error updating logistics company', { error, id: req.params.id });
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
+      throw new AppError(
+        "Failed to update logistics company. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
+    }
+  }));
+
+  app.delete("/api/logistics-companies/:id", isAuthenticated, isAdmin, asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const company = await storage.getLogisticsCompany(id);
+      
+      if (!company) {
+        throw new NotFoundError(`Logistics company with ID ${id} not found`, "logisticsCompany");
+      }
+      
+      const success = await storage.deleteLogisticsCompany(id);
+      
+      if (!success) {
+        throw new AppError(
+          "Failed to delete logistics company due to a database error.",
+          ErrorCode.DATABASE_ERROR,
+          500
+        );
+      }
+      
+      return res.json({
+        success: true,
+        message: `Logistics company "${company.name}" deactivated successfully`
+      });
+    } catch (error) {
+      logger.error('Error deleting logistics company', { error, id: req.params.id });
+      if (error instanceof NotFoundError || error instanceof AppError) {
+        throw error;
+      }
+      throw new AppError(
+        "Failed to delete logistics company. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
+    }
+  }));
+
+  // Shipping Method Routes (Admin Only)
+  app.get("/api/shipping-methods", isAuthenticated, isAdmin, asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const includeInactive = req.query.includeInactive === 'true';
+      const methods = await storage.getAllShippingMethods(includeInactive);
+      
+      return res.json({
+        success: true,
+        data: methods
+      });
+    } catch (error) {
+      logger.error('Error retrieving shipping methods', { error });
+      throw new AppError(
+        "Failed to retrieve shipping methods. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
+    }
+  }));
+
+  app.get("/api/logistics-companies/:companyId/methods", isAuthenticated, isAdmin, asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const companyId = parseInt(req.params.companyId);
+      const includeInactive = req.query.includeInactive === 'true';
+      const methods = await storage.getShippingMethodsByCompany(companyId, includeInactive);
+      
+      return res.json({
+        success: true,
+        data: methods
+      });
+    } catch (error) {
+      logger.error('Error retrieving shipping methods for company', { error, companyId: req.params.companyId });
+      throw new AppError(
+        "Failed to retrieve shipping methods for company. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
+    }
+  }));
+
+  app.get("/api/shipping-methods/:id", isAuthenticated, isAdmin, asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const method = await storage.getShippingMethod(id);
+      
+      if (!method) {
+        throw new NotFoundError(`Shipping method with ID ${id} not found`, "shippingMethod");
+      }
+      
+      return res.json({
+        success: true,
+        data: method
+      });
+    } catch (error) {
+      logger.error('Error retrieving shipping method', { error, id: req.params.id });
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
+      throw new AppError(
+        "Failed to retrieve shipping method details. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
+    }
+  }));
+
+  app.post("/api/shipping-methods", isAuthenticated, isAdmin, asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const methodData = insertShippingMethodSchema.parse(req.body);
+      const method = await storage.createShippingMethod(methodData);
+      
+      return res.status(201).json({
+        success: true,
+        data: method,
+        message: `Shipping method "${method.name}" created successfully`
+      });
+    } catch (error) {
+      logger.error('Error creating shipping method', { error, body: req.body });
+      throw new AppError(
+        "Failed to create shipping method. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
+    }
+  }));
+
+  app.put("/api/shipping-methods/:id", isAuthenticated, isAdmin, asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updateData = req.body;
+      
+      const method = await storage.updateShippingMethod(id, updateData);
+      
+      if (!method) {
+        throw new NotFoundError(`Shipping method with ID ${id} not found`, "shippingMethod");
+      }
+      
+      return res.json({
+        success: true,
+        data: method,
+        message: `Shipping method "${method.name}" updated successfully`
+      });
+    } catch (error) {
+      logger.error('Error updating shipping method', { error, id: req.params.id });
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
+      throw new AppError(
+        "Failed to update shipping method. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
+    }
+  }));
+
+  app.delete("/api/shipping-methods/:id", isAuthenticated, isAdmin, asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const method = await storage.getShippingMethod(id);
+      
+      if (!method) {
+        throw new NotFoundError(`Shipping method with ID ${id} not found`, "shippingMethod");
+      }
+      
+      const inUse = !(await storage.validateShippingMethodNotInUse(id));
+      if (inUse) {
+        throw new AppError(
+          "Cannot delete shipping method as it is currently in use by suppliers or orders",
+          ErrorCode.VALIDATION_ERROR,
+          400
+        );
+      }
+      
+      const success = await storage.deleteShippingMethod(id);
+      
+      if (!success) {
+        throw new AppError(
+          "Failed to delete shipping method due to a database error.",
+          ErrorCode.DATABASE_ERROR,
+          500
+        );
+      }
+      
+      return res.json({
+        success: true,
+        message: `Shipping method "${method.name}" deactivated successfully`
+      });
+    } catch (error) {
+      logger.error('Error deleting shipping method', { error, id: req.params.id });
+      if (error instanceof NotFoundError || error instanceof AppError) {
+        throw error;
+      }
+      throw new AppError(
+        "Failed to delete shipping method. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
+    }
+  }));
+
+  // Supplier Shipping Configuration Routes (Admin Only)
+  app.get("/api/suppliers/:id/shipping-methods", isAuthenticated, isAdmin, asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const supplierId = parseInt(req.params.id);
+      const methods = await storage.getSupplierShippingMethods(supplierId);
+      
+      return res.json({
+        success: true,
+        data: methods
+      });
+    } catch (error) {
+      logger.error('Error retrieving supplier shipping methods', { error, supplierId: req.params.id });
+      throw new AppError(
+        "Failed to retrieve supplier shipping methods. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
+    }
+  }));
+
+  app.post("/api/suppliers/:supplierId/shipping-methods/:methodId", isAuthenticated, isAdmin, asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const supplierId = parseInt(req.params.supplierId);
+      const methodId = parseInt(req.params.methodId);
+      const { customPrice, isDefault, isEnabled } = req.body;
+      
+      const assignment = await storage.assignShippingMethodToSupplier(supplierId, methodId, {
+        customPrice: customPrice || null,
+        isDefault: isDefault || false,
+        isEnabled: isEnabled !== false
+      });
+      
+      return res.status(201).json({
+        success: true,
+        data: assignment,
+        message: 'Shipping method assigned to supplier successfully'
+      });
+    } catch (error) {
+      logger.error('Error assigning shipping method to supplier', { 
+        error, 
+        supplierId: req.params.supplierId,
+        methodId: req.params.methodId
+      });
+      throw new AppError(
+        "Failed to assign shipping method to supplier. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
+    }
+  }));
+
+  app.put("/api/suppliers/:supplierId/shipping-methods/:methodId", isAuthenticated, isAdmin, asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const supplierId = parseInt(req.params.supplierId);
+      const methodId = parseInt(req.params.methodId);
+      const updateData = req.body;
+      
+      const assignment = await storage.updateSupplierShippingMethod(supplierId, methodId, updateData);
+      
+      if (!assignment) {
+        throw new NotFoundError(
+          `Shipping method ${methodId} is not assigned to supplier ${supplierId}`,
+          "supplierShippingMethod"
+        );
+      }
+      
+      return res.json({
+        success: true,
+        data: assignment,
+        message: 'Supplier shipping method configuration updated successfully'
+      });
+    } catch (error) {
+      logger.error('Error updating supplier shipping method', { 
+        error, 
+        supplierId: req.params.supplierId,
+        methodId: req.params.methodId
+      });
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
+      throw new AppError(
+        "Failed to update supplier shipping method configuration. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
+    }
+  }));
+
+  app.delete("/api/suppliers/:supplierId/shipping-methods/:methodId", isAuthenticated, isAdmin, asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const supplierId = parseInt(req.params.supplierId);
+      const methodId = parseInt(req.params.methodId);
+      
+      const success = await storage.removeShippingMethodFromSupplier(supplierId, methodId);
+      
+      if (!success) {
+        throw new NotFoundError(
+          `Shipping method ${methodId} is not assigned to supplier ${supplierId}`,
+          "supplierShippingMethod"
+        );
+      }
+      
+      return res.json({
+        success: true,
+        message: 'Shipping method removed from supplier successfully'
+      });
+    } catch (error) {
+      logger.error('Error removing shipping method from supplier', { 
+        error, 
+        supplierId: req.params.supplierId,
+        methodId: req.params.methodId
+      });
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
+      throw new AppError(
+        "Failed to remove shipping method from supplier. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
+    }
+  }));
+
+  app.put("/api/suppliers/:supplierId/shipping-methods/:methodId/default", isAuthenticated, isAdmin, asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const supplierId = parseInt(req.params.supplierId);
+      const methodId = parseInt(req.params.methodId);
+      
+      const success = await storage.setDefaultShippingMethod(supplierId, methodId);
+      
+      if (!success) {
+        throw new AppError(
+          "Failed to set default shipping method.",
+          ErrorCode.DATABASE_ERROR,
+          500
+        );
+      }
+      
+      return res.json({
+        success: true,
+        message: 'Default shipping method updated successfully'
+      });
+    } catch (error) {
+      logger.error('Error setting default shipping method', { 
+        error, 
+        supplierId: req.params.supplierId,
+        methodId: req.params.methodId
+      });
+      if (error instanceof AppError) {
+        throw error;
+      }
+      throw new AppError(
+        "Failed to set default shipping method. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
+    }
+  }));
+
+  // Cart Shipping Analysis Routes (Public/Customer)
+  app.post("/api/cart/analyze-shipping", asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const cartAnalysisSchema = z.object({
+        items: z.array(z.object({
+          productId: z.number(),
+          quantity: z.number().min(1)
+        }))
+      });
+      
+      const { items } = cartAnalysisSchema.parse(req.body);
+      
+      const analysis = await storage.analyzeCartShipping(items);
+      
+      return res.json({
+        success: true,
+        data: analysis
+      });
+    } catch (error) {
+      logger.error('Error analyzing cart shipping', { error, body: req.body });
+      throw new AppError(
+        "Failed to analyze cart shipping options. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
+    }
+  }));
+
+  app.post("/api/cart/calculate-shipping", asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const shippingCalculationSchema = z.object({
+        items: z.array(z.object({
+          productId: z.number(),
+          quantity: z.number().min(1)
+        })),
+        methodSelections: z.record(z.number())
+      });
+      
+      const { items, methodSelections } = shippingCalculationSchema.parse(req.body);
+      
+      const calculation = await storage.calculateShippingForSelection(items, methodSelections);
+      
+      return res.json({
+        success: true,
+        data: calculation
+      });
+    } catch (error) {
+      logger.error('Error calculating shipping cost', { error, body: req.body });
+      throw new AppError(
+        "Failed to calculate shipping cost. Please try again.",
         ErrorCode.INTERNAL_SERVER_ERROR,
         500,
         { originalError: error }

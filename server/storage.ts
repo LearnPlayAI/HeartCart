@@ -109,8 +109,26 @@ import {
   repPayments,
   type RepPayment,
   type InsertRepPayment,
+  // Multi-supplier shipping system imports
+  logisticsCompanies,
+  type LogisticsCompany,
+  type InsertLogisticsCompany,
+  shippingMethods,
+  type ShippingMethod,
+  type InsertShippingMethod,
+  supplierShippingMethods,
+  type SupplierShippingMethod,
+  type InsertSupplierShippingMethod,
+  orderShipments,
+  type OrderShipment,
+  type InsertOrderShipment,
 } from "@shared/schema";
 import { db } from "./db";
+import { LogisticsCompanyRepository } from "./storage/modules/logistics-company-repository";
+import { ShippingMethodRepository } from "./storage/modules/shipping-method-repository";
+import { SupplierShippingRepository } from "./storage/modules/supplier-shipping-repository";
+import { ShippingAnalysisRepository } from "./storage/modules/shipping-analysis-repository";
+import { OrderShipmentRepository } from "./storage/modules/order-shipment-repository";
 import {
   eq,
   ne,
@@ -403,6 +421,78 @@ export interface IStorage {
   ): Promise<Supplier | undefined>;
   deleteSupplier(id: number): Promise<boolean>; // Soft delete (set inactive)
   hardDeleteSupplier(id: number): Promise<boolean>; // Hard delete from database
+
+  // Multi-supplier shipping system operations
+  
+  // Logistics Companies operations
+  getLogisticsCompany(id: number): Promise<LogisticsCompany | undefined>;
+  getAllLogisticsCompanies(includeInactive?: boolean): Promise<LogisticsCompany[]>;
+  createLogisticsCompany(data: InsertLogisticsCompany): Promise<LogisticsCompany>;
+  updateLogisticsCompany(id: number, data: Partial<InsertLogisticsCompany>): Promise<LogisticsCompany | undefined>;
+  deleteLogisticsCompany(id: number): Promise<boolean>;
+  getLogisticsCompanyWithMethods(id: number): Promise<LogisticsCompany & { methods: ShippingMethod[] } | undefined>;
+  
+  // Shipping Methods operations
+  getShippingMethod(id: number): Promise<ShippingMethod | undefined>;
+  getShippingMethodsByCompany(companyId: number, includeInactive?: boolean): Promise<ShippingMethod[]>;
+  getAllShippingMethods(includeInactive?: boolean): Promise<ShippingMethod[]>;
+  createShippingMethod(data: InsertShippingMethod): Promise<ShippingMethod>;
+  updateShippingMethod(id: number, data: Partial<InsertShippingMethod>): Promise<ShippingMethod | undefined>;
+  deleteShippingMethod(id: number): Promise<boolean>;
+  validateShippingMethodNotInUse(id: number): Promise<boolean>;
+  
+  // Supplier Shipping Configuration operations
+  getSupplierShippingMethods(supplierId: number): Promise<(SupplierShippingMethod & { method: ShippingMethod })[]>;
+  assignShippingMethodToSupplier(supplierId: number, methodId: number, data: Partial<InsertSupplierShippingMethod>): Promise<SupplierShippingMethod>;
+  updateSupplierShippingMethod(supplierId: number, methodId: number, data: Partial<InsertSupplierShippingMethod>): Promise<SupplierShippingMethod | undefined>;
+  removeShippingMethodFromSupplier(supplierId: number, methodId: number): Promise<boolean>;
+  setDefaultShippingMethod(supplierId: number, methodId: number): Promise<boolean>;
+  validateSupplierHasShippingMethods(supplierId: number): Promise<boolean>;
+  
+  // Cart Shipping Analysis operations
+  analyzeCartShipping(cartItems: CartItem[]): Promise<{
+    groupedBySupplier: Array<{
+      supplierId: number;
+      supplier: Supplier;
+      items: CartItem[];
+      availableMethods: ShippingMethod[];
+      defaultMethod: ShippingMethod | null;
+    }>;
+    totalShippingCost: number;
+    validationErrors: string[];
+  }>;
+  calculateShippingForSelection(
+    cartItems: CartItem[],
+    methodSelections: Record<number, number>
+  ): Promise<{
+    totalCost: number;
+    breakdown: Array<{ supplierId: number; methodId: number; cost: number; itemCount: number }>;
+  }>;
+  validateShippingSelection(
+    cartItems: CartItem[],
+    methodSelections: Record<number, number>
+  ): Promise<{ valid: boolean; errors: string[] }>;
+  getApplicableShippingMethods(supplierId: number): Promise<ShippingMethod[]>;
+  
+  // Order Shipment Management operations
+  createOrderShipments(
+    orderId: number,
+    shipments: Array<{
+      supplierId: number;
+      methodId: number;
+      cost: string | number;
+      items: any;
+      displayLabel: string;
+    }>
+  ): Promise<OrderShipment[]>;
+  getOrderShipments(orderId: number, includeSupplierInfo?: boolean): Promise<(OrderShipment & { supplier?: Supplier; method?: ShippingMethod })[]>;
+  getOrderShipment(shipmentId: number): Promise<(OrderShipment & { supplier?: Supplier; method?: ShippingMethod }) | undefined>;
+  updateShipmentStatus(shipmentId: number, status: string, notes?: string): Promise<OrderShipment | undefined>;
+  updateShipmentTracking(shipmentId: number, trackingNumber: string): Promise<OrderShipment | undefined>;
+  calculateOrderShippingTotal(orderId: number): Promise<number>;
+  getShipmentItems(shipmentId: number): Promise<any>;
+  updateShipmentDeliveredAt(shipmentId: number, deliveredAt: string): Promise<OrderShipment | undefined>;
+
   getProductCountByCatalogId(catalogId: number): Promise<number>;
 
   // Catalog operations
@@ -8670,9 +8760,25 @@ export class DatabaseStorage implements IStorage {
    */
   readonly sessionStore: any;
 
+  /**
+   * Repository instances for modular shipping system
+   */
+  private logisticsCompanyRepo: LogisticsCompanyRepository;
+  private shippingMethodRepo: ShippingMethodRepository;
+  private supplierShippingRepo: SupplierShippingRepository;
+  private shippingAnalysisRepo: ShippingAnalysisRepository;
+  private orderShipmentRepo: OrderShipmentRepository;
+
   constructor() {
     // Initialize session store using dynamic imports to avoid ESM compatibility issues
     this.initSessionStore();
+    
+    // Initialize shipping repository modules
+    this.logisticsCompanyRepo = new LogisticsCompanyRepository();
+    this.shippingMethodRepo = new ShippingMethodRepository();
+    this.supplierShippingRepo = new SupplierShippingRepository();
+    this.shippingAnalysisRepo = new ShippingAnalysisRepository();
+    this.orderShipmentRepo = new OrderShipmentRepository();
   }
 
   /**
@@ -15790,6 +15896,158 @@ export class DatabaseStorage implements IStorage {
       });
       throw error;
     }
+  }
+
+  // ============================================================================
+  // SHIPPING SYSTEM - Delegation to Repository Modules
+  // ============================================================================
+
+  // Logistics Company Methods
+  async getLogisticsCompany(id: number): Promise<LogisticsCompany | undefined> {
+    return this.logisticsCompanyRepo.getLogisticsCompany(id);
+  }
+
+  async getAllLogisticsCompanies(includeInactive = false): Promise<LogisticsCompany[]> {
+    return this.logisticsCompanyRepo.getAllLogisticsCompanies(includeInactive);
+  }
+
+  async createLogisticsCompany(data: InsertLogisticsCompany): Promise<LogisticsCompany> {
+    return this.logisticsCompanyRepo.createLogisticsCompany(data);
+  }
+
+  async updateLogisticsCompany(id: number, data: Partial<InsertLogisticsCompany>): Promise<LogisticsCompany | undefined> {
+    return this.logisticsCompanyRepo.updateLogisticsCompany(id, data);
+  }
+
+  async deleteLogisticsCompany(id: number): Promise<boolean> {
+    return this.logisticsCompanyRepo.deleteLogisticsCompany(id);
+  }
+
+  async getLogisticsCompanyWithMethods(id: number): Promise<(LogisticsCompany & { methods: ShippingMethod[] }) | undefined> {
+    return this.logisticsCompanyRepo.getLogisticsCompanyWithMethods(id);
+  }
+
+  // Shipping Method Methods
+  async getShippingMethod(id: number): Promise<ShippingMethod | undefined> {
+    return this.shippingMethodRepo.getShippingMethod(id);
+  }
+
+  async getShippingMethodsByCompany(companyId: number, includeInactive = false): Promise<ShippingMethod[]> {
+    return this.shippingMethodRepo.getShippingMethodsByCompany(companyId, includeInactive);
+  }
+
+  async getAllShippingMethods(includeInactive = false): Promise<ShippingMethod[]> {
+    return this.shippingMethodRepo.getAllShippingMethods(includeInactive);
+  }
+
+  async createShippingMethod(data: InsertShippingMethod): Promise<ShippingMethod> {
+    return this.shippingMethodRepo.createShippingMethod(data);
+  }
+
+  async updateShippingMethod(id: number, data: Partial<InsertShippingMethod>): Promise<ShippingMethod | undefined> {
+    return this.shippingMethodRepo.updateShippingMethod(id, data);
+  }
+
+  async deleteShippingMethod(id: number): Promise<boolean> {
+    return this.shippingMethodRepo.deleteShippingMethod(id);
+  }
+
+  async validateShippingMethodNotInUse(id: number): Promise<boolean> {
+    return this.shippingMethodRepo.validateShippingMethodNotInUse(id);
+  }
+
+  // Supplier Shipping Methods
+  async getSupplierShippingMethods(supplierId: number): Promise<(SupplierShippingMethod & { method: ShippingMethod })[]> {
+    return this.supplierShippingRepo.getSupplierShippingMethods(supplierId);
+  }
+
+  async assignShippingMethodToSupplier(supplierId: number, methodId: number, data: Partial<InsertSupplierShippingMethod>): Promise<SupplierShippingMethod> {
+    return this.supplierShippingRepo.assignShippingMethodToSupplier(supplierId, methodId, data);
+  }
+
+  async updateSupplierShippingMethod(supplierId: number, methodId: number, data: Partial<InsertSupplierShippingMethod>): Promise<SupplierShippingMethod | undefined> {
+    return this.supplierShippingRepo.updateSupplierShippingMethod(supplierId, methodId, data);
+  }
+
+  async removeShippingMethodFromSupplier(supplierId: number, methodId: number): Promise<boolean> {
+    return this.supplierShippingRepo.removeShippingMethodFromSupplier(supplierId, methodId);
+  }
+
+  async setDefaultShippingMethod(supplierId: number, methodId: number): Promise<boolean> {
+    return this.supplierShippingRepo.setDefaultShippingMethod(supplierId, methodId);
+  }
+
+  async validateSupplierHasShippingMethods(supplierId: number): Promise<boolean> {
+    return this.supplierShippingRepo.validateSupplierHasShippingMethods(supplierId);
+  }
+
+  // Shipping Analysis Methods
+  async analyzeCartShipping(cartItems: CartItem[]): Promise<{
+    groupedBySupplier: Array<{
+      supplierId: number;
+      supplier: Supplier;
+      items: CartItem[];
+      availableMethods: ShippingMethod[];
+      defaultMethod: ShippingMethod | null;
+    }>;
+    totalShippingCost: number;
+    validationErrors: string[];
+  }> {
+    return this.shippingAnalysisRepo.analyzeCartShipping(cartItems);
+  }
+
+  async calculateShippingForSelection(cartItems: CartItem[], methodSelections: Record<number, number>): Promise<{
+    totalCost: number;
+    breakdown: Array<{ supplierId: number; methodId: number; cost: number; itemCount: number }>;
+  }> {
+    return this.shippingAnalysisRepo.calculateShippingForSelection(cartItems, methodSelections);
+  }
+
+  async validateShippingSelection(cartItems: CartItem[], methodSelections: Record<number, number>): Promise<{ valid: boolean; errors: string[] }> {
+    return this.shippingAnalysisRepo.validateShippingSelection(cartItems, methodSelections);
+  }
+
+  async getApplicableShippingMethods(supplierId: number): Promise<Array<{ method: ShippingMethod; isDefault: boolean; isEnabled: boolean; customPrice: string | null }>> {
+    return this.shippingAnalysisRepo.getApplicableShippingMethods(supplierId);
+  }
+
+  // Order Shipment Methods
+  async createOrderShipments(orderId: number, shipments: Array<{
+    supplierId: number;
+    methodId: number;
+    cost: string | number;
+    items: any;
+    displayLabel: string;
+  }>): Promise<OrderShipment[]> {
+    return this.orderShipmentRepo.createOrderShipments(orderId, shipments);
+  }
+
+  async getOrderShipments(orderId: number, includeSupplierInfo = false): Promise<(OrderShipment & { supplier?: Supplier; method?: ShippingMethod })[]> {
+    return this.orderShipmentRepo.getOrderShipments(orderId, includeSupplierInfo);
+  }
+
+  async getOrderShipment(shipmentId: number): Promise<(OrderShipment & { supplier?: Supplier; method?: ShippingMethod }) | undefined> {
+    return this.orderShipmentRepo.getOrderShipment(shipmentId);
+  }
+
+  async updateShipmentStatus(shipmentId: number, status: string, notes?: string): Promise<OrderShipment | undefined> {
+    return this.orderShipmentRepo.updateShipmentStatus(shipmentId, status, notes);
+  }
+
+  async updateShipmentTracking(shipmentId: number, trackingNumber: string): Promise<OrderShipment | undefined> {
+    return this.orderShipmentRepo.updateShipmentTracking(shipmentId, trackingNumber);
+  }
+
+  async calculateOrderShippingTotal(orderId: number): Promise<number> {
+    return this.orderShipmentRepo.calculateOrderShippingTotal(orderId);
+  }
+
+  async getShipmentItems(shipmentId: number): Promise<any> {
+    return this.orderShipmentRepo.getShipmentItems(shipmentId);
+  }
+
+  async updateShipmentDeliveredAt(shipmentId: number, deliveredAt: string): Promise<OrderShipment | undefined> {
+    return this.orderShipmentRepo.updateShipmentDeliveredAt(shipmentId, deliveredAt);
   }
 }
 
