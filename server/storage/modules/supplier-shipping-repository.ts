@@ -31,6 +31,19 @@ export class SupplierShippingRepository extends BaseRepository {
     }
   }
 
+  async getSupplierShippingMethodById(id: number): Promise<SupplierShippingMethod | undefined> {
+    try {
+      const [result] = await this.db
+        .select()
+        .from(supplierShippingMethods)
+        .where(eq(supplierShippingMethods.id, id))
+        .limit(1);
+      return result;
+    } catch (error) {
+      return this.handleError(`getSupplierShippingMethodById(${id})`, error);
+    }
+  }
+
   async assignShippingMethodToSupplier(
     supplierId: number,
     methodId: number,

@@ -6855,9 +6855,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const analysis = await storage.analyzeCartShipping(items);
       
+      // Fetch all logistics companies for enrichment
+      const companies = await storage.getAllLogisticsCompanies(true);
+      const companyMap = new Map(companies.map(c => [c.id, c.name]));
+      
+      // Serialize supplier groups with shipping method data transformation
+      const serializedData = {
+        ...analysis,
+        supplierGroups: analysis.groupedBySupplier.map(group => ({
+          supplierId: group.supplierId,
+          supplierName: group.supplier.name,
+          items: group.items.map(item => ({
+            productId: item.productId,
+            productName: item.productName || '',
+            quantity: item.quantity,
+            price: parseFloat(item.price?.toString() || '0')
+          })),
+          availableMethods: group.availableMethods.map(method => {
+            const serializedMethod = serializeShippingMethod(method, companyMap.get(method.companyId) || 'Unknown');
+            // Find the supplier-specific configuration
+            const supplierMethod = group.supplier.supplierShippingMethods?.find(sm => sm.methodId === method.id);
+            return {
+              id: method.id,
+              name: method.name,
+              code: serializedMethod.code,
+              customerPrice: supplierMethod?.customPrice != null ? parseFloat(supplierMethod.customPrice.toString()) : serializedMethod.baseCost,
+              estimatedDeliveryDays: serializedMethod.estimatedDeliveryDays,
+              isDefault: supplierMethod?.isDefault || false,
+              logisticsCompanyName: serializedMethod.logisticsCompanyName
+            };
+          }),
+          defaultMethodId: group.defaultMethod?.id || (group.availableMethods[0]?.id || 0)
+        }))
+      };
+      
       return res.json({
         success: true,
-        data: analysis
+        data: serializedData
       });
     } catch (error) {
       logger.error('Error analyzing cart shipping', { error, body: req.body });
