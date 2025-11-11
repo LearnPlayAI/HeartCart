@@ -110,7 +110,7 @@ export const products = pgTable("products", {
   specialSaleEnd: text("special_sale_end"), // Changed from timestamp to text
   soldCount: integer("sold_count").default(0),
   supplier: text("supplier"), // Legacy text field - kept for backward compatibility
-  supplierId: integer("supplierId").references(() => suppliers.id), // New FK to suppliers table
+  supplierId: integer("supplierId").notNull().references(() => suppliers.id), // Required FK to suppliers table for shipping system
   freeShipping: boolean("free_shipping").default(false),
   weight: doublePrecision("weight"), // in kg
   dimensions: text("dimensions"), // format: "LxWxH" in cm
@@ -744,6 +744,7 @@ export const insertProductSchema = createInsertSchema(products).omit({
 }).extend({
   displayOrder: z.number().default(999).optional(),
   stock: z.number().int().nonnegative().default(0), // Add default value for stock column
+  supplierId: z.number().int().positive({ message: "Supplier is required for shipping system" }), // REQUIRED for multi-supplier shipping
   // Date fields as strings
   specialSaleStart: z.string().nullable().optional(),
   specialSaleEnd: z.string().nullable().optional(),
