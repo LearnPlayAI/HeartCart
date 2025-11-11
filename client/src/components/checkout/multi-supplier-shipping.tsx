@@ -88,6 +88,72 @@ export default function MultiSupplierShipping({
     return sum + (method?.customerPrice || 0);
   }, 0);
 
+  // For single supplier, show simplified UI
+  if (supplierGroups.length === 1) {
+    const group = supplierGroups[0];
+    const selectedMethod = group.availableMethods.find(
+      m => m.id === shippingSelections[group.supplierId]
+    );
+
+    return (
+      <Card data-testid="multi-supplier-shipping">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Truck className="h-5 w-5" />
+            Shipping Method
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <RadioGroup
+            value={shippingSelections[group.supplierId]?.toString()}
+            onValueChange={(value) => handleMethodChange(group.supplierId, parseInt(value))}
+            data-testid={`shipping-methods-${group.supplierId}`}
+          >
+            {group.availableMethods.length === 0 ? (
+              <div className="text-sm text-muted-foreground p-4 border rounded-lg">
+                No shipping methods available
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {group.availableMethods.map((method) => (
+                  <div
+                    key={method.id}
+                    className="flex items-center space-x-2 p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                    data-testid={`method-${method.id}`}
+                  >
+                    <RadioGroupItem value={method.id.toString()} id={`method-${method.id}`} />
+                    <Label
+                      htmlFor={`method-${method.id}`}
+                      className="flex-1 cursor-pointer flex items-center justify-between"
+                    >
+                      <div>
+                        <div className="font-medium">{method.name}</div>
+                        <div className="text-sm text-muted-foreground flex items-center gap-3 mt-1">
+                          <span className="flex items-center gap-1">
+                            <Truck className="h-3 w-3" />
+                            {method.logisticsCompanyName}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {method.estimatedDeliveryDays} {method.estimatedDeliveryDays === 1 ? "day" : "days"}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="font-semibold">
+                        R{method.customerPrice.toFixed(2)}
+                      </div>
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            )}
+          </RadioGroup>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // For multiple suppliers, show detailed breakdown
   return (
     <div className="space-y-6" data-testid="multi-supplier-shipping">
       {/* Overview */}
@@ -101,7 +167,7 @@ export default function MultiSupplierShipping({
         <CardContent>
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">
-              Your order contains items from {supplierGroups.length} {supplierGroups.length === 1 ? 'supplier' : 'suppliers'}
+              Your order contains items from {supplierGroups.length} suppliers
             </span>
             <div className="flex items-center gap-2">
               <span className="font-medium">Total Shipping:</span>
@@ -133,25 +199,6 @@ export default function MultiSupplierShipping({
             </CardHeader>
 
             <CardContent className="space-y-4">
-              {/* Items in this shipment */}
-              <div className="rounded-lg bg-muted/50 p-4 space-y-2">
-                <h4 className="text-sm font-medium text-muted-foreground mb-2">Items in this shipment:</h4>
-                {group.items.map((item) => (
-                  <div
-                    key={item.productId}
-                    className="flex items-center justify-between text-sm"
-                    data-testid={`item-${item.productId}`}
-                  >
-                    <span>{item.productName}</span>
-                    <span className="text-muted-foreground">
-                      Qty: {item.quantity} × R{item.price.toFixed(2)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              <Separator />
-
               {/* Shipping method selection */}
               <div>
                 <h4 className="text-sm font-medium mb-3">Select shipping method:</h4>
@@ -169,38 +216,29 @@ export default function MultiSupplierShipping({
                       {group.availableMethods.map((method) => (
                         <div
                           key={method.id}
-                          className="flex items-center space-x-3 rounded-lg border p-4 hover:bg-muted/50 transition-colors"
+                          className="flex items-center space-x-2 p-4 rounded-lg border hover:bg-muted/50 transition-colors"
                           data-testid={`method-${method.id}`}
                         >
                           <RadioGroupItem value={method.id.toString()} id={`method-${group.supplierId}-${method.id}`} />
                           <Label
                             htmlFor={`method-${group.supplierId}-${method.id}`}
-                            className="flex-1 cursor-pointer flex items-start justify-between"
+                            className="flex-1 cursor-pointer flex items-center justify-between"
                           >
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-1">
-                                <Package className="h-4 w-4 text-muted-foreground" />
-                                <span className="font-medium">{method.name}</span>
-                                {method.isDefault && (
-                                  <Badge variant="secondary" className="text-xs">Default</Badge>
-                                )}
-                              </div>
-                              <div className="text-sm text-muted-foreground space-y-1">
-                                <div className="flex items-center gap-1">
+                            <div>
+                              <div className="font-medium">{method.name}</div>
+                              <div className="text-sm text-muted-foreground flex items-center gap-3 mt-1">
+                                <span className="flex items-center gap-1">
                                   <Truck className="h-3 w-3" />
-                                  <span>{method.logisticsCompanyName}</span>
-                                </div>
-                                <div className="flex items-center gap-1">
+                                  {method.logisticsCompanyName}
+                                </span>
+                                <span className="flex items-center gap-1">
                                   <Clock className="h-3 w-3" />
-                                  <span>
-                                    Estimated delivery: {method.estimatedDeliveryDays}{" "}
-                                    {method.estimatedDeliveryDays === 1 ? "day" : "days"}
-                                  </span>
-                                </div>
+                                  {method.estimatedDeliveryDays} {method.estimatedDeliveryDays === 1 ? "day" : "days"}
+                                </span>
                               </div>
                             </div>
-                            <div className="flex items-center gap-1 ml-4">
-                              <span className="font-semibold">R{method.customerPrice.toFixed(2)}</span>
+                            <div className="font-semibold">
+                              R{method.customerPrice.toFixed(2)}
                             </div>
                           </Label>
                         </div>
@@ -210,15 +248,6 @@ export default function MultiSupplierShipping({
                 </RadioGroup>
               </div>
 
-              {/* Selected method summary */}
-              {selectedMethod && (
-                <div className="rounded-lg bg-primary/5 border border-primary/20 p-3">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Shipping for this supplier:</span>
-                    <span className="font-semibold">R{selectedMethod.customerPrice.toFixed(2)}</span>
-                  </div>
-                </div>
-              )}
             </CardContent>
           </Card>
         );
