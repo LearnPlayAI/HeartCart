@@ -443,6 +443,7 @@ export interface IStorage {
   
   // Supplier Shipping Configuration operations
   getSupplierShippingMethods(supplierId: number): Promise<(SupplierShippingMethod & { method: ShippingMethod })[]>;
+  getSupplierShippingMethodById(id: number): Promise<SupplierShippingMethod | undefined>;
   assignShippingMethodToSupplier(supplierId: number, methodId: number, data: Partial<InsertSupplierShippingMethod>): Promise<SupplierShippingMethod>;
   updateSupplierShippingMethod(supplierId: number, methodId: number, data: Partial<InsertSupplierShippingMethod>): Promise<SupplierShippingMethod | undefined>;
   removeShippingMethodFromSupplier(supplierId: number, methodId: number): Promise<boolean>;
@@ -15959,6 +15960,10 @@ export class DatabaseStorage implements IStorage {
   // Supplier Shipping Methods
   async getSupplierShippingMethods(supplierId: number): Promise<(SupplierShippingMethod & { method: ShippingMethod })[]> {
     return this.supplierShippingRepo.getSupplierShippingMethods(supplierId);
+  }
+
+  async getSupplierShippingMethodById(id: number): Promise<SupplierShippingMethod | undefined> {
+    return this.supplierShippingRepo.getSupplierShippingMethodById(id);
   }
 
   async assignShippingMethodToSupplier(supplierId: number, methodId: number, data: Partial<InsertSupplierShippingMethod>): Promise<SupplierShippingMethod> {

@@ -6647,6 +6647,163 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }));
 
+  // Wrapper routes for frontend compatibility - these delegate to the existing composite-key routes
+  app.get("/api/supplier-shipping-methods", isAuthenticated, isAdmin, asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const supplierId = parseInt(req.query.supplierId as string);
+      
+      if (!supplierId || isNaN(supplierId)) {
+        throw new AppError(
+          "Supplier ID is required",
+          ErrorCode.VALIDATION_ERROR,
+          400
+        );
+      }
+      
+      const methods = await storage.getSupplierShippingMethods(supplierId);
+      
+      // Fetch all logistics companies for enrichment
+      const companies = await storage.getAllLogisticsCompanies(true);
+      const companyMap = new Map(companies.map(c => [c.id, c.name]));
+      
+      // Serialize nested shipping methods with company names
+      const serializedMethods = methods.map(item => ({
+        ...item,
+        method: serializeShippingMethod(item.method, companyMap.get(item.method.companyId) || 'Unknown')
+      }));
+      
+      return res.json({
+        success: true,
+        data: serializedMethods
+      });
+    } catch (error) {
+      logger.error('Error retrieving supplier shipping methods', { error, supplierId: req.query.supplierId });
+      if (error instanceof AppError) {
+        throw error;
+      }
+      throw new AppError(
+        "Failed to retrieve supplier shipping methods. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
+    }
+  }));
+
+  app.post("/api/supplier-shipping-methods", isAuthenticated, isAdmin, asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const { supplierId, shippingMethodId, customerPrice, supplierCost, isActive, isDefault } = req.body;
+      
+      if (!supplierId || !shippingMethodId) {
+        throw new AppError(
+          "Supplier ID and Shipping Method ID are required",
+          ErrorCode.VALIDATION_ERROR,
+          400
+        );
+      }
+      
+      const assignment = await storage.assignShippingMethodToSupplier(supplierId, shippingMethodId, {
+        customPrice: customerPrice || null,
+        isDefault: isDefault || false,
+        isEnabled: isActive !== false
+      });
+      
+      return res.status(201).json({
+        success: true,
+        data: assignment,
+        message: 'Shipping method assigned to supplier successfully'
+      });
+    } catch (error) {
+      logger.error('Error assigning shipping method to supplier', { error, body: req.body });
+      if (error instanceof AppError) {
+        throw error;
+      }
+      throw new AppError(
+        "Failed to assign shipping method to supplier. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
+    }
+  }));
+
+  app.patch("/api/supplier-shipping-methods/:id", isAuthenticated, isAdmin, asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { customerPrice, supplierCost, isActive, isDefault, supplierId, shippingMethodId } = req.body;
+      
+      // First, get the existing assignment to find supplierId and methodId
+      const existing = await storage.getSupplierShippingMethodById(id);
+      
+      if (!existing) {
+        throw new NotFoundError(`Supplier shipping method with ID ${id} not found`, "supplierShippingMethod");
+      }
+      
+      const updateData: any = {};
+      if (customerPrice !== undefined) updateData.customPrice = customerPrice;
+      if (isActive !== undefined) updateData.isEnabled = isActive;
+      if (isDefault !== undefined) updateData.isDefault = isDefault;
+      
+      const assignment = await storage.updateSupplierShippingMethod(existing.supplierId, existing.shippingMethodId, updateData);
+      
+      if (!assignment) {
+        throw new NotFoundError(`Supplier shipping method with ID ${id} not found`, "supplierShippingMethod");
+      }
+      
+      return res.json({
+        success: true,
+        data: assignment,
+        message: 'Supplier shipping method configuration updated successfully'
+      });
+    } catch (error) {
+      logger.error('Error updating supplier shipping method', { error, id: req.params.id });
+      if (error instanceof NotFoundError || error instanceof AppError) {
+        throw error;
+      }
+      throw new AppError(
+        "Failed to update supplier shipping method configuration. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
+    }
+  }));
+
+  app.delete("/api/supplier-shipping-methods/:id", isAuthenticated, isAdmin, asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      // First, get the existing assignment to find supplierId and methodId
+      const existing = await storage.getSupplierShippingMethodById(id);
+      
+      if (!existing) {
+        throw new NotFoundError(`Supplier shipping method with ID ${id} not found`, "supplierShippingMethod");
+      }
+      
+      const success = await storage.removeShippingMethodFromSupplier(existing.supplierId, existing.shippingMethodId);
+      
+      if (!success) {
+        throw new NotFoundError(`Supplier shipping method with ID ${id} not found`, "supplierShippingMethod");
+      }
+      
+      return res.json({
+        success: true,
+        message: 'Shipping method removed from supplier successfully'
+      });
+    } catch (error) {
+      logger.error('Error removing shipping method from supplier', { error, id: req.params.id });
+      if (error instanceof NotFoundError || error instanceof AppError) {
+        throw error;
+      }
+      throw new AppError(
+        "Failed to remove shipping method from supplier. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
+    }
+  }));
+
   app.put("/api/suppliers/:supplierId/shipping-methods/:methodId/default", isAuthenticated, isAdmin, asyncHandler(async (req: Request, res: Response) => {
     try {
       const supplierId = parseInt(req.params.supplierId);
