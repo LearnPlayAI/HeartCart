@@ -404,6 +404,27 @@ export default function CheckoutPage() {
     }
   });
 
+  // Remove item from cart mutation
+  const removeFromCart = useMutation({
+    mutationFn: async (cartItemId: number) => {
+      return apiRequest("DELETE", `/api/cart/${cartItemId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/cart"] });
+      toast({
+        title: "Item Removed",
+        description: "Item has been removed from your cart",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to remove item from cart",
+        variant: "destructive",
+      });
+    }
+  });
+
   // Create payment session mutation (step 1)
   const createPaymentSessionMutation = useMutation({
     mutationFn: async (orderData: any) => {
