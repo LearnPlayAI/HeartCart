@@ -676,13 +676,17 @@ router.get("/:id", isAuthenticated, asyncHandler(async (req: Request, res: Respo
       return sendError(res, "Access denied", 403);
     }
 
-    logger.info("Retrieved order with items", { 
+    // Fetch shipments with supplier and method information
+    const shipments = await storage.getOrderShipments(orderId, true);
+
+    logger.info("Retrieved order with items and shipments", { 
       orderId, 
       userId, 
-      itemCount: order.items?.length || 0 
+      itemCount: order.items?.length || 0,
+      shipmentCount: shipments?.length || 0
     });
 
-    return sendSuccess(res, order);
+    return sendSuccess(res, { ...order, shipments });
   } catch (error) {
     logger.error("Error fetching order", { error, orderId: req.params.id, userId: req.user?.id });
     return sendError(res, "Failed to fetch order", 500);

@@ -23,6 +23,33 @@ interface OrderItem {
   createdAt: string;
 }
 
+interface OrderShipment {
+  id: number;
+  orderId: number;
+  supplierId: number;
+  methodId: number;
+  cost: string;
+  status: string;
+  trackingNumber: string | null;
+  displayLabel: string | null;
+  lockerCode: string | null;
+  items: any;
+  estimatedDelivery: string | null;
+  deliveredAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  supplier?: {
+    id: number;
+    name: string;
+  };
+  method?: {
+    id: number;
+    name: string;
+    code: string;
+    estimatedDeliveryDays: number;
+  };
+}
+
 interface Order {
   id: number;
   userId: number;
@@ -55,6 +82,7 @@ interface Order {
   shippedAt: string | null;
   deliveredAt: string | null;
   items: OrderItem[];
+  shipments?: OrderShipment[];
 }
 
 const getStatusIcon = (status: string) => {
@@ -302,6 +330,70 @@ export default function OrderConfirmationPage() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Shipments Information - Multi-Supplier Orders */}
+            {order.shipments && order.shipments.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Truck className="h-5 w-5" />
+                    Shipments ({order.shipments.length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {order.shipments.map((shipment, index) => (
+                    <div key={shipment.id} className="border rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline">
+                            {shipment.displayLabel || `Shipment ${index + 1}`}
+                          </Badge>
+                          {shipment.supplier && (
+                            <span className="text-sm font-medium text-gray-700">
+                              {shipment.supplier.name}
+                            </span>
+                          )}
+                        </div>
+                        <Badge className={getStatusColor(shipment.status)}>
+                          {shipment.status.charAt(0).toUpperCase() + shipment.status.slice(1)}
+                        </Badge>
+                      </div>
+
+                      <div className="space-y-2 text-sm">
+                        {shipment.method && (
+                          <div className="flex items-center gap-2 text-gray-600">
+                            <Truck className="h-4 w-4" />
+                            <span>{shipment.method.name}</span>
+                            {shipment.method.estimatedDeliveryDays && (
+                              <span className="text-xs">
+                                ({shipment.method.estimatedDeliveryDays} days)
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        {shipment.trackingNumber && (
+                          <div className="flex items-center gap-2 text-gray-600">
+                            <Package className="h-4 w-4" />
+                            <span className="font-mono">{shipment.trackingNumber}</span>
+                          </div>
+                        )}
+
+                        <div className="flex items-center justify-between pt-2 border-t">
+                          <span className="text-gray-600">Shipping Cost:</span>
+                          <span className="font-medium">R{parseFloat(shipment.cost).toFixed(2)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  <div className="flex items-center justify-between pt-3 border-t font-medium">
+                    <span>Total Shipping:</span>
+                    <span>R{order.shippingCost?.toFixed(2) || '0.00'}</span>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Customer Notes */}
             {order.customerNotes && (

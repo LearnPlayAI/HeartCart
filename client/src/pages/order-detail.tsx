@@ -80,6 +80,34 @@ interface SupplierOrder {
   };
 }
 
+// Order Shipment interface
+interface OrderShipmentType {
+  id: number;
+  orderId: number;
+  supplierId: number;
+  methodId: number;
+  cost: string;
+  status: string;
+  trackingNumber: string | null;
+  displayLabel: string | null;
+  lockerCode: string | null;
+  items: any;
+  estimatedDelivery: string | null;
+  deliveredAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  supplier?: {
+    id: number;
+    name: string;
+  };
+  method?: {
+    id: number;
+    name: string;
+    code: string;
+    estimatedDeliveryDays: number;
+  };
+}
+
 // Order interface matching our camelCase schema
 interface OrderType {
   id: number;
@@ -108,6 +136,7 @@ interface OrderType {
   shippedAt: string | null;
   deliveredAt: string | null;
   items?: OrderItemType[];
+  shipments?: OrderShipmentType[];
 }
 
 // Order item interface
@@ -982,24 +1011,87 @@ ${order.customerName}`;
                     <p>{order.shippingCity}, {order.shippingPostalCode}</p>
                   </div>
                 </div>
-                <div className="flex items-center">
-                  <Truck className="h-4 w-4 mr-2 text-gray-500" />
-                  <span>{order.shippingMethod}</span>
-                </div>
-                {order.trackingNumber && (
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <Package className="h-4 w-4 mr-2 text-gray-500" />
-                      <span className="text-sm">Tracking: {order.trackingNumber}</span>
+                
+                {/* Show shipments if available (multi-supplier orders) */}
+                {order.shipments && order.shipments.length > 0 ? (
+                  <div className="space-y-3">
+                    <Separator />
+                    <h4 className="font-medium text-sm">Shipments ({order.shipments.length})</h4>
+                    {order.shipments.map((shipment, index) => (
+                      <div key={shipment.id} className="border rounded-lg p-3 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline">
+                              {shipment.displayLabel || `Shipment ${index + 1}`}
+                            </Badge>
+                            {shipment.supplier && (
+                              <span className="text-sm font-medium">
+                                {shipment.supplier.name}
+                              </span>
+                            )}
+                          </div>
+                          <Badge className={getStatusColor(shipment.status)}>
+                            {shipment.status.charAt(0).toUpperCase() + shipment.status.slice(1)}
+                          </Badge>
+                        </div>
+                        
+                        {shipment.method && (
+                          <div className="flex items-center text-sm text-gray-600">
+                            <Truck className="h-4 w-4 mr-2" />
+                            <span>{shipment.method.name}</span>
+                          </div>
+                        )}
+                        
+                        {shipment.trackingNumber && (
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center text-sm">
+                              <Package className="h-4 w-4 mr-2 text-gray-500" />
+                              <span className="font-mono text-xs">{shipment.trackingNumber}</span>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => copyToClipboard(shipment.trackingNumber!, 'Tracking number')}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )}
+                        
+                        <div className="flex items-center justify-between text-sm pt-2 border-t">
+                          <span className="text-gray-600">Cost:</span>
+                          <span className="font-medium">R{parseFloat(shipment.cost).toFixed(2)}</span>
+                        </div>
+                      </div>
+                    ))}
+                    <div className="flex items-center justify-between pt-2 border-t font-medium">
+                      <span>Total Shipping:</span>
+                      <span>R{order.shippingCost?.toFixed(2) || '0.00'}</span>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => copyToClipboard(order.trackingNumber!, 'Tracking number')}
-                    >
-                      <Copy className="h-3 w-3" />
-                    </Button>
                   </div>
+                ) : (
+                  /* Legacy single shipping method display */
+                  <>
+                    <div className="flex items-center">
+                      <Truck className="h-4 w-4 mr-2 text-gray-500" />
+                      <span>{order.shippingMethod}</span>
+                    </div>
+                    {order.trackingNumber && (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center">
+                          <Package className="h-4 w-4 mr-2 text-gray-500" />
+                          <span className="text-sm">Tracking: {order.trackingNumber}</span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => copyToClipboard(order.trackingNumber!, 'Tracking number')}
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    )}
+                  </>
                 )}
               </CardContent>
             </Card>
