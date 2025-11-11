@@ -190,6 +190,18 @@ export default function CheckoutPage() {
     refetchOnMount: true,
   });
 
+  // Debug logging for shipping analysis
+  useEffect(() => {
+    console.log('🚚 Shipping Analysis Debug:', {
+      hasCartData: !!cartResponse?.data,
+      isArray: Array.isArray(cartResponse?.data),
+      cartLength: cartResponse?.data?.length,
+      queryEnabled: !!cartResponse?.data && Array.isArray(cartResponse.data) && cartResponse.data.length > 0,
+      shippingAnalysisLoading,
+      shippingAnalysisData: shippingAnalysis
+    });
+  }, [cartResponse, shippingAnalysisLoading, shippingAnalysis]);
+
   // Multi-supplier shipping state
   const [shippingSelections, setShippingSelections] = useState<ShippingSelection>({});
   const [multiSupplierShippingCost, setMultiSupplierShippingCost] = useState(0);
@@ -198,6 +210,7 @@ export default function CheckoutPage() {
   useEffect(() => {
     queryClient.invalidateQueries({ queryKey: ["/api/user/preferred-locker"] });
     queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/cart/analyze-shipping"] });
   }, [queryClient]);
 
   // Extract cart items from the response
