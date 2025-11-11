@@ -1299,7 +1299,7 @@ export default function CheckoutPage() {
                         <div className="text-xs text-green-600">{reasonForWaiver}</div>
                       </div>
                     ) : (
-                      <span>{safeShippingCost === 0 ? "Free" : `R${safeShippingCost.toFixed(2)}`}</span>
+                      <span>{finalShippingCost === 0 ? "Free" : `R${finalShippingCost.toFixed(2)}`}</span>
                     )}
                   </div>
                 </div>
@@ -1344,16 +1344,7 @@ export default function CheckoutPage() {
                 )}
               </div>
 
-              {/* Selected Options Summary */}
-              <div className="text-xs text-gray-600 space-y-1">
-                <div>
-                  Shipping: {shippingOptions.find(o => o.id === selectedShippingMethod)?.name}
-                </div>
-                <div>
-                  Payment: {paymentOptions.find(o => o.id === selectedPaymentMethod)?.name}
-                </div>
-              </div>
-            </CardContent>
+              </CardContent>
           </Card>
           
           {/* PWA Install Prompt for Checkout Context */}
