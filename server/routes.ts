@@ -6227,15 +6227,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }));
 
+  // Helper function to deserialize frontend DTO to database format (for POST/PATCH)
+  const deserializeShippingMethodInput = (frontendData: any) => {
+    const dbData: any = { ...frontendData };
+    
+    // Map frontend fields to database fields
+    if (frontendData.logisticsCompanyId !== undefined) {
+      dbData.companyId = frontendData.logisticsCompanyId;
+      delete dbData.logisticsCompanyId;
+    }
+    if (frontendData.baseCost !== undefined) {
+      dbData.basePrice = frontendData.baseCost.toString();
+      delete dbData.baseCost;
+    }
+    if (frontendData.estimatedDeliveryDays !== undefined) {
+      dbData.estimatedDays = frontendData.estimatedDeliveryDays.toString();
+      delete dbData.estimatedDeliveryDays;
+    }
+    
+    // Remove frontend-only fields
+    delete dbData.logisticsCompanyName;
+    delete dbData.code; // code is auto-generated
+    
+    return dbData;
+  };
+
+  // Helper function to serialize shipping methods with logistics company info (for GET)
+  const serializeShippingMethod = (method: any, companyName: string) => {
+    const estimatedDays = method.estimatedDays ? method.estimatedDays.split('-')[0].trim() : '3';
+    const parsedDays = parseInt(estimatedDays);
+    
+    return {
+      id: method.id,
+      name: method.name,
+      code: method.code || `METHOD_${method.id}`,
+      description: method.description,
+      logisticsCompanyId: method.companyId,
+      logisticsCompanyName: companyName,
+      estimatedDeliveryDays: isNaN(parsedDays) ? 3 : parsedDays,
+      baseCost: parseFloat(method.basePrice) || 0,
+      isActive: method.isActive,
+      createdAt: method.createdAt,
+      updatedAt: method.updatedAt,
+    };
+  };
+
   // Shipping Method Routes (Admin Only)
   app.get("/api/shipping-methods", isAuthenticated, isAdmin, asyncHandler(async (req: Request, res: Response) => {
     try {
       const includeInactive = req.query.includeInactive === 'true';
       const methods = await storage.getAllShippingMethods(includeInactive);
       
+      // Fetch all logistics companies for enrichment
+      const companies = await storage.getAllLogisticsCompanies(true);
+      const companyMap = new Map(companies.map(c => [c.id, c.name]));
+      
+      // Serialize methods with company names
+      const serializedMethods = methods.map(method => 
+        serializeShippingMethod(method, companyMap.get(method.companyId) || 'Unknown')
+      );
+      
       return res.json({
         success: true,
-        data: methods
+        data: serializedMethods
       });
     } catch (error) {
       logger.error('Error retrieving shipping methods', { error });
@@ -6254,9 +6308,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const includeInactive = req.query.includeInactive === 'true';
       const methods = await storage.getShippingMethodsByCompany(companyId, includeInactive);
       
+      // Fetch company name for enrichment
+      const company = await storage.getLogisticsCompany(companyId);
+      const companyName = company?.name || 'Unknown';
+      
+      // Serialize methods with company name
+      const serializedMethods = methods.map(method => 
+        serializeShippingMethod(method, companyName)
+      );
+      
       return res.json({
         success: true,
-        data: methods
+        data: serializedMethods
       });
     } catch (error) {
       logger.error('Error retrieving shipping methods for company', { error, companyId: req.params.companyId });
@@ -6278,9 +6341,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw new NotFoundError(`Shipping method with ID ${id} not found`, "shippingMethod");
       }
       
+      // Fetch company name for enrichment
+      const company = await storage.getLogisticsCompany(method.companyId);
+      const serializedMethod = serializeShippingMethod(method, company?.name || 'Unknown');
+      
       return res.json({
         success: true,
-        data: method
+        data: serializedMethod
       });
     } catch (error) {
       logger.error('Error retrieving shipping method', { error, id: req.params.id });
@@ -6298,12 +6365,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/shipping-methods", isAuthenticated, isAdmin, asyncHandler(async (req: Request, res: Response) => {
     try {
-      const methodData = insertShippingMethodSchema.parse(req.body);
+      // Deserialize frontend DTO to database format
+      const dbData = deserializeShippingMethodInput(req.body);
+      const methodData = insertShippingMethodSchema.parse(dbData);
       const method = await storage.createShippingMethod(methodData);
+      
+      // Fetch company name for enrichment
+      const company = await storage.getLogisticsCompany(method.companyId);
+      const serializedMethod = serializeShippingMethod(method, company?.name || 'Unknown');
       
       return res.status(201).json({
         success: true,
-        data: method,
+        data: serializedMethod,
         message: `Shipping method "${method.name}" created successfully`
       });
     } catch (error) {
@@ -6320,17 +6393,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/shipping-methods/:id", isAuthenticated, isAdmin, asyncHandler(async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
-      const updateData = req.body;
+      // Deserialize frontend DTO to database format
+      const dbData = deserializeShippingMethodInput(req.body);
       
-      const method = await storage.updateShippingMethod(id, updateData);
+      const method = await storage.updateShippingMethod(id, dbData);
       
       if (!method) {
         throw new NotFoundError(`Shipping method with ID ${id} not found`, "shippingMethod");
       }
       
+      // Fetch company name for enrichment
+      const company = await storage.getLogisticsCompany(method.companyId);
+      const serializedMethod = serializeShippingMethod(method, company?.name || 'Unknown');
+      
       return res.json({
         success: true,
-        data: method,
+        data: serializedMethod,
         message: `Shipping method "${method.name}" updated successfully`
       });
     } catch (error) {
@@ -6350,17 +6428,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/shipping-methods/:id", isAuthenticated, isAdmin, asyncHandler(async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
-      const updateData = req.body;
+      // Deserialize frontend DTO to database format
+      const dbData = deserializeShippingMethodInput(req.body);
       
-      const method = await storage.updateShippingMethod(id, updateData);
+      const method = await storage.updateShippingMethod(id, dbData);
       
       if (!method) {
         throw new NotFoundError(`Shipping method with ID ${id} not found`, "shippingMethod");
       }
       
+      // Fetch company name for enrichment
+      const company = await storage.getLogisticsCompany(method.companyId);
+      const serializedMethod = serializeShippingMethod(method, company?.name || 'Unknown');
+      
       return res.json({
         success: true,
-        data: method,
+        data: serializedMethod,
         message: `Shipping method "${method.name}" updated successfully`
       });
     } catch (error) {
@@ -6429,9 +6512,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const supplierId = parseInt(req.params.id);
       const methods = await storage.getSupplierShippingMethods(supplierId);
       
+      // Fetch all logistics companies for enrichment
+      const companies = await storage.getAllLogisticsCompanies(true);
+      const companyMap = new Map(companies.map(c => [c.id, c.name]));
+      
+      // Serialize nested shipping methods with company names
+      const serializedMethods = methods.map(item => ({
+        ...item,
+        method: serializeShippingMethod(item.method, companyMap.get(item.method.companyId) || 'Unknown')
+      }));
+      
       return res.json({
         success: true,
-        data: methods
+        data: serializedMethods
       });
     } catch (error) {
       logger.error('Error retrieving supplier shipping methods', { error, supplierId: req.params.id });
