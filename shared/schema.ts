@@ -130,7 +130,7 @@ export const products = pgTable("products", {
   // Credit system fields
   costPrice: decimal("costPrice", { precision: 10, scale: 2 }),
   supplierAvailable: boolean("supplierAvailable").default(true).notNull(),
-  createdAt: text("created_at").default(String(new Date().toISOString())).notNull(),
+  createdAt: text("created_at").default(String(new Date().toISOString())), // Nullable to preserve legacy products without creation dates
 }, (table) => {
   return {
     categoryIdIdx: index("products_category_id_idx").on(table.categoryId),
