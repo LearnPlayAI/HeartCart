@@ -606,7 +606,7 @@ export default function CheckoutPage() {
         : {
             shippingMode: "single-supplier" as const,
             shippingMethod: data.shippingMethod,
-            shippingCost: safeShippingCost
+            shippingCost: finalShippingCost
           };
 
       const orderData = {

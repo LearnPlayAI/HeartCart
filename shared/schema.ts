@@ -171,8 +171,8 @@ export const orders = pgTable("orders", {
   shippingCity: text("shippingCity").notNull(),
   shippingPostalCode: text("shippingPostalCode").notNull(),
   shippingMethod: text("shippingMethod").notNull().default("standard"), // standard, express - legacy field
-  shippingCost: doublePrecision("shippingCost").notNull().default(85), // R85 for PUDO - customer payment amount - legacy field
-  actualShippingCost: doublePrecision("actualShippingCost").default(60), // Actual shipping cost to company for profit calculation
+  shippingCost: doublePrecision("shippingCost").notNull(), // Customer payment amount - MUST be explicitly set from checkout
+  actualShippingCost: doublePrecision("actualShippingCost"), // Actual shipping cost to company for profit calculation
   
   // Multi-supplier shipping system fields
   shippingTotal: decimal("shippingTotal", { precision: 10, scale: 2 }), // Total shipping cost across all shipments

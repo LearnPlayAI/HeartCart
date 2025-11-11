@@ -235,7 +235,7 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
     
     // CRITICAL FIX: Calculate all required financial fields from order items
     let calculatedSubtotal = 0;
-    let calculatedShippingCost = 85; // Default PUDO shipping
+    let calculatedShippingCost = 0;
     let calculatedVatAmount = 0;
     let calculatedVatRate = 0;
 
@@ -246,9 +246,21 @@ router.post('/yoco', asyncHandler(async (req: Request, res: Response) => {
       }, 0);
     }
 
-    // Extract shipping cost from cart data if available
+    // Extract shipping cost from cart data (REQUIRED - no defaults)
     if (orderData.shippingCost && typeof orderData.shippingCost === 'number') {
       calculatedShippingCost = orderData.shippingCost;
+    } else {
+      console.error('⚠️ WEBHOOK ERROR: Missing or invalid shippingCost in orderData!', {
+        checkoutId,
+        hasOrderData: !!orderData,
+        orderDataKeys: orderData ? Object.keys(orderData) : [],
+        shippingCostValue: orderData?.shippingCost,
+        shippingCostType: typeof orderData?.shippingCost
+      });
+      return res.status(400).json({ 
+        error: 'Invalid order data: shippingCost is required',
+        checkoutId
+      });
     }
 
     // Extract VAT information from cart data if available
