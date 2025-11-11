@@ -1138,98 +1138,147 @@ export default function CheckoutPage() {
               <CardTitle>Order Summary</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Cart Items */}
-              <div className="space-y-4">
-                {Array.isArray(cartItems) && cartItems.map((item: any) => (
-                  <div key={item.id} className="flex items-center space-x-3 pb-4 border-b last:border-b-0">
-                    {/* Product Image */}
-                    <div className="flex-shrink-0 w-12 h-12 bg-gray-100 rounded-lg overflow-hidden">
-                      {item.product?.imageUrl ? (
-                        <img 
-                          src={item.product.imageUrl} 
-                          alt={item.product.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                          <span className="text-gray-400 text-xs">No image</span>
-                        </div>
-                      )}
-                    </div>
+              {/* Cart Items - Grouped by Supplier */}
+              {hasConfiguredShipping && supplierGroups.length > 0 ? (
+                <div className="space-y-6">
+                  {supplierGroups.map((group, groupIndex) => {
+                    const groupCartItems = cartItems.filter((cartItem: any) => 
+                      group.items.some(groupItem => groupItem.productId === cartItem.productId)
+                    );
                     
-                    {/* Product Details */}
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm leading-tight mb-1">
-                        {item.product?.name || 'Product'}
-                      </div>
-                      <div className="text-xs text-gray-600 mb-1">Qty: {item.quantity}</div>
-                      
-                      {/* Show product attributes with quantity breakdown */}
-                      {item.attributeSelections && Object.keys(item.attributeSelections).length > 0 && (
-                        <div className="text-xs text-gray-500 mt-1">
-                          {Object.entries(item.attributeSelections).map(([attributeName, value]) => {
-                            // Handle both old format (string/array) and new format (quantity object)
-                            const getQuantityBreakdown = (attrValue: any) => {
-                              if (typeof attrValue === 'object' && !Array.isArray(attrValue)) {
-                                // New format: {optionValue: quantity}
-                                return attrValue;
-                              } else if (Array.isArray(attrValue)) {
-                                // Old format: array of values
-                                const counts: Record<string, number> = {};
-                                attrValue.forEach(val => {
-                                  counts[val] = (counts[val] || 0) + 1;
-                                });
-                                return counts;
-                              } else {
-                                // Old format: single value gets the full item quantity
-                                return { [attrValue]: item.quantity };
-                              }
-                            };
+                    const selectedMethod = group.availableMethods.find(
+                      m => m.id === shippingSelections[group.supplierId]
+                    );
+                    
+                    const groupSubtotal = groupCartItems.reduce((sum: number, item: any) => {
+                      if (item.product) {
+                        const promotionInfo = promotionMap.get(item.product.id) || null;
+                        const pricing = calculateProductPricing(
+                          item.product.price || 0,
+                          item.product.salePrice,
+                          promotionInfo
+                        );
+                        return sum + (pricing.displayPrice * item.quantity);
+                      } else {
+                        return sum + (parseFloat(item.itemPrice || 0) * item.quantity);
+                      }
+                    }, 0);
 
-                            const quantityBreakdown = getQuantityBreakdown(value);
-
-                            return (
-                              <div key={attributeName} className="flex items-center gap-1 flex-wrap mb-1">
-                                <span className="font-medium">{attributeName}:</span>
-                                <div className="flex gap-1 flex-wrap">
-                                  {Object.entries(quantityBreakdown).map(([optionValue, count]) => (
-                                    <Badge 
-                                      key={optionValue} 
-                                      className="bg-[#ff69b4] text-[#ffffff] text-xs py-0 px-2 h-5"
-                                    >
-                                      {optionValue} x{count}
-                                    </Badge>
-                                  ))}
-                                </div>
+                    return (
+                      <div key={group.supplierId} className="border rounded-lg p-3 space-y-3">
+                        {/* Supplier Group Header */}
+                        {supplierGroups.length > 1 && (
+                          <div className="flex items-center justify-between pb-2 border-b">
+                            <div className="flex items-center gap-2">
+                              <Package className="h-4 w-4 text-gray-500" />
+                              <span className="text-sm font-medium">Shipment {groupIndex + 1}</span>
+                            </div>
+                            <span className="text-xs text-gray-500">{group.items.length} {group.items.length === 1 ? 'item' : 'items'}</span>
+                          </div>
+                        )}
+                        
+                        {/* Group Items */}
+                        <div className="space-y-3">
+                          {groupCartItems.map((item: any) => (
+                            <div key={item.id} className="flex items-start space-x-3">
+                              {/* Product Image */}
+                              <div className="flex-shrink-0 w-12 h-12 bg-gray-100 rounded-lg overflow-hidden">
+                                {item.product?.imageUrl ? (
+                                  <img 
+                                    src={item.product.imageUrl} 
+                                    alt={item.product.name}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                                    <span className="text-gray-400 text-xs">No img</span>
+                                  </div>
+                                )}
                               </div>
-                            );
-                          })}
+                              
+                              {/* Product Details */}
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-sm leading-tight mb-1">
+                                  {item.product?.name || 'Product'}
+                                </div>
+                                <div className="text-xs text-gray-600">Qty: {item.quantity}</div>
+                              </div>
+                              
+                              {/* Price & Remove */}
+                              <div className="text-right flex flex-col items-end gap-1">
+                                <div className="text-sm font-semibold text-primary">
+                                  R{(() => {
+                                    if (item.product) {
+                                      const promotionInfo = promotionMap.get(item.product.id) || null;
+                                      const pricing = calculateProductPricing(
+                                        item.product.price || 0,
+                                        item.product.salePrice,
+                                        promotionInfo
+                                      );
+                                      return (pricing.displayPrice * item.quantity).toFixed(2);
+                                    } else {
+                                      return (parseFloat(item.itemPrice || 0) * item.quantity).toFixed(2);
+                                    }
+                                  })()}
+                                </div>
+                                <button
+                                  onClick={() => removeFromCart.mutate(item.id)}
+                                  className="text-xs text-red-600 hover:text-red-700 underline"
+                                  data-testid={`remove-item-${item.id}`}
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                      )}
-                    </div>
-                    
-                    {/* Price */}
-                    <div className="text-right">
-                      <div className="text-sm font-semibold text-primary">
-                        R{(() => {
-                          // Use unified promotional pricing system with promotional info from map
-                          if (item.product) {
-                            const promotionInfo = promotionMap.get(item.product.id) || null;
-                            const pricing = calculateProductPricing(
-                              item.product.price || 0,
-                              item.product.salePrice,
-                              promotionInfo
-                            );
-                            return (pricing.displayPrice * item.quantity).toFixed(2);
-                          } else {
-                            // Fallback to itemPrice if no product data
-                            const currentPrice = parseFloat(item.itemPrice || 0);
-                            return (currentPrice * item.quantity).toFixed(2);
-                          }
-                        })()}
+                        
+                        {/* Group Shipping Cost */}
+                        {selectedMethod && (
+                          <div className="pt-2 border-t">
+                            <div className="flex items-center justify-between text-sm">
+                              <div className="flex items-center gap-2 text-gray-600">
+                                <Truck className="h-3 w-3" />
+                                <span>Shipping: {selectedMethod.name}</span>
+                              </div>
+                              <span className="font-medium">R{selectedMethod.customerPrice.toFixed(2)}</span>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      {item.quantity > 1 && (
-                        <div className="text-xs text-gray-500">
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {Array.isArray(cartItems) && cartItems.map((item: any) => (
+                    <div key={item.id} className="flex items-center space-x-3 pb-4 border-b last:border-b-0">
+                      {/* Product Image */}
+                      <div className="flex-shrink-0 w-12 h-12 bg-gray-100 rounded-lg overflow-hidden">
+                        {item.product?.imageUrl ? (
+                          <img 
+                            src={item.product.imageUrl} 
+                            alt={item.product.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                            <span className="text-gray-400 text-xs">No image</span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Product Details */}
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm leading-tight mb-1">
+                          {item.product?.name || 'Product'}
+                        </div>
+                        <div className="text-xs text-gray-600">Qty: {item.quantity}</div>
+                      </div>
+                      
+                      {/* Price & Remove */}
+                      <div className="text-right flex flex-col items-end gap-1">
+                        <div className="text-sm font-semibold text-primary">
                           R{(() => {
                             if (item.product) {
                               const promotionInfo = promotionMap.get(item.product.id) || null;
@@ -1238,29 +1287,24 @@ export default function CheckoutPage() {
                                 item.product.salePrice,
                                 promotionInfo
                               );
-                              return pricing.displayPrice.toFixed(2);
+                              return (pricing.displayPrice * item.quantity).toFixed(2);
                             } else {
-                              return parseFloat(item.itemPrice || 0).toFixed(2);
+                              return (parseFloat(item.itemPrice || 0) * item.quantity).toFixed(2);
                             }
-                          })()} each
+                          })()}
                         </div>
-                      )}
-                      
-                      {/* Show promotional badge if applicable */}
-                      {item.product && promotionMap.get(item.product.id) && (
-                        <div className="mt-1">
-                          <Badge 
-                            variant="secondary" 
-                            className="bg-red-100 text-red-700 text-xs py-0 px-1 h-4"
-                          >
-                            {getPromotionalBadgeText(promotionMap.get(item.product.id))}
-                          </Badge>
-                        </div>
-                      )}
+                        <button
+                          onClick={() => removeFromCart.mutate(item.id)}
+                          className="text-xs text-red-600 hover:text-red-700 underline"
+                          data-testid={`remove-item-${item.id}`}
+                        >
+                          Remove
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
 
               <Separator />
 
