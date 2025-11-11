@@ -2921,6 +2921,17 @@ export class DatabaseStorage implements IStorage {
 
   async createProduct(product: InsertProduct): Promise<Product> {
     try {
+      // CRITICAL: Validate supplier has shipping methods before creating product
+      if (product.supplierId) {
+        const hasShippingMethods = await this.validateSupplierHasShippingMethods(product.supplierId);
+        if (!hasShippingMethods) {
+          throw new Error(
+            `Cannot create product: Supplier ID ${product.supplierId} has no shipping methods configured. ` +
+            `Please configure shipping methods for this supplier first.`
+          );
+        }
+      }
+      
       const [newProduct] = await db
         .insert(products)
         .values(product)
@@ -3001,6 +3012,17 @@ export class DatabaseStorage implements IStorage {
    */
   async createProductWithWizard(product: InsertProduct): Promise<Product> {
     try {
+      // CRITICAL: Validate supplier has shipping methods before creating product
+      if (product.supplierId) {
+        const hasShippingMethods = await this.validateSupplierHasShippingMethods(product.supplierId);
+        if (!hasShippingMethods) {
+          throw new Error(
+            `Cannot create product: Supplier ID ${product.supplierId} has no shipping methods configured. ` +
+            `Please configure shipping methods for this supplier first.`
+          );
+        }
+      }
+      
       // Use a transaction to ensure all operations succeed or fail together
       const createdProduct = await db.transaction(async (tx) => {
         // Add created_at timestamp if not specified
