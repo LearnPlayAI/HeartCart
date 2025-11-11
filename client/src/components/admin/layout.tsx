@@ -31,6 +31,7 @@ function Navigation({ className, isCollapsed, onNavigate }: { className?: string
     { path: "/admin/orders", label: "Orders", icon: Package },
     { path: "/admin/user-carts", label: "User Carts", icon: ShoppingBasket },
     { path: "/admin/supplier-orders", label: "Supplier Orders", icon: Truck },
+    { path: "/admin/logistics-companies", label: "Logistics Companies", icon: Package },
     { path: "/admin/categories", label: "Categories", icon: BarChart3 },
     { path: "/admin/global-attributes", label: "Global Attributes", icon: Tags },
     { path: "/admin/pricing", label: "Pricing", icon: DollarSign },

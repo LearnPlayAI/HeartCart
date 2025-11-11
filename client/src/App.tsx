@@ -82,6 +82,7 @@ import ManageUsersPage from "@/pages/admin/sales-reps/manage-users";
 import UserCartsPage from "@/pages/admin/user-carts";
 import UserCartDetailPage from "@/pages/admin/user-cart-detail";
 import CustomerCreditsPage from "@/pages/admin/customer-credits";
+import LogisticsCompaniesPage from "@/pages/admin/logistics-companies";
 
 // Developer Pages
 import DeveloperDashboard from "@/pages/developer";
@@ -246,6 +247,7 @@ function App() {
                   <AdminProtectedRoute path="/admin/orders" component={AdminOrders} />
                   <AdminProtectedRoute path="/admin/orders/:id" component={AdminOrderDetail} />
                   <AdminProtectedRoute path="/admin/supplier-orders" component={SupplierOrders} />
+                  <AdminProtectedRoute path="/admin/logistics-companies" component={LogisticsCompaniesPage} />
                   <AdminProtectedRoute path="/admin/user-carts" component={UserCartsPage} />
                   <AdminProtectedRoute path="/admin/user-carts/:userId" component={UserCartDetailPage} />
                   <AdminProtectedRoute path="/admin/users" component={UserAdminPageFixed} />
