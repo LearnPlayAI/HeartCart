@@ -89,6 +89,31 @@ interface OrderItem {
   supplierStatus?: 'pending' | 'ordered' | 'unavailable' | 'received';
 }
 
+interface Shipment {
+  id: number;
+  orderId: number;
+  supplierId: number;
+  methodId: number;
+  cost: string;
+  status: string;
+  trackingNumber: string | null;
+  displayLabel: string | null;
+  lockerCode: string | null;
+  items: any;
+  estimatedDelivery: string | null;
+  deliveredAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  method: {
+    id: number;
+    name: string;
+    code: string;
+    customerPrice: string;
+    logisticsCompanyName: string;
+  };
+  supplierName?: string;
+}
+
 interface Order {
   id: number;
   orderNumber: string;
@@ -117,6 +142,7 @@ interface Order {
   supplierOrderDate?: string;
   adminNotes?: string;
   items: OrderItem[];
+  shipments?: Shipment[];
   // PUDO Locker Information
   selectedLockerId?: number;
   selectedLockerCode?: string;
@@ -1668,20 +1694,6 @@ export default function AdminOrderDetail() {
                 </div>
                 
                 <div className="flex items-center space-x-2">
-                  <Truck className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="font-medium">
-                      {order.shippingMethod === 'pudo-locker' 
-                        ? 'PUDO Lockers (R85)' 
-                        : order.shippingMethod === 'pudo-door' 
-                        ? 'PUDO to your Door (R119)' 
-                        : order.shippingMethod}
-                    </p>
-                    <p className="text-sm text-muted-foreground">Shipping Method</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center space-x-2">
                   <CreditCard className="h-4 w-4 text-muted-foreground" />
                   <div>
                     <p className="font-medium capitalize">{order.paymentMethod}</p>
@@ -1689,6 +1701,147 @@ export default function AdminOrderDetail() {
                   </div>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Shipments Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Truck className="h-5 w-5" />
+                <span>Shipments</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {order.shipments && order.shipments.length > 0 ? (
+                <div className="space-y-4">
+                  {(() => {
+                    // Group shipments by supplier
+                    const shipmentsBySupplier = order.shipments.reduce((acc, shipment) => {
+                      const key = shipment.supplierId;
+                      if (!acc[key]) {
+                        acc[key] = {
+                          supplierName: shipment.supplierName || `Supplier ${key}`,
+                          shipments: []
+                        };
+                      }
+                      acc[key].shipments.push(shipment);
+                      return acc;
+                    }, {} as Record<number, { supplierName: string; shipments: Shipment[] }>);
+
+                    return Object.entries(shipmentsBySupplier).map(([supplierId, group]) => (
+                      <div key={supplierId} className="border rounded-lg p-4 space-y-3">
+                        {/* Supplier Header */}
+                        <div className="flex items-center space-x-2 pb-2 border-b">
+                          <Building2 className="h-4 w-4 text-primary" />
+                          <span className="font-semibold text-sm">{group.supplierName}</span>
+                          <Badge variant="outline" className="ml-auto">
+                            {group.shipments.length} {group.shipments.length === 1 ? 'shipment' : 'shipments'}
+                          </Badge>
+                        </div>
+
+                        {/* Shipments for this supplier */}
+                        <div className="space-y-3">
+                          {group.shipments.map((shipment, index) => {
+                            const shipmentStatus = shipment.status || 'pending';
+                            const statusColors = {
+                              pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+                              processing: 'bg-blue-100 text-blue-800 border-blue-200',
+                              shipped: 'bg-green-100 text-green-800 border-green-200',
+                              delivered: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+                              cancelled: 'bg-red-100 text-red-800 border-red-200',
+                              in_transit: 'bg-purple-100 text-purple-800 border-purple-200',
+                            };
+                            const statusColor = statusColors[shipmentStatus as keyof typeof statusColors] || 'bg-gray-100 text-gray-800 border-gray-200';
+
+                            return (
+                              <div key={shipment.id} className="bg-muted/50 rounded-lg p-3 space-y-2">
+                                {/* Shipment Header */}
+                                <div className="flex items-start justify-between">
+                                  <div className="flex items-center space-x-2">
+                                    <Package2 className="h-3 w-3 text-muted-foreground" />
+                                    <span className="font-medium text-xs">
+                                      {shipment.displayLabel || `Shipment ${index + 1}`}
+                                    </span>
+                                  </div>
+                                  <Badge className={`${statusColor} border text-xs`}>
+                                    {shipmentStatus.replace('_', ' ').charAt(0).toUpperCase() + shipmentStatus.slice(1).replace('_', ' ')}
+                                  </Badge>
+                                </div>
+
+                                {/* Shipping Method */}
+                                <div className="space-y-1">
+                                  <div className="flex items-center text-xs">
+                                    <Truck className="h-3 w-3 mr-2 text-muted-foreground" />
+                                    <span className="font-medium">
+                                      {shipment.method.logisticsCompanyName}
+                                    </span>
+                                    <span className="mx-1 text-muted-foreground">•</span>
+                                    <span className="text-muted-foreground">
+                                      {shipment.method.name}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center text-xs text-muted-foreground">
+                                    <CreditCard className="h-3 w-3 mr-2" />
+                                    <span>Cost: {formatCurrency(parseFloat(shipment.cost))}</span>
+                                  </div>
+                                </div>
+
+                                {/* Tracking Info */}
+                                {shipment.trackingNumber && (
+                                  <div className="flex items-center text-xs">
+                                    <Package className="h-3 w-3 mr-2 text-muted-foreground" />
+                                    <span className="text-muted-foreground">Tracking:</span>
+                                    <span className="ml-1 font-mono text-xs">
+                                      {shipment.trackingNumber}
+                                    </span>
+                                  </div>
+                                )}
+
+                                {/* Locker Code */}
+                                {shipment.lockerCode && (
+                                  <div className="flex items-center text-xs">
+                                    <Building2 className="h-3 w-3 mr-2 text-muted-foreground" />
+                                    <span className="text-muted-foreground">Locker:</span>
+                                    <span className="ml-1 font-medium">
+                                      {shipment.lockerCode}
+                                    </span>
+                                  </div>
+                                )}
+
+                                {/* Estimated Delivery */}
+                                {shipment.estimatedDelivery && (
+                                  <div className="flex items-center text-xs text-muted-foreground">
+                                    <Clock className="h-3 w-3 mr-2" />
+                                    <span>ETA: {formatDate(shipment.estimatedDelivery)}</span>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ));
+                  })()}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex items-center text-sm">
+                    <Truck className="h-4 w-4 mr-2 text-muted-foreground" />
+                    <span className="font-medium">Legacy Shipping Method:</span>
+                  </div>
+                  <div className="bg-muted px-3 py-2 rounded text-sm">
+                    {order.shippingMethod === 'pudo-locker' 
+                      ? 'PUDO Lockers (R85)' 
+                      : order.shippingMethod === 'pudo-door' 
+                      ? 'PUDO to your Door (R119)' 
+                      : order.shippingMethod || 'Standard Shipping'}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    This order was placed before the multi-supplier shipping system was implemented.
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
 
