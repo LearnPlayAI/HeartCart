@@ -8,6 +8,7 @@
 import { db } from "./db";
 import { sql } from "drizzle-orm";
 import { logger } from "./logger";
+import { storage } from "./storage";
 
 export interface PublicationResult {
   success: boolean;
@@ -34,6 +35,23 @@ export async function publishProductDraft(draftId: number): Promise<PublicationR
 
     const draft = draftRows.rows[0] as any;
     logger.info('Draft found, inserting product', { draftId, name: draft.name });
+
+    // CRITICAL: Validate supplier has shipping methods before publishing
+    const supplierId = draft.supplier_id;
+    if (!supplierId) {
+      return { 
+        success: false, 
+        error: 'Cannot publish product: Supplier ID is required for shipping system' 
+      };
+    }
+    
+    const hasShippingMethods = await storage.validateSupplierHasShippingMethods(supplierId);
+    if (!hasShippingMethods) {
+      return { 
+        success: false, 
+        error: `Cannot publish product: Supplier ID ${supplierId} has no shipping methods configured. Please configure shipping methods for this supplier first.` 
+      };
+    }
 
     // Insert product with all the fields including the missing ones
     const productRows = await db.execute(sql`

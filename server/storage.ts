@@ -2945,6 +2945,17 @@ export class DatabaseStorage implements IStorage {
 
   async updateProduct(productId: number, productData: Partial<InsertProduct>): Promise<Product> {
     try {
+      // CRITICAL: Validate supplier has shipping methods if supplierId is being changed
+      if (productData.supplierId !== undefined) {
+        const hasShippingMethods = await this.validateSupplierHasShippingMethods(productData.supplierId);
+        if (!hasShippingMethods) {
+          throw new Error(
+            `Cannot update product: Supplier ID ${productData.supplierId} has no shipping methods configured. ` +
+            `Please configure shipping methods for this supplier first.`
+          );
+        }
+      }
+      
       // Use snake_case field names like the working createProductWithWizard method
       const updateData = {
         name: productData.name,
@@ -2989,6 +3000,17 @@ export class DatabaseStorage implements IStorage {
 
   async updateProductFromDraft(productId: number, productData: Partial<InsertProduct>): Promise<Product> {
     try {
+      // CRITICAL: Validate supplier has shipping methods if supplierId is being changed
+      if (productData.supplierId !== undefined) {
+        const hasShippingMethods = await this.validateSupplierHasShippingMethods(productData.supplierId);
+        if (!hasShippingMethods) {
+          throw new Error(
+            `Cannot update product: Supplier ID ${productData.supplierId} has no shipping methods configured. ` +
+            `Please configure shipping methods for this supplier first.`
+          );
+        }
+      }
+      
       const [updatedProduct] = await db
         .update(products)
         .set(productData)
