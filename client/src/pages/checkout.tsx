@@ -342,14 +342,15 @@ export default function CheckoutPage() {
   );
   const safeShippingCost = shippingCost || 0;
 
-  // Detect multi-supplier mode
+  // Detect configured shipping mode (works for single or multiple suppliers)
   const supplierGroups = shippingAnalysis?.success && shippingAnalysis?.data?.supplierGroups 
     ? shippingAnalysis.data.supplierGroups 
     : [];
+  const hasConfiguredShipping = supplierGroups.length > 0;
   const isMultiSupplier = supplierGroups.length > 1;
 
-  // Use multi-supplier shipping cost if applicable, otherwise use legacy calculation
-  const finalShippingCost = isMultiSupplier ? multiSupplierShippingCost : safeShippingCost;
+  // Use configured shipping cost if available, otherwise use legacy calculation
+  const finalShippingCost = hasConfiguredShipping ? multiSupplierShippingCost : safeShippingCost;
   
   // Get VAT settings from API response and check if they're ACTIVE
   const vatRateValue = parseFloat(vatRateSettings?.data?.settingValue || '0');
@@ -885,7 +886,7 @@ export default function CheckoutPage() {
             </Card>
 
             {/* Shipping Method - Conditional Rendering */}
-            {isMultiSupplier ? (
+            {hasConfiguredShipping ? (
               <MultiSupplierShipping
                 supplierGroups={supplierGroups}
                 onShippingChange={(selections, totalCost) => {
