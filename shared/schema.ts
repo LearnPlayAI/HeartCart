@@ -109,7 +109,8 @@ export const products = pgTable("products", {
   specialSaleStart: text("special_sale_start"), // Changed from timestamp to text
   specialSaleEnd: text("special_sale_end"), // Changed from timestamp to text
   soldCount: integer("sold_count").default(0),
-  supplier: text("supplier"),
+  supplier: text("supplier"), // Legacy text field - kept for backward compatibility
+  supplierId: integer("supplierId").references(() => suppliers.id), // New FK to suppliers table
   freeShipping: boolean("free_shipping").default(false),
   weight: doublePrecision("weight"), // in kg
   dimensions: text("dimensions"), // format: "LxWxH" in cm
@@ -169,9 +170,13 @@ export const orders = pgTable("orders", {
   shippingAddress: text("shippingAddress").notNull(),
   shippingCity: text("shippingCity").notNull(),
   shippingPostalCode: text("shippingPostalCode").notNull(),
-  shippingMethod: text("shippingMethod").notNull().default("standard"), // standard, express
-  shippingCost: doublePrecision("shippingCost").notNull().default(85), // R85 for PUDO - customer payment amount
+  shippingMethod: text("shippingMethod").notNull().default("standard"), // standard, express - legacy field
+  shippingCost: doublePrecision("shippingCost").notNull().default(85), // R85 for PUDO - customer payment amount - legacy field
   actualShippingCost: doublePrecision("actualShippingCost").default(60), // Actual shipping cost to company for profit calculation
+  
+  // Multi-supplier shipping system fields
+  shippingTotal: decimal("shippingTotal", { precision: 10, scale: 2 }), // Total shipping cost across all shipments
+  shipmentCount: integer("shipmentCount"), // Number of separate shipments for this order
   
   // Payment information
   paymentMethod: text("paymentMethod").notNull().default("eft"), // eft, card
@@ -337,8 +342,100 @@ export const suppliers = pgTable("suppliers", {
   logo: text("logo"),
   website: varchar("website", { length: 255 }),
   isActive: boolean("is_active").default(true).notNull(),
+  
+  // Multi-supplier shipping system fields (camelCase)
+  defaultShippingMethodId: integer("defaultShippingMethodId").references(() => shippingMethods.id),
+  shippingNotes: text("shippingNotes"),
+  preferredLogisticsCompanyId: integer("preferredLogisticsCompanyId").references(() => logisticsCompanies.id),
+  
   createdAt: text("created_at").default(String(new Date().toISOString())).notNull(),
   updatedAt: text("updated_at").default(String(new Date().toISOString())).notNull(),
+});
+
+// =============================================================================
+// MULTI-SUPPLIER SHIPPING SYSTEM TABLES
+// =============================================================================
+
+// Logistics Companies table - manages shipping providers (PUDO, Courier Guy, etc.)
+export const logisticsCompanies = pgTable("logisticsCompanies", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  description: text("description"),
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: text("createdAt").default(String(new Date().toISOString())).notNull(),
+  updatedAt: text("updatedAt").default(String(new Date().toISOString())).notNull(),
+}, (table) => {
+  return {
+    nameIdx: index("logisticsCompanies_name_idx").on(table.name),
+    isActiveIdx: index("logisticsCompanies_isActive_idx").on(table.isActive),
+  };
+});
+
+// Shipping Methods table - specific shipping options under each logistics company
+export const shippingMethods = pgTable("shippingMethods", {
+  id: serial("id").primaryKey(),
+  companyId: integer("companyId").notNull().references(() => logisticsCompanies.id, { onDelete: "restrict" }),
+  name: text("name").notNull(),
+  description: text("description"),
+  basePrice: decimal("basePrice", { precision: 10, scale: 2 }).notNull(),
+  estimatedDays: text("estimatedDays"), // e.g., "2-3 business days"
+  isActive: boolean("isActive").default(true).notNull(),
+  metadata: jsonb("metadata"), // For additional configuration like weight limits, etc.
+  createdAt: text("createdAt").default(String(new Date().toISOString())).notNull(),
+  updatedAt: text("updatedAt").default(String(new Date().toISOString())).notNull(),
+}, (table) => {
+  return {
+    companyIdIdx: index("shippingMethods_companyId_idx").on(table.companyId),
+    nameIdx: index("shippingMethods_name_idx").on(table.name),
+    isActiveIdx: index("shippingMethods_isActive_idx").on(table.isActive),
+    // Ensure unique method names per company
+    companyMethodUnique: unique("shippingMethods_company_method_unique").on(table.companyId, table.name),
+  };
+});
+
+// Supplier Shipping Methods - junction table linking suppliers to their available shipping methods
+export const supplierShippingMethods = pgTable("supplierShippingMethods", {
+  supplierId: integer("supplierId").notNull().references(() => suppliers.id, { onDelete: "cascade" }),
+  methodId: integer("methodId").notNull().references(() => shippingMethods.id, { onDelete: "restrict" }),
+  customPrice: decimal("customPrice", { precision: 10, scale: 2 }), // Override basePrice if set
+  isEnabled: boolean("isEnabled").default(true).notNull(),
+  isDefault: boolean("isDefault").default(false).notNull(),
+  deliveryNotes: text("deliveryNotes"), // Special instructions for this supplier's use of this method
+  handlingFee: decimal("handlingFee", { precision: 10, scale: 2 }), // Additional handling fee if applicable
+  createdAt: text("createdAt").default(String(new Date().toISOString())).notNull(),
+  updatedAt: text("updatedAt").default(String(new Date().toISOString())).notNull(),
+}, (table) => {
+  return {
+    supplierIdIdx: index("supplierShippingMethods_supplierId_idx").on(table.supplierId),
+    methodIdIdx: index("supplierShippingMethods_methodId_idx").on(table.methodId),
+    // Ensure each supplier-method combination is unique
+    supplierMethodUnique: unique("supplierShippingMethods_supplier_method_unique").on(table.supplierId, table.methodId),
+  };
+});
+
+// Order Shipments table - tracks individual shipments within an order (one per supplier)
+export const orderShipments = pgTable("orderShipments", {
+  id: serial("id").primaryKey(),
+  orderId: integer("orderId").notNull().references(() => orders.id, { onDelete: "cascade" }),
+  supplierId: integer("supplierId").notNull().references(() => suppliers.id, { onDelete: "restrict" }),
+  methodId: integer("methodId").notNull().references(() => shippingMethods.id, { onDelete: "restrict" }),
+  cost: decimal("cost", { precision: 10, scale: 2 }).notNull(),
+  status: text("status").notNull().default("pending"), // pending, processing, shipped, delivered, cancelled
+  trackingNumber: text("trackingNumber"),
+  displayLabel: text("displayLabel"), // e.g., "Shipment 1", "Shipment 2" for customer display
+  lockerCode: text("lockerCode"), // PUDO locker code if applicable
+  items: jsonb("items"), // Denormalized snapshot of items in this shipment for easy display
+  estimatedDelivery: text("estimatedDelivery"),
+  deliveredAt: text("deliveredAt"),
+  createdAt: text("createdAt").default(String(new Date().toISOString())).notNull(),
+  updatedAt: text("updatedAt").default(String(new Date().toISOString())).notNull(),
+}, (table) => {
+  return {
+    orderIdIdx: index("orderShipments_orderId_idx").on(table.orderId),
+    supplierIdIdx: index("orderShipments_supplierId_idx").on(table.supplierId),
+    statusIdx: index("orderShipments_status_idx").on(table.status),
+    methodIdIdx: index("orderShipments_methodId_idx").on(table.methodId),
+  };
 });
 
 // Catalogs table
@@ -716,6 +813,30 @@ export const insertSupplierSchema = createInsertSchema(suppliers).omit({
   updatedAt: true,
 });
 
+// Multi-supplier shipping system insert schemas
+export const insertLogisticsCompanySchema = createInsertSchema(logisticsCompanies).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertShippingMethodSchema = createInsertSchema(shippingMethods).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSupplierShippingMethodSchema = createInsertSchema(supplierShippingMethods).omit({
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertOrderShipmentSchema = createInsertSchema(orderShipments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertCatalogSchema = createInsertSchema(catalogs).omit({
   id: true,
   createdAt: true,
@@ -863,6 +984,19 @@ export type InsertAiSetting = z.infer<typeof insertAiSettingsSchema>;
 
 export type Supplier = typeof suppliers.$inferSelect;
 export type InsertSupplier = z.infer<typeof insertSupplierSchema>;
+
+// Multi-supplier shipping system types
+export type LogisticsCompany = typeof logisticsCompanies.$inferSelect;
+export type InsertLogisticsCompany = z.infer<typeof insertLogisticsCompanySchema>;
+
+export type ShippingMethod = typeof shippingMethods.$inferSelect;
+export type InsertShippingMethod = z.infer<typeof insertShippingMethodSchema>;
+
+export type SupplierShippingMethod = typeof supplierShippingMethods.$inferSelect;
+export type InsertSupplierShippingMethod = z.infer<typeof insertSupplierShippingMethodSchema>;
+
+export type OrderShipment = typeof orderShipments.$inferSelect;
+export type InsertOrderShipment = z.infer<typeof insertOrderShipmentSchema>;
 
 export type Catalog = typeof catalogs.$inferSelect;
 export type InsertCatalog = z.infer<typeof insertCatalogSchema>;
