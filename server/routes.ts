@@ -6852,6 +6852,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }));
 
   // Cart Shipping Analysis Routes (Public/Customer)
+  // GET endpoint for current user's cart
+  app.get("/api/cart/analyze-shipping", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const userId = (req.user as any)?.id;
+      if (!userId) {
+        throw new AppError(
+          "User not authenticated",
+          ErrorCode.UNAUTHORIZED,
+          401
+        );
+      }
+      
+      // Get user's cart items
+      const cartItems = await storage.getCartItems(userId);
+      
+      if (!cartItems || cartItems.length === 0) {
+        return res.json({
+          success: true,
+          data: {
+            supplierGroups: [],
+            groupedBySupplier: [],
+            totalShippingCost: 0,
+            validationErrors: []
+          }
+        });
+      }
+      
+      // Convert cart items to analysis format
+      const items = cartItems.map(item => ({
+        productId: item.productId,
+        quantity: item.quantity
+      }));
+      
+      const analysis = await storage.analyzeCartShipping(items);
+      
+      // Fetch all logistics companies for enrichment
+      const companies = await storage.getAllLogisticsCompanies(true);
+      const companyMap = new Map(companies.map(c => [c.id, c.name]));
+      
+      // Serialize supplier groups with shipping method data transformation
+      const serializedData = {
+        ...analysis,
+        supplierGroups: analysis.groupedBySupplier.map(group => ({
+          supplierId: group.supplierId,
+          supplierName: group.supplier.name,
+          items: group.items.map(item => ({
+            productId: item.productId,
+            productName: item.productName || '',
+            quantity: item.quantity,
+            price: parseFloat(item.price?.toString() || '0')
+          })),
+          availableMethods: group.availableMethods.map(method => {
+            const serializedMethod = serializeShippingMethod(method, companyMap.get(method.companyId) || 'Unknown');
+            // Find the supplier-specific configuration
+            const supplierMethod = group.supplier.supplierShippingMethods?.find(sm => sm.methodId === method.id);
+            return {
+              id: method.id,
+              name: method.name,
+              code: serializedMethod.code,
+              customerPrice: supplierMethod?.customPrice != null ? parseFloat(supplierMethod.customPrice.toString()) : serializedMethod.baseCost,
+              estimatedDeliveryDays: serializedMethod.estimatedDeliveryDays,
+              isDefault: supplierMethod?.isDefault || false,
+              logisticsCompanyName: serializedMethod.logisticsCompanyName
+            };
+          }),
+          defaultMethodId: group.defaultMethod?.id || (group.availableMethods[0]?.id || 0)
+        }))
+      };
+      
+      return res.json({
+        success: true,
+        data: serializedData
+      });
+    } catch (error) {
+      logger.error('Error analyzing user cart shipping', { error, userId: (req.user as any)?.id });
+      throw new AppError(
+        "Failed to analyze cart shipping options. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
+    }
+  }));
+
+  // POST endpoint for custom cart analysis
   app.post("/api/cart/analyze-shipping", asyncHandler(async (req: Request, res: Response) => {
     try {
       const cartAnalysisSchema = z.object({
