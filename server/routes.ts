@@ -6864,8 +6864,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
       }
       
-      // Get user's cart items
-      const cartItems = await storage.getCartItems(userId);
+      // Get user's cart items with product information
+      const cartItems = await storage.getCartItemsWithProducts(userId);
       
       if (!cartItems || cartItems.length === 0) {
         return res.json({
@@ -6885,6 +6885,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         quantity: item.quantity
       }));
       
+      // Create a map of product info from cart items for enrichment
+      const productInfoMap = new Map(cartItems.map(item => [
+        item.productId,
+        {
+          name: item.product?.name || '',
+          price: item.itemPrice ? parseFloat(item.itemPrice.toString()) : (item.product?.salePrice || item.product?.price || 0)
+        }
+      ]));
+      
       const analysis = await storage.analyzeCartShipping(items);
       
       // Fetch all logistics companies for enrichment
@@ -6895,12 +6904,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const supplierGroups = analysis.groupedBySupplier.map(group => ({
         supplierId: group.supplierId,
         supplierName: group.supplier.name,
-        items: group.items.map(item => ({
-          productId: item.productId,
-          productName: item.productName || '',
-          quantity: item.quantity,
-          price: parseFloat(item.price?.toString() || '0')
-        })),
+        items: group.items.map(item => {
+          const productInfo = productInfoMap.get(item.productId);
+          return {
+            productId: item.productId,
+            productName: productInfo?.name || '',
+            quantity: item.quantity,
+            price: parseFloat((productInfo?.price || 0).toString())
+          };
+        }),
         availableMethods: group.availableMethods.map(method => {
           const serializedMethod = serializeShippingMethod(method, companyMap.get(method.companyId) || 'Unknown');
           // Find the supplier-specific configuration

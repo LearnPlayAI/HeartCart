@@ -4,7 +4,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Truck, Package, Clock, DollarSign } from "lucide-react";
+import { Truck, Package, Clock } from "lucide-react";
 
 export type SupplierGroup = {
   supplierId: number;
@@ -125,7 +125,6 @@ export default function MultiSupplierShipping({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Badge variant="outline">Shipment {index + 1}</Badge>
-                  <CardTitle className="text-lg">{group.supplierName}</CardTitle>
                 </div>
                 <span className="text-sm text-muted-foreground">
                   {group.items.length} {group.items.length === 1 ? 'item' : 'items'}
@@ -201,7 +200,6 @@ export default function MultiSupplierShipping({
                               </div>
                             </div>
                             <div className="flex items-center gap-1 ml-4">
-                              <DollarSign className="h-4 w-4 text-muted-foreground" />
                               <span className="font-semibold">R{method.customerPrice.toFixed(2)}</span>
                             </div>
                           </Label>
