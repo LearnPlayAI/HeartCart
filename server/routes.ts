@@ -6160,6 +6160,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }));
 
+  app.patch("/api/logistics-companies/:id", isAuthenticated, isAdmin, asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updateData = req.body;
+      
+      const company = await storage.updateLogisticsCompany(id, updateData);
+      
+      if (!company) {
+        throw new NotFoundError(`Logistics company with ID ${id} not found`, "logisticsCompany");
+      }
+      
+      return res.json({
+        success: true,
+        data: company,
+        message: `Logistics company "${company.name}" updated successfully`
+      });
+    } catch (error) {
+      logger.error('Error updating logistics company', { error, id: req.params.id });
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
+      throw new AppError(
+        "Failed to update logistics company. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
+    }
+  }));
+
   app.delete("/api/logistics-companies/:id", isAuthenticated, isAdmin, asyncHandler(async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
@@ -6288,6 +6318,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }));
 
   app.put("/api/shipping-methods/:id", isAuthenticated, isAdmin, asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updateData = req.body;
+      
+      const method = await storage.updateShippingMethod(id, updateData);
+      
+      if (!method) {
+        throw new NotFoundError(`Shipping method with ID ${id} not found`, "shippingMethod");
+      }
+      
+      return res.json({
+        success: true,
+        data: method,
+        message: `Shipping method "${method.name}" updated successfully`
+      });
+    } catch (error) {
+      logger.error('Error updating shipping method', { error, id: req.params.id });
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
+      throw new AppError(
+        "Failed to update shipping method. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
+    }
+  }));
+
+  app.patch("/api/shipping-methods/:id", isAuthenticated, isAdmin, asyncHandler(async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       const updateData = req.body;

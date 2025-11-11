@@ -3,12 +3,43 @@ import {
   shippingMethods,
   supplierShippingMethods,
   orderShipments,
+  logisticsCompanies,
   type ShippingMethod,
   type InsertShippingMethod
 } from "@shared/schema";
 import { BaseRepository } from "./base-repository";
 
+export type ShippingMethodDTO = {
+  id: number;
+  name: string;
+  code: string;
+  description: string | null;
+  logisticsCompanyId: number;
+  logisticsCompanyName: string;
+  estimatedDeliveryDays: number;
+  baseCost: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export class ShippingMethodRepository extends BaseRepository {
+  private serializeShippingMethod(method: any, companyName: string): ShippingMethodDTO {
+    return {
+      id: method.id,
+      name: method.name,
+      code: method.code || `METHOD_${method.id}`,
+      description: method.description,
+      logisticsCompanyId: method.companyId,
+      logisticsCompanyName: companyName,
+      estimatedDeliveryDays: method.estimatedDays ? parseInt(method.estimatedDays.split('-')[0]) || 3 : 3,
+      baseCost: parseFloat(method.basePrice) || 0,
+      isActive: method.isActive,
+      createdAt: method.createdAt,
+      updatedAt: method.updatedAt,
+    };
+  }
+
   async getShippingMethod(id: number): Promise<ShippingMethod | undefined> {
     try {
       const [method] = await this.db
