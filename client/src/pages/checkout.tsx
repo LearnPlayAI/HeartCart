@@ -212,6 +212,21 @@ export default function CheckoutPage() {
     queryClient.invalidateQueries({ queryKey: ["/api/user"] });
     queryClient.invalidateQueries({ queryKey: ["/api/cart/analyze-shipping"] });
   }, [queryClient]);
+  
+  // CRITICAL FIX: Auto-update shipping cost when cart items change and shipping analysis updates
+  useEffect(() => {
+    if (shippingAnalysis?.success && shippingAnalysis?.data?.totalShippingCost !== undefined) {
+      const newTotalCost = parseFloat(shippingAnalysis.data.totalShippingCost.toString());
+      // Only update if cost has actually changed to avoid unnecessary re-renders
+      if (newTotalCost !== multiSupplierShippingCost) {
+        console.log('🔄 Auto-updating shipping cost from analysis:', {
+          oldCost: multiSupplierShippingCost,
+          newCost: newTotalCost
+        });
+        setMultiSupplierShippingCost(newTotalCost);
+      }
+    }
+  }, [shippingAnalysis]);
 
   // Extract cart items from the response
   const cartItems = cartResponse?.data || [];
