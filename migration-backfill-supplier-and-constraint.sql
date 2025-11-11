@@ -8,20 +8,18 @@ BEGIN;
 -- This supplier will be used for all legacy products that don't have a supplier assigned
 INSERT INTO suppliers (
   name,
-  "contactEmail",
-  "contactPhone",
+  email,
+  phone,
   address,
-  "vatNumber",
-  "isActive",
-  "createdAt",
-  "updatedAt"
+  is_active,
+  created_at,
+  updated_at
 )
 SELECT
   'Unknown Supplier',
   'legacy@heartcart.shop',
   '0000000000',
   'Legacy Products - No Supplier Information',
-  NULL,
   true,
   NOW()::text,
   NOW()::text
@@ -76,7 +74,11 @@ END $$;
 -- Step 5: Apply the NOT NULL constraint
 ALTER TABLE products ALTER COLUMN "supplierId" SET NOT NULL;
 
-RAISE NOTICE 'Successfully applied NOT NULL constraint to products.supplierId';
+-- Success message
+DO $$
+BEGIN
+  RAISE NOTICE 'Successfully applied NOT NULL constraint to products.supplierId';
+END $$;
 
 COMMIT;
 
