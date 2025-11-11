@@ -6231,23 +6231,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const deserializeShippingMethodInput = (frontendData: any) => {
     const dbData: any = { ...frontendData };
     
-    // Map frontend fields to database fields
-    if (frontendData.logisticsCompanyId !== undefined) {
+    // Map frontend fields to database fields (only if present)
+    if ('logisticsCompanyId' in frontendData && frontendData.logisticsCompanyId !== undefined) {
       dbData.companyId = frontendData.logisticsCompanyId;
       delete dbData.logisticsCompanyId;
     }
-    if (frontendData.baseCost !== undefined) {
-      dbData.basePrice = frontendData.baseCost.toString();
+    if ('baseCost' in frontendData && frontendData.baseCost !== undefined) {
+      dbData.basePrice = typeof frontendData.baseCost === 'number' 
+        ? frontendData.baseCost.toString() 
+        : frontendData.baseCost;
       delete dbData.baseCost;
     }
-    if (frontendData.estimatedDeliveryDays !== undefined) {
-      dbData.estimatedDays = frontendData.estimatedDeliveryDays.toString();
+    if ('estimatedDeliveryDays' in frontendData && frontendData.estimatedDeliveryDays !== undefined) {
+      dbData.estimatedDays = typeof frontendData.estimatedDeliveryDays === 'number'
+        ? frontendData.estimatedDeliveryDays.toString()
+        : frontendData.estimatedDeliveryDays;
       delete dbData.estimatedDeliveryDays;
     }
     
-    // Remove frontend-only fields
+    // Remove frontend-only fields that should not be in DB
     delete dbData.logisticsCompanyName;
-    delete dbData.code; // code is auto-generated
+    delete dbData.code; // code is stored in DB but auto-generated, don't allow updates
     
     return dbData;
   };
