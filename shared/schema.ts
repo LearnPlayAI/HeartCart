@@ -1197,6 +1197,10 @@ export const productsRelations = relations(products, ({ one, many }) => ({
     fields: [products.catalogId],
     references: [catalogs.id]
   }),
+  supplier: one(suppliers, {
+    fields: [products.supplierId],
+    references: [suppliers.id]
+  }),
   images: many(productImages),
   productPromotions: many(productPromotions),
   favourites: many(userFavourites),
@@ -1218,8 +1222,61 @@ export const catalogsRelations = relations(catalogs, ({ one, many }) => ({
   products: many(products)
 }));
 
-export const suppliersRelations = relations(suppliers, ({ many }) => ({
-  catalogs: many(catalogs)
+export const suppliersRelations = relations(suppliers, ({ one, many }) => ({
+  catalogs: many(catalogs),
+  products: many(products),
+  supplierShippingMethods: many(supplierShippingMethods),
+  orderShipments: many(orderShipments),
+  defaultShippingMethod: one(shippingMethods, {
+    fields: [suppliers.defaultShippingMethodId],
+    references: [shippingMethods.id]
+  }),
+  preferredLogisticsCompany: one(logisticsCompanies, {
+    fields: [suppliers.preferredLogisticsCompanyId],
+    references: [logisticsCompanies.id]
+  })
+}));
+
+// Multi-supplier shipping system relations
+export const logisticsCompaniesRelations = relations(logisticsCompanies, ({ many }) => ({
+  shippingMethods: many(shippingMethods),
+  preferredBySuppliers: many(suppliers)
+}));
+
+export const shippingMethodsRelations = relations(shippingMethods, ({ one, many }) => ({
+  company: one(logisticsCompanies, {
+    fields: [shippingMethods.companyId],
+    references: [logisticsCompanies.id]
+  }),
+  supplierShippingMethods: many(supplierShippingMethods),
+  orderShipments: many(orderShipments),
+  defaultForSuppliers: many(suppliers)
+}));
+
+export const supplierShippingMethodsRelations = relations(supplierShippingMethods, ({ one }) => ({
+  supplier: one(suppliers, {
+    fields: [supplierShippingMethods.supplierId],
+    references: [suppliers.id]
+  }),
+  method: one(shippingMethods, {
+    fields: [supplierShippingMethods.methodId],
+    references: [shippingMethods.id]
+  })
+}));
+
+export const orderShipmentsRelations = relations(orderShipments, ({ one }) => ({
+  order: one(orders, {
+    fields: [orderShipments.orderId],
+    references: [orders.id]
+  }),
+  supplier: one(suppliers, {
+    fields: [orderShipments.supplierId],
+    references: [suppliers.id]
+  }),
+  method: one(shippingMethods, {
+    fields: [orderShipments.methodId],
+    references: [shippingMethods.id]
+  })
 }));
 
 // Favourites and Analytics Relations
@@ -1289,7 +1346,8 @@ export const ordersRelations = relations(orders, ({ one, many }) => ({
     fields: [orders.selectedLockerId],
     references: [pudoLockers.id]
   }),
-  orderItems: many(orderItems)
+  orderItems: many(orderItems),
+  orderShipments: many(orderShipments)
 }));
 
 // PUDO Lockers relations
