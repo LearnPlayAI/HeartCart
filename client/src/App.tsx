@@ -83,6 +83,8 @@ import UserCartsPage from "@/pages/admin/user-carts";
 import UserCartDetailPage from "@/pages/admin/user-cart-detail";
 import CustomerCreditsPage from "@/pages/admin/customer-credits";
 import LogisticsCompaniesPage from "@/pages/admin/logistics-companies";
+import ShippingMethodsPage from "@/pages/admin/shipping-methods";
+import SupplierShippingPage from "@/pages/admin/supplier-shipping";
 
 // Developer Pages
 import DeveloperDashboard from "@/pages/developer";
@@ -248,6 +250,8 @@ function App() {
                   <AdminProtectedRoute path="/admin/orders/:id" component={AdminOrderDetail} />
                   <AdminProtectedRoute path="/admin/supplier-orders" component={SupplierOrders} />
                   <AdminProtectedRoute path="/admin/logistics-companies" component={LogisticsCompaniesPage} />
+                  <AdminProtectedRoute path="/admin/shipping-methods" component={ShippingMethodsPage} />
+                  <AdminProtectedRoute path="/admin/supplier-shipping" component={SupplierShippingPage} />
                   <AdminProtectedRoute path="/admin/user-carts" component={UserCartsPage} />
                   <AdminProtectedRoute path="/admin/user-carts/:userId" component={UserCartDetailPage} />
                   <AdminProtectedRoute path="/admin/users" component={UserAdminPageFixed} />
