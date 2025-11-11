@@ -6666,11 +6666,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const companies = await storage.getAllLogisticsCompanies(true);
       const companyMap = new Map(companies.map(c => [c.id, c.name]));
       
-      // Serialize nested shipping methods with company names
-      const serializedMethods = methods.map(item => ({
-        ...item,
-        method: serializeShippingMethod(item.method, companyMap.get(item.method.companyId) || 'Unknown')
-      }));
+      // Serialize both the supplier shipping method fields AND the nested shipping method
+      const serializedMethods = methods.map(item => {
+        const serializedMethod = serializeShippingMethod(item.method, companyMap.get(item.method.companyId) || 'Unknown');
+        return {
+          id: item.id,
+          supplierId: item.supplierId,
+          shippingMethodId: item.methodId,
+          shippingMethodName: item.method.name,
+          customerPrice: item.customPrice != null ? parseFloat(item.customPrice.toString()) : serializedMethod.baseCost,
+          supplierCost: item.supplierCost != null ? parseFloat(item.supplierCost.toString()) : serializedMethod.baseCost,
+          isActive: item.isActive,
+          isDefault: item.isDefault,
+          logisticsCompanyName: serializedMethod.logisticsCompanyName
+        };
+      });
       
       return res.json({
         success: true,
