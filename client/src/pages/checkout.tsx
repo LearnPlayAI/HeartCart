@@ -411,6 +411,7 @@ export default function CheckoutPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/cart"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/cart/analyze-shipping"] });
       toast({
         title: "Item Removed",
         description: "Item has been removed from your cart",
