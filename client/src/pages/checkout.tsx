@@ -33,6 +33,19 @@ import {
   AlertCircle
 } from "lucide-react";
 import ContextualInstallPrompts from "@/components/pwa/ContextualInstallPrompts";
+import MultiSupplierShipping, { type SupplierGroup } from "@/components/checkout/multi-supplier-shipping";
+
+// Multi-supplier shipping analysis types
+type ShippingAnalysisResponse = {
+  success: boolean;
+  data?: {
+    supplierGroups: SupplierGroup[];
+  };
+};
+
+type ShippingSelection = {
+  [supplierId: number]: number; // supplierId -> shippingMethodId
+};
 
 // Enhanced checkout form schema with comprehensive validation
 const checkoutSchema = z.object({
@@ -49,10 +62,8 @@ const checkoutSchema = z.object({
   province: z.string().min(2, "Please select a province"),
   postalCode: z.string().min(4, "Please enter a valid postal code"),
   
-  // Shipping Method
-  shippingMethod: z.enum(["pudo-locker", "pudo-door"], {
-    required_error: "Please select a shipping method"
-  }),
+  // Shipping Method (optional for multi-supplier carts)
+  shippingMethod: z.enum(["pudo-locker", "pudo-door"]).optional(),
   
   // Payment Method - dynamic validation based on available options
   paymentMethod: z.string().min(1, "Please select a payment method"),
@@ -170,6 +181,18 @@ export default function CheckoutPage() {
     queryKey: ['/api/admin/settings/vatRegistrationNumber'],
     staleTime: 5 * 60 * 1000,
   });
+
+  // Fetch cart shipping analysis for multi-supplier support
+  const { data: shippingAnalysis, isLoading: shippingAnalysisLoading } = useQuery<ShippingAnalysisResponse>({
+    queryKey: ["/api/cart/analyze-shipping"],
+    enabled: !!cartResponse?.data && Array.isArray(cartResponse.data) && cartResponse.data.length > 0,
+    staleTime: 0,
+    refetchOnMount: true,
+  });
+
+  // Multi-supplier shipping state
+  const [shippingSelections, setShippingSelections] = useState<ShippingSelection>({});
+  const [multiSupplierShippingCost, setMultiSupplierShippingCost] = useState(0);
 
   // Invalidate preferred locker cache when checkout page loads to ensure fresh data
   useEffect(() => {
@@ -305,6 +328,15 @@ export default function CheckoutPage() {
     userOrders
   );
   const safeShippingCost = shippingCost || 0;
+
+  // Detect multi-supplier mode
+  const supplierGroups = shippingAnalysis?.success && shippingAnalysis?.data?.supplierGroups 
+    ? shippingAnalysis.data.supplierGroups 
+    : [];
+  const isMultiSupplier = supplierGroups.length > 1;
+
+  // Use multi-supplier shipping cost if applicable, otherwise use legacy calculation
+  const finalShippingCost = isMultiSupplier ? multiSupplierShippingCost : safeShippingCost;
   
   // Get VAT settings from API response and check if they're ACTIVE
   const vatRateValue = parseFloat(vatRateSettings?.data?.settingValue || '0');
@@ -337,7 +369,7 @@ export default function CheckoutPage() {
   // Calculate VAT using effective rate (0 if inactive)
   const vatCalculation = calculateVAT({
     subtotal: subtotal,
-    shippingCost: safeShippingCost,
+    shippingCost: finalShippingCost,
     vatRate: effectiveVATRate
   });
 
@@ -462,6 +494,22 @@ export default function CheckoutPage() {
       return;
     }
 
+    // Validate multi-supplier shipping selections
+    if (isMultiSupplier) {
+      const missingSelections = supplierGroups.filter(
+        group => !shippingSelections[group.supplierId]
+      );
+      
+      if (missingSelections.length > 0) {
+        toast({
+          title: "Shipping Method Required",
+          description: `Please select a shipping method for all suppliers (${missingSelections.map(g => g.supplierName).join(", ")})`,
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+
     // Show disclaimer modal before processing order
     setPendingFormData(data);
     setDisclaimersModalOpen(true);
@@ -508,6 +556,23 @@ export default function CheckoutPage() {
         productAttributes: item.attributeSelections || {}
       }));
 
+      // Prepare shipment data based on mode
+      const shipmentData = isMultiSupplier
+        ? {
+            shippingMode: "multi-supplier" as const,
+            shipments: supplierGroups.map(group => ({
+              supplierId: group.supplierId,
+              shippingMethodId: shippingSelections[group.supplierId],
+              customerPrice: group.availableMethods.find(m => m.id === shippingSelections[group.supplierId])?.customerPrice || 0
+            })),
+            shippingCost: multiSupplierShippingCost
+          }
+        : {
+            shippingMode: "single-supplier" as const,
+            shippingMethod: data.shippingMethod,
+            shippingCost: safeShippingCost
+          };
+
       const orderData = {
         customerInfo: {
           firstName: data.firstName,
@@ -522,8 +587,7 @@ export default function CheckoutPage() {
           province: data.province,
           postalCode: data.postalCode
         },
-        shippingMethod: data.shippingMethod,
-        shippingCost: safeShippingCost,
+        ...shipmentData,
         paymentMethod: data.paymentMethod,
         specialInstructions: data.specialInstructions,
         orderItems,
@@ -807,44 +871,54 @@ export default function CheckoutPage() {
               </CardContent>
             </Card>
 
-            {/* Shipping Method */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Truck className="h-5 w-5" />
-                  Shipping Method
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <RadioGroup
-                  value={selectedShippingMethod}
-                  onValueChange={(value) => form.setValue("shippingMethod", value as any)}
-                >
-                  {shippingOptions.map((option) => (
-                    <div key={option.id} className="flex items-center space-x-2 p-4 border rounded-lg">
-                      <RadioGroupItem value={option.id} id={option.id} />
-                      <Label htmlFor={option.id} className="flex-1 cursor-pointer">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <option.icon className="h-5 w-5 text-gray-500" />
-                            <div>
-                              <div className="font-medium">{option.name}</div>
-                              <div className="text-sm text-gray-600">{option.description}</div>
-                              <div className="text-sm text-gray-500">{option.estimatedDays}</div>
+            {/* Shipping Method - Conditional Rendering */}
+            {isMultiSupplier ? (
+              <MultiSupplierShipping
+                supplierGroups={supplierGroups}
+                onShippingChange={(selections, totalCost) => {
+                  setShippingSelections(selections);
+                  setMultiSupplierShippingCost(totalCost);
+                }}
+              />
+            ) : (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Truck className="h-5 w-5" />
+                    Shipping Method
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <RadioGroup
+                    value={selectedShippingMethod}
+                    onValueChange={(value) => form.setValue("shippingMethod", value as any)}
+                  >
+                    {shippingOptions.map((option) => (
+                      <div key={option.id} className="flex items-center space-x-2 p-4 border rounded-lg">
+                        <RadioGroupItem value={option.id} id={option.id} />
+                        <Label htmlFor={option.id} className="flex-1 cursor-pointer">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <option.icon className="h-5 w-5 text-gray-500" />
+                              <div>
+                                <div className="font-medium">{option.name}</div>
+                                <div className="text-sm text-gray-600">{option.description}</div>
+                                <div className="text-sm text-gray-500">{option.estimatedDays}</div>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="font-semibold">
+                                {option.price === 0 ? "Free" : `R${option.price}`}
+                              </div>
                             </div>
                           </div>
-                          <div className="text-right">
-                            <div className="font-semibold">
-                              {option.price === 0 ? "Free" : `R${option.price}`}
-                            </div>
-                          </div>
-                        </div>
-                      </Label>
-                    </div>
-                  ))}
-                </RadioGroup>
-              </CardContent>
-            </Card>
+                        </Label>
+                      </div>
+                    ))}
+                  </RadioGroup>
+                </CardContent>
+              </Card>
+            )}
 
             {/* PUDO Locker Selection */}
             {selectedShippingMethod === "pudo-locker" && (
