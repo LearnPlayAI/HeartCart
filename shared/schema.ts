@@ -1004,6 +1004,14 @@ export type InsertSupplierShippingMethod = z.infer<typeof insertSupplierShipping
 export type OrderShipment = typeof orderShipments.$inferSelect;
 export type InsertOrderShipment = z.infer<typeof insertOrderShipmentSchema>;
 
+// Extended shipment type with method and logistics company details for admin display
+export type ShipmentWithMethod = OrderShipment & {
+  method: ShippingMethod & {
+    logisticsCompanyName: string;
+  };
+  supplierName?: string;
+};
+
 export type Catalog = typeof catalogs.$inferSelect;
 export type InsertCatalog = z.infer<typeof insertCatalogSchema>;
 

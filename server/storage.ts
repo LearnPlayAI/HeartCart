@@ -122,6 +122,7 @@ import {
   orderShipments,
   type OrderShipment,
   type InsertOrderShipment,
+  type ShipmentWithMethod,
 } from "@shared/schema";
 import { db } from "./db";
 import { LogisticsCompanyRepository } from "./storage/modules/logistics-company-repository";
@@ -4282,6 +4283,22 @@ export class DatabaseStorage implements IStorage {
   ): Promise<
     | (Order & {
         items: (OrderItem & { product: Product; attributeDetails?: any })[];
+        shipments?: Array<{
+          id: number;
+          supplierId: number;
+          methodId: number;
+          cost: string;
+          status: string;
+          trackingNumber: string | null;
+          estimatedDelivery: string | null;
+          method: {
+            id: number;
+            name: string;
+            code: string;
+            customerPrice: string;
+            logisticsCompanyName: string;
+          };
+        }>;
       })
     | undefined
   > {
@@ -4383,6 +4400,70 @@ export class DatabaseStorage implements IStorage {
           itemCount: items.length,
         });
 
+        // Fetch orderShipments with shipping methods and logistics companies
+        let shipments: ShipmentWithMethod[] = [];
+        try {
+          const shipmentsData = await db
+            .select({
+              id: orderShipments.id,
+              orderId: orderShipments.orderId,
+              supplierId: orderShipments.supplierId,
+              methodId: orderShipments.methodId,
+              cost: orderShipments.cost,
+              status: orderShipments.status,
+              trackingNumber: orderShipments.trackingNumber,
+              displayLabel: orderShipments.displayLabel,
+              lockerCode: orderShipments.lockerCode,
+              items: orderShipments.items,
+              estimatedDelivery: orderShipments.estimatedDelivery,
+              deliveredAt: orderShipments.deliveredAt,
+              createdAt: orderShipments.createdAt,
+              updatedAt: orderShipments.updatedAt,
+              method: shippingMethods,
+              logisticsCompanyName: logisticsCompanies.name,
+              supplierName: suppliers.name,
+            })
+            .from(orderShipments)
+            .leftJoin(shippingMethods, eq(orderShipments.methodId, shippingMethods.id))
+            .leftJoin(logisticsCompanies, eq(shippingMethods.companyId, logisticsCompanies.id))
+            .leftJoin(suppliers, eq(orderShipments.supplierId, suppliers.id))
+            .where(eq(orderShipments.orderId, id))
+            .orderBy(orderShipments.id);
+
+          shipments = shipmentsData.map(row => ({
+            id: row.id,
+            orderId: row.orderId,
+            supplierId: row.supplierId,
+            methodId: row.methodId,
+            cost: row.cost,
+            status: row.status,
+            trackingNumber: row.trackingNumber,
+            displayLabel: row.displayLabel,
+            lockerCode: row.lockerCode,
+            items: row.items,
+            estimatedDelivery: row.estimatedDelivery,
+            deliveredAt: row.deliveredAt,
+            createdAt: row.createdAt,
+            updatedAt: row.updatedAt,
+            method: row.method ? {
+              ...row.method,
+              logisticsCompanyName: row.logisticsCompanyName || 'Unknown',
+            } : {} as any,
+            supplierName: row.supplierName || undefined,
+          }));
+
+          logger.debug(`Retrieved order shipments`, {
+            orderId: id,
+            shipmentCount: shipments.length,
+          });
+        } catch (shipmentsError) {
+          logger.error(`Error fetching order shipments`, {
+            error: shipmentsError,
+            orderId: id,
+          });
+          // Continue without shipments - don't fail the entire order fetch
+        }
+
         // Parse lockerDetails JSON and enrich with full PUDO locker data if available
         let parsedOrder = { ...order };
         if (order.lockerDetails && typeof order.lockerDetails === 'string') {
@@ -4435,6 +4516,7 @@ export class DatabaseStorage implements IStorage {
         return {
           ...parsedOrder,
           items,
+          shipments,
         };
       } catch (itemsError) {
         logger.error(`Error fetching order items`, {
@@ -4463,6 +4545,7 @@ export class DatabaseStorage implements IStorage {
         return {
           ...parsedOrder,
           items: [],
+          shipments: [],
         };
       }
     } catch (error) {
