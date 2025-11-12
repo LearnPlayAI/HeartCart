@@ -334,9 +334,12 @@ export async function publishProductDraftComplete(draftId: number): Promise<Publ
 
       // 3. Create or update product using proper Drizzle operations
       let productResult;
-      if (draft.originalProductId) {
-        // UPDATE existing product
-        logger.info('Updating existing product with all fields', { originalProductId: draft.originalProductId });
+      if (existingProduct) {
+        // UPDATE existing product (check existingProduct, not draft.originalProductId)
+        logger.info('Updating existing product with all fields', { 
+          originalProductId: existingProduct.id,
+          foundBySlug: !draft.originalProductId 
+        });
         
         // Remove createdAt from update data
         const { createdAt, ...updateData } = productData;
@@ -344,7 +347,7 @@ export async function publishProductDraftComplete(draftId: number): Promise<Publ
         const [updatedProduct] = await tx
           .update(products)
           .set(updateData)
-          .where(eq(products.id, draft.originalProductId))
+          .where(eq(products.id, existingProduct.id))
           .returning();
         productResult = updatedProduct;
       } else {
@@ -362,7 +365,7 @@ export async function publishProductDraftComplete(draftId: number): Promise<Publ
       }
 
       // For new products, update the canonical URL with the actual product ID
-      if (!draft.originalProductId) {
+      if (!existingProduct) {
         await tx
           .update(products)
           .set({ canonicalUrl: generateCanonicalUrl(draft.slug, productResult.id) })
