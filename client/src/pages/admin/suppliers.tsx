@@ -66,8 +66,12 @@ export default function AdminSuppliers() {
   const [searchQuery, setSearchQuery] = useState("");
   // No longer using modal dialog for adding suppliers
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showDeleteOptionsDialog, setShowDeleteOptionsDialog] = useState(false);
   const [showDeactivateDialog, setShowDeactivateDialog] = useState(false);
+  const [showReassignDialog, setShowReassignDialog] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
+  const [productCount, setProductCount] = useState<number>(0);
+  const [targetSupplierId, setTargetSupplierId] = useState<number | null>(null);
   
   // Query suppliers from API - set queryKey to include a parameter forcing inactive suppliers to be shown
   const { data: suppliersResponse, isLoading, refetch } = useQuery<{ success: boolean, data: Supplier[], error?: { message: string } }>({
@@ -122,6 +126,17 @@ export default function AdminSuppliers() {
       return result;
     },
     onSuccess: (result) => {
+      const data = result.data;
+      
+      // If supplier can't be deleted due to associated products
+      if (data && !data.canDelete && data.hasProducts) {
+        setProductCount(data.productCount || 0);
+        setShowDeleteDialog(false);
+        setShowDeleteOptionsDialog(true);
+        return;
+      }
+      
+      // Supplier was successfully deleted
       queryClient.invalidateQueries({ 
         predicate: (query) => {
           const key = query.queryKey;
@@ -131,11 +146,90 @@ export default function AdminSuppliers() {
       setShowDeleteDialog(false);
       setSelectedSupplier(null);
       
+      toast({
+        title: "Supplier deleted",
+        description: result.message || "Supplier was successfully deleted",
+      });
     },
     onError: (error: any) => {
       toast({
         title: "Error",
         description: error.message || "Failed to delete supplier",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const { mutate: reassignProducts, isPending: isReassigning } = useMutation({
+    mutationFn: async ({ oldSupplierId, newSupplierId }: { oldSupplierId: number, newSupplierId: number }) => {
+      const result = await apiRequest("POST", `/api/suppliers/${oldSupplierId}/reassign-products`, {
+        newSupplierId
+      });
+      if (!result.success) {
+        throw new Error(result.error?.message || "Failed to reassign products");
+      }
+      
+      return result;
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const key = query.queryKey;
+          return Array.isArray(key) && key[0] === "/api/suppliers";
+        }
+      });
+      setShowReassignDialog(false);
+      setShowDeleteOptionsDialog(false);
+      setSelectedSupplier(null);
+      setTargetSupplierId(null);
+      
+      toast({
+        title: "Products reassigned",
+        description: result.message || "Products were successfully reassigned",
+      });
+      
+      // Now try to delete the supplier again
+      if (selectedSupplier) {
+        deleteSupplier(selectedSupplier.id);
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to reassign products",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const { mutate: deleteWithProducts, isPending: isDeletingWithProducts } = useMutation({
+    mutationFn: async (id: number) => {
+      const result = await apiRequest("POST", `/api/suppliers/${id}/delete-with-products`);
+      if (!result.success) {
+        throw new Error(result.error?.message || "Failed to delete supplier and products");
+      }
+      
+      return result;
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const key = query.queryKey;
+          return Array.isArray(key) && key[0] === "/api/suppliers";
+        }
+      });
+      setShowDeleteOptionsDialog(false);
+      setSelectedSupplier(null);
+      
+      toast({
+        title: "Supplier and products deleted",
+        description: result.message || "Supplier and all products were successfully deleted",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete supplier and products",
         variant: "destructive",
       });
     },
@@ -407,6 +501,151 @@ export default function AdminSuppliers() {
                 </>
               ) : (
                 "Deactivate"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Options Dialog - shown when supplier has products */}
+      <Dialog open={showDeleteOptionsDialog} onOpenChange={setShowDeleteOptionsDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Supplier Has Associated Products</DialogTitle>
+            <DialogDescription>
+              This supplier has {productCount} product{productCount !== 1 ? 's' : ''} associated with it. 
+              Choose an option to proceed:
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            {selectedSupplier && (
+              <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md p-3">
+                <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                  Supplier: {selectedSupplier.name}
+                </p>
+                <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                  {productCount} product{productCount !== 1 ? 's' : ''} will be affected
+                </p>
+              </div>
+            )}
+            
+            <div className="space-y-2">
+              <Button 
+                variant="outline" 
+                className="w-full justify-start h-auto py-3 px-4"
+                onClick={() => {
+                  setShowDeleteOptionsDialog(false);
+                  setShowReassignDialog(true);
+                }}
+              >
+                <div className="text-left">
+                  <div className="font-medium">Reassign products to another supplier</div>
+                  <div className="text-sm text-muted-foreground mt-1">
+                    Move all products to a different supplier before deleting
+                  </div>
+                </div>
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                className="w-full justify-start h-auto py-3 px-4 border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-900/20"
+                onClick={() => {
+                  if (selectedSupplier) {
+                    if (confirm(`Are you sure you want to delete ${productCount} product${productCount !== 1 ? 's' : ''} along with this supplier? This action cannot be undone.`)) {
+                      deleteWithProducts(selectedSupplier.id);
+                    }
+                  }
+                }}
+                disabled={isDeletingWithProducts}
+              >
+                <div className="text-left">
+                  <div className="font-medium text-red-600 dark:text-red-400">
+                    {isDeletingWithProducts ? (
+                      <span className="flex items-center">
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Deleting...
+                      </span>
+                    ) : (
+                      'Delete supplier and all products'
+                    )}
+                  </div>
+                  <div className="text-sm text-red-500 dark:text-red-400 mt-1">
+                    Permanently remove the supplier and all {productCount} products
+                  </div>
+                </div>
+              </Button>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeleteOptionsDialog(false)}>
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reassign Products Dialog */}
+      <Dialog open={showReassignDialog} onOpenChange={setShowReassignDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Reassign Products</DialogTitle>
+            <DialogDescription>
+              Select a supplier to reassign the {productCount} product{productCount !== 1 ? 's' : ''} to:
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            {selectedSupplier && (
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md p-3">
+                <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                  Moving {productCount} product{productCount !== 1 ? 's' : ''} from: {selectedSupplier.name}
+                </p>
+              </div>
+            )}
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Select target supplier:</label>
+              <select
+                className="w-full border border-gray-300 dark:border-gray-700 rounded-md p-2 bg-white dark:bg-gray-950"
+                value={targetSupplierId || ''}
+                onChange={(e) => setTargetSupplierId(Number(e.target.value))}
+              >
+                <option value="">-- Select a supplier --</option>
+                {suppliers?.filter(s => s.id !== selectedSupplier?.id && s.isActive).map(supplier => (
+                  <option key={supplier.id} value={supplier.id}>
+                    {supplier.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowReassignDialog(false);
+                setShowDeleteOptionsDialog(true);
+              }}
+            >
+              Back
+            </Button>
+            <Button 
+              onClick={() => {
+                if (selectedSupplier && targetSupplierId) {
+                  reassignProducts({
+                    oldSupplierId: selectedSupplier.id,
+                    newSupplierId: targetSupplierId
+                  });
+                }
+              }}
+              disabled={!targetSupplierId || isReassigning}
+            >
+              {isReassigning ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Reassigning...
+                </>
+              ) : (
+                'Reassign Products'
               )}
             </Button>
           </DialogFooter>

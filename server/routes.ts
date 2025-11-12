@@ -21,6 +21,8 @@ import {
   insertCategorySchema,
   insertProductSchema,
   orders,
+  products,
+  suppliers,
   insertProductImageSchema,
   insertPricingSchema,
   insertSupplierSchema,
@@ -5994,30 +5996,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw new NotFoundError(`Supplier with ID ${id} not found`, "supplier");
       }
       
+      // Check for products directly linked to this supplier via supplierId
+      const linkedProductsCount = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(products)
+        .where(eq(products.supplierId, id));
+      
+      const productCount = Number(linkedProductsCount[0]?.count || 0);
+      
+      // If there are linked products, return information (success: true, but canDelete: false)
+      if (productCount > 0) {
+        return res.json({
+          success: true,
+          message: `Supplier "${supplier.name}" has ${productCount} associated product${productCount !== 1 ? 's' : ''}. Choose an action to proceed.`,
+          data: {
+            canDelete: false,
+            hasProducts: true,
+            productCount,
+            supplier: {
+              id: supplier.id,
+              name: supplier.name
+            }
+          }
+        });
+      }
+      
       // Check if supplier has associated catalogs
-      const supplierCatalogs = await storage.getCatalogsBySupplierId(id, false); // Get all catalogs, including inactive
+      const supplierCatalogs = await storage.getCatalogsBySupplierId(id, false);
       
       if (supplierCatalogs.length > 0) {
-        // Check if any products exist in any of the catalogs
-        let totalProducts = 0;
-        for (const catalog of supplierCatalogs) {
-          const productCount = await storage.getProductCountByCatalogId(catalog.id);
-          totalProducts += productCount;
-        }
-        
-        if (totalProducts > 0) {
-          throw new AppError(
-            `Cannot delete supplier "${supplier.name}" because it has ${supplierCatalogs.length} catalogs with ${totalProducts} products. Delete all products and catalogs first, or deactivate the supplier instead.`,
-            ErrorCode.DEPENDENT_ENTITIES_EXIST,
-            409
-          );
-        }
-        
-        throw new AppError(
-          `Cannot delete supplier "${supplier.name}" because it has ${supplierCatalogs.length} catalogs associated with it. Delete all catalogs first, or deactivate the supplier instead.`,
-          ErrorCode.DEPENDENT_ENTITIES_EXIST,
-          409
-        );
+        return res.status(409).json({
+          success: false,
+          code: 'SUPPLIER_HAS_CATALOGS',
+          message: `Cannot delete supplier "${supplier.name}" because it has ${supplierCatalogs.length} catalogs associated with it.`,
+          data: {
+            supplierId: id,
+            supplierName: supplier.name,
+            catalogCount: supplierCatalogs.length
+          }
+        });
       }
       
       const success = await storage.hardDeleteSupplier(id);
@@ -6032,7 +6049,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       return res.json({
         success: true,
-        message: `Supplier "${supplier.name}" deleted successfully`
+        message: `Supplier "${supplier.name}" deleted successfully`,
+        data: {
+          canDelete: true,
+          hasProducts: false,
+          productCount: 0
+        }
       });
     } catch (error) {
       // Log detailed error information with context
@@ -6050,6 +6072,169 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Return generic error for unexpected issues
       throw new AppError(
         "Failed to delete supplier. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
+    }
+  }));
+
+  // Reassign all products from one supplier to another
+  app.post("/api/suppliers/:id/reassign-products", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    const oldSupplierId = parseInt(req.params.id);
+    const { newSupplierId } = req.body;
+    
+    try {
+      if (user.role !== 'admin') {
+        throw new ForbiddenError("Only administrators can manage suppliers");
+      }
+      
+      if (!newSupplierId || typeof newSupplierId !== 'number') {
+        throw new AppError("New supplier ID is required", ErrorCode.VALIDATION_ERROR, 400);
+      }
+      
+      // Check if both suppliers exist
+      const oldSupplier = await storage.getSupplierById(oldSupplierId);
+      if (!oldSupplier) {
+        throw new NotFoundError(`Supplier with ID ${oldSupplierId} not found`, "supplier");
+      }
+      
+      const newSupplier = await storage.getSupplierById(newSupplierId);
+      if (!newSupplier) {
+        throw new NotFoundError(`Target supplier with ID ${newSupplierId} not found`, "supplier");
+      }
+      
+      if (oldSupplierId === newSupplierId) {
+        throw new AppError("Cannot reassign products to the same supplier", ErrorCode.VALIDATION_ERROR, 400);
+      }
+      
+      // Count products to be reassigned
+      const productCountResult = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(products)
+        .where(eq(products.supplierId, oldSupplierId));
+      
+      const productCount = Number(productCountResult[0]?.count || 0);
+      
+      if (productCount === 0) {
+        return res.json({
+          success: true,
+          message: `No products to reassign from "${oldSupplier.name}"`,
+          data: { reassignedCount: 0 }
+        });
+      }
+      
+      // Reassign products in a transaction
+      const result = await db
+        .update(products)
+        .set({ supplierId: newSupplierId })
+        .where(eq(products.supplierId, oldSupplierId));
+      
+      logger.info(`Reassigned ${productCount} products`, {
+        from: oldSupplier.name,
+        to: newSupplier.name,
+        userId: user.id,
+        productCount
+      });
+      
+      return res.json({
+        success: true,
+        message: `Successfully reassigned ${productCount} products from "${oldSupplier.name}" to "${newSupplier.name}"`,
+        data: {
+          reassignedCount: productCount,
+          oldSupplier: { id: oldSupplierId, name: oldSupplier.name },
+          newSupplier: { id: newSupplierId, name: newSupplier.name }
+        }
+      });
+    } catch (error) {
+      logger.error('Error reassigning products', { 
+        error,
+        userId: user.id,
+        oldSupplierId,
+        newSupplierId
+      });
+      
+      if (error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof AppError) {
+        throw error;
+      }
+      
+      throw new AppError(
+        "Failed to reassign products. Please try again.",
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500,
+        { originalError: error }
+      );
+    }
+  }));
+
+  // Delete supplier along with all its products
+  app.post("/api/suppliers/:id/delete-with-products", isAuthenticated, asyncHandler(async (req: Request, res: Response) => {
+    const user = req.user as any;
+    const supplierId = parseInt(req.params.id);
+    
+    try {
+      if (user.role !== 'admin') {
+        throw new ForbiddenError("Only administrators can manage suppliers");
+      }
+      
+      // Check if supplier exists
+      const supplier = await storage.getSupplierById(supplierId);
+      if (!supplier) {
+        throw new NotFoundError(`Supplier with ID ${supplierId} not found`, "supplier");
+      }
+      
+      // Count products to be deleted
+      const productCountResult = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(products)
+        .where(eq(products.supplierId, supplierId));
+      
+      const productCount = Number(productCountResult[0]?.count || 0);
+      
+      // Delete products and supplier in a transaction
+      await db.transaction(async (tx) => {
+        // First delete all products
+        if (productCount > 0) {
+          await tx
+            .delete(products)
+            .where(eq(products.supplierId, supplierId));
+        }
+        
+        // Then delete the supplier
+        await tx
+          .delete(suppliers)
+          .where(eq(suppliers.id, supplierId));
+      });
+      
+      logger.info(`Deleted supplier with products`, {
+        supplierName: supplier.name,
+        supplierId,
+        productCount,
+        userId: user.id
+      });
+      
+      return res.json({
+        success: true,
+        message: `Successfully deleted supplier "${supplier.name}" and ${productCount} associated products`,
+        data: {
+          deletedProductCount: productCount,
+          supplier: { id: supplierId, name: supplier.name }
+        }
+      });
+    } catch (error) {
+      logger.error('Error deleting supplier with products', { 
+        error,
+        userId: user.id,
+        supplierId
+      });
+      
+      if (error instanceof NotFoundError || error instanceof ForbiddenError || error instanceof AppError) {
+        throw error;
+      }
+      
+      throw new AppError(
+        "Failed to delete supplier and products. Please try again.",
         ErrorCode.INTERNAL_SERVER_ERROR,
         500,
         { originalError: error }
