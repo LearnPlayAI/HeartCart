@@ -5410,6 +5410,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
     })
   );
 
+  // Update shipment tracking number (Admin only)
+  app.patch(
+    "/api/admin/shipments/:shipmentId/tracking",
+    isAuthenticated,
+    validateRequest({
+      params: z.object({
+        shipmentId: z.coerce.number().positive("Shipment ID must be a positive number")
+      }),
+      body: z.object({
+        trackingNumber: z.string().trim().optional().nullable()
+      })
+    }),
+    asyncHandler(async (req: Request, res: Response) => {
+      const user = req.user as any;
+      const shipmentId = Number(req.params.shipmentId);
+      const { trackingNumber } = req.body;
+      
+      // Check if user is admin
+      if (user.role !== 'admin') {
+        return res.status(403).json({
+          success: false,
+          error: { message: "Admin access required" }
+        });
+      }
+      
+      try {
+        // Update the tracking number for the specific shipment
+        const [updatedShipment] = await db
+          .update(orderShipments)
+          .set({ 
+            trackingNumber: trackingNumber?.trim() || null,
+            updatedAt: new Date().toISOString() 
+          })
+          .where(eq(orderShipments.id, shipmentId))
+          .returning();
+        
+        if (!updatedShipment) {
+          return res.status(404).json({
+            success: false,
+            error: { message: "Shipment not found" }
+          });
+        }
+        
+        logger.info('Shipment tracking number updated', { 
+          adminId: user.id, 
+          shipmentId,
+          trackingNumber 
+        });
+        
+        return res.json({
+          success: true,
+          data: updatedShipment,
+          message: "Tracking number updated successfully"
+        });
+      } catch (error) {
+        logger.error('Error updating shipment tracking number', { 
+          error, 
+          adminId: user.id, 
+          shipmentId 
+        });
+        
+        return res.status(500).json({
+          success: false,
+          error: { message: "Failed to update tracking number" }
+        });
+      }
+    })
+  );
+
   // Delete order endpoint (Admin only)
   app.delete(
     "/api/admin/orders/:id",

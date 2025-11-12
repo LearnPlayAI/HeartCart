@@ -372,6 +372,10 @@ export default function AdminOrderDetail() {
   const [actualShippingCost, setActualShippingCost] = useState("");
   const [copiedField, setCopiedField] = useState<string | null>(null);
   
+  // Shipment tracking state - track editing state and input values per shipment
+  const [editingShipmentTracking, setEditingShipmentTracking] = useState<Record<number, boolean>>({});
+  const [shipmentTrackingInputs, setShipmentTrackingInputs] = useState<Record<number, string>>({});
+  
   // Custom line items state
   const [lineItemType, setLineItemType] = useState<'packaging' | 'shipping' | 'misc'>('packaging');
   const [customPrice, setCustomPrice] = useState('');
@@ -548,6 +552,36 @@ export default function AdminOrderDetail() {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
       setTrackingInput("");
       
+    },
+    onError: () => {
+      toast({ 
+        variant: "destructive",
+        description: "Failed to update tracking number" 
+      });
+    }
+  });
+
+  // Update shipment tracking number mutation
+  const updateShipmentTrackingMutation = useMutation({
+    mutationFn: async ({ shipmentId, trackingNumber }: { shipmentId: number; trackingNumber: string }) => {
+      return await apiRequest('PATCH', `/api/admin/shipments/${shipmentId}/tracking`, { trackingNumber });
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/orders', orderId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
+      // Clear editing state for this shipment
+      setEditingShipmentTracking(prev => ({
+        ...prev,
+        [variables.shipmentId]: false
+      }));
+      setShipmentTrackingInputs(prev => ({
+        ...prev,
+        [variables.shipmentId]: ''
+      }));
+      toast({ 
+        title: "Success",
+        description: "Tracking number updated successfully" 
+      });
     },
     onError: () => {
       toast({ 
@@ -977,41 +1011,44 @@ export default function AdminOrderDetail() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Tracking Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {order.trackingNumber && (
+            {/* Legacy single tracking card - only show for orders without shipments */}
+            {(!order.shipments || order.shipments.length === 0) && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Tracking Information</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {order.trackingNumber && (
+                    <div>
+                      <label className="text-sm font-medium">Current Tracking Number:</label>
+                      <p className="text-sm bg-muted p-2 rounded mt-1">{order.trackingNumber}</p>
+                    </div>
+                  )}
+                  
                   <div>
-                    <label className="text-sm font-medium">Current Tracking Number:</label>
-                    <p className="text-sm bg-muted p-2 rounded mt-1">{order.trackingNumber}</p>
+                    <label className="text-sm font-medium">Update Tracking Number:</label>
+                    <div className="flex space-x-2 mt-1">
+                      <Input
+                        placeholder="Enter tracking number"
+                        value={trackingInput}
+                        onChange={(e) => setTrackingInput(e.target.value)}
+                        className="flex-1"
+                      />
+                      <Button
+                        onClick={() => updateTrackingMutation.mutate({ 
+                          orderId: order.id, 
+                          trackingNumber: trackingInput 
+                        })}
+                        disabled={updateTrackingMutation.isPending || !trackingInput.trim()}
+                        size="sm"
+                      >
+                        Update
+                      </Button>
+                    </div>
                   </div>
-                )}
-                
-                <div>
-                  <label className="text-sm font-medium">Update Tracking Number:</label>
-                  <div className="flex space-x-2 mt-1">
-                    <Input
-                      placeholder="Enter tracking number"
-                      value={trackingInput}
-                      onChange={(e) => setTrackingInput(e.target.value)}
-                      className="flex-1"
-                    />
-                    <Button
-                      onClick={() => updateTrackingMutation.mutate({ 
-                        orderId: order.id, 
-                        trackingNumber: trackingInput 
-                      })}
-                      disabled={updateTrackingMutation.isPending || !trackingInput.trim()}
-                      size="sm"
-                    >
-                      Update
-                    </Button>
-                  </div>
-                </div>
               </CardContent>
             </Card>
+            )}
           </div>
 
           {/* Supplier Order Information */}
@@ -1815,16 +1852,87 @@ export default function AdminOrderDetail() {
                                   </div>
                                 </div>
 
-                                {/* Tracking Info */}
-                                {shipment.trackingNumber && (
-                                  <div className="flex items-center text-xs">
-                                    <Package className="h-3 w-3 mr-2 text-muted-foreground" />
-                                    <span className="text-muted-foreground">Tracking:</span>
-                                    <span className="ml-1 font-mono text-xs">
-                                      {shipment.trackingNumber}
-                                    </span>
+                                {/* Tracking Info - Editable */}
+                                <div className="space-y-1">
+                                  <div className="flex items-center text-xs text-muted-foreground">
+                                    <Package className="h-3 w-3 mr-2" />
+                                    <span>Tracking Number:</span>
                                   </div>
-                                )}
+                                  {editingShipmentTracking[shipment.id] || !shipment.trackingNumber ? (
+                                    <div className="flex items-center gap-2">
+                                      <Input
+                                        type="text"
+                                        placeholder="Enter tracking number"
+                                        value={shipmentTrackingInputs[shipment.id] ?? shipment.trackingNumber ?? ''}
+                                        onChange={(e) => setShipmentTrackingInputs(prev => ({
+                                          ...prev,
+                                          [shipment.id]: e.target.value
+                                        }))}
+                                        className="h-7 text-xs"
+                                      />
+                                      <Button
+                                        size="sm"
+                                        onClick={() => {
+                                          const trackingNumber = shipmentTrackingInputs[shipment.id] ?? shipment.trackingNumber ?? '';
+                                          updateShipmentTrackingMutation.mutate({
+                                            shipmentId: shipment.id,
+                                            trackingNumber
+                                          });
+                                          setEditingShipmentTracking(prev => ({
+                                            ...prev,
+                                            [shipment.id]: false
+                                          }));
+                                        }}
+                                        disabled={updateShipmentTrackingMutation.isPending}
+                                        className="h-7 px-2 text-xs"
+                                      >
+                                        {updateShipmentTrackingMutation.isPending ? "Saving..." : "Save"}
+                                      </Button>
+                                      {shipment.trackingNumber && (
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          onClick={() => {
+                                            setEditingShipmentTracking(prev => ({
+                                              ...prev,
+                                              [shipment.id]: false
+                                            }));
+                                            setShipmentTrackingInputs(prev => ({
+                                              ...prev,
+                                              [shipment.id]: shipment.trackingNumber || ''
+                                            }));
+                                          }}
+                                          className="h-7 px-2 text-xs"
+                                        >
+                                          Cancel
+                                        </Button>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-mono text-xs bg-muted px-2 py-1 rounded">
+                                        {shipment.trackingNumber}
+                                      </span>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => {
+                                          setEditingShipmentTracking(prev => ({
+                                            ...prev,
+                                            [shipment.id]: true
+                                          }));
+                                          setShipmentTrackingInputs(prev => ({
+                                            ...prev,
+                                            [shipment.id]: shipment.trackingNumber || ''
+                                          }));
+                                        }}
+                                        className="h-6 px-2 text-xs"
+                                      >
+                                        Edit
+                                      </Button>
+                                    </div>
+                                  )}
+                                </div>
 
                                 {/* Locker Code */}
                                 {shipment.lockerCode && (
