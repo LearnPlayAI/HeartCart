@@ -156,6 +156,27 @@ export async function publishProductDraftComplete(draftId: number): Promise<Publ
           .from(products)
           .where(eq(products.id, draft.originalProductId));
         existingProduct = existing;
+      } else if (draft.slug) {
+        // If no originalProductId but we have a slug, check if a product with this slug exists
+        // This handles cases where the draft link was lost but we're actually updating
+        const [existingBySlug] = await tx
+          .select()
+          .from(products)
+          .where(eq(products.slug, draft.slug));
+        
+        if (existingBySlug) {
+          logger.warn('Found existing product with same slug, treating as update', {
+            draftId,
+            slug: draft.slug,
+            existingProductId: existingBySlug.id
+          });
+          existingProduct = existingBySlug;
+          // Update the draft to link to this product
+          await tx
+            .update(productDrafts)
+            .set({ originalProductId: existingBySlug.id })
+            .where(eq(productDrafts.id, draftId));
+        }
       }
 
       // Debug cost preservation logic - test both possible field access patterns
