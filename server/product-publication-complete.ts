@@ -185,7 +185,7 @@ export async function publishProductDraftComplete(draftId: number): Promise<Publ
         categoryId: draft.categoryId,
         
         // Supplier and Catalog
-        supplierId: (draft as any).supplier_id, // Use supplier_id from draft (set in wizard step 1)
+        supplierId: draft.supplierId, // Use supplierId from draft (set in wizard step 1)
         catalogId: draft.catalogId,
         
         // Pricing Fields - Complete Mapping with COST PRESERVATION
