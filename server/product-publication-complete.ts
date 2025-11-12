@@ -7,8 +7,47 @@
 
 import { db } from "./db";
 import { products, productDrafts, productAttributes, productImages } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { logger } from "./logger";
+
+/**
+ * Generate a unique slug by checking for conflicts and appending numbers if needed
+ */
+async function generateUniqueSlug(baseSlug: string, existingProductId?: number, tx?: any): Promise<string> {
+  const dbContext = tx || db;
+  let slug = baseSlug;
+  let counter = 1;
+  
+  while (true) {
+    // Check if this slug exists (excluding the current product if updating)
+    const query = existingProductId
+      ? dbContext
+          .select({ id: products.id })
+          .from(products)
+          .where(sql`${products.slug} = ${slug} AND ${products.id} != ${existingProductId}`)
+      : dbContext
+          .select({ id: products.id })
+          .from(products)
+          .where(eq(products.slug, slug));
+    
+    const existing = await query;
+    
+    if (existing.length === 0) {
+      // Slug is unique!
+      return slug;
+    }
+    
+    // Slug exists, try with a number suffix
+    slug = `${baseSlug}-${counter}`;
+    counter++;
+    
+    // Safety check - don't loop forever
+    if (counter > 100) {
+      // Fallback to timestamp-based slug
+      return `${baseSlug}-${Date.now()}`;
+    }
+  }
+}
 
 /**
  * Generate canonical URL for SEO purposes
@@ -179,6 +218,19 @@ export async function publishProductDraftComplete(draftId: number): Promise<Publ
         }
       }
 
+      // Generate unique slug to prevent conflicts
+      const baseSlug = safeString(draft.slug) || `product-${Date.now()}`;
+      const uniqueSlug = await generateUniqueSlug(baseSlug, existingProduct?.id, tx);
+      
+      if (uniqueSlug !== baseSlug) {
+        logger.info('Generated unique slug to avoid conflict', {
+          draftId,
+          originalSlug: baseSlug,
+          uniqueSlug,
+          isUpdate: !!existingProduct
+        });
+      }
+
       // Debug cost preservation logic - test both possible field access patterns
       const draftCostPriceField = draft.costPrice;
       const draftCostPriceSnake = (draft as any).cost_price;
@@ -200,7 +252,7 @@ export async function publishProductDraftComplete(draftId: number): Promise<Publ
       const productData = {
         // Basic Information Fields
         name: safeString(draft.name) || 'Untitled Product',
-        slug: safeString(draft.slug) || `product-${Date.now()}`,
+        slug: uniqueSlug, // Use the unique slug
         sku: safeString(draft.sku), // Critical SKU field for dropshipping
         description: safeString(draft.description),
         categoryId: draft.categoryId,
