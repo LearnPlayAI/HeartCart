@@ -104,12 +104,16 @@ interface Shipment {
   deliveredAt: string | null;
   createdAt: string;
   updatedAt: string;
-  method: {
+  shippingMethod: {
     id: number;
     name: string;
     code: string;
     customerPrice: string;
-    logisticsCompanyName: string;
+    logisticsCompany: {
+      id: number;
+      name: string;
+      code: string;
+    };
   };
   supplierName?: string;
 }
@@ -456,7 +460,8 @@ export default function AdminOrderDetail() {
   // Hydrate form fields with existing order data
   useEffect(() => {
     if (order) {
-      setActualShippingCost(order.actualShippingCost?.toString() || "60");
+      // Don't pre-populate actualShippingCost - let it show formatted value or empty input
+      setActualShippingCost("");
     }
   }, [order]);
 
@@ -1071,38 +1076,61 @@ export default function AdminOrderDetail() {
                 <div>
                   <label className="text-sm font-medium">Customer Shipping Cost:</label>
                   <div className="bg-gray-50 p-2 rounded mt-1">
-                    <span className="text-sm font-medium">{formatCurrency(order.shippingCost)}</span>
-                    <span className="text-xs text-gray-500 ml-2">
-                      ({order.shippingMethod === 'pudo-locker' ? 'PUDO Lockers' : 
-                        order.shippingMethod === 'pudo-door' ? 'PUDO to your Door' : 
-                        order.shippingMethod || 'Standard'})
-                    </span>
+                    {order.shipments && order.shipments.length > 0 ? (
+                      <>
+                        <span className="text-sm font-medium">
+                          {formatCurrency(
+                            order.shipments.reduce((sum, shipment) => 
+                              sum + parseFloat(shipment.shippingMethod.customerPrice), 0
+                            )
+                          )}
+                        </span>
+                        <span className="text-xs text-gray-500 ml-2">
+                          ({order.shipments.length} shipment{order.shipments.length > 1 ? 's' : ''})
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-sm font-medium">{formatCurrency(order.shippingCost)}</span>
+                        <span className="text-xs text-gray-500 ml-2">
+                          ({order.shippingMethod === 'pudo-locker' ? 'PUDO Lockers' : 
+                            order.shippingMethod === 'pudo-door' ? 'PUDO to your Door' : 
+                            order.shippingMethod || 'Standard'})
+                        </span>
+                      </>
+                    )}
                   </div>
                 </div>
                 
                 <div>
                   <label className="text-sm font-medium">Actual Shipping Cost:</label>
-                  <div className="flex space-x-2 mt-1">
-                    <Input
-                      type="number"
-                      placeholder="Enter actual cost"
-                      value={actualShippingCost}
-                      onChange={(e) => setActualShippingCost(e.target.value)}
-                      className="flex-1"
-                      min="0"
-                      step="0.01"
-                    />
-                    <Button
-                      onClick={() => updateShippingCostMutation.mutate({ 
-                        orderId: order.id, 
-                        actualShippingCost: parseFloat(actualShippingCost) || 0
-                      })}
-                      disabled={updateShippingCostMutation.isPending || !actualShippingCost}
-                      size="sm"
-                    >
-                      {updateShippingCostMutation.isPending ? "Saving..." : "Save"}
-                    </Button>
-                  </div>
+                  {order.actualShippingCost && !actualShippingCost ? (
+                    <div className="bg-muted p-2 rounded mt-1">
+                      <span className="text-sm font-medium">{formatCurrency(order.actualShippingCost)}</span>
+                    </div>
+                  ) : (
+                    <div className="flex space-x-2 mt-1">
+                      <Input
+                        type="number"
+                        placeholder="Enter actual cost"
+                        value={actualShippingCost}
+                        onChange={(e) => setActualShippingCost(e.target.value)}
+                        className="flex-1"
+                        min="0"
+                        step="0.01"
+                      />
+                      <Button
+                        onClick={() => updateShippingCostMutation.mutate({ 
+                          orderId: order.id, 
+                          actualShippingCost: parseFloat(actualShippingCost) || 0
+                        })}
+                        disabled={updateShippingCostMutation.isPending || !actualShippingCost}
+                        size="sm"
+                      >
+                        {updateShippingCostMutation.isPending ? "Saving..." : "Save"}
+                      </Button>
+                    </div>
+                  )}
                 </div>
                 
                 <div className="text-xs text-gray-500">
@@ -1774,16 +1802,16 @@ export default function AdminOrderDetail() {
                                   <div className="flex items-center text-xs">
                                     <Truck className="h-3 w-3 mr-2 text-muted-foreground" />
                                     <span className="font-medium">
-                                      {shipment.method.logisticsCompanyName}
+                                      {shipment.shippingMethod.logisticsCompany.name}
                                     </span>
                                     <span className="mx-1 text-muted-foreground">•</span>
                                     <span className="text-muted-foreground">
-                                      {shipment.method.name}
+                                      {shipment.shippingMethod.name}
                                     </span>
                                   </div>
                                   <div className="flex items-center text-xs text-muted-foreground">
                                     <CreditCard className="h-3 w-3 mr-2" />
-                                    <span>Cost: {formatCurrency(parseFloat(shipment.cost))}</span>
+                                    <span>Customer Price: {formatCurrency(parseFloat(shipment.shippingMethod.customerPrice))}</span>
                                   </div>
                                 </div>
 

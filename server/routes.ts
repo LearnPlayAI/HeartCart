@@ -5023,6 +5023,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
     })
   );
 
+  // Get single order with full details (Admin only)
+  app.get(
+    "/api/admin/orders/:id",
+    isAuthenticated,
+    asyncHandler(async (req: Request, res: Response) => {
+      const user = req.user as any;
+      const orderId = Number(req.params.id);
+      
+      // Check if user is admin
+      if (user.role !== 'admin') {
+        return res.status(403).json({
+          success: false,
+          error: { message: "Admin access required" }
+        });
+      }
+      
+      // Validate order ID
+      if (!orderId || isNaN(orderId)) {
+        return res.status(400).json({
+          success: false,
+          error: { message: "Valid order ID is required" }
+        });
+      }
+      
+      try {
+        // Get order with all related data including shipments
+        const orderData = await db.query.orders.findFirst({
+          where: eq(orders.id, orderId),
+          with: {
+            orderItems: {
+              with: {
+                product: true
+              }
+            },
+            user: {
+              columns: {
+                id: true,
+                username: true,
+                email: true
+              }
+            },
+            shipments: {
+              with: {
+                shippingMethod: {
+                  with: {
+                    logisticsCompany: true
+                  }
+                }
+              }
+            }
+          }
+        });
+        
+        if (!orderData) {
+          return res.status(404).json({
+            success: false,
+            error: { message: "Order not found" }
+          });
+        }
+        
+        logger.info('Admin order detail fetched successfully', { 
+          orderId,
+          hasShipments: orderData.shipments && orderData.shipments.length > 0
+        });
+        
+        return res.json({
+          success: true,
+          data: orderData
+        });
+      } catch (error) {
+        logger.error('Error fetching admin order detail', { 
+          error,
+          adminId: user.id,
+          orderId
+        });
+        
+        return res.status(500).json({
+          success: false,
+          error: { message: "Failed to fetch order details" }
+        });
+      }
+    })
+  );
+
   app.get(
     "/api/orders/:id", 
     isAuthenticated, 
