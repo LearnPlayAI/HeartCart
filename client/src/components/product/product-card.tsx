@@ -6,13 +6,13 @@ import { useCart } from '@/hooks/use-cart';
 import { formatCurrency, calculateDiscount } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import QuickViewModal from './quick-view-modal';
-// DisclaimersModal removed - disclaimer now shown during checkout process only
 import { Badge } from '@/components/ui/badge';
 import type { Product } from '@shared/schema';
 import { ensureValidImageUrl } from '@/utils/file-manager';
 import { useCountdown } from '@/hooks/use-countdown';
 import { FavouriteHeart } from '@/components/FavouriteHeart';
 import { useAuth } from '@/hooks/use-auth';
+import { saveProductClickState } from '@/hooks/use-scroll-management';
 import { 
   calculateProductPricing, 
   getCartPrice, 
@@ -228,56 +228,10 @@ const ProductCard: React.FC<ProductCardProps> = ({
     return stars;
   };
   
-  // All product cards will use a consistent design based on the Featured Products style
   return (
-    <div data-product-id={product.id} className="product-card bg-white rounded-lg shadow-sm overflow-hidden w-full max-w-sm mx-auto">
-      <Link href={`/product/id/${product.id}`} className="block relative" onClick={(event) => {
-        // Save complete application state before navigating from grid view
-        const urlParams = new URLSearchParams(window.location.search);
-        const currentPage = parseInt(urlParams.get('page') || '1');
-        
-        // Try to get existing filter state from the parent page first (more reliable)
-        const existingState = (window as any).productListingCurrentState || {};
-        
-        // Get current filter state from URL and localStorage as fallback
-        const categoryId = existingState?.categoryId || urlParams.get('categoryId') || 'null';
-        const searchQuery = existingState?.searchQuery || urlParams.get('search') || '';
-        const sortBy = existingState?.sortBy || urlParams.get('sort') || 'newest';
-        const viewMode = existingState?.viewMode || localStorage.getItem('productListingViewMode') || 'grid';
-        
-        // Create comprehensive state object preserving current filters
-        const state = {
-          page: currentPage,
-          categoryId,
-          searchQuery,
-          sortBy,
-          viewMode,
-          priceRange: existingState?.priceRange || [0, 5000],
-          ratingFilter: existingState?.ratingFilter || null,
-          filters: existingState?.filters || {},
-          attributeFilters: existingState?.attributeFilters || [],
-          selectedCategory: existingState?.selectedCategory || null
-        };
-        
-        // Save complete state to sessionStorage
-        sessionStorage.setItem('productListingState', JSON.stringify(state));
-        
-        // Save scroll position relative to this product
-        const productElement = (event.currentTarget as HTMLElement).closest('[data-product-id]') as HTMLElement;
-        if (productElement) {
-          const rect = productElement.getBoundingClientRect();
-          const relativePosition = rect.top + window.scrollY;
-          sessionStorage.setItem('productListingScrollPosition', relativePosition.toString());
-          sessionStorage.setItem('productListingTargetProduct', product.id.toString());
-          console.log('Saved complete state on product click (grid):', { 
-            ...state,
-            scroll: relativePosition, 
-            productId: product.id 
-          });
-        } else {
-          sessionStorage.setItem('productListingScrollPosition', window.scrollY.toString());
-          console.log('Saved complete state on product click (grid fallback):', { ...state, scroll: window.scrollY });
-        }
+    <div data-product-id={product.id} data-testid={`card-product-${product.id}`} className="product-card bg-white rounded-lg shadow-sm overflow-hidden w-full max-w-sm mx-auto">
+      <Link href={`/product/id/${product.id}`} className="block relative" onClick={() => {
+        saveProductClickState(product.id);
       }}>
         {imageError ? (
           <div className="w-full h-48 bg-gray-100 flex items-center justify-center">
