@@ -464,8 +464,13 @@ export default function AdminOrderDetail() {
   // Hydrate form fields with existing order data
   useEffect(() => {
     if (order) {
-      // Don't pre-populate actualShippingCost - let it show formatted value or empty input
-      setActualShippingCost("");
+      // Pre-populate actualShippingCost with existing value for editing
+      // Handle zero values correctly (0 is a valid shipping cost for free shipping)
+      setActualShippingCost(
+        order.actualShippingCost !== null && order.actualShippingCost !== undefined 
+          ? order.actualShippingCost.toString() 
+          : ""
+      );
     }
   }, [order]);
 
@@ -1141,33 +1146,38 @@ export default function AdminOrderDetail() {
                 
                 <div>
                   <label className="text-sm font-medium">Actual Shipping Cost:</label>
-                  {order.actualShippingCost && !actualShippingCost ? (
-                    <div className="bg-muted p-2 rounded mt-1">
-                      <span className="text-sm font-medium">{formatCurrency(order.actualShippingCost)}</span>
-                    </div>
-                  ) : (
-                    <div className="flex space-x-2 mt-1">
-                      <Input
-                        type="number"
-                        placeholder="Enter actual cost"
-                        value={actualShippingCost}
-                        onChange={(e) => setActualShippingCost(e.target.value)}
-                        className="flex-1"
-                        min="0"
-                        step="0.01"
-                      />
-                      <Button
-                        onClick={() => updateShippingCostMutation.mutate({ 
+                  <div className="flex space-x-2 mt-1">
+                    <Input
+                      type="number"
+                      placeholder="Enter actual cost"
+                      value={actualShippingCost}
+                      onChange={(e) => setActualShippingCost(e.target.value)}
+                      className="flex-1"
+                      min="0"
+                      step="0.01"
+                    />
+                    <Button
+                      onClick={() => {
+                        const cost = parseFloat(actualShippingCost);
+                        if (isNaN(cost) || cost < 0) {
+                          toast({
+                            title: "Invalid cost",
+                            description: "Please enter a valid shipping cost (0 or greater)",
+                            variant: "destructive"
+                          });
+                          return;
+                        }
+                        updateShippingCostMutation.mutate({ 
                           orderId: order.id, 
-                          actualShippingCost: parseFloat(actualShippingCost) || 0
-                        })}
-                        disabled={updateShippingCostMutation.isPending || !actualShippingCost}
-                        size="sm"
-                      >
-                        {updateShippingCostMutation.isPending ? "Saving..." : "Save"}
-                      </Button>
-                    </div>
-                  )}
+                          actualShippingCost: cost
+                        });
+                      }}
+                      disabled={updateShippingCostMutation.isPending || actualShippingCost === '' || parseFloat(actualShippingCost) < 0 || isNaN(parseFloat(actualShippingCost))}
+                      size="sm"
+                    >
+                      {updateShippingCostMutation.isPending ? "Saving..." : "Save"}
+                    </Button>
+                  </div>
                 </div>
                 
                 <div className="text-xs text-gray-500">
