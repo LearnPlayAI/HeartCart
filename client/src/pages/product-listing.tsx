@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet';
 
 import { StandardApiResponse } from '@/types/api';
-import { useProductListingScroll, useScrollRestoration, ScrollManager } from '@/hooks/use-scroll-management';
+import { useProductListingScroll, useScrollRestoration, ScrollManager, saveProductClickState } from '@/hooks/use-scroll-management';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/hooks/use-cart';
 import { useToast } from '@/hooks/use-toast';
@@ -318,6 +318,7 @@ const ProductListing = () => {
     
     if (sortBy !== 'default') params.set('sort', sortBy);
     if (selectedCategory) params.set('category', selectedCategory);
+    if (selectedCategoryId) params.set('categoryId', selectedCategoryId.toString());
     if (ratingFilter) params.set('rating', ratingFilter);
     if (searchQuery) params.set('q', searchQuery);
     if (filters.onPromotion) params.set('onPromotion', 'true');
@@ -351,7 +352,7 @@ const ProductListing = () => {
     }
     
     setActiveFilters(newActiveFilters);
-  }, [sortBy, selectedCategory, ratingFilter, searchQuery, filters, page, priceRange, categories, location, setLocation]);
+  }, [sortBy, selectedCategory, selectedCategoryId, ratingFilter, searchQuery, filters, page, priceRange, categories, location, setLocation]);
   
   const toggleFilter = () => {
     setIsFilterOpen(!isFilterOpen);
@@ -364,10 +365,6 @@ const ProductListing = () => {
     queryClient.invalidateQueries({ queryKey: ['/api/products'] });
   };
   
-  const handleCategoryChange = (value: string) => {
-    setSelectedCategory(value);
-    setPage(1);
-  };
   
   const handleRatingFilterChange = (value: string) => {
     setRatingFilter(value);
@@ -1050,45 +1047,8 @@ const ProductListing = () => {
                             <Link 
                               href={`/product/${product.slug}`} 
                               className="block"
-                              onClick={(event) => {
-                                // Save complete application state before navigating
-                                const currentPage = parseInt(searchParams.get('page') || '1');
-                                const state = {
-                                  page: currentPage,
-                                  categoryId: selectedCategoryId?.toString() || 'null',
-                                  selectedCategory,
-                                  searchQuery,
-                                  sortBy,
-                                  viewMode,
-                                  priceRange,
-                                  ratingFilter,
-                                  filters,
-                                  attributeFilters: attributeFilters.map(f => ({
-                                    attributeId: f.attributeId,
-                                    attributeName: f.attributeName,
-                                    selectedOptions: f.selectedOptions
-                                  }))
-                                };
-                                
-                                // Save all state to sessionStorage
-                                sessionStorage.setItem('productListingState', JSON.stringify(state));
-                                
-                                // Save scroll position relative to this product
-                                const productElement = (event.currentTarget as HTMLElement).closest('[data-product-id]') as HTMLElement;
-                                if (productElement) {
-                                  const rect = productElement.getBoundingClientRect();
-                                  const relativePosition = rect.top + window.scrollY;
-                                  sessionStorage.setItem('productListingScrollPosition', relativePosition.toString());
-                                  sessionStorage.setItem('productListingTargetProduct', product.id.toString());
-                                  console.log('Saved complete state on product click:', { 
-                                    ...state,
-                                    scroll: relativePosition, 
-                                    productId: product.id 
-                                  });
-                                } else {
-                                  sessionStorage.setItem('productListingScrollPosition', window.scrollY.toString());
-                                  console.log('Saved complete state on product click (fallback):', { ...state, scroll: window.scrollY });
-                                }
+                              onClick={() => {
+                                saveProductClickState(product.id);
                               }}
                             >
                               <img 
@@ -1104,11 +1064,7 @@ const ProductListing = () => {
                                 href={`/product/${product.slug}`} 
                                 className="block"
                                 onClick={() => {
-                                  // Save current pagination state before navigating
-                                  const currentPage = parseInt(searchParams.get('page') || '1');
-                                  sessionStorage.setItem('productListingPage', currentPage.toString());
-                                  sessionStorage.setItem('productListingScrollPosition', window.scrollY.toString());
-                                  console.log('Saved pagination state on product title click:', { page: currentPage, scroll: window.scrollY });
+                                  saveProductClickState(product.id);
                                 }}
                               >
                                 <h3 className="text-lg font-medium text-gray-800 hover:text-[#FF69B4] mb-2">
