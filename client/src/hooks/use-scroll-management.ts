@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'wouter';
 
 interface ScrollPosition {
@@ -6,22 +6,24 @@ interface ScrollPosition {
   y: number;
 }
 
-interface PageState {
-  scrollPosition: ScrollPosition;
-  currentPage: number;
-  totalPages: number;
+interface ProductListingState {
+  scrollY: number;
+  targetProductId: string | null;
+  page: number;
+  categoryId: string | null;
+  fullUrl: string;
   timestamp: number;
 }
 
 class ScrollManager {
   private static instance: ScrollManager;
   private scrollPositions = new Map<string, ScrollPosition>();
-  private pageStates = new Map<string, PageState>();
   private lastLocation: string = '';
   private previousLocation: string = '';
   private lastFullUrl: string = '';
   private previousFullUrl: string = '';
   private isListeningToScroll = false;
+  private productListingState: ProductListingState | null = null;
 
   static getInstance(): ScrollManager {
     if (!ScrollManager.instance) {
@@ -31,29 +33,21 @@ class ScrollManager {
   }
 
   private handleScroll = () => {
-    if (this.lastLocation && this.isProductListingPage(this.lastLocation)) {
-      this.saveScrollPosition(this.lastLocation);
+    const fullUrl = window.location.pathname + window.location.search;
+    if (this.isProductListingPage(window.location.pathname)) {
+      this.saveScrollPosition(fullUrl);
     }
   };
 
   private handleBeforeUnload = () => {
-    if (this.lastLocation) {
-      this.saveScrollPosition(this.lastLocation);
-    }
-  };
-
-  private handlePopState = (event: PopStateEvent) => {
-    // When back button is pressed, save current scroll position
-    if (this.lastLocation) {
-      this.saveScrollPosition(this.lastLocation);
-    }
+    const fullUrl = window.location.pathname + window.location.search;
+    this.saveScrollPosition(fullUrl);
   };
 
   startScrollTracking(): void {
     if (!this.isListeningToScroll) {
       window.addEventListener('scroll', this.handleScroll, { passive: true });
       window.addEventListener('beforeunload', this.handleBeforeUnload);
-      window.addEventListener('popstate', this.handlePopState);
       this.isListeningToScroll = true;
     }
   }
@@ -62,25 +56,24 @@ class ScrollManager {
     if (this.isListeningToScroll) {
       window.removeEventListener('scroll', this.handleScroll);
       window.removeEventListener('beforeunload', this.handleBeforeUnload);
-      window.removeEventListener('popstate', this.handlePopState);
       this.isListeningToScroll = false;
     }
   }
 
-  saveScrollPosition(path: string): void {
+  saveScrollPosition(fullUrl: string): void {
     const scrollPosition = {
       x: window.scrollX || window.pageXOffset,
       y: window.scrollY || window.pageYOffset
     };
-    this.scrollPositions.set(path, scrollPosition);
+    this.scrollPositions.set(fullUrl, scrollPosition);
   }
 
-  getScrollPosition(path: string): ScrollPosition | null {
-    return this.scrollPositions.get(path) || null;
+  getScrollPosition(fullUrl: string): ScrollPosition | null {
+    return this.scrollPositions.get(fullUrl) || null;
   }
 
-  clearScrollPosition(path: string): void {
-    this.scrollPositions.delete(path);
+  clearScrollPosition(fullUrl: string): void {
+    this.scrollPositions.delete(fullUrl);
   }
 
   setLastLocation(location: string): void {
@@ -109,57 +102,47 @@ class ScrollManager {
     return this.previousFullUrl;
   }
 
-  // Session storage methods for pagination state
-  savePageState(path: string, currentPage: number, totalPages: number): void {
-    const scrollPosition = this.getScrollPosition(path) || { x: 0, y: window.scrollY };
-    const pageState: PageState = {
-      scrollPosition,
-      currentPage,
-      totalPages,
-      timestamp: Date.now()
-    };
-    
+  saveProductListingState(state: ProductListingState): void {
+    this.productListingState = state;
     try {
-      sessionStorage.setItem(`pageState_${path}`, JSON.stringify(pageState));
-      this.pageStates.set(path, pageState);
+      sessionStorage.setItem('productListingScrollState', JSON.stringify(state));
     } catch (error) {
-      console.warn('Failed to save page state to sessionStorage:', error);
+      console.warn('Failed to save product listing state to sessionStorage:', error);
     }
   }
 
-  getPageState(path: string): PageState | null {
+  getProductListingState(): ProductListingState | null {
+    if (this.productListingState) {
+      return this.productListingState;
+    }
+    
     try {
-      // First check memory cache
-      const memoryState = this.pageStates.get(path);
-      if (memoryState) {
-        return memoryState;
-      }
-
-      // Then check sessionStorage
-      const stored = sessionStorage.getItem(`pageState_${path}`);
+      const stored = sessionStorage.getItem('productListingScrollState');
       if (stored) {
-        const pageState = JSON.parse(stored) as PageState;
-        // Only return if timestamp is recent (within 30 minutes)
-        if (Date.now() - pageState.timestamp < 30 * 60 * 1000) {
-          this.pageStates.set(path, pageState);
-          return pageState;
+        const state = JSON.parse(stored) as ProductListingState;
+        if (Date.now() - state.timestamp < 30 * 60 * 1000) {
+          this.productListingState = state;
+          return state;
         } else {
-          // Clean up expired state
-          sessionStorage.removeItem(`pageState_${path}`);
+          sessionStorage.removeItem('productListingScrollState');
         }
       }
     } catch (error) {
-      console.warn('Failed to retrieve page state from sessionStorage:', error);
+      console.warn('Failed to retrieve product listing state from sessionStorage:', error);
     }
     return null;
   }
 
-  clearPageState(path: string): void {
-    this.pageStates.delete(path);
+  clearProductListingState(): void {
+    this.productListingState = null;
     try {
-      sessionStorage.removeItem(`pageState_${path}`);
+      sessionStorage.removeItem('productListingScrollState');
+      sessionStorage.removeItem('productListingState');
+      sessionStorage.removeItem('productListingScrollPosition');
+      sessionStorage.removeItem('productListingTargetProduct');
+      sessionStorage.removeItem('productListingPage');
     } catch (error) {
-      console.warn('Failed to clear page state from sessionStorage:', error);
+      console.warn('Failed to clear product listing state:', error);
     }
   }
 
@@ -171,6 +154,7 @@ class ScrollManager {
     return (
       path === '/' ||
       path === '/products' ||
+      path.startsWith('/products?') ||
       path.startsWith('/category/') ||
       path.startsWith('/search') ||
       path === '/flash-deals' ||
@@ -179,11 +163,9 @@ class ScrollManager {
   }
 
   shouldPreserveScroll(fromPath: string, toPath: string): boolean {
-    // Preserve scroll when going from product listing to product detail
     if (this.isProductListingPage(fromPath) && this.isProductDetailPage(toPath)) {
       return true;
     }
-    // Preserve scroll when returning from product detail to product listing
     if (this.isProductDetailPage(fromPath) && this.isProductListingPage(toPath)) {
       return true;
     }
@@ -201,70 +183,28 @@ export const useScrollToTop = () => {
     const previousPath = lastLocationRef.current;
     const currentFullUrl = window.location.pathname + window.location.search;
 
-    // Start scroll tracking for product listing pages
     if (scrollManager.isProductListingPage(currentPath)) {
       scrollManager.startScrollTracking();
     }
 
-    // Always save scroll position before navigation
     if (previousPath) {
-      scrollManager.saveScrollPosition(previousPath);
+      const prevFullUrl = scrollManager.getLastFullUrl();
+      if (prevFullUrl) {
+        scrollManager.saveScrollPosition(prevFullUrl);
+      }
     }
 
-    // Update scroll manager location tracking
     scrollManager.setLastLocation(currentPath);
     scrollManager.setLastFullUrl(currentFullUrl);
 
-    // Product detail pages should ALWAYS start at the top
     if (scrollManager.isProductDetailPage(currentPath)) {
       window.scrollTo(0, 0);
       lastLocationRef.current = currentPath;
       return;
     }
 
-    // Check if we're coming back from a product detail page to a listing page
-    const isBackFromProductDetail = scrollManager.isProductDetailPage(previousPath) && scrollManager.isProductListingPage(currentPath);
-    
-    if (isBackFromProductDetail) {
-      // Restore scroll position when coming back from product detail
-      const savedPosition = scrollManager.getScrollPosition(currentPath);
-      if (savedPosition) {
-        // Use requestAnimationFrame for better timing with DOM updates
-        requestAnimationFrame(() => {
-          setTimeout(() => {
-            window.scrollTo({
-              left: savedPosition.x,
-              top: savedPosition.y,
-              behavior: 'instant'
-            });
-          }, 250);
-        });
-      } else {
-        window.scrollTo(0, 0);
-      }
-    } else if (scrollManager.isProductListingPage(currentPath)) {
-      // For fresh navigation to product listing pages, check if we have saved position
-      const savedPosition = scrollManager.getScrollPosition(currentPath);
-      if (savedPosition && scrollManager.shouldPreserveScroll(previousPath, currentPath)) {
-        setTimeout(() => {
-          window.scrollTo({
-            left: savedPosition.x,
-            top: savedPosition.y,
-            behavior: 'instant'
-          });
-        }, 100);
-      } else {
-        window.scrollTo(0, 0);
-      }
-    } else {
-      // For all other navigation, scroll to top
-      window.scrollTo(0, 0);
-    }
-
-    // Update last location reference
     lastLocationRef.current = currentPath;
 
-    // Cleanup function to stop tracking when component unmounts
     return () => {
       scrollManager.stopScrollTracking();
     };
@@ -275,49 +215,34 @@ export const useScrollPositionManager = () => {
   const scrollManager = ScrollManager.getInstance();
   
   return {
-    saveScrollPosition: (path: string) => scrollManager.saveScrollPosition(path),
-    getScrollPosition: (path: string) => scrollManager.getScrollPosition(path),
-    clearScrollPosition: (path: string) => scrollManager.clearScrollPosition(path),
-    savePageState: (path: string, currentPage: number, totalPages: number) => 
-      scrollManager.savePageState(path, currentPage, totalPages),
-    getPageState: (path: string) => scrollManager.getPageState(path),
-    clearPageState: (path: string) => scrollManager.clearPageState(path)
+    saveScrollPosition: (fullUrl: string) => scrollManager.saveScrollPosition(fullUrl),
+    getScrollPosition: (fullUrl: string) => scrollManager.getScrollPosition(fullUrl),
+    clearScrollPosition: (fullUrl: string) => scrollManager.clearScrollPosition(fullUrl),
+    saveProductListingState: (state: ProductListingState) => scrollManager.saveProductListingState(state),
+    getProductListingState: () => scrollManager.getProductListingState(),
+    clearProductListingState: () => scrollManager.clearProductListingState()
   };
 };
 
-// Hook specifically for product listing pages to handle back navigation
 export const useProductListingScroll = () => {
-  const [location] = useLocation();
   const scrollManager = ScrollManager.getInstance();
 
   useEffect(() => {
-    // Save scroll position when leaving product listing pages
     return () => {
-      if (scrollManager.isProductListingPage(location)) {
-        scrollManager.saveScrollPosition(location);
+      const fullUrl = window.location.pathname + window.location.search;
+      if (scrollManager.isProductListingPage(window.location.pathname)) {
+        scrollManager.saveScrollPosition(fullUrl);
       }
     };
-  }, [location]);
+  }, []);
 };
 
-// Hook for back navigation with scroll position restoration
 export const useNavigateBack = () => {
   const scrollManager = ScrollManager.getInstance();
   
   return {
     goBack: () => {
-      const previousLocation = scrollManager.getPreviousLocation();
-      
-      if (previousLocation && scrollManager.isProductListingPage(previousLocation)) {
-        // For product listing pages, use history.back() to trigger our pagination restoration
-        window.history.back();
-      } else if (previousLocation) {
-        // Use history.back() for other cases
-        window.history.back();
-      } else {
-        // Fallback to home page if no previous location
-        window.location.href = '/';
-      }
+      window.history.back();
     },
     getPreviousLocation: () => scrollManager.getPreviousLocation(),
     getPreviousFullUrl: () => scrollManager.getPreviousFullUrl(),
@@ -325,7 +250,95 @@ export const useNavigateBack = () => {
   };
 };
 
-// Hook for pagination state restoration in product listing pages
+export const useScrollRestoration = (
+  isLoading: boolean,
+  productsLoaded: boolean,
+  onRestoreComplete?: () => void
+) => {
+  const restoredRef = useRef(false);
+  const scrollManager = ScrollManager.getInstance();
+
+  const restoreScrollPosition = useCallback(() => {
+    if (restoredRef.current) return;
+
+    const savedState = scrollManager.getProductListingState();
+    if (!savedState) return;
+
+    const currentFullUrl = window.location.pathname + window.location.search;
+    
+    const currentParams = new URLSearchParams(window.location.search);
+    const savedParams = new URLSearchParams(savedState.fullUrl.split('?')[1] || '');
+    
+    const currentCategoryId = currentParams.get('categoryId') || 'null';
+    const savedCategoryId = savedParams.get('categoryId') || savedState.categoryId || 'null';
+    
+    if (currentCategoryId !== savedCategoryId) {
+      scrollManager.clearProductListingState();
+      return;
+    }
+
+    restoredRef.current = true;
+
+    const attemptScroll = (attempt: number = 0) => {
+      if (attempt > 10) {
+        window.scrollTo(0, savedState.scrollY);
+        scrollManager.clearProductListingState();
+        onRestoreComplete?.();
+        return;
+      }
+
+      if (savedState.targetProductId) {
+        const targetElement = document.querySelector(`[data-product-id="${savedState.targetProductId}"]`);
+        if (targetElement) {
+          const rect = targetElement.getBoundingClientRect();
+          const absoluteTop = rect.top + window.scrollY;
+          const center = absoluteTop - (window.innerHeight / 2) + (targetElement.clientHeight / 2);
+          window.scrollTo({ top: Math.max(0, center), behavior: 'instant' });
+          scrollManager.clearProductListingState();
+          onRestoreComplete?.();
+          return;
+        }
+      }
+
+      if (savedState.scrollY > 0) {
+        const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+        if (maxScroll >= savedState.scrollY * 0.8) {
+          window.scrollTo({ top: savedState.scrollY, behavior: 'instant' });
+          scrollManager.clearProductListingState();
+          onRestoreComplete?.();
+          return;
+        }
+      }
+
+      setTimeout(() => attemptScroll(attempt + 1), 100);
+    };
+
+    requestAnimationFrame(() => {
+      attemptScroll(0);
+    });
+  }, [scrollManager, onRestoreComplete]);
+
+  useEffect(() => {
+    if (!isLoading && productsLoaded && !restoredRef.current) {
+      const savedState = scrollManager.getProductListingState();
+      if (savedState) {
+        setTimeout(() => {
+          restoreScrollPosition();
+        }, 50);
+      }
+    }
+  }, [isLoading, productsLoaded, restoreScrollPosition]);
+
+  useEffect(() => {
+    restoredRef.current = false;
+  }, []);
+
+  return {
+    restoreScrollPosition,
+    hasStateToRestore: () => !!scrollManager.getProductListingState()
+  };
+};
+
 export const usePaginationStateRestoration = (
   currentPage: number,
   totalPages: number,
@@ -335,56 +348,64 @@ export const usePaginationStateRestoration = (
   const scrollManager = ScrollManager.getInstance();
   const hasRestoredRef = useRef(false);
 
-  // Save current page to sessionStorage when it changes
-  useEffect(() => {
-    if (location === '/products' && currentPage > 1) {
-      sessionStorage.setItem('productListingPage', currentPage.toString());
-      // Also save the current category context
-      const urlParams = new URLSearchParams(window.location.search);
-      const categoryId = urlParams.get('categoryId') || 'null';
-      sessionStorage.setItem('productListingCategoryId', categoryId);
-      console.log('Saved page to sessionStorage:', currentPage, 'with categoryId:', categoryId);
-    }
-  }, [location, currentPage]);
-
-  // Handle popstate events for pagination restoration
   useEffect(() => {
     const handlePopState = () => {
-      console.log('PopState detected, checking for pagination restoration');
-      
-      // Only restore on product listing page
       if (window.location.pathname === '/products' && !hasRestoredRef.current) {
-        const savedPage = sessionStorage.getItem('productListingPage');
-        console.log('Checking saved page from sessionStorage:', savedPage);
-        
-        if (savedPage && parseInt(savedPage) !== currentPage && parseInt(savedPage) > 1) {
-          console.log('Restoring pagination to page:', savedPage);
-          setCurrentPage(parseInt(savedPage));
-          hasRestoredRef.current = true;
+        const savedState = scrollManager.getProductListingState();
+        if (savedState && savedState.page !== currentPage && savedState.page > 1) {
+          const currentParams = new URLSearchParams(window.location.search);
+          const savedCategoryId = savedState.categoryId || 'null';
+          const currentCategoryId = currentParams.get('categoryId') || 'null';
           
-          // Reset the flag after a delay
-          setTimeout(() => {
-            hasRestoredRef.current = false;
-          }, 1000);
+          if (savedCategoryId === currentCategoryId) {
+            setCurrentPage(savedState.page);
+            hasRestoredRef.current = true;
+            setTimeout(() => {
+              hasRestoredRef.current = false;
+            }, 1000);
+          }
         }
       }
     };
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [currentPage, setCurrentPage]);
-
-  // Clear sessionStorage when leaving products page
-  useEffect(() => {
-    if (location !== '/products') {
-      sessionStorage.removeItem('productListingPage');
-      hasRestoredRef.current = false;
-    }
-  }, [location]);
+  }, [currentPage, setCurrentPage, scrollManager]);
 
   return {
-    savePageState: (page: number, total: number) => 
-      scrollManager.savePageState(location, page, total),
-    getSavedPageState: () => scrollManager.getPageState(location)
+    savePageState: (page: number, total: number) => {
+      const fullUrl = window.location.pathname + window.location.search;
+      const params = new URLSearchParams(window.location.search);
+      scrollManager.saveProductListingState({
+        scrollY: window.scrollY,
+        targetProductId: null,
+        page,
+        categoryId: params.get('categoryId'),
+        fullUrl,
+        timestamp: Date.now()
+      });
+    },
+    getSavedPageState: () => scrollManager.getProductListingState()
   };
 };
+
+export const saveProductClickState = (productId: number | string) => {
+  const scrollManager = ScrollManager.getInstance();
+  const fullUrl = window.location.pathname + window.location.search;
+  const params = new URLSearchParams(window.location.search);
+  const pageParam = params.get('page');
+  const page = pageParam ? parseInt(pageParam) : 1;
+  
+  const state: ProductListingState = {
+    scrollY: window.scrollY,
+    targetProductId: productId.toString(),
+    page,
+    categoryId: params.get('categoryId'),
+    fullUrl,
+    timestamp: Date.now()
+  };
+  
+  scrollManager.saveProductListingState(state);
+};
+
+export { ScrollManager };
