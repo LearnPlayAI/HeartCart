@@ -3,29 +3,8 @@ import { useLocation, Link } from 'wouter';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet';
 
-// Extend Window interface for scroll restoration
-declare global {
-  interface Window {
-    scrollRestorationData?: {
-      savedScroll: string;
-      targetProductId: string;
-    };
-    productListingCurrentState?: {
-      page: number;
-      categoryId: string;
-      selectedCategory: string | null;
-      searchQuery: string;
-      sortBy: string;
-      viewMode: string;
-      priceRange: number[];
-      ratingFilter: number | null;
-      filters: Record<string, any>;
-      attributeFilters: any[];
-    };
-  }
-}
 import { StandardApiResponse } from '@/types/api';
-import { useProductListingScroll, usePaginationStateRestoration } from '@/hooks/use-scroll-management';
+import { useProductListingScroll, useScrollRestoration, ScrollManager } from '@/hooks/use-scroll-management';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/hooks/use-cart';
 import { useToast } from '@/hooks/use-toast';
@@ -107,30 +86,7 @@ const getAttributeDisplayName = (attribute: Attribute | CategoryAttribute): stri
 const ProductListing = () => {
   const [location, setLocation] = useLocation();
   
-  // Initialize searchParams with saved state restoration
-  const initializeSearchParams = () => {
-    const savedStateStr = sessionStorage.getItem('productListingState');
-    if (savedStateStr) {
-      try {
-        const savedState = JSON.parse(savedStateStr);
-        if (savedState.categoryId && savedState.categoryId !== 'null') {
-          // Update URL with saved category ID before creating searchParams
-          const currentUrl = new URL(window.location.href);
-          currentUrl.searchParams.set('categoryId', savedState.categoryId);
-          if (savedState.page && savedState.page > 1) {
-            currentUrl.searchParams.set('page', savedState.page.toString());
-          }
-          window.history.replaceState({}, '', currentUrl.toString());
-          setLocation(currentUrl.pathname + currentUrl.search);
-        }
-      } catch (error) {
-        console.error('Failed to restore saved state in searchParams:', error);
-      }
-    }
-    return new URLSearchParams(location.split('?')[1] || '');
-  };
-  
-  const searchParams = initializeSearchParams();
+  const searchParams = new URLSearchParams(location.split('?')[1] || '');
   const { addItem } = useCart();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -148,53 +104,10 @@ const ProductListing = () => {
   // Removed disclaimer modal state - disclaimer now shown during checkout process only
   const [priceRange, setPriceRange] = useState([0, 5000]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(() => {
-    // First check for saved state from navigation
-    const savedStateStr = sessionStorage.getItem('productListingState');
-    if (savedStateStr) {
-      try {
-        const savedState = JSON.parse(savedStateStr);
-        if (savedState.selectedCategory) {
-          console.log('Initializing with saved selectedCategory:', savedState.selectedCategory);
-          return savedState.selectedCategory;
-        }
-      } catch (error) {
-        console.error('Failed to parse saved selectedCategory during initialization:', error);
-      }
-    }
-    
-    // Fallback to URL parameter
     return searchParams.get('category');
   });
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(() => {
-    // First check for saved state from navigation
-    const savedStateStr = sessionStorage.getItem('productListingState');
-    if (savedStateStr) {
-      try {
-        const savedState = JSON.parse(savedStateStr);
-        if (savedState.categoryId && savedState.categoryId !== 'null') {
-          const categoryIdNum = parseInt(savedState.categoryId);
-          if (!isNaN(categoryIdNum)) {
-            console.log('Initializing with saved categoryId:', categoryIdNum);
-            
-            // Update URL immediately to ensure API calls use correct category
-            const currentUrl = new URL(window.location.href);
-            currentUrl.searchParams.set('categoryId', savedState.categoryId);
-            if (savedState.page && savedState.page > 1) {
-              currentUrl.searchParams.set('page', savedState.page.toString());
-            }
-            window.history.replaceState({}, '', currentUrl.toString());
-            
-            return categoryIdNum;
-          }
-        }
-      } catch (error) {
-        console.error('Failed to parse saved state during initialization:', error);
-      }
-    }
-    
-    // Fallback to URL parameter
     const categoryIdParam = new URLSearchParams(window.location.search).get('categoryId');
-    console.log('Initial categoryId from URL:', categoryIdParam);
     return categoryIdParam ? parseInt(categoryIdParam) : null;
   });
   
@@ -202,58 +115,12 @@ const ProductListing = () => {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const categoryIdParam = urlParams.get('categoryId');
-    console.log('URL changed, new categoryId:', categoryIdParam);
-    
-    // Get previous category to detect changes
-    const previousCategoryId = selectedCategoryId;
     const newCategoryId = categoryIdParam ? parseInt(categoryIdParam) : null;
     
-    // If category changed, reset pagination and clear session storage
-    if (previousCategoryId !== newCategoryId) {
-      console.log('Category changed, resetting pagination');
-      setPage(1);
-      // Clear session storage when category changes
-      sessionStorage.removeItem('productListingPage');
-      sessionStorage.removeItem('productListingScrollPosition');
-      sessionStorage.removeItem('productListingTargetProduct');
-      sessionStorage.removeItem('productListingState');
+    if (selectedCategoryId !== newCategoryId) {
+      setSelectedCategoryId(newCategoryId);
     }
-    
-    setSelectedCategoryId(newCategoryId);
-  }, [location, selectedCategoryId]);
-
-  // Additional effect to handle page restoration after back navigation
-  useEffect(() => {
-    const savedStateStr = sessionStorage.getItem('productListingState');
-    if (savedStateStr) {
-      try {
-        const savedState = JSON.parse(savedStateStr);
-        console.log('Page restoration effect - checking saved state:', savedState);
-        
-        // Only restore if we have a saved page and current URL doesn't match
-        const urlParams = new URLSearchParams(window.location.search);
-        const currentPageParam = urlParams.get('page');
-        const currentPageFromUrl = currentPageParam ? parseInt(currentPageParam) : 1;
-        
-        if (savedState.page && savedState.page !== currentPageFromUrl) {
-          console.log('Forcing page restoration to page:', savedState.page, 'from URL page:', currentPageFromUrl);
-          
-          // Update URL first
-          const newUrl = new URL(window.location.href);
-          newUrl.searchParams.set('page', savedState.page.toString());
-          if (savedState.categoryId && savedState.categoryId !== 'null') {
-            newUrl.searchParams.set('categoryId', savedState.categoryId);
-          }
-          window.history.replaceState({}, '', newUrl.toString());
-          
-          // Then update state
-          setPage(savedState.page);
-        }
-      } catch (error) {
-        console.error('Failed to restore page state:', error);
-      }
-    }
-  }, [location]); // Only depend on location changes
+  }, [location]);
   const [availabilityFilter, setAvailabilityFilter] = useState('all');
   const [ratingFilter, setRatingFilter] = useState(searchParams.get('rating') || '');
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
@@ -265,146 +132,21 @@ const ProductListing = () => {
     newArrivals: searchParams.get('newArrivals') === 'true'
   });
   
-  // Pagination - Initialize with saved state priority
+  // Pagination - Initialize from URL or saved scroll state
   const [page, setPage] = useState(() => {
-    const savedStateStr = sessionStorage.getItem('productListingState');
-    if (savedStateStr) {
-      try {
-        const savedState = JSON.parse(savedStateStr);
-        if (savedState.page) {
-          console.log('Initializing page from saved state:', savedState.page);
-          return savedState.page;
-        }
-      } catch (error) {
-        console.error('Failed to parse saved page state:', error);
+    const scrollManager = ScrollManager.getInstance();
+    const savedState = scrollManager.getProductListingState();
+    if (savedState && savedState.page > 1) {
+      const savedCategoryId = savedState.categoryId || 'null';
+      const currentCategoryId = new URLSearchParams(window.location.search).get('categoryId') || 'null';
+      if (savedCategoryId === currentCategoryId) {
+        return savedState.page;
       }
     }
     return parseInt(searchParams.get('page') || '1');
   });
   const limit = 20;
   
-  // Debug pagination state
-  useEffect(() => {
-    console.log('Product listing page state:', {
-      page,
-      urlPage: searchParams.get('page'),
-      location: window.location.href
-    });
-  }, [page, searchParams]);
-
-  // Scroll to top when page changes (but not on initial load or when restoring state)
-  useEffect(() => {
-    const isRestoringState = sessionStorage.getItem('productListingState');
-    const isRestoringPageState = sessionStorage.getItem('productListingPage');
-    
-    // Only scroll to top if we're not restoring state and this is a user-initiated page change
-    if (!isRestoringState && !isRestoringPageState && page > 1) {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  }, [page]);
-
-  // Restore complete state when returning from product detail pages
-  useEffect(() => {
-    const savedStateStr = sessionStorage.getItem('productListingState');
-    const savedScroll = sessionStorage.getItem('productListingScrollPosition');
-    const targetProductId = sessionStorage.getItem('productListingTargetProduct');
-    
-    if (savedStateStr) {
-      try {
-        const savedState = JSON.parse(savedStateStr);
-        const currentCategoryId = selectedCategoryId?.toString() || 'null';
-        
-        console.log('Checking for saved state:', { 
-          savedState, 
-          currentCategoryId, 
-          savedScroll, 
-          targetProductId 
-        });
-        
-        console.log('Restoring complete state:', savedState);
-        
-        // Restore category first (critical for filtering)
-        if (savedState.categoryId && savedState.categoryId !== 'null') {
-          const categoryIdNum = parseInt(savedState.categoryId);
-          if (!isNaN(categoryIdNum)) {
-            console.log('Restoring category:', categoryIdNum, 'from saved state');
-            setSelectedCategoryId(categoryIdNum);
-            setSelectedCategory(savedState.selectedCategory || null);
-            
-            // Update URL to include category filter
-            const newUrl = new URL(window.location.href);
-            newUrl.searchParams.set('categoryId', savedState.categoryId);
-            window.history.replaceState({}, '', newUrl.toString());
-          }
-        }
-        
-        // Skip pagination restoration here - let the dedicated effect handle it
-        // This prevents double restoration and timing conflicts
-        
-        // Restore filters
-        if (savedState.searchQuery && savedState.searchQuery !== searchQuery) {
-          setSearchQuery(savedState.searchQuery);
-        }
-        
-        if (savedState.sortBy && savedState.sortBy !== sortBy) {
-          setSortBy(savedState.sortBy);
-        }
-        
-        if (savedState.viewMode && savedState.viewMode !== viewMode) {
-          setViewMode(savedState.viewMode);
-        }
-        
-        if (savedState.priceRange && Array.isArray(savedState.priceRange) && savedState.priceRange.length === 2) {
-          if (JSON.stringify(savedState.priceRange) !== JSON.stringify(priceRange)) {
-            setPriceRange(savedState.priceRange);
-          }
-        }
-        
-        if (savedState.ratingFilter !== undefined && savedState.ratingFilter !== ratingFilter) {
-          setRatingFilter(savedState.ratingFilter);
-        }
-        
-        if (savedState.filters && JSON.stringify(savedState.filters) !== JSON.stringify(filters)) {
-          setFilters(savedState.filters);
-        }
-        
-        if (savedState.attributeFilters && JSON.stringify(savedState.attributeFilters) !== JSON.stringify(attributeFilters)) {
-          setAttributeFilters(savedState.attributeFilters);
-        }
-        
-        // Store scroll restoration data
-        if (savedScroll && targetProductId) {
-          window.scrollRestorationData = {
-            savedScroll,
-            targetProductId
-          };
-        }
-      } catch (error) {
-        console.error('Failed to parse saved state:', error);
-        sessionStorage.removeItem('productListingState');
-        sessionStorage.removeItem('productListingScrollPosition');
-        sessionStorage.removeItem('productListingTargetProduct');
-      }
-    }
-  }, [selectedCategoryId]); // Run when selectedCategoryId changes
-
-  // Update global state tracker for ProductCard components to access
-  useEffect(() => {
-    (window as any).productListingCurrentState = {
-      page,
-      categoryId: selectedCategoryId?.toString() || 'null',
-      selectedCategory,
-      searchQuery,
-      sortBy,
-      viewMode,
-      priceRange,
-      ratingFilter,
-      filters,
-      attributeFilters
-    };
-  }, [page, selectedCategoryId, selectedCategory, searchQuery, sortBy, viewMode, priceRange, ratingFilter, filters, attributeFilters]);
-  
-  // Initialize scroll management
   useProductListingScroll();
   
   // Fetch categories
@@ -516,42 +258,7 @@ const ProductListing = () => {
   const totalProducts = productsResponse?.meta?.total || products.length;
   const totalPages = Math.ceil(totalProducts / limit);
   
-  // Handle scroll restoration after products have loaded
-  useEffect(() => {
-    if (!isLoadingProducts && products.length > 0 && window.scrollRestorationData) {
-      const { savedScroll, targetProductId } = window.scrollRestorationData;
-      
-      console.log('Products loaded, attempting scroll restoration:', { savedScroll, targetProductId });
-      
-      setTimeout(() => {
-        if (targetProductId) {
-          const targetElement = document.querySelector(`[data-product-id="${targetProductId}"]`);
-          if (targetElement) {
-            const elementRect = targetElement.getBoundingClientRect();
-            const absoluteElementTop = elementRect.top + window.scrollY;
-            const center = absoluteElementTop - (window.innerHeight / 2) + (targetElement.clientHeight / 2);
-            console.log('Restoring scroll to target product:', targetProductId, 'at position:', center);
-            window.scrollTo(0, Math.max(0, center));
-          } else {
-            console.log('Target product not found after products loaded, using saved scroll position:', parseInt(savedScroll));
-            window.scrollTo(0, parseInt(savedScroll));
-          }
-        } else if (savedScroll) {
-          console.log('No target product, restoring scroll position to:', savedScroll);
-          window.scrollTo(0, parseInt(savedScroll));
-        }
-        
-        // Clear the restoration data and sessionStorage
-        delete window.scrollRestorationData;
-        sessionStorage.removeItem('productListingPage');
-        sessionStorage.removeItem('productListingScrollPosition');
-        sessionStorage.removeItem('productListingTargetProduct');
-      }, 300); // Increased delay to ensure DOM is ready
-    }
-  }, [isLoadingProducts, products]);
-  
-  // Initialize pagination state restoration after data is available
-  usePaginationStateRestoration(page, totalPages, setPage);
+  useScrollRestoration(isLoadingProducts, products.length > 0);
   
   // Fetch categories with children for hierarchical filtering
   const { 
