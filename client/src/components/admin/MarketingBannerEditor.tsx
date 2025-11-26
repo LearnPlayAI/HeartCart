@@ -113,7 +113,9 @@ export function MarketingBannerEditor() {
       });
     },
     onSuccess: () => {
+      // Invalidate both admin and public query caches so all users see the update immediately
       queryClient.invalidateQueries({ queryKey: ['/api/admin/settings/marketingBannerConfig'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/settings/marketingBannerConfig'] });
       toast({
         title: 'Banner Updated',
         description: 'Marketing banner has been saved successfully.',

@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
-import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { useLocation } from 'wouter';
 import { ArrowRight } from 'lucide-react';
 
@@ -65,8 +64,9 @@ export function MarketingBanner() {
       className="relative overflow-hidden rounded-lg shadow-md mb-4 md:mb-6"
       data-testid="marketing-banner"
     >
-      <AspectRatio ratio={4 / 1} className="bg-gradient-to-r from-purple-500 to-pink-500">
-        <div className="relative w-full h-full flex items-center justify-center">
+      {/* Responsive container: taller on mobile (aspect-[3/2]), wider on tablet (aspect-[3/1]), widest on desktop (aspect-[4/1]) */}
+      <div className="relative w-full aspect-[3/2] sm:aspect-[3/1] md:aspect-[4/1] bg-gradient-to-r from-purple-500 to-pink-500">
+        <div className="absolute inset-0 flex items-center justify-center">
           {/* Responsive Banner Image */}
           {config.imageVariants && config.imageVariants.length > 0 ? (
             <picture>
@@ -106,10 +106,10 @@ export function MarketingBanner() {
             style={{ opacity: config.overlayOpacity || 0.3 }}
           />
 
-          {/* Content */}
-          <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
+          {/* Content - using flex column to ensure button stays visible */}
+          <div className="relative z-10 text-center px-4 py-4 max-w-4xl mx-auto flex flex-col items-center justify-center h-full">
             <h1
-              className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-2 sm:mb-3 md:mb-4 animate-fade-in"
+              className="text-xl sm:text-2xl md:text-3xl lg:text-5xl font-bold mb-1 sm:mb-2 md:mb-4 animate-fade-in line-clamp-2"
               style={{ color: config.textColor || '#FFFFFF' }}
             >
               {config.title}
@@ -117,7 +117,7 @@ export function MarketingBanner() {
 
             {config.subtitle && (
               <p
-                className="text-base sm:text-lg md:text-xl lg:text-2xl mb-4 sm:mb-5 md:mb-6 animate-fade-in"
+                className="text-sm sm:text-base md:text-lg lg:text-2xl mb-3 sm:mb-4 md:mb-6 animate-fade-in line-clamp-2"
                 style={{
                   color: config.textColor || '#FFFFFF',
                   animationDelay: '0.1s',
@@ -131,7 +131,7 @@ export function MarketingBanner() {
               <Button
                 onClick={handleCtaClick}
                 size="lg"
-                className="bg-pink-500 hover:bg-pink-600 text-white font-semibold px-6 sm:px-8 py-4 sm:py-6 text-base sm:text-lg shadow-lg hover:shadow-xl transition-all animate-fade-in"
+                className="bg-pink-500 hover:bg-pink-600 text-white font-semibold px-4 sm:px-6 md:px-8 py-2 sm:py-4 md:py-6 text-sm sm:text-base md:text-lg shadow-lg hover:shadow-xl transition-all animate-fade-in flex-shrink-0"
                 style={{ animationDelay: '0.2s' }}
                 data-testid="fulvic-hero-cta-button"
               >
@@ -141,7 +141,7 @@ export function MarketingBanner() {
             )}
           </div>
         </div>
-      </AspectRatio>
+      </div>
     </div>
   );
 }
