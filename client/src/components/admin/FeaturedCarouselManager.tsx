@@ -18,6 +18,8 @@ interface CarouselProduct {
 
 interface CarouselConfig {
   enabled: boolean;
+  heading: string;
+  subheading: string;
   products: CarouselProduct[];
 }
 
@@ -25,6 +27,8 @@ export function FeaturedCarouselManager() {
   const { toast } = useToast();
   const [config, setConfig] = useState<CarouselConfig>({
     enabled: true,
+    heading: 'Fulvic Wellness Products',
+    subheading: 'Premium health and wellness solutions for you and your animals',
     products: []
   });
   const [productSearch, setProductSearch] = useState('');
@@ -75,7 +79,13 @@ export function FeaturedCarouselManager() {
     if (settingData?.success && settingData.data?.settingValue) {
       try {
         const parsed = JSON.parse(settingData.data.settingValue);
-        setConfig(parsed);
+        // Merge with defaults to ensure heading/subheading are populated for legacy configs
+        setConfig({
+          enabled: parsed.enabled ?? true,
+          heading: parsed.heading || 'Fulvic Wellness Products',
+          subheading: parsed.subheading || 'Premium health and wellness solutions for you and your animals',
+          products: parsed.products || []
+        });
       } catch (error) {
         console.error('Error parsing carousel config:', error);
       }
@@ -93,6 +103,7 @@ export function FeaturedCarouselManager() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/settings/featuredCarouselProducts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/settings/featuredCarouselProducts'] });
       toast({
         title: 'Carousel Updated',
         description: 'Featured products carousel has been saved successfully.',
@@ -211,6 +222,32 @@ export function FeaturedCarouselManager() {
             data-testid="checkbox-carousel-enabled"
           />
           <Label htmlFor="carousel-enabled">Enable Carousel</Label>
+        </div>
+
+        {/* Heading and Subheading */}
+        <div className="grid grid-cols-1 gap-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
+          <div className="space-y-2">
+            <Label htmlFor="carousel-heading">Carousel Heading</Label>
+            <Input
+              id="carousel-heading"
+              value={config.heading}
+              onChange={(e) => setConfig(prev => ({ ...prev, heading: e.target.value }))}
+              placeholder="Enter carousel heading..."
+              className="bg-white"
+              data-testid="input-carousel-heading"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="carousel-subheading">Carousel Subheading</Label>
+            <Input
+              id="carousel-subheading"
+              value={config.subheading}
+              onChange={(e) => setConfig(prev => ({ ...prev, subheading: e.target.value }))}
+              placeholder="Enter carousel subheading..."
+              className="bg-white"
+              data-testid="input-carousel-subheading"
+            />
+          </div>
         </div>
 
         <div className="space-y-4">

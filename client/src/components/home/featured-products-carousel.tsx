@@ -11,6 +11,8 @@ interface CarouselProduct {
 
 interface CarouselConfig {
   enabled: boolean;
+  heading?: string;
+  subheading?: string;
   products: CarouselProduct[];
 }
 
@@ -142,10 +144,10 @@ export function FeaturedProductsCarousel() {
     <section className="mb-4 md:mb-8 bg-white rounded-lg shadow-md overflow-hidden" data-testid="fulvic-products-carousel">
       <div className="bg-gradient-to-r from-purple-600 to-purple-800 p-4">
         <h2 className="text-white text-xl font-bold">
-          Fulvic Wellness Products
+          {config?.heading || 'Fulvic Wellness Products'}
         </h2>
         <p className="text-white/90 text-sm mt-1">
-          Premium health and wellness solutions for you and your animals
+          {config?.subheading || 'Premium health and wellness solutions for you and your animals'}
         </p>
       </div>
       <div className="relative bg-[#f3e5f5]">
