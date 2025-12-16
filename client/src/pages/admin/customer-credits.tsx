@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
-import { CreditCard, Search, Plus, Eye, DollarSign, Users, Activity, TrendingUp, Mail } from "lucide-react";
+import { CreditCard, Search, Plus, Minus, Eye, DollarSign, Users, Activity, TrendingUp, Mail } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -19,12 +19,12 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 
 // Form schemas
-const addCreditSchema = z.object({
-  amount: z.number().positive("Amount must be positive"),
+const adjustCreditSchema = z.object({
+  amount: z.number().positive("Amount must be greater than 0"),
   description: z.string().min(1, "Description is required"),
 });
 
-type AddCreditForm = z.infer<typeof addCreditSchema>;
+type AdjustCreditForm = z.infer<typeof adjustCreditSchema>;
 
 // Credit Overview Cards Component
 function CreditOverviewCards() {
@@ -110,25 +110,35 @@ function CreditOverviewCards() {
   );
 }
 
-// Add Credits Modal Component
-function AddCreditsModal({ customerId, customerName, onSuccess }: { customerId: number, customerName: string, onSuccess: () => void }) {
+// Adjust Credits Modal Component (Add or Remove)
+function AdjustCreditsModal({ customerId, customerName, availableCredit, onSuccess }: { 
+  customerId: number; 
+  customerName: string; 
+  availableCredit: number;
+  onSuccess: () => void;
+}) {
   const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState<'add' | 'remove'>('add');
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const form = useForm<AddCreditForm>({
-    resolver: zodResolver(addCreditSchema),
+  const form = useForm<AdjustCreditForm>({
+    resolver: zodResolver(adjustCreditSchema),
     defaultValues: {
       amount: 0,
       description: "",
     },
   });
 
-  const addCreditMutation = useMutation({
-    mutationFn: async (data: AddCreditForm) => {
+  const adjustCreditMutation = useMutation({
+    mutationFn: async (data: AdjustCreditForm) => {
+      const adjustedAmount = mode === 'remove' ? -data.amount : data.amount;
       return apiRequest(`/api/credits/admin/${customerId}/adjust`, {
         method: "PUT",
-        body: JSON.stringify(data),
+        body: JSON.stringify({ 
+          amount: adjustedAmount,
+          description: data.description 
+        }),
       });
     },
     onSuccess: () => {
@@ -136,37 +146,94 @@ function AddCreditsModal({ customerId, customerName, onSuccess }: { customerId: 
       queryClient.invalidateQueries({ queryKey: ["/api/credits/admin/overview"] });
       toast({
         title: "Success",
-        description: "Credits added successfully",
+        description: mode === 'add' ? "Credits added successfully" : "Credits removed successfully",
       });
       setOpen(false);
       form.reset();
+      setMode('add');
       onSuccess();
     },
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to add credits",
+        description: error.message || `Failed to ${mode} credits`,
         variant: "destructive",
       });
     },
   });
 
-  const onSubmit = (data: AddCreditForm) => {
-    addCreditMutation.mutate(data);
+  const onSubmit = (data: AdjustCreditForm) => {
+    if (mode === 'remove' && data.amount > availableCredit) {
+      toast({
+        title: "Error",
+        description: `Cannot remove more than available credits (R${availableCredit.toFixed(2)})`,
+        variant: "destructive",
+      });
+      return;
+    }
+    adjustCreditMutation.mutate(data);
   };
 
+  const handleOpenChange = (isOpen: boolean) => {
+    setOpen(isOpen);
+    if (!isOpen) {
+      form.reset();
+      setMode('add');
+    }
+  };
+
+  const isAddMode = mode === 'add';
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button size="sm" className="bg-pink-600 hover:bg-pink-700">
-          <Plus className="h-4 w-4 mr-2" />
-          Add Credits
+        <Button size="sm" className="bg-pink-600 hover:bg-pink-700" data-testid={`button-adjust-credits-${customerId}`}>
+          <CreditCard className="h-4 w-4 mr-2" />
+          Adjust
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Add Credits to {customerName}</DialogTitle>
+          <DialogTitle>Adjust Credits for {customerName}</DialogTitle>
         </DialogHeader>
+        
+        {/* Mode Toggle */}
+        <div className="flex rounded-lg border p-1 bg-gray-50">
+          <button
+            type="button"
+            onClick={() => setMode('add')}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+              isAddMode 
+                ? 'bg-green-600 text-white shadow-sm' 
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <Plus className="h-4 w-4" />
+            Add Credits
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode('remove')}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+              !isAddMode 
+                ? 'bg-red-600 text-white shadow-sm' 
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <Minus className="h-4 w-4" />
+            Remove Credits
+          </button>
+        </div>
+
+        {/* Available Credit Info (shown in remove mode) */}
+        {!isAddMode && (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+            <p className="text-sm text-amber-800">
+              Available to remove: <span className="font-semibold">R{availableCredit.toFixed(2)}</span>
+            </p>
+          </div>
+        )}
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
@@ -174,12 +241,15 @@ function AddCreditsModal({ customerId, customerName, onSuccess }: { customerId: 
               name="amount"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Credit Amount (R)</FormLabel>
+                  <FormLabel>Amount (R)</FormLabel>
                   <FormControl>
                     <Input
                       type="number"
                       step="0.01"
+                      min="0.01"
+                      max={!isAddMode ? availableCredit : undefined}
                       placeholder="0.00"
+                      data-testid="input-credit-amount"
                       {...field}
                       onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                     />
@@ -193,10 +263,11 @@ function AddCreditsModal({ customerId, customerName, onSuccess }: { customerId: 
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <FormLabel>Reason</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Reason for adding credits..."
+                      placeholder={isAddMode ? "Reason for adding credits..." : "Reason for removing credits..."}
+                      data-testid="input-credit-description"
                       {...field}
                     />
                   </FormControl>
@@ -205,11 +276,19 @@ function AddCreditsModal({ customerId, customerName, onSuccess }: { customerId: 
               )}
             />
             <div className="flex justify-end space-x-2">
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={addCreditMutation.isPending}>
-                {addCreditMutation.isPending ? "Adding..." : "Add Credits"}
+              <Button 
+                type="submit" 
+                disabled={adjustCreditMutation.isPending}
+                className={isAddMode ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}
+                data-testid="button-submit-credit-adjustment"
+              >
+                {adjustCreditMutation.isPending 
+                  ? (isAddMode ? "Adding..." : "Removing...") 
+                  : (isAddMode ? "Add Credits" : "Remove Credits")
+                }
               </Button>
             </div>
           </form>
@@ -523,9 +602,10 @@ export default function CustomerCreditsPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex space-x-2">
-                          <AddCreditsModal
+                          <AdjustCreditsModal
                             customerId={customer.userId}
                             customerName={customer.fullName || customer.username}
+                            availableCredit={parseFloat(customer.availableCreditAmount)}
                             onSuccess={() => refetch()}
                           />
                           <CustomerTransactionsModal
